@@ -4,6 +4,8 @@ Branch: `fix/post-phase-b-defect-remediation`
 
 Purpose: accumulate defects found by repeated deep audits and close them with reproducible tests and exact-SHA CI evidence.
 
+Canonical remediation implementation contract: `docs/audit/post-phase-b-remediation-technical-spec.md`. All D01–D72 code changes, regression tests and verification evidence MUST conform to that specification.
+
 ## Audit cadence
 
 - Audit 1/10: completed — initial deep audit after Phase B
