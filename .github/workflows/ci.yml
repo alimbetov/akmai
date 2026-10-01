@@ -1,5 +1,5 @@
 name: CI
-# persistence gate
+# hybrid retrieval review gate v3
 
 on:
   push:

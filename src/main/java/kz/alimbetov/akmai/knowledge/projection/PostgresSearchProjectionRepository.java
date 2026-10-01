@@ -88,6 +88,41 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
     }
 
     @Override
+    public List<SearchProjection> findByChunkIds(List<String> chunkIds) {
+        if (chunkIds == null || chunkIds.isEmpty()) {
+            return List.of();
+        }
+        return jdbcTemplate.query(
+                "SELECT * FROM knowledge_search_projection WHERE chunk_id = ANY (?)",
+                ps -> ps.setArray(
+                        1,
+                        ps.getConnection().createArrayOf("varchar", chunkIds.toArray())
+                ),
+                this::map
+        );
+    }
+
+    @Override
+    public List<SearchProjection> findAdjacent(
+            String documentId,
+            int chunkIndex,
+            int radius
+    ) {
+        return jdbcTemplate.query(
+                """
+                SELECT * FROM knowledge_search_projection
+                WHERE document_id = ?
+                  AND chunk_index BETWEEN ? AND ?
+                ORDER BY chunk_index
+                """,
+                this::map,
+                documentId,
+                Math.max(0, chunkIndex - radius),
+                chunkIndex + radius
+        );
+    }
+
+    @Override
     public List<SearchProjection> searchLexical(
             String query,
             List<String> documentIds,

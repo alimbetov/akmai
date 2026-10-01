@@ -79,8 +79,24 @@ public class ParallelRetrievalExecutor {
         dependencies.forEach(future -> dependencyHits.addAll(future.join()));
 
         return strategy.retrieve(
-                step.queryChunk(),
-                new RetrievalContext(List.copyOf(dependencyHits))
+                        step.queryChunk(),
+                        new RetrievalContext(List.copyOf(dependencyHits))
+                ).stream()
+                .map(hit -> withQueryChunk(hit, step.queryChunk().id()))
+                .toList();
+    }
+
+    private RetrievalHit withQueryChunk(RetrievalHit hit, String queryChunkId) {
+        Map<String, Object> metadata = new HashMap<>(hit.metadata());
+        metadata.put("queryChunkId", queryChunkId);
+        return new RetrievalHit(
+                hit.type(),
+                hit.documentId(),
+                hit.chunkId(),
+                hit.text(),
+                metadata,
+                hit.evidence(),
+                hit.fusedScore()
         );
     }
 

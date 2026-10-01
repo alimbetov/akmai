@@ -54,9 +54,19 @@ class RetrievalPlannerTest {
 
         assertThat(plan.steps())
                 .extracting(RetrievalStep::type)
-                .containsExactly(RetrievalType.VECTOR, RetrievalType.LEXICAL);
-        assertThat(plan.steps()).allSatisfy(
-                step -> assertThat(step.dependsOn()).isEmpty()
-        );
+                .containsExactly(
+                        RetrievalType.VECTOR,
+                        RetrievalType.LEXICAL,
+                        RetrievalType.REFERENCE
+                );
+
+        RetrievalStep vector = plan.steps().get(0);
+        RetrievalStep lexical = plan.steps().get(1);
+        RetrievalStep reference = plan.steps().get(2);
+
+        assertThat(vector.dependsOn()).isEmpty();
+        assertThat(lexical.dependsOn()).isEmpty();
+        assertThat(reference.dependsOn())
+                .containsExactly(vector.id(), lexical.id());
     }
 }

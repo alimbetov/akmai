@@ -15,8 +15,15 @@ public class RetrievalPlanner {
 
         for (QueryChunk chunk : chunks) {
             if (chunk.identifiers().isEmpty()) {
-                steps.add(step(chunk, RetrievalType.VECTOR, List.of()));
-                steps.add(step(chunk, RetrievalType.LEXICAL, List.of()));
+                RetrievalStep vector = step(chunk, RetrievalType.VECTOR, List.of());
+                RetrievalStep lexical = step(chunk, RetrievalType.LEXICAL, List.of());
+                steps.add(vector);
+                steps.add(lexical);
+                steps.add(step(
+                        chunk,
+                        RetrievalType.REFERENCE,
+                        List.of(vector.id(), lexical.id())
+                ));
                 continue;
             }
 
@@ -24,8 +31,23 @@ public class RetrievalPlanner {
             steps.add(identifier);
 
             if (!chunk.semanticText().isBlank()) {
-                steps.add(step(chunk, RetrievalType.VECTOR, List.of(identifier.id())));
-                steps.add(step(chunk, RetrievalType.LEXICAL, List.of(identifier.id())));
+                RetrievalStep vector = step(
+                        chunk,
+                        RetrievalType.VECTOR,
+                        List.of(identifier.id())
+                );
+                RetrievalStep lexical = step(
+                        chunk,
+                        RetrievalType.LEXICAL,
+                        List.of(identifier.id())
+                );
+                steps.add(vector);
+                steps.add(lexical);
+                steps.add(step(
+                        chunk,
+                        RetrievalType.REFERENCE,
+                        List.of(vector.id(), lexical.id())
+                ));
             }
         }
 
