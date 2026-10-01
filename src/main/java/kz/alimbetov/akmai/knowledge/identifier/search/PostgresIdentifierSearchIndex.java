@@ -35,6 +35,17 @@ public class PostgresIdentifierSearchIndex implements IdentifierSearchIndex {
     }
 
     @Override
+    public List<DocumentIdentifier> search(IdentifierSearchQuery query) {
+        String normalized = normalizer.normalize(query.normalizedValue());
+        if (query.matchMode() != MatchMode.EXACT) {
+            throw new UnsupportedOperationException(
+                    "Only EXACT identifier matching is implemented"
+            );
+        }
+        return repository.findExact(query.type(), normalized, query.limit());
+    }
+
+    @Override
     public void deleteByDocumentId(String documentId) {
         jdbcTemplate.update(
                 "DELETE FROM document_identifier WHERE document_id = ?",
