@@ -1,5 +1,5 @@
 name: CI
-# retention timestamp binding gate
+# multi-pod lease recovery gate
 
 on:
   push:
