@@ -69,46 +69,56 @@ public class RetentionWorkerPool {
         if (!accepting.get()) {
             return 0;
         }
-        int capacity = availableCapacity();
-        if (capacity == 0) {
+        int requested = Math.min(properties.batchSize(), availableCapacity());
+        int permits = reserveUpTo(requested);
+        if (permits == 0) {
             return 0;
         }
-        int claimSize = Math.min(properties.batchSize(), capacity);
-        List<RetentionClaim> claims = lifecycleRepository.claimExpired(
+        List<RetentionClaim> claims;
+        try {
+            claims = lifecycleRepository.claimExpired(
                 clock.instant(),
-                claimSize,
+                permits,
                 properties.retryLimit(),
                 workerId,
                 properties.leaseDuration()
-        );
+            );
+        } catch (RuntimeException exception) {
+            reserved.addAndGet(-permits);
+            throw exception;
+        }
+
+        reserved.addAndGet(-(permits - claims.size()));
         int submitted = 0;
         for (RetentionClaim claim : claims) {
-            if (!reserve()) {
-                break;
-            }
             try {
                 workers.execute(() -> runClaim(claim));
                 submitted++;
             } catch (RuntimeException exception) {
                 reserved.decrementAndGet();
-                throw exception;
+                lifecycleRepository.releaseClaim(claim, clock.instant());
             }
         }
         return submitted;
     }
 
-    private boolean reserve() {
+    private int reserveUpTo(int requested) {
+        if (requested <= 0) {
+            return 0;
+        }
         while (accepting.get()) {
             int current = reserved.get();
             int maximum = properties.workerParallelism() + properties.queueCapacity();
-            if (current >= maximum) {
-                return false;
+            int available = maximum - current;
+            if (available <= 0) {
+                return 0;
             }
-            if (reserved.compareAndSet(current, current + 1)) {
-                return true;
+            int granted = Math.min(requested, available);
+            if (reserved.compareAndSet(current, current + granted)) {
+                return granted;
             }
         }
-        return false;
+        return 0;
     }
 
     private void runClaim(RetentionClaim claim) {
