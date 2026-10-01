@@ -88,7 +88,7 @@ class PostgresRetrievalIntegrationTest {
                 "legacy obsolete marker"
         )));
 
-        assertThat(repository.searchLexical("obsolete", List.of("doc-1"), 10))
+        assertThat(repository.searchLexical("obsolete", "en", List.of("doc-1"), 10))
                 .extracting(SearchProjection::chunkId)
                 .containsExactly("old-chunk");
 
@@ -102,9 +102,9 @@ class PostgresRetrievalIntegrationTest {
 
         assertThat(repository.findChunkIdsByDocumentId("doc-1"))
                 .containsExactly("new-chunk");
-        assertThat(repository.searchLexical("obsolete", List.of("doc-1"), 10))
+        assertThat(repository.searchLexical("obsolete", "en", List.of("doc-1"), 10))
                 .isEmpty();
-        assertThat(repository.searchLexical("replacement", List.of("doc-1"), 10))
+        assertThat(repository.searchLexical("replacement", "en", List.of("doc-1"), 10))
                 .extracting(SearchProjection::chunkId)
                 .containsExactly("new-chunk");
     }
@@ -193,6 +193,7 @@ class PostgresRetrievalIntegrationTest {
                 .containsExactly("new-coordinator");
         assertThat(repository.searchLexical(
                 "obsolete",
+                "en",
                 List.of("doc-coordinator"),
                 10
         )).isEmpty();
@@ -300,20 +301,20 @@ class PostgresRetrievalIntegrationTest {
     @Test
     void lexicalIndexSupportsExactTokensAcrossTargetLanguages() {
         repository.saveAll(List.of(
-                projection("kk", "doc-kk", 0, "келісімшарт төлем мерзімі"),
-                projection("ru", "doc-ru", 0, "договор срок оплаты"),
-                projection("en", "doc-en", 0, "contract payment deadline"),
-                projection("zh", "doc-zh", 0, "合同 付款 期限")
+                projection("kk", "doc-kk", 0, "келісімшарт төлем мерзімі", "kk"),
+                projection("ru", "doc-ru", 0, "договор срок оплаты", "ru"),
+                projection("en", "doc-en", 0, "contract payment deadline", "en"),
+                projection("zh", "doc-zh", 0, "合同付款期限", "zh")
         ));
 
-        assertThat(repository.searchLexical("келісімшарт", List.of(), 10))
-                .extracting(SearchProjection::chunkId).contains("kk");
-        assertThat(repository.searchLexical("договор", List.of(), 10))
-                .extracting(SearchProjection::chunkId).contains("ru");
-        assertThat(repository.searchLexical("contract", List.of(), 10))
-                .extracting(SearchProjection::chunkId).contains("en");
-        assertThat(repository.searchLexical("合同", List.of(), 10))
-                .extracting(SearchProjection::chunkId).contains("zh");
+        assertThat(repository.searchLexical("келісімшарт", "kk", List.of(), 10))
+                .extracting(SearchProjection::chunkId).containsExactly("kk");
+        assertThat(repository.searchLexical("договоры", "ru", List.of(), 10))
+                .extracting(SearchProjection::chunkId).containsExactly("ru");
+        assertThat(repository.searchLexical("contracts", "en", List.of(), 10))
+                .extracting(SearchProjection::chunkId).containsExactly("en");
+        assertThat(repository.searchLexical("付款期限", "zh", List.of(), 10))
+                .extracting(SearchProjection::chunkId).containsExactly("zh");
     }
 
     private static EnrichedKnowledgeChunk enriched(
@@ -369,6 +370,16 @@ class PostgresRetrievalIntegrationTest {
             int chunkIndex,
             String text
     ) {
+        return projection(chunkId, documentId, chunkIndex, text, "en");
+    }
+
+    private static SearchProjection projection(
+            String chunkId,
+            String documentId,
+            int chunkIndex,
+            String text,
+            String language
+    ) {
         return new SearchProjection(
                 chunkId,
                 documentId,
@@ -376,7 +387,7 @@ class PostgresRetrievalIntegrationTest {
                 chunkIndex,
                 text,
                 text,
-                "und",
+                language,
                 KnowledgeDomain.GENERAL,
                 "integration",
                 List.of(),
