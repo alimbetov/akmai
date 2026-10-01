@@ -11,7 +11,8 @@ Purpose: accumulate defects found by repeated deep audits and close them with re
 - Audit 3/10: completed — retention fencing, context budgeting and reranker isolation audit
 - Audit 4/10: completed — process simulation, queue/load envelope and cross-pipeline contract audit
 - Audit 5/10: completed — system-analysis and architecture-contract review
-- Audits 6/10 .. 10/10: pending
+- Audit 6/10: completed — previously-unreviewed chunking, ingestion runtime, retention queue and executor lifecycle audit
+- Audits 7/10 .. 10/10: pending
 - A defect is never removed from this ledger. It moves through `OPEN -> IMPLEMENTING -> FIXED -> VERIFIED`.
 - `VERIFIED` requires an automated regression test and exact-SHA successful CI.
 
@@ -100,6 +101,18 @@ These are stress-model results, not production telemetry.
 | D38 | P2 | retention observability | The lifecycle specification requires structured retention logs and metrics for claimed/deleted/failed/stale/lease-lost work, backlog and run duration, but `RetentionScheduler`, `RetentionWorkerPool` and `ChunkRetentionService` emit none. Failures can persist only as row state without the operational signals required to detect a stuck backlog or repeated lease loss | add bounded-cardinality Micrometer metrics and structured lifecycle events for run, claim, delete, failure, stale claim, lease loss, recovery and backlog; never label with document text | meter/log tests distinguish successful deletion, retryable failure, stale claim and lease loss; backlog gauge changes with seeded lifecycle rows | OPEN |
 
 
+
+## Audit 6/10 findings
+
+| ID | Sev | Area | Defect | Required remediation | Verification | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| D39 | P1 | ingestion/runtime | The ingestion write path has no deadline around `vectorStore.add()` / embedding generation. A wedged vector/embedding dependency can hold the document advisory lock and leave lifecycle state `INGESTING` indefinitely; stale-ingestion recovery cannot acquire the same document lock to recover it while the blocked process/session remains alive | add bounded ingestion/vector-write deadlines at the transport and application levels, cancellation/isolation, and a deterministic fail/compensation path that releases the document operation lock | fault-injected vector/embedding call that never returns must cause ingestion to fail within the configured deadline, release the lock and leave a recoverable staged generation | OPEN |
+| D40 | P1 | retention/queue leasing | Retention leases start when rows are claimed, but heartbeats start only when a queued claim actually begins `runClaim`. A claim can therefore expire while waiting in the worker queue. Reclaiming expired `DELETE_PENDING/DELETING` rows increments `attempt_count`; repeated queue expiry/reclaim can consume the retry budget without any cleanup attempt and eventually leave an expired deletion row permanently unclaimable because `attempt_count >= retryLimit` | do not start the operational lease before execution capacity exists, or heartbeat queued ownership; separate crash-reclaim count from cleanup-failure retry budget; guarantee an expired queued claim cannot exhaust deletion retries without running cleanup | deterministic queue/clock test with worker saturation and short leases proves queued claims neither expire silently nor consume cleanup retry budget before execution | OPEN |
+| D41 | P2 | chunking/legal semantics | `DomainSemanticClassifier` uses substring matching and checks positive deontic terms before negative phrases. English `must not`/ `shall not` can be classified as OBLIGATION instead of PROHIBITION, `may not` as RIGHT, and short substring terms such as `must`, `may`, `days` can match unrelated words. This corrupts semantic-unit typing used by chunk protection decisions | use boundary-aware phrase/token matching, prioritize longer/negative deontic constructions before positive terms, and define multilingual polarity fixtures | legal classifier corpus covers must/shall/may and their negated forms plus substring counterexamples across supported languages | OPEN |
+| D42 | P2 | chunking/Kazakh hierarchy | `legalLevel("ТАРМАҚША")` matches the earlier `startsWith("ТАРМАҚ")` branch and returns paragraph level 6 instead of subparagraph level 7. Kazakh `ТАРМАҚ` and `ТАРМАҚША` therefore collapse to the same hierarchy depth, causing the parent paragraph to be popped from the section stack | use exact canonical heading-token mapping (or test subparagraph before paragraph) rather than prefix matching for overlapping Kazakh terms | hierarchy fixture asserts `... > 1-тармақ > 1.1-тармақша` is preserved exactly for both numbered and non-numbered Kazakh headings | OPEN |
+| D43 | P1 | executor/shutdown | The shared bounded executor uses `ThreadPoolExecutor.CallerRunsPolicy`. After an executor is shut down, that policy silently discards rejected tasks instead of throwing. Tasks submitted through `CompletableFuture.supplyAsync/thenApplyAsync` can therefore remain permanently incomplete, making ingestion/retrieval `join()` calls hang during shutdown races | use a rejection policy that completes asynchronous work exceptionally, coordinate graceful shutdown with request draining, and bound all joins/dependent stages with cancellation | shutdown-race tests prove tasks submitted after/while shutdown fail promptly and no ingestion/retrieval future remains incomplete | OPEN |
+
+
 ## Remediation order
 
 ### Wave 1 — consistency and visibility
@@ -110,6 +123,7 @@ D31 active-vs-staging generation state model
 D20 generation-scoped lexical/identifier publication
 D03 non-destructive replacement
 D01 orphan vectors
+D39 bounded ingestion/vector-write deadline
 D02 published-generation visibility
 D19 vector identity canonicalization
 D32 embedding profile / re-embedding lifecycle
@@ -123,6 +137,7 @@ D05 identifier-only canonical resolution
 D06 RU/EN FTS indexes
 D07 retrieval deadlines
 D08 saturation isolation
+D43 executor shutdown/rejection semantics
 D25 identifier-scope fail-closed semantics
 D35 collision-safe identifier identity
 D34 complete identifier capability contract
@@ -137,6 +152,7 @@ D23 exact assembled-context budget
 
 ```text
 D09 retention shutdown race
+D40 queued-claim lease/retry semantics
 D22 retention lease fencing
 D28 JDBC/advisory-lock pool starvation
 D38 retention observability
@@ -153,6 +169,8 @@ D13 provenance contract
 D14 expansion provenance
 D15 language canonicalization
 D16 ambiguous language routing
+D41 legal semantic polarity/token boundaries
+D42 Kazakh paragraph/subparagraph hierarchy
 D17 request limits
 D36 chunking configuration invariants
 D37 ingestion idempotency semantics
