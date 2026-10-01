@@ -149,9 +149,121 @@ class SemanticChunkingDepthTest {
                 """);
     }
 
+
+    @Test
+    void protectsAllFiveMedicalAtomicFactTypesAcrossLanguages() {
+        assertFiveMedicalAtomicFacts(
+                "med-five-ru",
+                "ru",
+                """
+                Клиническая инструкция
+
+                Показания: препарат показан для лечения гипертензии.
+                Дозировка: принимать 10 мг один раз в сутки.
+                Противопоказания: противопоказан при тяжёлой почечной недостаточности.
+                Взаимодействие: взаимодействие с варфарином усиливает риск кровотечения.
+                Мониторинг: контролировать артериальное давление еженедельно.
+                """,
+                List.of(
+                        "Показания:",
+                        "Дозировка:",
+                        "Противопоказания:",
+                        "Взаимодействие:",
+                        "Мониторинг:"
+                )
+        );
+
+        assertFiveMedicalAtomicFacts(
+                "med-five-kk",
+                "kk",
+                """
+                Клиникалық нұсқаулық
+
+                Көрсетілім: препарат гипертензияны емдеуге көрсетілім береді.
+                Доза: тәулігіне бір рет 10 мг.
+                Қарсы көрсетілім: ауыр бүйрек жеткіліксіздігінде қарсы көрсетілім бар.
+                Өзара әрекет: варфаринмен өзара әрекет қан кету қаупін арттырады.
+                Бақылау: артериялық қысымды апта сайын бақылау қажет.
+                """,
+                List.of(
+                        "Көрсетілім:",
+                        "Доза:",
+                        "Қарсы көрсетілім:",
+                        "Өзара әрекет:",
+                        "Бақылау:"
+                )
+        );
+
+        assertFiveMedicalAtomicFacts(
+                "med-five-en",
+                "en",
+                """
+                Clinical guidance
+
+                Indication: indicated for treatment of hypertension.
+                Dosage: take 10 mg once daily.
+                Contraindication: contraindicated in severe renal failure.
+                Interaction: interaction with warfarin increases bleeding risk.
+                Monitoring: monitor blood pressure weekly.
+                """,
+                List.of(
+                        "Indication:",
+                        "Dosage:",
+                        "Contraindication:",
+                        "Interaction:",
+                        "Monitoring:"
+                )
+        );
+
+        assertFiveMedicalAtomicFacts(
+                "med-five-zh",
+                "zh",
+                """
+                临床指南
+
+                适应症: 适应症为治疗高血压。
+                剂量: 每日一次10毫克。
+                禁忌: 严重肾功能衰竭属于禁忌。
+                相互作用: 与华法林相互作用会增加出血风险。
+                监测: 每周监测血压。
+                """,
+                List.of(
+                        "适应症:",
+                        "剂量:",
+                        "禁忌:",
+                        "相互作用:",
+                        "监测:"
+                )
+        );
+    }
+
     private void assertHierarchy(String id, String language, String text, String expectedLeaf) {
         var chunks = chunker.chunk(document(id, language, KnowledgeDomain.LEGAL, text));
         assertThat(chunks.getLast().sectionPath()).contains(expectedLeaf).contains(" > ");
+    }
+
+
+    private void assertFiveMedicalAtomicFacts(
+            String id,
+            String language,
+            String text,
+            java.util.List<String> markers
+    ) {
+        var chunks = chunker.chunk(document(id, language, KnowledgeDomain.MEDICAL, text));
+        assertThat(chunks).hasSizeGreaterThanOrEqualTo(5);
+
+        for (String marker : markers) {
+            assertThat(chunks)
+                    .filteredOn(chunk -> chunk.rawText().contains(marker))
+                    .hasSize(1);
+        }
+
+        assertThat(chunks)
+                .filteredOn(chunk -> markers.stream()
+                        .anyMatch(marker -> chunk.rawText().contains(marker)))
+                .allSatisfy(chunk -> assertThat(markers.stream()
+                        .filter(marker -> chunk.rawText().contains(marker))
+                        .count()).isEqualTo(1));
     }
 
     private void assertMedicalAtomic(String id, String language, String text) {
