@@ -538,7 +538,8 @@ Publication and cleanup JDBC work is bounded by transaction/statement timeouts, 
 ResultFusion MUST no longer use the first arbitrary hit as the canonical payload.
 
 For every fused chunk:
-- resolve canonical published SearchProjection;
+- use (documentId, chunkId) as the canonical fusion key;
+- batch-resolve canonical published SearchProjection rows for all fused keys;
 - use canonical text/provenance as representative;
 - retain evidence from identifier/vector/lexical/reference channels.
 
