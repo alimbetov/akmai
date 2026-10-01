@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -218,6 +219,7 @@ class PostgresDocumentLifecycleRepositoryTest {
         RetentionClaim impostor = new RetentionClaim(
                 claim.documentId(),
                 claim.generation(),
+                UUID.randomUUID(),
                 "pod-b",
                 claim.leaseUntil()
         );
@@ -228,6 +230,24 @@ class PostgresDocumentLifecycleRepositoryTest {
         assertThat(repository.renewLease(
                 claim, now.plusSeconds(60), Duration.ofMinutes(10)
         )).isTrue();
+    }
+
+    @Test
+    void reclaimedClaimInvalidatesPreviousTokenEvenForSamePod() {
+        Instant now = Instant.parse("2026-10-01T10:00:00Z");
+        repository.activate("same-pod", RetentionPolicy.TTL, now.minusSeconds(60));
+
+        RetentionClaim first = repository.claimExpired(
+                now, 1, 5, "pod-a", Duration.ofMinutes(10)
+        ).getFirst();
+        RetentionClaim reclaimed = repository.claimExpired(
+                now.plusSeconds(601), 1, 5, "pod-a", Duration.ofMinutes(10)
+        ).getFirst();
+
+        assertThat(reclaimed.claimId()).isNotEqualTo(first.claimId());
+        assertThat(repository.isCurrentClaim(first, now.plusSeconds(601))).isFalse();
+        assertThat(repository.isCurrentClaim(reclaimed, now.plusSeconds(601))).isTrue();
+        assertThat(repository.markDeleting(first, now.plusSeconds(601))).isFalse();
     }
 
     private static void await(CountDownLatch latch) {
