@@ -33,6 +33,8 @@ import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import static org.mockito.Mockito.mock;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -160,7 +162,10 @@ class PostgresRetrievalIntegrationTest {
                 identifierIndex,
                 new SearchProjectionFactory(),
                 repository,
-                new PostgresDocumentLifecycleRepository(jdbcTemplate),
+                new PostgresDocumentLifecycleRepository(
+                        jdbcTemplate,
+                        new TransactionTemplate(new DataSourceTransactionManager(jdbcTemplate.getDataSource()))
+                ),
                 new VectorGenerationRepository(jdbcTemplate),
                 new DocumentOperationLock(jdbcTemplate.getDataSource()),
                 new RetentionProperties(
