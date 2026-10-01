@@ -25,4 +25,18 @@ class ContextBudgetTest {
 
         assertThat(budget.apply(hits)).hasSize(4);
     }
+    @Test
+    void rejectsOversizedFirstChunk() {
+        String oversized = "word ".repeat(30000);
+        RetrievalHit hit = new RetrievalHit(
+                RetrievalType.VECTOR,
+                "doc-a",
+                "oversized",
+                oversized,
+                Map.of()
+        );
+
+        assertThat(budget.apply(List.of(hit))).isEmpty();
+    }
 }
+
