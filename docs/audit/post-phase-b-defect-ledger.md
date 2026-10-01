@@ -8,7 +8,8 @@ Purpose: accumulate defects found by repeated deep audits and close them with re
 
 - Audit 1/10: completed — initial deep audit after Phase B
 - Audit 2/10: completed — generation-publication model and citation failure-path audit
-- Audits 3/10 .. 10/10: pending
+- Audit 3/10: completed — retention fencing, context budgeting and reranker isolation audit
+- Audits 4/10 .. 10/10: pending
 - A defect is never removed from this ledger. It moves through `OPEN -> IMPLEMENTING -> FIXED -> VERIFIED`.
 - `VERIFIED` requires an automated regression test and exact-SHA successful CI.
 
@@ -50,6 +51,15 @@ Purpose: accumulate defects found by repeated deep audits and close them with re
 | D20 | P0 | ingestion/publication | Lifecycle/vector data is generation-scoped, but `knowledge_search_projection` and `document_identifier` are not. New lexical projections and identifiers cannot be staged alongside generation N+1 without deleting or overwriting generation N before publication, so a true atomic multi-modality publication switch is impossible with the current schema | add generation identity to canonical projections and identifiers; stage rows per generation; make vector/lexical/identifier reads resolve only the published generation; retire old generation only after successful publication; compensate failed staged generation | integration contract: failed N+1 leaves N vector + lexical + identifier results unchanged and N+1 invisible; successful publish switches all retrieval modalities to N+1 together | OPEN |
 | D21 | P2 | citations/availability | `CitationValidator` parses the numeric body of every `[SOURCE n]` marker with `Integer.parseInt`; a model response containing an out-of-range integer marker throws `NumberFormatException` and fails the whole RAG request instead of treating the citation as invalid | parse citation numbers without overflow (bounded parse or guarded exception) and sanitize/record oversized markers as invalid | huge citation marker such as `[SOURCE 999999999999999999999]` does not throw and is removed/reported invalid | OPEN |
 
+
+## Audit 3/10 findings
+
+| ID | Sev | Area | Defect | Required remediation | Verification | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| D22 | P1 | retention/concurrency | `ChunkRetentionService` checks `isCurrentClaim` before vector deletion and again afterwards, but then deletes identifiers, projections and generation metadata without another fencing check. If the lease expires or the claim is replaced after the second check, a stale worker can continue destructive cleanup and only discover loss of ownership when `markDeleted` fails | make destructive cleanup lease-fenced through the entire critical section; re-check/atomically fence immediately before destructive tail, and ensure stale workers cannot mutate SQL/vector state after claim loss | race test that forces claim loss after vector phase but before SQL cleanup and proves stale worker performs no further destructive mutations | OPEN |
+| D23 | P2 | RAG/context budget | `ContextBudget` counts only `hit.text()`, while `ContextAssembler` adds source labels and metadata fields (`documentId`, `chunkId`, `source`, `language`, `sectionPath`, `page`) for every chunk. The assembled context can therefore exceed `contextMaxTokens` even when the budget reports it within limit | budget the exact serialized context envelope, or reserve deterministic overhead per source plus prompt framing | test with long metadata / many chunks proving assembled context stays within configured token budget | OPEN |
+| D24 | P2 | reranker/runtime | Reranker timeout uses `Future.get(timeout)` + `cancel(true)`, but the single reranker worker can remain blocked inside `EmbeddingModel.embed()` if the client ignores interruption. One hung embed can monopolize the only worker and force later reranks into repeated timeout/rejection fallback until the underlying call returns | enforce transport-level embedding timeout/cancellation, isolate or rotate poisoned workers, and bound queued rerank work independently of candidate count | blocking scorer test proving one timed-out request cannot prevent a later rerank from executing successfully | OPEN |
+
 ## Remediation order
 
 ### Wave 1 — consistency and visibility
@@ -70,12 +80,15 @@ D05 identifier-only canonical resolution
 D06 RU/EN FTS indexes
 D07 retrieval deadlines
 D08 saturation isolation
+D24 reranker poisoned-worker isolation
+D23 exact assembled-context budget
 ```
 
 ### Wave 3 — lifecycle/concurrency
 
 ```text
 D09 retention shutdown race
+D22 retention lease fencing
 ```
 
 ### Wave 4 — trust, provenance and API boundaries
