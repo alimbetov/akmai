@@ -5,6 +5,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -26,6 +27,8 @@ public class RetentionWorkerPool {
     private final ScheduledExecutorService heartbeatExecutor;
     private final AtomicBoolean accepting = new AtomicBoolean(true);
     private final AtomicInteger reserved = new AtomicInteger();
+    private final java.util.concurrent.ConcurrentMap<UUID, AtomicBoolean> lostLeases =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     public RetentionWorkerPool(
             DocumentLifecycleRepository lifecycleRepository,
@@ -122,34 +125,41 @@ public class RetentionWorkerPool {
     }
 
     private void runClaim(RetentionClaim claim) {
-        ScheduledFuture<?> heartbeat = startHeartbeat(claim);
+        AtomicBoolean lostLease = new AtomicBoolean(false);
+        lostLeases.put(claim.claimId(), lostLease);
+        ScheduledFuture<?> heartbeat = startHeartbeat(claim, lostLease);
         try {
-            cleanupService.cleanup(claim);
+            if (!lostLease.get()) {
+                cleanupService.cleanup(claim);
+            }
         } finally {
             heartbeat.cancel(false);
+            lostLeases.remove(claim.claimId());
             reserved.decrementAndGet();
         }
     }
 
-    private ScheduledFuture<?> startHeartbeat(RetentionClaim claim) {
+    private ScheduledFuture<?> startHeartbeat(RetentionClaim claim, AtomicBoolean lostLease) {
         long periodMillis = heartbeatPeriod(properties.leaseDuration()).toMillis();
         return heartbeatExecutor.scheduleAtFixedRate(
-                () -> renewSafely(claim),
+                () -> renewSafely(claim, lostLease),
                 periodMillis,
                 periodMillis,
                 TimeUnit.MILLISECONDS
         );
     }
 
-    private void renewSafely(RetentionClaim claim) {
+    private void renewSafely(RetentionClaim claim, AtomicBoolean lostLease) {
         try {
-            lifecycleRepository.renewLease(
+            if (!lifecycleRepository.renewLease(
                     claim,
                     Instant.now(clock),
                     properties.leaseDuration()
-            );
-        } catch (RuntimeException ignored) {
-            // Cleanup performs claim checks around destructive boundaries.
+            )) {
+                lostLease.set(true);
+            }
+        } catch (RuntimeException exception) {
+            lostLease.set(true);
         }
     }
 
