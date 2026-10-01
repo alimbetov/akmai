@@ -1,5 +1,6 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
+import java.util.List;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Component;
 
@@ -13,10 +14,11 @@ public class EmbeddingSemanticRerankScorer implements SemanticRerankScorer {
     }
 
     @Override
-    public double score(String question, RetrievalHit hit) {
+    public List<Double> score(String question, List<RetrievalHit> hits) {
         float[] questionVector = embeddingModel.embed(question);
-        float[] hitVector = embeddingModel.embed(hit.text());
-        return cosine(questionVector, hitVector);
+        return hits.stream()
+                .map(hit -> cosine(questionVector, embeddingModel.embed(hit.text())))
+                .toList();
     }
 
     private double cosine(float[] left, float[] right) {
