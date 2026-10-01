@@ -37,6 +37,19 @@ public class DomainSemanticClassifier {
             if (containsAny(value, "взаимодейств", "interaction", "өзара әрекет", "相互作用")) {
                 return SemanticUnitType.INTERACTION;
             }
+            if (containsAny(
+                    value,
+                    "мониторинг",
+                    "контролировать",
+                    "monitoring",
+                    "monitor ",
+                    "бақылау",
+                    "бақылаңыз",
+                    "监测",
+                    "监控"
+            )) {
+                return SemanticUnitType.MONITORING;
+            }
             if (containsAny(value, "показан", "indication", "көрсетілім", "适应症")) {
                 return SemanticUnitType.INDICATION;
             }
