@@ -7,7 +7,8 @@ public interface RetrievalStrategy {
 
     RetrievalType type();
 
-    boolean supports(QueryChunk queryChunk);
-
-    List<RetrievalHit> retrieve(QueryChunk queryChunk);
+    List<RetrievalHit> retrieve(
+            QueryChunk queryChunk,
+            RetrievalContext context
+    );
 }
