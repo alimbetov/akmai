@@ -5,6 +5,8 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
@@ -28,6 +30,7 @@ public class ParallelRetrievalExecutor {
     }
 
     public List<RetrievalHit> execute(RetrievalPlan plan) {
+        validateAcyclic(plan);
         Map<String, CompletableFuture<List<RetrievalHit>>> futures = new HashMap<>();
 
         for (RetrievalStep step : plan.steps()) {
@@ -98,6 +101,35 @@ public class ParallelRetrievalExecutor {
                 hit.evidence(),
                 hit.fusedScore()
         );
+    }
+
+    private void validateAcyclic(RetrievalPlan plan) {
+        Set<String> visited = new HashSet<>();
+        Set<String> visiting = new HashSet<>();
+        for (RetrievalStep step : plan.steps()) {
+            visit(step, plan, visited, visiting);
+        }
+    }
+
+    private void visit(
+            RetrievalStep step,
+            RetrievalPlan plan,
+            Set<String> visited,
+            Set<String> visiting
+    ) {
+        if (visited.contains(step.id())) {
+            return;
+        }
+        if (!visiting.add(step.id())) {
+            throw new IllegalArgumentException(
+                    "Retrieval plan contains a dependency cycle at step: " + step.id()
+            );
+        }
+        for (String dependencyId : step.dependsOn()) {
+            visit(findStep(plan, dependencyId), plan, visited, visiting);
+        }
+        visiting.remove(step.id());
+        visited.add(step.id());
     }
 
     private RetrievalStep findStep(RetrievalPlan plan, String id) {
