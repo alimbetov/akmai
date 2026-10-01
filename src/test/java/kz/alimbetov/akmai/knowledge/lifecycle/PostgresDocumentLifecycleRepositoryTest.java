@@ -2,6 +2,7 @@ package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -122,7 +123,7 @@ class PostgresDocumentLifecycleRepositoryTest {
 
         assertThat(firstGeneration).isEqualTo(1);
         assertThat(secondGeneration).isEqualTo(2);
-        assertThat(repository.isCurrentClaim(stale)).isFalse();
+        assertThat(repository.isCurrentClaim(stale, now)).isFalse();
         assertThat(repository.markDeleting(stale, now)).isFalse();
         assertThat(repository.findByDocumentId("reingested").orElseThrow().status())
                 .isEqualTo(LifecycleStatus.READY);
@@ -179,6 +180,54 @@ class PostgresDocumentLifecycleRepositoryTest {
         assertThat(lifecycle.status()).isEqualTo(LifecycleStatus.DELETED);
         assertThat(lifecycle.claimGeneration()).isNull();
         assertThat(lifecycle.deletedAt()).isEqualTo(now.plusSeconds(1));
+    }
+
+    @Test
+    void expiredLeaseCanBeReclaimedByAnotherPod() {
+        Instant now = Instant.parse("2026-10-01T10:00:00Z");
+        repository.activate("crashed", RetentionPolicy.TTL, now.minusSeconds(60));
+
+        RetentionClaim podA = repository.claimExpired(
+                now, 1, 5, "pod-a", Duration.ofMinutes(10)
+        ).getFirst();
+
+        assertThat(repository.claimExpired(
+                now.plusSeconds(300), 1, 5, "pod-b", Duration.ofMinutes(10)
+        )).isEmpty();
+
+        RetentionClaim podB = repository.claimExpired(
+                now.plusSeconds(601), 1, 5, "pod-b", Duration.ofMinutes(10)
+        ).getFirst();
+
+        assertThat(podB.documentId()).isEqualTo("crashed");
+        assertThat(podB.workerId()).isEqualTo("pod-b");
+        assertThat(repository.isCurrentClaim(podA, now.plusSeconds(601))).isFalse();
+        assertThat(repository.isCurrentClaim(podB, now.plusSeconds(601))).isTrue();
+        assertThat(repository.findByDocumentId("crashed").orElseThrow().attemptCount())
+                .isEqualTo(1);
+    }
+
+    @Test
+    void leaseCanBeRenewedOnlyByCurrentOwner() {
+        Instant now = Instant.parse("2026-10-01T10:00:00Z");
+        repository.activate("long-job", RetentionPolicy.TTL, now.minusSeconds(60));
+        RetentionClaim claim = repository.claimExpired(
+                now, 1, 5, "pod-a", Duration.ofMinutes(10)
+        ).getFirst();
+
+        RetentionClaim impostor = new RetentionClaim(
+                claim.documentId(),
+                claim.generation(),
+                "pod-b",
+                claim.leaseUntil()
+        );
+
+        assertThat(repository.renewLease(
+                impostor, now.plusSeconds(60), Duration.ofMinutes(10)
+        )).isFalse();
+        assertThat(repository.renewLease(
+                claim, now.plusSeconds(60), Duration.ofMinutes(10)
+        )).isTrue();
     }
 
     private static void await(CountDownLatch latch) {
