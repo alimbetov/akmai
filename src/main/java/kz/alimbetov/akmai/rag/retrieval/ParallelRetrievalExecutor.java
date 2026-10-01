@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.time.Duration;
+import java.time.Instant;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalStep;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -19,14 +21,17 @@ public class ParallelRetrievalExecutor {
 
     private final Map<RetrievalType, RetrievalStrategy> strategies;
     private final Executor retrievalExecutor;
+    private final RetrievalObserver observer;
 
     public ParallelRetrievalExecutor(
             List<RetrievalStrategy> strategies,
-            @Qualifier("retrievalExecutor") Executor retrievalExecutor
+            @Qualifier("retrievalExecutor") Executor retrievalExecutor,
+            RetrievalObserver observer
     ) {
         this.strategies = new EnumMap<>(RetrievalType.class);
         strategies.forEach(strategy -> this.strategies.put(strategy.type(), strategy));
         this.retrievalExecutor = retrievalExecutor;
+        this.observer = observer;
     }
 
     public List<RetrievalHit> execute(RetrievalPlan plan) {
@@ -94,12 +99,20 @@ public class ParallelRetrievalExecutor {
         List<RetrievalHit> dependencyHits = new ArrayList<>();
         dependencies.forEach(future -> dependencyHits.addAll(future.join()));
 
-        return strategy.retrieve(
-                        step.queryChunk(),
-                        new RetrievalContext(List.copyOf(dependencyHits))
-                ).stream()
-                .map(hit -> withQueryChunk(hit, step.queryChunk().id()))
-                .toList();
+        Instant started = Instant.now();
+        try {
+            List<RetrievalHit> hits = strategy.retrieve(
+                            step.queryChunk(),
+                            new RetrievalContext(List.copyOf(dependencyHits))
+                    ).stream()
+                    .map(hit -> withQueryChunk(hit, step.queryChunk().id()))
+                    .toList();
+            observer.success(step.type(), Duration.between(started, Instant.now()), hits.size());
+            return hits;
+        } catch (RuntimeException exception) {
+            observer.failure(step.type(), Duration.between(started, Instant.now()), exception);
+            throw exception;
+        }
     }
 
     private RetrievalHit withQueryChunk(RetrievalHit hit, String queryChunkId) {
