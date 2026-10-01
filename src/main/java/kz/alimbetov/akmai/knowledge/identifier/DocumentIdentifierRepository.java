@@ -74,6 +74,53 @@ public class DocumentIdentifierRepository {
         );
     }
 
+    public List<DocumentIdentifier> findPrefix(
+            IdentifierType type,
+            String normalizedPrefix,
+            int limit
+    ) {
+        return findLike(type, normalizedPrefix + "%", limit);
+    }
+
+    public List<DocumentIdentifier> findPartial(
+            IdentifierType type,
+            String normalizedPart,
+            int limit
+    ) {
+        return findLike(type, "%" + normalizedPart + "%", limit);
+    }
+
+    private List<DocumentIdentifier> findLike(
+            IdentifierType type,
+            String pattern,
+            int limit
+    ) {
+        return jdbcTemplate.query(
+                """
+                SELECT document_id, chunk_id, page_number, identifier_type,
+                       raw_value, normalized_value, context_text, created_at
+                  FROM document_identifier
+                 WHERE identifier_type = ?
+                   AND normalized_value LIKE ?
+                 ORDER BY created_at DESC
+                 LIMIT ?
+                """,
+                (rs, rowNum) -> new DocumentIdentifier(
+                        rs.getString("document_id"),
+                        rs.getString("chunk_id"),
+                        rs.getInt("page_number"),
+                        IdentifierType.valueOf(rs.getString("identifier_type")),
+                        rs.getString("raw_value"),
+                        rs.getString("normalized_value"),
+                        rs.getString("context_text"),
+                        rs.getTimestamp("created_at").toInstant()
+                ),
+                type.name(),
+                pattern,
+                limit
+        );
+    }
+
     public List<DocumentIdentifier> findExact(String normalizedValue, int limit) {
         return jdbcTemplate.query(
                 """
