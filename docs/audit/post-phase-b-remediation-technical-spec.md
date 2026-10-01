@@ -754,6 +754,8 @@ Cleanup:
 - resolve the claimed generation's embedding profile/vector table and verified manifest;
 - delete exactly those vector UUIDs from that profile table;
 - delete reference edges/targets, identifiers, projections and manifest for exactly claim_generation;
+- delete generation-scoped state;
+- immediately before final lifecycle/generation updates, re-check the same claim token/generation and require lease_until > clock_timestamp(); if this final fence fails, throw so the entire cleanup transaction rolls back;
 - change generation PUBLISHED -> RETIRED -> CLEANED;
 - clear lifecycle.published_generation;
 - set retention_status=DELETED, deleted_at=DB time and clear claim fields;
