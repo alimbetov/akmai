@@ -1,5 +1,5 @@
 name: CI
-# lease-aware API remediation gate
+# unique claim fencing gate
 
 on:
   push:
