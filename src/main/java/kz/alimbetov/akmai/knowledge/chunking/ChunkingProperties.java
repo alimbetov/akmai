@@ -1,12 +1,24 @@
 package kz.alimbetov.akmai.knowledge.chunking;
 
+import jakarta.validation.constraints.Min;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
+@Validated
 @ConfigurationProperties(prefix = "akmai.chunking")
 public record ChunkingProperties(
-        int targetTokens,
-        int softMaxTokens,
-        int hardMaxTokens,
-        int minTokens
+        @Min(1) int targetTokens,
+        @Min(1) int softMaxTokens,
+        @Min(1) int hardMaxTokens,
+        @Min(1) int minTokens
 ) {
+    public ChunkingProperties {
+        if (minTokens > targetTokens
+                || targetTokens > softMaxTokens
+                || softMaxTokens > hardMaxTokens) {
+            throw new IllegalArgumentException(
+                    "chunking must satisfy min <= target <= soft <= hard"
+            );
+        }
+    }
 }
