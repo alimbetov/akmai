@@ -21,7 +21,7 @@ class KnowledgeExpansionTest {
 
     @Test
     void resolvesSeedCoordinatesFromCanonicalProjection() {
-        KnowledgeExpansion expansion = new KnowledgeExpansion(repository);
+        KnowledgeExpansion expansion = new KnowledgeExpansion(repository, RetrievalTestProperties.defaults());
         RetrievalHit seed = new RetrievalHit(
                 RetrievalType.VECTOR,
                 "doc",
