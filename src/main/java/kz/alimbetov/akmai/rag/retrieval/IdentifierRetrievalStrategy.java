@@ -3,6 +3,8 @@ package kz.alimbetov.akmai.rag.retrieval;
 import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
+import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchQuery;
+import kz.alimbetov.akmai.knowledge.identifier.search.MatchMode;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import org.springframework.stereotype.Component;
 
@@ -27,7 +29,12 @@ public class IdentifierRetrievalStrategy implements RetrievalStrategy {
     ) {
         return queryChunk.identifiers().stream()
                 .flatMap(identifier -> searchIndex
-                        .search(identifier.normalizedValue(), 10)
+                        .search(new IdentifierSearchQuery(
+                                identifier.type(),
+                                identifier.normalizedValue(),
+                                MatchMode.EXACT,
+                                10
+                        ))
                         .stream())
                 .map(hit -> new RetrievalHit(
                         RetrievalType.IDENTIFIER,
