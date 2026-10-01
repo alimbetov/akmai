@@ -21,12 +21,10 @@ public class IdentifierRetrievalStrategy implements RetrievalStrategy {
     }
 
     @Override
-    public boolean supports(QueryChunk queryChunk) {
-        return !queryChunk.identifiers().isEmpty();
-    }
-
-    @Override
-    public List<RetrievalHit> retrieve(QueryChunk queryChunk) {
+    public List<RetrievalHit> retrieve(
+            QueryChunk queryChunk,
+            RetrievalContext context
+    ) {
         return queryChunk.identifiers().stream()
                 .flatMap(identifier -> searchIndex
                         .search(identifier.normalizedValue(), 10)
