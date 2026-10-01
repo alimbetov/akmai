@@ -6,6 +6,8 @@ import kz.alimbetov.akmai.rag.api.RagResponse;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
 import kz.alimbetov.akmai.rag.retrieval.ContextAssembler;
+import kz.alimbetov.akmai.rag.retrieval.ContextBudget;
+import kz.alimbetov.akmai.rag.retrieval.KnowledgeExpansion;
 import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
 import kz.alimbetov.akmai.rag.retrieval.Reranker;
 import kz.alimbetov.akmai.rag.retrieval.ResultFusion;
@@ -23,6 +25,8 @@ public class RagQuestionService {
     private final ParallelRetrievalExecutor retrievalExecutor;
     private final ResultFusion resultFusion;
     private final Reranker reranker;
+    private final KnowledgeExpansion knowledgeExpansion;
+    private final ContextBudget contextBudget;
     private final ContextAssembler contextAssembler;
     private final ChatClient chatClient;
 
@@ -32,6 +36,8 @@ public class RagQuestionService {
             ParallelRetrievalExecutor retrievalExecutor,
             ResultFusion resultFusion,
             Reranker reranker,
+            KnowledgeExpansion knowledgeExpansion,
+            ContextBudget contextBudget,
             ContextAssembler contextAssembler,
             ChatClient.Builder chatClientBuilder
     ) {
@@ -40,6 +46,8 @@ public class RagQuestionService {
         this.retrievalExecutor = retrievalExecutor;
         this.resultFusion = resultFusion;
         this.reranker = reranker;
+        this.knowledgeExpansion = knowledgeExpansion;
+        this.contextBudget = contextBudget;
         this.contextAssembler = contextAssembler;
         this.chatClient = chatClientBuilder.build();
     }
@@ -50,12 +58,14 @@ public class RagQuestionService {
         List<RetrievalHit> retrieved = retrievalExecutor.execute(plan);
         List<RetrievalHit> fused = resultFusion.fuse(retrieved);
         List<RetrievalHit> ranked = reranker.rerank(fused, question);
+        List<RetrievalHit> expanded = knowledgeExpansion.expand(ranked);
+        List<RetrievalHit> bounded = contextBudget.apply(expanded);
 
-        if (ranked.isEmpty()) {
+        if (bounded.isEmpty()) {
             return new RagResponse("В базе знаний недостаточно информации.", List.of());
         }
 
-        String context = contextAssembler.assemble(ranked);
+        String context = contextAssembler.assemble(bounded);
 
         String answer = chatClient.prompt()
                 .system("""
@@ -78,7 +88,7 @@ public class RagQuestionService {
                 .call()
                 .content();
 
-        List<RagResponse.Source> sources = ranked.stream()
+        List<RagResponse.Source> sources = bounded.stream()
                 .map(hit -> new RagResponse.Source(
                         Objects.toString(hit.metadata().get("source"), hit.documentId()),
                         Objects.toString(hit.metadata().get("language"), "unknown"),
