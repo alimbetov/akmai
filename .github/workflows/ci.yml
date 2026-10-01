@@ -1,5 +1,5 @@
 name: CI
-# unified lifecycle publication gate
+# lifecycle API migration gate
 
 on:
   push:
