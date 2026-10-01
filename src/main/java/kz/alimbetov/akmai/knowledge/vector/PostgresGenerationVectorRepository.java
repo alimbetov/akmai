@@ -75,17 +75,12 @@ public class PostgresGenerationVectorRepository {
             return 0;
         }
         String table = storageManager.qualified(profile);
-        int[] counts = jdbcTemplate.batchUpdate(
-                "DELETE FROM " + table + " WHERE id = ?",
-                ids,
-                100,
-                (ps, id) -> ps.setObject(1, UUID.fromString(id))
-        );
         int deleted = 0;
-        for (int count : counts) {
-            if (count > 0) {
-                deleted += count;
-            }
+        for (String id : ids) {
+            deleted += jdbcTemplate.update(
+                    "DELETE FROM " + table + " WHERE id = ?",
+                    UUID.fromString(id)
+            );
         }
         return deleted;
     }
