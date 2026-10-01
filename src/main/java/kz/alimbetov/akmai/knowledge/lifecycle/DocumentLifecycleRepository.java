@@ -11,6 +11,10 @@ public interface DocumentLifecycleRepository {
 
     boolean publishIngestion(String documentId, long generation, Instant now);
 
+    boolean failIngestion(String documentId, long generation, Instant now, String error);
+
+    int failStaleIngestions(Instant staleBefore, Instant now, String error);
+
 
     List<RetentionClaim> claimExpired(
             Instant now,
