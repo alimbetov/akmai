@@ -1,5 +1,5 @@
 name: CI
-# lifecycle API migration gate
+# deterministic generation race gate
 
 on:
   push:
