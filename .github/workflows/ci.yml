@@ -1,5 +1,5 @@
 name: CI
-# lifecycle vector fencing compile gate
+# unified lifecycle publication gate
 
 on:
   push:
