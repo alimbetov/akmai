@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db/changelog/changes/002-document-lifecycle.sql
   - include:
       file: db/changelog/changes/003-lifecycle-vector-generation.sql
+  - include:
+      file: db/changelog/changes/004-lifecycle-ingesting-status.sql
