@@ -31,6 +31,7 @@ import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalTestProperties;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -54,6 +55,12 @@ class PostgresRetrievalIntegrationTest {
 
     static JdbcTemplate jdbcTemplate;
     static PostgresSearchProjectionRepository repository;
+
+    @BeforeEach
+    void cleanupDatabase() {
+        jdbcTemplate.update("TRUNCATE TABLE document_identifier RESTART IDENTITY CASCADE");
+        jdbcTemplate.update("TRUNCATE TABLE knowledge_search_projection CASCADE");
+    }
 
     @BeforeAll
     static void migrate() throws Exception {
