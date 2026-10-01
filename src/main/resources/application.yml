@@ -65,6 +65,12 @@ akmai:
     reranker-candidates: ${AKMAI_RERANKER_CANDIDATES:20}
     reranker-timeout: ${AKMAI_RERANKER_TIMEOUT:2s}
     reranker-fused-weight: ${AKMAI_RERANKER_FUSED_WEIGHT:0.15}
+    request-timeout: ${AKMAI_RETRIEVAL_REQUEST_TIMEOUT:8s}
+    strategy-timeout: ${AKMAI_RETRIEVAL_STRATEGY_TIMEOUT:3s}
+    answer-timeout: ${AKMAI_RETRIEVAL_ANSWER_TIMEOUT:20s}
+    embedding-http-timeout: ${AKMAI_RETRIEVAL_EMBEDDING_TIMEOUT:3s}
+    context-expansion-max-chunks: ${AKMAI_CONTEXT_EXPANSION_MAX_CHUNKS:3}
+    answer-reserved-tokens: ${AKMAI_ANSWER_RESERVED_TOKENS:1024}
   retention:
     enabled: ${AKMAI_RETENTION_ENABLED:true}
     cron: "${AKMAI_RETENTION_CRON:0 30 3 * * *}"
