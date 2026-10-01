@@ -33,6 +33,23 @@ class QueryChunkerTest {
                 .isEqualTo("zh");
     }
 
+
+    @Test
+    void preservesOriginalMultiIntentQueryAndAddsBoundedRetrievalSubqueries() {
+        var chunks = chunker().chunk(
+                "What dosage applies and what monitoring is required?"
+        );
+
+        assertThat(chunks)
+                .extracting(QueryChunk::rawText)
+                .containsExactly(
+                        "What dosage applies and what monitoring is required?",
+                        "What dosage applies",
+                        "what monitoring is required?"
+                );
+        assertThat(chunks).hasSizeLessThanOrEqualTo(QueryDecomposer.MAX_SEGMENTS);
+    }
+
     @Test
     void usesSameIdentifierParsersForQuestionAndSeparatesMultipleIdentifiers() {
         var chunks = chunker().chunk(
