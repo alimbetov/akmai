@@ -16,10 +16,12 @@ public class SearchProjectionFactory {
                 chunk.rawText(),
                 chunk.embeddingText(),
                 chunk.language(),
+                chunk.domain(),
                 chunk.sectionPath(),
                 enriched.identifiers(),
                 enriched.references(),
-                chunk.metadata()
+                chunk.metadata(),
+                1
         );
     }
 }
