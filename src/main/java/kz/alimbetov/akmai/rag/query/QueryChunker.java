@@ -13,13 +13,16 @@ public class QueryChunker {
 
     private final TextNormalizer normalizer;
     private final IdentifierExtractor identifierExtractor;
+    private final QueryLanguageDetector languageDetector;
 
     public QueryChunker(
             TextNormalizer normalizer,
-            IdentifierExtractor identifierExtractor
+            IdentifierExtractor identifierExtractor,
+            QueryLanguageDetector languageDetector
     ) {
         this.normalizer = normalizer;
         this.identifierExtractor = identifierExtractor;
+        this.languageDetector = languageDetector;
     }
 
     public List<QueryChunk> chunk(String question) {
@@ -68,6 +71,7 @@ public class QueryChunker {
                 text,
                 normalizer.normalize(text),
                 semantic.isBlank() ? text : semantic,
+                languageDetector.detect(text),
                 identifiers
         );
     }
