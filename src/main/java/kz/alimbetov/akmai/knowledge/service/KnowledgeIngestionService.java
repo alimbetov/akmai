@@ -3,38 +3,31 @@ package kz.alimbetov.akmai.knowledge.service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.time.Instant;
-import java.util.ArrayList;
 import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
 import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResponse;
 import kz.alimbetov.akmai.knowledge.chunking.SemanticChunker;
+import kz.alimbetov.akmai.knowledge.ingestion.EnrichedKnowledgeChunk;
+import kz.alimbetov.akmai.knowledge.ingestion.ParallelIngestionExecutor;
+import kz.alimbetov.akmai.knowledge.ingestion.PersistenceCoordinator;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDocument;
-import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
-import kz.alimbetov.akmai.knowledge.identifier.IdentifierExtractor;
-import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
-import org.springframework.ai.document.Document;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
 @Service
 public class KnowledgeIngestionService {
 
     private final SemanticChunker semanticChunker;
-    private final VectorStore vectorStore;
-    private final IdentifierExtractor identifierExtractor;
-    private final IdentifierSearchIndex identifierSearchIndex;
+    private final ParallelIngestionExecutor parallelIngestionExecutor;
+    private final PersistenceCoordinator persistenceCoordinator;
 
     public KnowledgeIngestionService(
             SemanticChunker semanticChunker,
-            VectorStore vectorStore,
-            IdentifierExtractor identifierExtractor,
-            IdentifierSearchIndex identifierSearchIndex
+            ParallelIngestionExecutor parallelIngestionExecutor,
+            PersistenceCoordinator persistenceCoordinator
     ) {
         this.semanticChunker = semanticChunker;
-        this.vectorStore = vectorStore;
-        this.identifierExtractor = identifierExtractor;
-        this.identifierSearchIndex = identifierSearchIndex;
+        this.parallelIngestionExecutor = parallelIngestionExecutor;
+        this.persistenceCoordinator = persistenceCoordinator;
     }
 
     public KnowledgeIngestionResponse addText(AddKnowledgeRequest request) {
@@ -53,44 +46,14 @@ public class KnowledgeIngestionService {
         );
 
         List<KnowledgeChunk> chunks = semanticChunker.chunk(document);
+        List<EnrichedKnowledgeChunk> enriched =
+                parallelIngestionExecutor.execute(chunks);
 
-        List<Document> vectorDocuments = chunks.stream()
-                .map(chunk -> new Document(
-                        chunk.embeddingText(),
-                        toVectorMetadata(chunk)
-                ))
-                .toList();
-
-        vectorStore.add(vectorDocuments);
-
-        List<DocumentIdentifier> identifiers = new ArrayList<>();
-        for (KnowledgeChunk chunk : chunks) {
-            identifierExtractor.extract(chunk.rawText()).forEach(detected ->
-                    identifiers.add(new DocumentIdentifier(
-                            chunk.documentId(),
-                            chunk.chunkId(),
-                            chunk.location().pageFrom(),
-                            detected.type(),
-                            detected.rawValue(),
-                            detected.normalizedValue(),
-                            detected.contextText(),
-                            Instant.now()
-                    ))
-            );
-        }
-        identifierSearchIndex.index(identifiers);
+        persistenceCoordinator.persist(enriched);
 
         return new KnowledgeIngestionResponse(
                 document.documentId(),
                 chunks.size()
         );
-    }
-
-    private Map<String, Object> toVectorMetadata(KnowledgeChunk chunk) {
-        Map<String, Object> metadata = new HashMap<>(chunk.metadata());
-        metadata.put("chunkId", chunk.chunkId());
-        metadata.put("source", chunk.metadata().getOrDefault("source", "unknown"));
-        metadata.put("references", String.join(",", chunk.references()));
-        return metadata;
     }
 }
