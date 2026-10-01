@@ -10,6 +10,7 @@ import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository.VectorGenerationEntry;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository.VectorRow;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -24,6 +25,7 @@ public class GenerationPublicationService {
     private final SearchProjectionRepository projectionRepository;
     private final DocumentIdentifierRepository identifierRepository;
     private final VectorGenerationRepository vectorGenerationRepository;
+    private final ReferenceGraphRepository referenceGraphRepository;
     private final PostgresGenerationVectorRepository vectorRepository;
 
     public GenerationPublicationService(
@@ -32,6 +34,7 @@ public class GenerationPublicationService {
             SearchProjectionRepository projectionRepository,
             DocumentIdentifierRepository identifierRepository,
             VectorGenerationRepository vectorGenerationRepository,
+            ReferenceGraphRepository referenceGraphRepository,
             PostgresGenerationVectorRepository vectorRepository
     ) {
         this.jdbcTemplate = jdbcTemplate;
@@ -39,6 +42,7 @@ public class GenerationPublicationService {
         this.projectionRepository = projectionRepository;
         this.identifierRepository = identifierRepository;
         this.vectorGenerationRepository = vectorGenerationRepository;
+        this.referenceGraphRepository = referenceGraphRepository;
         this.vectorRepository = vectorRepository;
     }
 
@@ -152,6 +156,7 @@ public class GenerationPublicationService {
 
         projectionRepository.saveAll(projections);
         identifierRepository.saveAll(identifiers);
+        referenceGraphRepository.saveAll(projections);
         vectorGenerationRepository.save(
                 documentId,
                 generation,
