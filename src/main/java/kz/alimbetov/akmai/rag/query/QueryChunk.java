@@ -9,6 +9,7 @@ public record QueryChunk(
         String rawText,
         String normalizedText,
         String semanticText,
+        String language,
         List<DetectedIdentifier> identifiers
 ) {
 }
