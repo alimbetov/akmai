@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import kz.alimbetov.akmai.knowledge.identifier.DetectedIdentifier;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -32,8 +33,8 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
                 INSERT INTO knowledge_search_projection (
                     chunk_id, document_id, parent_chunk_id, chunk_index,
                     text_content, embedding_text, language, domain, section_path,
-                    references_json, metadata_json, projection_version
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?)
+                    identifiers_json, references_json, metadata_json, projection_version
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?)
                 ON CONFLICT (chunk_id) DO UPDATE SET
                     document_id = EXCLUDED.document_id,
                     parent_chunk_id = EXCLUDED.parent_chunk_id,
@@ -43,6 +44,7 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
                     language = EXCLUDED.language,
                     domain = EXCLUDED.domain,
                     section_path = EXCLUDED.section_path,
+                    identifiers_json = EXCLUDED.identifiers_json,
                     references_json = EXCLUDED.references_json,
                     metadata_json = EXCLUDED.metadata_json,
                     projection_version = EXCLUDED.projection_version,
@@ -60,9 +62,10 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
                     ps.setString(7, p.language());
                     ps.setString(8, p.domain().name());
                     ps.setString(9, p.sectionPath());
-                    ps.setString(10, writeJson(p.references()));
-                    ps.setString(11, writeJson(p.metadata()));
-                    ps.setInt(12, p.projectionVersion());
+                    ps.setString(10, writeJson(p.identifiers()));
+                    ps.setString(11, writeJson(p.references()));
+                    ps.setString(12, writeJson(p.metadata()));
+                    ps.setInt(13, p.projectionVersion());
                 }
         );
     }
@@ -136,7 +139,7 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
                 rs.getString("language"),
                 KnowledgeDomain.valueOf(rs.getString("domain")),
                 rs.getString("section_path"),
-                List.of(),
+                readJson(rs.getString("identifiers_json"), new TypeReference<List<DetectedIdentifier>>() {}),
                 readJson(rs.getString("references_json"), new TypeReference<List<String>>() {}),
                 readJson(rs.getString("metadata_json"), new TypeReference<Map<String, Object>>() {}),
                 rs.getInt("projection_version")
