@@ -37,12 +37,14 @@ public class PostgresIdentifierSearchIndex implements IdentifierSearchIndex {
     @Override
     public List<DocumentIdentifier> search(IdentifierSearchQuery query) {
         String normalized = normalizer.normalize(query.normalizedValue());
-        if (query.matchMode() != MatchMode.EXACT) {
-            throw new UnsupportedOperationException(
-                    "Only EXACT identifier matching is implemented"
-            );
+        if (query.limit() <= 0 || query.limit() > 100) {
+            throw new IllegalArgumentException("Identifier search limit must be between 1 and 100");
         }
-        return repository.findExact(query.type(), normalized, query.limit());
+        return switch (query.matchMode()) {
+            case EXACT -> repository.findExact(query.type(), normalized, query.limit());
+            case PREFIX -> repository.findPrefix(query.type(), normalized, query.limit());
+            case PARTIAL -> repository.findPartial(query.type(), normalized, query.limit());
+        };
     }
 
     @Override
@@ -53,9 +55,4 @@ public class PostgresIdentifierSearchIndex implements IdentifierSearchIndex {
         );
     }
 
-    @Override
-    public void rebuild() {
-        // PostgreSQL is the canonical store and the initial search implementation.
-        // A future local index (for example Lucene) will rebuild from this table.
-    }
 }
