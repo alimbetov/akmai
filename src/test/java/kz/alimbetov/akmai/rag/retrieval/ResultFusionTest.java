@@ -44,6 +44,33 @@ class ResultFusionTest {
     }
 
     @Test
+    void multiQueryEvidenceBoostsSharedChunkWithoutCrossQueryRankPollution() {
+        RetrievalHit sharedQ1 = hit(RetrievalType.LEXICAL, "shared", "q1");
+        RetrievalHit q1Only = hit(RetrievalType.LEXICAL, "q1-only", "q1");
+        RetrievalHit sharedQ2 = hit(RetrievalType.LEXICAL, "shared", "q2");
+        RetrievalHit q2Only = hit(RetrievalType.LEXICAL, "q2-only", "q2");
+
+        List<RetrievalHit> fused = fusion.fuse(List.of(
+                sharedQ1,
+                q1Only,
+                sharedQ2,
+                q2Only
+        ));
+
+        assertThat(fused.getFirst().chunkId()).isEqualTo("shared");
+        assertThat(fused.getFirst().evidence())
+                .extracting(RetrievalEvidence::rank)
+                .containsExactly(1, 1);
+        assertThat(fused.getFirst().fusedScore())
+                .isGreaterThan(fused.get(1).fusedScore());
+    }
+
+    @Test
+    void emptyRetrievalProducesEmptyFusion() {
+        assertThat(fusion.fuse(List.of())).isEmpty();
+    }
+
+    @Test
     void toleratesMissingChunkId() {
         RetrievalHit hit = new RetrievalHit(
                 RetrievalType.IDENTIFIER,
