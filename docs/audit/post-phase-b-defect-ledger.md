@@ -22,9 +22,9 @@ Purpose: accumulate defects found by repeated deep audits and close them with re
 
 | ID | Sev | Area | Defect | Required remediation | Verification | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| D01 | P0 | ingestion/vector | Failed ingestion can leave orphan physical vectors when vector add partially succeeds before generation manifest is saved | generation staging + compensation/reconciliation | fault-injection integration test | OPEN |
+| D01 | P0 | ingestion/vector | Failed ingestion can leave orphan physical vectors when vector add partially succeeds before generation manifest is saved | generation staging + compensation/reconciliation | fault-injection integration test (`4d255816`) | IMPLEMENTING |
 | D02 | P0 | retrieval/lifecycle | Retrieval does not enforce READY/current generation visibility | published-generation visibility fence on vector/lexical/identifier reads | INGEST_FAILED generation invisible in all strategies | OPEN |
-| D03 | P0 | ingestion | Re-ingestion deletes previous READY generation before replacement is successfully published | non-destructive generation replacement / atomic publication switch | failed replacement keeps previous READY searchable | OPEN |
+| D03 | P0 | ingestion | Re-ingestion deletes previous READY generation before replacement is successfully published | non-destructive generation replacement / atomic publication switch | failing replacement contract (`4d255816`) | IMPLEMENTING |
 | D04 | P1 | fusion | Identifier snippet can become canonical representative for a chunk and hide full chunk payload/provenance | deterministic representative priority / canonical payload | mixed identifier+semantic query preserves canonical text | OPEN |
 | D05 | P1 | retrieval | Identifier-only queries return identifier context but do not resolve canonical chunk/neighbors | canonical resolution after identifier hit | identifier-only acceptance | OPEN |
 | D06 | P1 | PostgreSQL FTS | RU/EN queries build russian/english tsvector at query time while indexed generated vector is `simple` | language-specific expression/generated indexes | EXPLAIN/integration index contract | OPEN |
