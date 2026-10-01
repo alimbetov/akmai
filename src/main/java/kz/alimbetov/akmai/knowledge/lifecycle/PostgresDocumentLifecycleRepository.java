@@ -40,10 +40,10 @@ public class PostgresDocumentLifecycleRepository
                 """
                 INSERT INTO knowledge_document_lifecycle (
                     document_id, lifecycle_policy, lifecycle_status,
-                    generation, claim_generation, claimed_by, claimed_at, lease_until, expires_at,
+                    generation, claim_generation, claim_id, claimed_by, claimed_at, lease_until, expires_at,
                     delete_started_at, deleted_at, attempt_count,
                     last_error, row_version, created_at, updated_at
-                ) VALUES (?, ?, 'READY', 1, NULL, NULL, NULL, NULL, ?, NULL, NULL, 0, NULL, 0, now(), now())
+                ) VALUES (?, ?, 'READY', 1, NULL, NULL, NULL, NULL, NULL, ?, NULL, NULL, 0, NULL, 0, now(), now())
                 ON CONFLICT (document_id) DO UPDATE SET
                     lifecycle_policy = EXCLUDED.lifecycle_policy,
                     lifecycle_status = 'READY',
