@@ -14,10 +14,10 @@ public class ResultFusion {
 
     public List<RetrievalHit> fuse(List<RetrievalHit> hits) {
         Map<String, Accumulator> accumulated = new LinkedHashMap<>();
-        Map<RetrievalType, Integer> ranks = new LinkedHashMap<>();
+        Map<String, Integer> ranks = new LinkedHashMap<>();
 
         for (RetrievalHit hit : hits) {
-            int rank = ranks.merge(hit.type(), 1, Integer::sum);
+            int rank = ranks.merge(rankKey(hit), 1, Integer::sum);
             RetrievalEvidence evidence = new RetrievalEvidence(
                     hit.type(),
                     rank,
@@ -31,6 +31,11 @@ public class ResultFusion {
                 .map(Accumulator::toHit)
                 .sorted(Comparator.comparingDouble(RetrievalHit::fusedScore).reversed())
                 .toList();
+    }
+
+    private String rankKey(RetrievalHit hit) {
+        Object queryChunkId = hit.metadata().get("queryChunkId");
+        return String.valueOf(queryChunkId) + "|" + hit.type();
     }
 
     private String key(RetrievalHit hit) {
