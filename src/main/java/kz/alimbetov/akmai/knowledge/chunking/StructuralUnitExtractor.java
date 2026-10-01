@@ -21,6 +21,13 @@ public class StructuralUnitExtractor {
             "^(LAW|ЗАКОН|ЗАҢ|法律|PART|ЧАСТЬ|БӨЛІМ|编|CHAPTER|ГЛАВА|ТАРАУ|章|SECTION|РАЗДЕЛ|БӨЛІК|节|ARTICLE|СТАТЬЯ|БАП|条|PARAGRAPH|ПАРАГРАФ|ТАРМАҚ|款|SUBPARAGRAPH|ПОДПАРАГРАФ|ТАРМАҚША|项)(?=\\s|$|[.:：]).*$",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
     );
+    private static final Pattern KAZAKH_NUMBERED_LEGAL_HEADING = Pattern.compile(
+            "^\\d+(?:\\.\\d+)*[-‑–—]?\\s*(БӨЛІМ|ТАРАУ|БӨЛІК|БАП|ТАРМАҚША|ТАРМАҚ)(?=\\s|$|[.:：]).*$",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
+    );
+    private static final Pattern CHINESE_ORDINAL_LEGAL_HEADING = Pattern.compile(
+            "^第[一二三四五六七八九十百千万零〇两\\d]+(编|章|节|条|款|项).*$"
+    );
     private static final Pattern NUMBERED_HEADING = Pattern.compile("^\\d+(?:\\.\\d+)*[.)]?\\s+.+$");
 
     public List<SemanticUnit> extract(KnowledgeDocument document, String normalizedText) {
@@ -71,7 +78,17 @@ public class StructuralUnitExtractor {
 
         Matcher legal = LEGAL_HEADING.matcher(value);
         if (legal.matches()) {
-            return new Heading(legalLevel(value), value);
+            return new Heading(legalLevel(legal.group(1)), value);
+        }
+
+        Matcher kazakh = KAZAKH_NUMBERED_LEGAL_HEADING.matcher(value);
+        if (kazakh.matches()) {
+            return new Heading(legalLevel(kazakh.group(1)), value);
+        }
+
+        Matcher chinese = CHINESE_ORDINAL_LEGAL_HEADING.matcher(value);
+        if (chinese.matches()) {
+            return new Heading(legalLevel(chinese.group(1)), value);
         }
 
         if (NUMBERED_HEADING.matcher(value).matches()) {
@@ -81,8 +98,8 @@ public class StructuralUnitExtractor {
         return null;
     }
 
-    private int legalLevel(String value) {
-        String upper = value.toUpperCase(Locale.ROOT);
+    private int legalLevel(String token) {
+        String upper = token.toUpperCase(Locale.ROOT);
         if (startsWithAny(upper, "LAW", "ЗАКОН", "ЗАҢ", "法律")) return 1;
         if (startsWithAny(upper, "PART", "ЧАСТЬ", "БӨЛІМ", "编")) return 2;
         if (startsWithAny(upper, "CHAPTER", "ГЛАВА", "ТАРАУ", "章")) return 3;
