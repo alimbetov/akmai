@@ -11,6 +11,9 @@ public record RetentionProperties(
         int batchSize,
         int maxBatchesPerRun,
         int retryLimit,
+        int workerParallelism,
+        int queueCapacity,
+        Duration leaseDuration,
         RetentionPolicy defaultPolicy,
         Duration defaultTtl
 ) {
@@ -24,6 +27,15 @@ public record RetentionProperties(
         }
         if (retryLimit <= 0) {
             throw new IllegalArgumentException("retention retry-limit must be > 0");
+        }
+        if (workerParallelism <= 0) {
+            throw new IllegalArgumentException("retention worker-parallelism must be > 0");
+        }
+        if (queueCapacity <= 0) {
+            throw new IllegalArgumentException("retention queue-capacity must be > 0");
+        }
+        if (leaseDuration == null || leaseDuration.isZero() || leaseDuration.isNegative()) {
+            throw new IllegalArgumentException("retention lease-duration must be positive");
         }
         if (defaultPolicy == RetentionPolicy.TTL
                 && (defaultTtl == null || defaultTtl.isZero() || defaultTtl.isNegative())) {
