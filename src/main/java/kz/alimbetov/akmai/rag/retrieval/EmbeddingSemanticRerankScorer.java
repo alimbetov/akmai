@@ -1,6 +1,5 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
-import java.util.List;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Component;
 
