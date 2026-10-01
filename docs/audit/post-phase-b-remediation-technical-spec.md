@@ -494,10 +494,10 @@ All Duration values MUST be positive, have explicit minimum/maximum and avoid to
 BoundedExecutorFactory MUST use rejection that completes/submits exceptionally; do not use CallerRunsPolicy.
 
 Shutdown MUST:
-- stop accepting new requests/tasks;
+- stop accepting new requests/tasks and retention claims;
 - drain/await active work for a bounded period;
-- stop heartbeat scheduling only after retention workers are drained;
-- cancel remaining work;
+- cancel remaining non-transactional work;
+- allow active bounded database transactions to finish or roll back;
 - guarantee no CompletableFuture remains forever incomplete.
 
 Transport-level HTTP/JDBC timeouts MUST back application deadlines so cancellation is not dependent only on Thread.interrupt.
@@ -922,7 +922,7 @@ Add a corpus-backed production pipeline benchmark that executes:
 - RetrievalPlanner;
 - ParallelRetrievalExecutor;
 - production PostgreSQL lexical/identifier/reference repositories;
-- production PgVectorStore write/search adapter with deterministic test EmbeddingModel;
+- production PostgresGenerationVectorRepository + PublishedVectorSearchRepository with deterministic test EmbeddingModel;
 - ResultFusion;
 - Reranker;
 - KnowledgeExpansion;
