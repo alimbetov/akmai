@@ -1,0 +1,12 @@
+package kz.alimbetov.akmai;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class AkmaiApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(AkmaiApplication.class, args);
+    }
+}
