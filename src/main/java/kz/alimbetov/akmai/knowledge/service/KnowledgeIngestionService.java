@@ -3,11 +3,16 @@ package kz.alimbetov.akmai.knowledge.service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.Instant;
+import java.util.ArrayList;
 import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
 import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResponse;
 import kz.alimbetov.akmai.knowledge.chunking.SemanticChunker;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDocument;
+import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
+import kz.alimbetov.akmai.knowledge.identifier.IdentifierExtractor;
+import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
@@ -17,13 +22,19 @@ public class KnowledgeIngestionService {
 
     private final SemanticChunker semanticChunker;
     private final VectorStore vectorStore;
+    private final IdentifierExtractor identifierExtractor;
+    private final IdentifierSearchIndex identifierSearchIndex;
 
     public KnowledgeIngestionService(
             SemanticChunker semanticChunker,
-            VectorStore vectorStore
+            VectorStore vectorStore,
+            IdentifierExtractor identifierExtractor,
+            IdentifierSearchIndex identifierSearchIndex
     ) {
         this.semanticChunker = semanticChunker;
         this.vectorStore = vectorStore;
+        this.identifierExtractor = identifierExtractor;
+        this.identifierSearchIndex = identifierSearchIndex;
     }
 
     public KnowledgeIngestionResponse addText(AddKnowledgeRequest request) {
@@ -51,6 +62,23 @@ public class KnowledgeIngestionService {
                 .toList();
 
         vectorStore.add(vectorDocuments);
+
+        List<DocumentIdentifier> identifiers = new ArrayList<>();
+        for (KnowledgeChunk chunk : chunks) {
+            identifierExtractor.extract(chunk.rawText()).forEach(detected ->
+                    identifiers.add(new DocumentIdentifier(
+                            chunk.documentId(),
+                            chunk.chunkId(),
+                            chunk.location().pageFrom(),
+                            detected.type(),
+                            detected.rawValue(),
+                            detected.normalizedValue(),
+                            detected.contextText(),
+                            Instant.now()
+                    ))
+            );
+        }
+        identifierSearchIndex.index(identifiers);
 
         return new KnowledgeIngestionResponse(
                 document.documentId(),
