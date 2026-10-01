@@ -69,7 +69,7 @@ public class ChunkRetentionService {
              * If reingestion won the race, this worker must not delete the newly
              * published PostgreSQL retrieval state.
              */
-            if (!lifecycleRepository.isCurrentClaim(claim)) {
+            if (!lifecycleRepository.isCurrentClaim(claim, clock.instant())) {
                 return stale(claim);
             }
 
