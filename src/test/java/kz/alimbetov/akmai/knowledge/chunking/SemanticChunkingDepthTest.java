@@ -115,6 +115,56 @@ class SemanticChunkingDepthTest {
                 """, "条 25");
     }
 
+
+    @Test
+    void supportsRealWorldKazakhAndChineseLegalHeadingForms() {
+        assertHierarchy(
+                "kk-real-law",
+                "kk",
+                """
+                ЗАҢ
+
+                1-бөлім
+
+                2-тарау
+
+                3-бөлік
+
+                25-бап. Шартты бұзу
+
+                1-тармақ
+
+                1.1-тармақша
+
+                Банк шартты бұзуға құқылы.
+                """,
+                "25-бап"
+        );
+
+        assertHierarchy(
+                "zh-real-law",
+                "zh",
+                """
+                法律
+
+                第一编 总则
+
+                第二章 合同
+
+                第三节 解除
+
+                第二十五条 合同终止
+
+                第一款 一般规则
+
+                第一项 通知
+
+                银行可以依法终止合同。
+                """,
+                "第二十五条"
+        );
+    }
+
     @Test
     void emitsMedicalFactsAsSeparateAtomicChunksAcrossLanguages() {
         assertMedicalAtomic("med-ru", "ru", """
