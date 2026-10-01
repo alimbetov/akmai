@@ -38,7 +38,9 @@ public class ParallelRetrievalExecutor {
         }
 
         return plan.steps().stream()
-                .flatMap(step -> futures.get(step.id()).join().stream())
+                .flatMap(step -> isolateFailure(futures.get(step.id()))
+                        .join()
+                        .stream())
                 .toList();
     }
 
