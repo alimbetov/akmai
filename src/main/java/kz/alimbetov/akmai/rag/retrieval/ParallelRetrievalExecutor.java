@@ -1,16 +1,21 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
-import java.time.Duration;
-import java.time.Instant;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalStep;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -22,82 +27,128 @@ public class ParallelRetrievalExecutor {
     private final Map<RetrievalType, RetrievalStrategy> strategies;
     private final Executor retrievalExecutor;
     private final RetrievalObserver observer;
+    private final RetrievalProperties properties;
 
     public ParallelRetrievalExecutor(
             List<RetrievalStrategy> strategies,
             @Qualifier("retrievalExecutor") Executor retrievalExecutor,
-            RetrievalObserver observer
+            RetrievalObserver observer,
+            RetrievalProperties properties
     ) {
         this.strategies = new EnumMap<>(RetrievalType.class);
         strategies.forEach(strategy -> this.strategies.put(strategy.type(), strategy));
         this.retrievalExecutor = retrievalExecutor;
         this.observer = observer;
+        this.properties = properties;
     }
 
     public List<RetrievalHit> execute(RetrievalPlan plan) {
-        validateAcyclic(plan);
-        Map<String, CompletableFuture<List<RetrievalHit>>> futures = new HashMap<>();
+        return executeDetailed(plan).hits();
+    }
 
+    public RetrievalExecutionResult executeDetailed(RetrievalPlan plan) {
+        validateAcyclic(plan);
+        Instant deadline = Instant.now().plus(properties.requestTimeout());
+        Map<String, CompletableFuture<RetrievalStepOutcome>> futures = new HashMap<>();
         for (RetrievalStep step : plan.steps()) {
             schedule(step, plan, futures);
         }
 
-        return plan.steps().stream()
-                .flatMap(step -> isolateFailure(futures.get(step.id()))
-                        .join()
-                        .stream())
+        LinkedHashMap<String, RetrievalStepOutcome> outcomes = new LinkedHashMap<>();
+        for (RetrievalStep step : plan.steps()) {
+            long remaining = Duration.between(Instant.now(), deadline).toMillis();
+            if (remaining <= 0) {
+                outcomes.put(step.id(), timeout(step));
+                continue;
+            }
+            try {
+                RetrievalStepOutcome outcome = futures.get(step.id())
+                        .get(remaining, TimeUnit.MILLISECONDS);
+                outcomes.put(step.id(), outcome);
+            } catch (java.util.concurrent.TimeoutException exception) {
+                futures.get(step.id()).cancel(true);
+                outcomes.put(step.id(), timeout(step));
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                outcomes.put(step.id(), failed(
+                        step,
+                        RetrievalOutcomeStatus.FAILED,
+                        "INTERRUPTED"
+                ));
+            } catch (java.util.concurrent.ExecutionException exception) {
+                outcomes.put(step.id(), outcomeFromFailure(step, exception.getCause()));
+            }
+        }
+
+        List<RetrievalHit> hits = outcomes.values().stream()
+                .flatMap(outcome -> outcome.hits().stream())
                 .toList();
+        boolean degraded = outcomes.values().stream()
+                .anyMatch(outcome -> !outcome.successful());
+        boolean criticalFailure = criticalFailure(plan, outcomes);
+        return new RetrievalExecutionResult(hits, outcomes, degraded, criticalFailure);
     }
 
-    private CompletableFuture<List<RetrievalHit>> schedule(
+    private CompletableFuture<RetrievalStepOutcome> schedule(
             RetrievalStep step,
             RetrievalPlan plan,
-            Map<String, CompletableFuture<List<RetrievalHit>>> futures
+            Map<String, CompletableFuture<RetrievalStepOutcome>> futures
     ) {
-        CompletableFuture<List<RetrievalHit>> existing = futures.get(step.id());
+        CompletableFuture<RetrievalStepOutcome> existing = futures.get(step.id());
         if (existing != null) {
             return existing;
         }
 
-        List<CompletableFuture<List<RetrievalHit>>> dependencies = step.dependsOn().stream()
-                .map(id -> findStep(plan, id))
-                .map(dependency -> schedule(dependency, plan, futures))
-                .toList();
-
-        List<CompletableFuture<List<RetrievalHit>>> isolatedDependencies =
-                dependencies.stream()
-                        .map(this::isolateFailure)
+        List<CompletableFuture<RetrievalStepOutcome>> dependencies =
+                step.dependsOn().stream()
+                        .map(id -> findStep(plan, id))
+                        .map(dependency -> schedule(dependency, plan, futures))
                         .toList();
 
         CompletableFuture<Void> ready = CompletableFuture.allOf(
-                isolatedDependencies.toArray(CompletableFuture[]::new)
+                dependencies.toArray(CompletableFuture[]::new)
         );
 
-        CompletableFuture<List<RetrievalHit>> future = ready.thenApplyAsync(
-                ignored -> executeStep(step, isolatedDependencies),
-                retrievalExecutor
-        );
+        CompletableFuture<RetrievalStepOutcome> future;
+        try {
+            future = ready.thenApplyAsync(
+                    ignored -> executeStep(step, dependencies),
+                    retrievalExecutor
+            );
+        } catch (RejectedExecutionException exception) {
+            future = CompletableFuture.completedFuture(
+                    failed(step, RetrievalOutcomeStatus.REJECTED, "EXECUTOR_REJECTED")
+            );
+        }
+
+        future = future
+                .orTimeout(properties.strategyTimeout().toMillis(), TimeUnit.MILLISECONDS)
+                .exceptionally(exception -> outcomeFromFailure(step, exception));
         futures.put(step.id(), future);
         return future;
     }
 
-    private CompletableFuture<List<RetrievalHit>> isolateFailure(
-            CompletableFuture<List<RetrievalHit>> future
-    ) {
-        return future.exceptionally(ignored -> List.of());
-    }
-
-    private List<RetrievalHit> executeStep(
+    private RetrievalStepOutcome executeStep(
             RetrievalStep step,
-            List<CompletableFuture<List<RetrievalHit>>> dependencies
+            List<CompletableFuture<RetrievalStepOutcome>> dependencyFutures
     ) {
-        RetrievalStrategy strategy = strategies.get(step.type());
-        if (strategy == null) {
-            return List.of();
+        List<RetrievalStepOutcome> dependencies = dependencyFutures.stream()
+                .map(CompletableFuture::join)
+                .toList();
+
+        RetrievalStepOutcome dependencyDecision = dependencyDecision(step, dependencies);
+        if (dependencyDecision != null) {
+            return dependencyDecision;
         }
 
-        List<RetrievalHit> dependencyHits = new ArrayList<>();
-        dependencies.forEach(future -> dependencyHits.addAll(future.join()));
+        RetrievalStrategy strategy = strategies.get(step.type());
+        if (strategy == null) {
+            return failed(step, RetrievalOutcomeStatus.FAILED, "STRATEGY_MISSING");
+        }
+
+        List<RetrievalHit> dependencyHits = dependencies.stream()
+                .flatMap(outcome -> outcome.hits().stream())
+                .toList();
 
         Instant started = Instant.now();
         try {
@@ -108,11 +159,167 @@ public class ParallelRetrievalExecutor {
                     .map(hit -> withQueryChunk(hit, step.queryChunk().id()))
                     .toList();
             observer.success(step.type(), Duration.between(started, Instant.now()), hits.size());
-            return hits;
+            return new RetrievalStepOutcome(
+                    step.id(),
+                    step.type(),
+                    hits.isEmpty()
+                            ? RetrievalOutcomeStatus.EMPTY
+                            : RetrievalOutcomeStatus.SUCCESS,
+                    hits,
+                    null
+            );
         } catch (RuntimeException exception) {
             observer.failure(step.type(), Duration.between(started, Instant.now()), exception);
             throw exception;
         }
+    }
+
+    private RetrievalStepOutcome dependencyDecision(
+            RetrievalStep step,
+            List<RetrievalStepOutcome> dependencies
+    ) {
+        if (dependencies.isEmpty()) {
+            return null;
+        }
+
+        if (step.type() == RetrievalType.VECTOR || step.type() == RetrievalType.LEXICAL) {
+            RetrievalStepOutcome identifier = dependencies.stream()
+                    .filter(value -> value.type() == RetrievalType.IDENTIFIER)
+                    .findFirst()
+                    .orElse(null);
+            if (identifier != null) {
+                if (identifier.status() == RetrievalOutcomeStatus.EMPTY) {
+                    return new RetrievalStepOutcome(
+                            step.id(),
+                            step.type(),
+                            RetrievalOutcomeStatus.SKIPPED_DEPENDENCY,
+                            List.of(),
+                            "IDENTIFIER_SCOPE_EMPTY"
+                    );
+                }
+                if (identifier.status() != RetrievalOutcomeStatus.SUCCESS) {
+                    return new RetrievalStepOutcome(
+                            step.id(),
+                            step.type(),
+                            RetrievalOutcomeStatus.SKIPPED_DEPENDENCY,
+                            List.of(),
+                            "IDENTIFIER_SCOPE_UNAVAILABLE"
+                    );
+                }
+            }
+        }
+
+        if (step.type() == RetrievalType.REFERENCE) {
+            boolean anyHits = dependencies.stream()
+                    .anyMatch(value -> value.status() == RetrievalOutcomeStatus.SUCCESS
+                            && !value.hits().isEmpty());
+            if (!anyHits) {
+                return new RetrievalStepOutcome(
+                        step.id(),
+                        step.type(),
+                        RetrievalOutcomeStatus.EMPTY,
+                        List.of(),
+                        null
+                );
+            }
+        }
+        return null;
+    }
+
+    private RetrievalStepOutcome outcomeFromFailure(
+            RetrievalStep step,
+            Throwable throwable
+    ) {
+        Throwable root = unwrap(throwable);
+        if (root instanceof TimeoutException) {
+            return timeout(step);
+        }
+        if (root instanceof RejectedExecutionException) {
+            return failed(step, RetrievalOutcomeStatus.REJECTED, "EXECUTOR_REJECTED");
+        }
+        return failed(
+                step,
+                RetrievalOutcomeStatus.FAILED,
+                root == null ? "UNKNOWN" : root.getClass().getSimpleName()
+        );
+    }
+
+    private Throwable unwrap(Throwable throwable) {
+        Throwable current = throwable;
+        while (current instanceof CompletionException
+                && current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
+    }
+
+    private RetrievalStepOutcome timeout(RetrievalStep step) {
+        return failed(step, RetrievalOutcomeStatus.TIMED_OUT, "TIMEOUT");
+    }
+
+    private RetrievalStepOutcome failed(
+            RetrievalStep step,
+            RetrievalOutcomeStatus status,
+            String category
+    ) {
+        return new RetrievalStepOutcome(
+                step.id(),
+                step.type(),
+                status,
+                List.of(),
+                category
+        );
+    }
+
+    private boolean criticalFailure(
+            RetrievalPlan plan,
+            Map<String, RetrievalStepOutcome> outcomes
+    ) {
+        Map<String, List<RetrievalStep>> byChunk = plan.steps().stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        step -> step.queryChunk().id()
+                ));
+        for (List<RetrievalStep> steps : byChunk.values()) {
+            RetrievalStep identifierStep = steps.stream()
+                    .filter(step -> step.type() == RetrievalType.IDENTIFIER)
+                    .findFirst()
+                    .orElse(null);
+            if (identifierStep != null) {
+                RetrievalStepOutcome identifier = outcomes.get(identifierStep.id());
+                if (identifier != null && isInfrastructureFailure(identifier.status())) {
+                    return true;
+                }
+                continue;
+            }
+
+            RetrievalStepOutcome vector = outcome(steps, outcomes, RetrievalType.VECTOR);
+            RetrievalStepOutcome lexical = outcome(steps, outcomes, RetrievalType.LEXICAL);
+            if (vector != null
+                    && lexical != null
+                    && isInfrastructureFailure(vector.status())
+                    && isInfrastructureFailure(lexical.status())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private RetrievalStepOutcome outcome(
+            List<RetrievalStep> steps,
+            Map<String, RetrievalStepOutcome> outcomes,
+            RetrievalType type
+    ) {
+        return steps.stream()
+                .filter(step -> step.type() == type)
+                .findFirst()
+                .map(step -> outcomes.get(step.id()))
+                .orElse(null);
+    }
+
+    private boolean isInfrastructureFailure(RetrievalOutcomeStatus status) {
+        return status == RetrievalOutcomeStatus.FAILED
+                || status == RetrievalOutcomeStatus.TIMED_OUT
+                || status == RetrievalOutcomeStatus.REJECTED;
     }
 
     private RetrievalHit withQueryChunk(RetrievalHit hit, String queryChunkId) {
