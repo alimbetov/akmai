@@ -41,6 +41,18 @@ akmai:
   retrieval:
     parallelism: ${AKMAI_RETRIEVAL_PARALLELISM:8}
     queue-capacity: ${AKMAI_RETRIEVAL_QUEUE_CAPACITY:64}
+    vector-top-k: ${AKMAI_RETRIEVAL_VECTOR_TOP_K:5}
+    vector-similarity-threshold: ${AKMAI_RETRIEVAL_VECTOR_THRESHOLD:0.65}
+    lexical-limit: ${AKMAI_RETRIEVAL_LEXICAL_LIMIT:10}
+    identifier-limit: ${AKMAI_RETRIEVAL_IDENTIFIER_LIMIT:10}
+    reference-limit: ${AKMAI_RETRIEVAL_REFERENCE_LIMIT:20}
+    rrf-k: ${AKMAI_RETRIEVAL_RRF_K:60}
+    expansion-seeds: ${AKMAI_RETRIEVAL_EXPANSION_SEEDS:5}
+    expansion-radius: ${AKMAI_RETRIEVAL_EXPANSION_RADIUS:1}
+    expansion-max: ${AKMAI_RETRIEVAL_EXPANSION_MAX:10}
+    context-max-tokens: ${AKMAI_RETRIEVAL_CONTEXT_MAX_TOKENS:6000}
+    context-max-chunks: ${AKMAI_RETRIEVAL_CONTEXT_MAX_CHUNKS:12}
+    context-max-chunks-per-document: ${AKMAI_RETRIEVAL_CONTEXT_MAX_CHUNKS_PER_DOCUMENT:4}
   retention:
     enabled: ${AKMAI_RETENTION_ENABLED:true}
     cron: "${AKMAI_RETENTION_CRON:0 30 3 * * *}"
