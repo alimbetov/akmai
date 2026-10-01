@@ -1,5 +1,5 @@
 name: CI
-# generation-scoped vector fencing gate
+# lifecycle vector fencing compile gate
 
 on:
   push:
