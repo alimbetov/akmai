@@ -2,6 +2,7 @@ package kz.alimbetov.akmai.knowledge.chunking;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDocument;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
