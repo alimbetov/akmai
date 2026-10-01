@@ -128,7 +128,28 @@ public class PostgresDocumentLifecycleRepository
     }
 
     @Override
-    public int failStaleIngestions(
+    public List<String> findStaleIngestionDocumentIds(Instant staleBefore, int limit) {
+        if (limit <= 0) {
+            throw new IllegalArgumentException("limit must be > 0");
+        }
+        return jdbcTemplate.queryForList(
+                """
+                SELECT document_id
+                FROM knowledge_document_lifecycle
+                WHERE lifecycle_status = 'INGESTING'
+                  AND ingestion_started_at < ?
+                ORDER BY ingestion_started_at, document_id
+                LIMIT ?
+                """,
+                String.class,
+                timestamp(staleBefore),
+                limit
+        );
+    }
+
+    @Override
+    public boolean failStaleIngestion(
+            String documentId,
             Instant staleBefore,
             Instant now,
             String error
@@ -141,13 +162,15 @@ public class PostgresDocumentLifecycleRepository
                     last_error = ?,
                     row_version = row_version + 1,
                     updated_at = ?
-                WHERE lifecycle_status = 'INGESTING'
+                WHERE document_id = ?
+                  AND lifecycle_status = 'INGESTING'
                   AND ingestion_started_at < ?
                 """,
                 sanitizeError(error),
                 timestamp(now),
+                documentId,
                 timestamp(staleBefore)
-        );
+        ) == 1;
     }
 
     @Override
