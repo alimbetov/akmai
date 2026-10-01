@@ -1,7 +1,6 @@
 package kz.alimbetov.akmai.knowledge.ingestion;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,8 +31,10 @@ class PersistenceCoordinatorTest {
     void vectorDocumentsUseGenerationScopedIdsAndCanonicalChunkMetadata() {
         Fixture fixture = fixture();
         when(fixture.lifecycle.findByDocumentId("doc-1")).thenReturn(java.util.Optional.empty());
-        when(fixture.lifecycle.activate("doc-1", RetentionPolicy.PERMANENT, null))
+        when(fixture.lifecycle.beginIngestion("doc-1", RetentionPolicy.PERMANENT, null))
                 .thenReturn(1L);
+        when(fixture.lifecycle.publishIngestion(org.mockito.ArgumentMatchers.eq("doc-1"), org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(true);
         when(fixture.projections.findChunkIdsByDocumentId("doc-1"))
                 .thenReturn(List.of());
 
@@ -65,8 +66,10 @@ class PersistenceCoordinatorTest {
         when(previous.generation()).thenReturn(4L);
         when(fixture.lifecycle.findByDocumentId("doc-1"))
                 .thenReturn(java.util.Optional.of(previous));
-        when(fixture.lifecycle.activate("doc-1", RetentionPolicy.PERMANENT, null))
+        when(fixture.lifecycle.beginIngestion("doc-1", RetentionPolicy.PERMANENT, null))
                 .thenReturn(5L);
+        when(fixture.lifecycle.publishIngestion(org.mockito.ArgumentMatchers.eq("doc-1"), org.mockito.ArgumentMatchers.eq(5L), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(true);
         when(fixture.vectorGenerations.findVectorIds("doc-1", 4L))
                 .thenReturn(List.of("v4-a", "v4-b"));
 
@@ -74,7 +77,7 @@ class PersistenceCoordinatorTest {
 
         verify(fixture.vectorStore).delete(List.of("v4-a", "v4-b"));
         verify(fixture.vectorGenerations).deleteGeneration("doc-1", 4L);
-        verify(fixture.lifecycle).activate("doc-1", RetentionPolicy.PERMANENT, null);
+        verify(fixture.lifecycle).beginIngestion("doc-1", RetentionPolicy.PERMANENT, null);
     }
 
     private Fixture fixture() {
