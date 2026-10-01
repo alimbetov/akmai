@@ -24,6 +24,8 @@ public interface DocumentLifecycleRepository {
 
     boolean renewLease(RetentionClaim claim, Instant now, Duration leaseDuration);
 
+    boolean releaseClaim(RetentionClaim claim, Instant now);
+
     boolean markDeleted(RetentionClaim claim, Instant now);
 
     boolean markFailed(RetentionClaim claim, Instant now, String error);
