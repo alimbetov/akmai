@@ -43,7 +43,7 @@ class ReferenceRetrievalStrategyTest {
                 "doc",
                 "target",
                 48,
-                IdentifierType.ARTICLE,
+                IdentifierType.DOCUMENT_NUMBER,
                 "Статья 48",
                 "СТАТЬЯ48",
                 "короткий identifier context",
