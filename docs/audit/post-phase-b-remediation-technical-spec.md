@@ -482,11 +482,14 @@ RagQuestionService MUST distinguish:
 
 Add validated properties:
 
-- retrieval.request-timeout
-- retrieval.strategy-timeout
-- reranker-timeout
-- answer-timeout
-- ingestion.vector-write-timeout
+- akmai.retrieval.request-timeout
+- akmai.retrieval.strategy-timeout
+- akmai.retrieval.reranker-timeout
+- akmai.retrieval.answer-timeout
+- akmai.retrieval.embedding-http-timeout
+- akmai.vector.embedding-http-timeout
+- akmai.vector.db-transaction-timeout
+- akmai.retention.cleanup-transaction-timeout
 - database/query timeouts where required
 
 All Duration values MUST be positive, have explicit minimum/maximum and avoid toMillis precision collapse.
@@ -1304,8 +1307,8 @@ Concurrency/fault injection:
 - retrieval saturation/shutdown;
 - reranker poisoned dependency;
 - vector write timeout;
-- heartbeat head-of-line;
-- queued retention lease;
+- permit-before-claim/no-claimed-queue invariant;
+- cleanup transaction timeout/lease expiry;
 - lease loss at every destructive boundary;
 - failure after every ingestion side effect;
 - >100 row batch rollback;
@@ -1347,6 +1350,7 @@ akmai.security.enabled
 akmai.security.api-key — external secret only; consumed as X-AKMAI-API-Key  
 akmai.vector.embedding-http-timeout  
 akmai.vector.db-transaction-timeout  
+akmai.retrieval.embedding-http-timeout  
 akmai.retention.cleanup-transaction-timeout  
 akmai.retrieval.context-expansion-max-chunks  
 akmai.idempotency.lease-duration  
@@ -1359,10 +1363,9 @@ Keep secrets out of committed application.yml values. Defaults must be safe for 
 The following outcomes MUST be deterministic.
 
 - Failed N+1 ingestion with published N -> N stays published; N+1 FAILED; cleanup is retryable.
-- Crash after staging relational state but before vector add -> stale STAGING generation is reconcilable and invisible.
-- Failure/crash during the publication DB transaction -> PostgreSQL rolls back vector + manifest + relational rows + pointer together; generation remains non-published and is recoverable.
+- Crash after generation allocation or after embedding but before publication transaction -> STAGING generation has no retrieval rows and is recoverable.
+- Failure/crash during the publication DB transaction -> PostgreSQL rolls back vector + manifest + relational rows + pointer together; ambiguous commit outcomes are resolved by re-reading authoritative state.
 - Embedding timeout occurs before any publication DB mutation and therefore requires no vector compensation.
-- Crash after vectors but before publication -> vectors remain unpublished/invisible and are reconcilable.
 - Crash immediately after publication -> N+1 remains published; old N may remain physically but is invisible and cleanup can resume.
 - Retrieval backend failure -> degraded/error status, never fabricated zero evidence.
 - Expired retention lease -> stale worker loses all mutation rights.
@@ -1397,7 +1400,7 @@ PR #13 MUST remain draft until every condition below is true.
 2. Every P0/P1 is VERIFIED.
 3. Every P2 is VERIFIED or has an explicit accepted disposition recorded in the ledger.
 4. Legacy upgrade Testcontainers gate passes.
-5. Production PgVectorStore E2E gate passes.
+5. Production profile-scoped pgvector repository E2E gate passes.
 6. Generation publication/reingestion/retention race suites pass.
 7. Multilingual production-pipeline quality gate passes.
 8. Retrieval metrics satisfy mathematical invariants.
