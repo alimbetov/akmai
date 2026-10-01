@@ -87,6 +87,8 @@ Add knowledge_document_generation:
 - document_id VARCHAR(100)
 - generation BIGINT
 - generation_status STAGING|PUBLISHED|FAILED|RETIRED|CLEANED
+- generation_kind INGESTION|REEMBEDDING
+- migration_id UUID NULL
 - embedding_profile_id VARCHAR(128)
 - content_fingerprint VARCHAR(64)
 - physical_id_version SMALLINT
@@ -777,7 +779,7 @@ Shutdown:
 
 This structural removal is the remediation for D09 and D60. D40 is closed by permit-before-claim/no-claimed-queue semantics.
 
-Stale-ingestion recovery uses an atomic PostgreSQL UPDATE ... FROM (SELECT ... FOR UPDATE SKIP LOCKED LIMIT :batch) over STAGING generation rows to mark them FAILED with cleanup_required=true. It repeats bounded batches and requires no document advisory lock.
+Stale-ingestion recovery uses an atomic PostgreSQL UPDATE ... FROM (SELECT ... FOR UPDATE SKIP LOCKED LIMIT :batch) over STAGING rows where generation_kind=INGESTION to mark them FAILED with cleanup_required=true. It repeats bounded batches and requires no document advisory lock.
 
 ## 22. Per-document concurrency without long-lived advisory locks
 
