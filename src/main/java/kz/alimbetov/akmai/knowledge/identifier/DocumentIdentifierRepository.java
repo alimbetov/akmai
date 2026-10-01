@@ -39,6 +39,37 @@ public class DocumentIdentifierRepository {
         );
     }
 
+    public List<DocumentIdentifier> findExact(
+            IdentifierType type,
+            String normalizedValue,
+            int limit
+    ) {
+        return jdbcTemplate.query(
+                """
+                SELECT document_id, chunk_id, page_number, identifier_type,
+                       raw_value, normalized_value, context_text, created_at
+                  FROM document_identifier
+                 WHERE identifier_type = ?
+                   AND normalized_value = ?
+                 ORDER BY created_at DESC
+                 LIMIT ?
+                """,
+                (rs, rowNum) -> new DocumentIdentifier(
+                        rs.getString("document_id"),
+                        rs.getString("chunk_id"),
+                        rs.getInt("page_number"),
+                        IdentifierType.valueOf(rs.getString("identifier_type")),
+                        rs.getString("raw_value"),
+                        rs.getString("normalized_value"),
+                        rs.getString("context_text"),
+                        rs.getTimestamp("created_at").toInstant()
+                ),
+                type.name(),
+                normalizedValue,
+                limit
+        );
+    }
+
     public List<DocumentIdentifier> findExact(String normalizedValue, int limit) {
         return jdbcTemplate.query(
                 """
