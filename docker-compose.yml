@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: akmai-postgres
+    environment:
+      POSTGRES_DB: akmai
+      POSTGRES_USER: akmai
+      POSTGRES_PASSWORD: akmai
+    ports:
+      - "5432:5432"
+    volumes:
+      - akmai_pgdata:/var/lib/postgresql/data
+
+volumes:
+  akmai_pgdata:
