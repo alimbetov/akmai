@@ -9,8 +9,6 @@ import kz.alimbetov.akmai.knowledge.chunking.SemanticChunker;
 import kz.alimbetov.akmai.knowledge.ingestion.EnrichedKnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.ingestion.ParallelIngestionExecutor;
 import kz.alimbetov.akmai.knowledge.ingestion.PersistenceCoordinator;
-import kz.alimbetov.akmai.knowledge.lifecycle.DocumentLifecycleRepository;
-import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDocument;
 import org.springframework.stereotype.Service;
@@ -21,18 +19,15 @@ public class KnowledgeIngestionService {
     private final SemanticChunker semanticChunker;
     private final ParallelIngestionExecutor parallelIngestionExecutor;
     private final PersistenceCoordinator persistenceCoordinator;
-    private final DocumentLifecycleRepository lifecycleRepository;
 
     public KnowledgeIngestionService(
             SemanticChunker semanticChunker,
             ParallelIngestionExecutor parallelIngestionExecutor,
-            PersistenceCoordinator persistenceCoordinator,
-            DocumentLifecycleRepository lifecycleRepository
+            PersistenceCoordinator persistenceCoordinator
     ) {
         this.semanticChunker = semanticChunker;
         this.parallelIngestionExecutor = parallelIngestionExecutor;
         this.persistenceCoordinator = persistenceCoordinator;
-        this.lifecycleRepository = lifecycleRepository;
     }
 
     public KnowledgeIngestionResponse addText(AddKnowledgeRequest request) {
@@ -54,18 +49,7 @@ public class KnowledgeIngestionService {
         List<EnrichedKnowledgeChunk> enriched =
                 parallelIngestionExecutor.execute(chunks);
 
-        long generation = lifecycleRepository.reserveGeneration(document.documentId());
-        persistenceCoordinator.persist(enriched, generation);
-        if (!lifecycleRepository.activate(
-                document.documentId(),
-                generation,
-                RetentionPolicy.PERMANENT,
-                null
-        )) {
-            throw new IllegalStateException(
-                    "Lifecycle generation changed before ingestion publication"
-            );
-        }
+        persistenceCoordinator.persist(enriched);
 
         return new KnowledgeIngestionResponse(
                 document.documentId(),
