@@ -15,7 +15,7 @@ public class QueryDecomposer {
     static final int MAX_SEGMENTS = 8;
 
     private static final Pattern SENTENCE_BOUNDARY =
-            Pattern.compile("(?<=[.!?;。！？；])\\s+");
+            Pattern.compile("(?<=[.!?;])\\s+|(?<=[。！？；])");
 
     private static final Pattern COORDINATING_BOUNDARY = Pattern.compile(
             "(?i)\\s+(?:and|as well as|и|а также|және|сондай-ақ)\\s+|(?:以及|并且)"
