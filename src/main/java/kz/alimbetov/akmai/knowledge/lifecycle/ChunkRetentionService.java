@@ -4,7 +4,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
-import kz.alimbetov.akmai.knowledge.ingestion.VectorIdentity;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
@@ -16,19 +15,25 @@ public class ChunkRetentionService {
     private final SearchProjectionRepository projectionRepository;
     private final IdentifierSearchIndex identifierSearchIndex;
     private final VectorStore vectorStore;
+    private final VectorGenerationRepository vectorGenerationRepository;
+    private final DocumentOperationLock documentOperationLock;
     private final Clock clock;
 
     public ChunkRetentionService(
             DocumentLifecycleRepository lifecycleRepository,
             SearchProjectionRepository projectionRepository,
             IdentifierSearchIndex identifierSearchIndex,
-            VectorStore vectorStore
+            VectorStore vectorStore,
+            VectorGenerationRepository vectorGenerationRepository,
+            DocumentOperationLock documentOperationLock
     ) {
         this(
                 lifecycleRepository,
                 projectionRepository,
                 identifierSearchIndex,
                 vectorStore,
+                vectorGenerationRepository,
+                documentOperationLock,
                 Clock.systemUTC()
         );
     }
@@ -38,71 +43,79 @@ public class ChunkRetentionService {
             SearchProjectionRepository projectionRepository,
             IdentifierSearchIndex identifierSearchIndex,
             VectorStore vectorStore,
+            VectorGenerationRepository vectorGenerationRepository,
+            DocumentOperationLock documentOperationLock,
             Clock clock
     ) {
         this.lifecycleRepository = lifecycleRepository;
         this.projectionRepository = projectionRepository;
         this.identifierSearchIndex = identifierSearchIndex;
         this.vectorStore = vectorStore;
+        this.vectorGenerationRepository = vectorGenerationRepository;
+        this.documentOperationLock = documentOperationLock;
         this.clock = clock;
     }
 
     public RetentionCleanupResult cleanup(RetentionClaim claim) {
-        Instant now = clock.instant();
-        if (!lifecycleRepository.markDeleting(claim, now)) {
-            return stale(claim);
-        }
-
-        try {
-            List<String> chunkIds =
-                    projectionRepository.findChunkIdsByDocumentId(claim.documentId());
-
-            if (!lifecycleRepository.isCurrentClaim(claim, clock.instant())) {
+        try (var ignored = documentOperationLock.acquire(claim.documentId())) {
+            Instant now = clock.instant();
+            if (!lifecycleRepository.markDeleting(claim, now)) {
                 return stale(claim);
             }
 
-            if (!chunkIds.isEmpty()) {
-                vectorStore.delete(chunkIds.stream()
-                        .map(chunkId -> VectorIdentity.physicalId(
-                                claim.documentId(), claim.generation(), chunkId
-                        ))
-                        .toList());
+            try {
+                List<String> vectorIds = vectorGenerationRepository.findVectorIds(
+                        claim.documentId(),
+                        claim.generation()
+                );
+                if (vectorIds.isEmpty()) {
+                    vectorIds = projectionRepository.findChunkIdsByDocumentId(
+                            claim.documentId()
+                    );
+                }
+
+                if (!lifecycleRepository.isCurrentClaim(claim, clock.instant())) {
+                    return stale(claim);
+                }
+
+                if (!vectorIds.isEmpty()) {
+                    vectorStore.delete(vectorIds);
+                }
+
+                if (!lifecycleRepository.isCurrentClaim(claim, clock.instant())) {
+                    return stale(claim);
+                }
+
+                identifierSearchIndex.deleteByDocumentId(claim.documentId());
+                projectionRepository.deleteByDocumentId(claim.documentId());
+                vectorGenerationRepository.deleteGeneration(
+                        claim.documentId(),
+                        claim.generation()
+                );
+
+                if (!lifecycleRepository.markDeleted(claim, clock.instant())) {
+                    return stale(claim);
+                }
+
+                return new RetentionCleanupResult(
+                        claim.documentId(),
+                        claim.generation(),
+                        vectorIds.size(),
+                        RetentionCleanupResult.Status.DELETED
+                );
+            } catch (RuntimeException exception) {
+                lifecycleRepository.markFailed(
+                        claim,
+                        clock.instant(),
+                        safeMessage(exception)
+                );
+                return new RetentionCleanupResult(
+                        claim.documentId(),
+                        claim.generation(),
+                        0,
+                        RetentionCleanupResult.Status.FAILED
+                );
             }
-
-            /*
-             * The fence is checked again after the non-transactional vector operation.
-             * If reingestion won the race, this worker must not delete the newly
-             * published PostgreSQL retrieval state.
-             */
-            if (!lifecycleRepository.isCurrentClaim(claim, clock.instant())) {
-                return stale(claim);
-            }
-
-            identifierSearchIndex.deleteByDocumentId(claim.documentId());
-            projectionRepository.deleteByDocumentId(claim.documentId());
-
-            if (!lifecycleRepository.markDeleted(claim, clock.instant())) {
-                return stale(claim);
-            }
-
-            return new RetentionCleanupResult(
-                    claim.documentId(),
-                    claim.generation(),
-                    chunkIds.size(),
-                    RetentionCleanupResult.Status.DELETED
-            );
-        } catch (RuntimeException exception) {
-            lifecycleRepository.markFailed(
-                    claim,
-                    clock.instant(),
-                    safeMessage(exception)
-            );
-            return new RetentionCleanupResult(
-                    claim.documentId(),
-                    claim.generation(),
-                    0,
-                    RetentionCleanupResult.Status.FAILED
-            );
         }
     }
 
