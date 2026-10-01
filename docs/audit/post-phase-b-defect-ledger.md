@@ -9,7 +9,8 @@ Purpose: accumulate defects found by repeated deep audits and close them with re
 - Audit 1/10: completed — initial deep audit after Phase B
 - Audit 2/10: completed — generation-publication model and citation failure-path audit
 - Audit 3/10: completed — retention fencing, context budgeting and reranker isolation audit
-- Audits 4/10 .. 10/10: pending
+- Audit 4/10: completed — process simulation, queue/load envelope and cross-pipeline contract audit
+- Audits 5/10 .. 10/10: pending
 - A defect is never removed from this ledger. It moves through `OPEN -> IMPLEMENTING -> FIXED -> VERIFIED`.
 - `VERIFIED` requires an automated regression test and exact-SHA successful CI.
 
@@ -60,6 +61,29 @@ Purpose: accumulate defects found by repeated deep audits and close them with re
 | D23 | P2 | RAG/context budget | `ContextBudget` counts only `hit.text()`, while `ContextAssembler` adds source labels and metadata fields (`documentId`, `chunkId`, `source`, `language`, `sectionPath`, `page`) for every chunk. The assembled context can therefore exceed `contextMaxTokens` even when the budget reports it within limit | budget the exact serialized context envelope, or reserve deterministic overhead per source plus prompt framing | test with long metadata / many chunks proving assembled context stays within configured token budget | OPEN |
 | D24 | P2 | reranker/runtime | Reranker timeout uses `Future.get(timeout)` + `cancel(true)`, but the single reranker worker can remain blocked inside `EmbeddingModel.embed()` if the client ignores interruption. One hung embed can monopolize the only worker and force later reranks into repeated timeout/rejection fallback until the underlying call returns | enforce transport-level embedding timeout/cancellation, isolate or rotate poisoned workers, and bound queued rerank work independently of candidate count | blocking scorer test proving one timed-out request cannot prevent a later rerank from executing successfully | OPEN |
 
+
+## Audit 4/10 findings
+
+| ID | Sev | Area | Defect | Required remediation | Verification | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| D25 | P1 | retrieval/identifier scoping | Identifier-dependent vector/lexical steps receive an empty `RetrievalContext` when exact identifier lookup misses. Both strategies interpret an empty document set as “unscoped global search”, so a query for an unknown contract/order/etc. can silently broaden from identifier-scoped retrieval to the entire corpus | distinguish “no scope requested” from “required scope resolved to zero documents”; fail closed or use an explicit configured fallback policy for identifier-bearing queries | unknown identifier + semantic text must not execute unrestricted vector/lexical retrieval; multi-identifier tests cover partial misses | OPEN |
+| D26 | P2 | retrieval/reference amplification | `ReferenceRetrievalStrategy` executes one identifier-index query per distinct textual reference, up to `referenceLimit` per reference step, and each lookup can return up to `identifierLimit` candidates. With 8 query units and defaults 20×10 this permits up to 160 identifier SQL lookups and 1,600 pre-fusion identifier candidates, plus projection lookups, from one user question | batch reference resolution, cap total resolved targets per step/request, deduplicate before database round-trips, and expose amplification metrics | query-count integration test and bounded-cardinality test for max-segment/max-reference input | OPEN |
+| D27 | P1 | retrieval/reference correctness | The production reference pipeline has no real producer for the keys consumed by `ReferenceRetrievalStrategy`: `CrossReferenceExtractor` emits forms such as `статья/article/section/clause 48`, while the ingestion `IdentifierExtractor` only indexes business/document identifiers captured as their value token. Existing reference tests manually synthesize `references` and `DocumentIdentifier` rows that normal ingestion cannot create | define a typed canonical cross-reference identity and index it during ingestion; make extractor, normalizer, identifier storage and reference resolver share that contract | end-to-end Testcontainers test that ingests a source containing a real cross-reference and a target containing the referenced article/section, then resolves it without manually inserted identifier rows | OPEN |
+| D28 | P1 | JDBC/concurrency | `DocumentOperationLock` holds a DataSource connection for the full ingestion/retention critical section, while code inside that section uses `JdbcTemplate`/pgvector and therefore needs additional connections from the same pool. If concurrent document locks consume the pool, every lock holder can block waiting for a second connection and no operation can progress to release its lock | avoid holding an application-pool connection solely for session advisory locking, use a dedicated lock datasource/connection budget or a single-connection transactional/fencing design, and enforce a concurrency invariant against pool capacity | Hikari integration test with a deliberately small pool and concurrent different-document operations proves no connection-starvation cycle | OPEN |
+| D29 | P1 | RAG/runtime | Retrieval and reranking can be given deadlines, but the final synchronous `chatClient.prompt().call().content()` stage has no application-level request deadline/cancellation/fallback contract in this service. A slow or wedged generation call can therefore dominate end-to-end request latency after retrieval has completed | add an explicit answer-generation deadline and transport timeout, cancellation/isolation, and a deterministic fallback/error contract | blocking/fault-injected chat model test proves `ask()` returns or fails within the configured end-to-end deadline | OPEN |
+| D30 | P2 | metadata/retrieval | Request metadata permits null values; those values are persisted in `metadata_json`, while `RetrievalHit` canonicalizes metadata with `Map.copyOf`, which rejects null keys/values. A document containing a null metadata value can therefore make a retrieval branch fail when its projection metadata is converted to a hit | validate/canonicalize metadata at ingestion and/or sanitize nulls before constructing retrieval hits; define supported metadata value types | ingest metadata containing a null value and prove vector/lexical retrieval remains deterministic rather than throwing/dropping the branch | OPEN |
+
+### Audit 4 simulation / capacity evidence
+
+These are stress-model results, not production telemetry.
+
+- Query decomposition permits up to 8 units. An identifier-bearing unit can create 4 retrieval steps, giving a structural maximum of 32 retrieval tasks per request. With 8 workers, a simplified service-demand model yields an executor-only saturation envelope of about 5 max-fanout requests/s at 50 ms average task time, 2.5 requests/s at 100 ms, and 1 request/s at 250 ms, before database/model overhead.
+- For identifier-scoped queries, if the independent per-identifier resolution miss rate were 10%, the probability that at least one of 8 identifier units enters the current unintended global fallback path is `1 - 0.9^8 ≈ 56.95%`. At a 5% miss rate it is about 33.66%. This quantifies D25 sensitivity; the miss rates themselves are illustrative.
+- The reference-stage upper bound from the current defaults is deterministic: up to 8 reference steps × 20 identifier lookups = 160 identifier SQL lookups, and up to 8 × 20 × 10 = 1,600 identifier candidates before fusion. Projection reads add further round-trips.
+- The application does not set a Hikari maximum pool size. With Hikari's default maximum of 10 connections, 10 concurrent document operations holding session advisory-lock connections leave no free connection for nested JDBC work. A Poisson/lognormal stress model with 1 s mean lock hold is highly sensitive once offered concurrency approaches that boundary; this is used only to prioritize D28, while the defect itself follows from the connection-allocation invariant.
+- The reranker model from Audit 3 is also load-sensitive: with one worker and a 20-entry queue, cancellation of queued `FutureTask` instances does not create a transport-level guarantee that the underlying embed call stopped; D24 remains a separate poisoned-worker concern.
+
+
 ## Remediation order
 
 ### Wave 1 — consistency and visibility
@@ -80,7 +104,11 @@ D05 identifier-only canonical resolution
 D06 RU/EN FTS indexes
 D07 retrieval deadlines
 D08 saturation isolation
+D25 identifier-scope fail-closed semantics
+D27 real cross-reference indexing contract
+D26 reference fan-out/query amplification
 D24 reranker poisoned-worker isolation
+D29 answer-generation deadline
 D23 exact assembled-context budget
 ```
 
@@ -89,6 +117,7 @@ D23 exact assembled-context budget
 ```text
 D09 retention shutdown race
 D22 retention lease fencing
+D28 JDBC/advisory-lock pool starvation
 ```
 
 ### Wave 4 — trust, provenance and API boundaries
@@ -103,6 +132,7 @@ D14 expansion provenance
 D15 language canonicalization
 D16 ambiguous language routing
 D17 request limits
+D30 metadata canonicalization
 D18 authentication/authorization
 ```
 
