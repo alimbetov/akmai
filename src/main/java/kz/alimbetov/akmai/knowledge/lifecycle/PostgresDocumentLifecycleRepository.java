@@ -179,6 +179,7 @@ public class PostgresDocumentLifecycleRepository
                 WHERE document_id = ?
                   AND generation = ?
                   AND claim_generation = ?
+                  AND claim_id = ?
                   AND claimed_by = ?
                   AND lease_until >= ?
                   AND lifecycle_status = 'DELETE_PENDING'
@@ -188,6 +189,7 @@ public class PostgresDocumentLifecycleRepository
                 claim.documentId(),
                 claim.generation(),
                 claim.generation(),
+                claim.claimId(),
                 claim.workerId(),
                 timestamp(now)
         ) == 1;
@@ -211,6 +213,7 @@ public class PostgresDocumentLifecycleRepository
                 WHERE document_id = ?
                   AND generation = ?
                   AND claim_generation = ?
+                  AND claim_id = ?
                   AND claimed_by = ?
                   AND lease_until >= ?
                   AND lifecycle_status IN ('DELETE_PENDING', 'DELETING')
@@ -220,6 +223,7 @@ public class PostgresDocumentLifecycleRepository
                 claim.documentId(),
                 claim.generation(),
                 claim.generation(),
+                claim.claimId(),
                 claim.workerId(),
                 timestamp(now)
         ) == 1;
@@ -243,6 +247,7 @@ public class PostgresDocumentLifecycleRepository
                 WHERE document_id = ?
                   AND generation = ?
                   AND claim_generation = ?
+                  AND claim_id = ?
                   AND claimed_by = ?
                   AND lease_until >= ?
                   AND lifecycle_status = 'DELETING'
@@ -252,6 +257,7 @@ public class PostgresDocumentLifecycleRepository
                 claim.documentId(),
                 claim.generation(),
                 claim.generation(),
+                claim.claimId(),
                 claim.workerId(),
                 timestamp(now)
         ) == 1;
@@ -280,6 +286,7 @@ public class PostgresDocumentLifecycleRepository
                 WHERE document_id = ?
                   AND generation = ?
                   AND claim_generation = ?
+                  AND claim_id = ?
                   AND claimed_by = ?
                   AND lifecycle_status IN ('DELETE_PENDING', 'DELETING')
                 """,
@@ -288,6 +295,7 @@ public class PostgresDocumentLifecycleRepository
                 claim.documentId(),
                 claim.generation(),
                 claim.generation(),
+                claim.claimId(),
                 claim.workerId()
         ) == 1;
     }
@@ -301,6 +309,7 @@ public class PostgresDocumentLifecycleRepository
                 WHERE document_id = ?
                   AND generation = ?
                   AND claim_generation = ?
+                  AND claim_id = ?
                   AND claimed_by = ?
                   AND lease_until >= ?
                   AND lifecycle_status IN ('DELETE_PENDING', 'DELETING')
@@ -309,6 +318,7 @@ public class PostgresDocumentLifecycleRepository
                 claim.documentId(),
                 claim.generation(),
                 claim.generation(),
+                claim.claimId(),
                 claim.workerId(),
                 timestamp(now)
         );
