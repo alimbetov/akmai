@@ -39,4 +39,3 @@ class ContextBudgetTest {
         assertThat(budget.apply(List.of(hit))).isEmpty();
     }
 }
-
