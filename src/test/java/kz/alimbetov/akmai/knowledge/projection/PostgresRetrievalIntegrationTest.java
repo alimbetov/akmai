@@ -5,6 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
+import java.time.Instant;
+import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
+import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
+import kz.alimbetov.akmai.knowledge.identifier.IdentifierType;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
@@ -81,6 +85,44 @@ class PostgresRetrievalIntegrationTest {
         assertThat(repository.searchLexical("replacement", List.of("doc-1"), 10))
                 .extracting(SearchProjection::chunkId)
                 .containsExactly("new-chunk");
+    }
+
+    @Test
+    void identifierReplacementLeavesNoStaleIdentifierState() {
+        DocumentIdentifierRepository identifiers =
+                new DocumentIdentifierRepository(jdbcTemplate);
+        identifiers.saveAll(List.of(new DocumentIdentifier(
+                "doc-ident",
+                "old-ident-chunk",
+                0,
+                IdentifierType.DOCUMENT_NUMBER,
+                "OLD-42",
+                "OLD-42",
+                "old context",
+                Instant.now()
+        )));
+
+        assertThat(identifiers.findExact("OLD-42", 10)).hasSize(1);
+
+        jdbcTemplate.update(
+                "DELETE FROM document_identifier WHERE document_id = ?",
+                "doc-ident"
+        );
+        identifiers.saveAll(List.of(new DocumentIdentifier(
+                "doc-ident",
+                "new-ident-chunk",
+                0,
+                IdentifierType.DOCUMENT_NUMBER,
+                "NEW-43",
+                "NEW-43",
+                "new context",
+                Instant.now()
+        )));
+
+        assertThat(identifiers.findExact("OLD-42", 10)).isEmpty();
+        assertThat(identifiers.findExact("NEW-43", 10))
+                .extracting(DocumentIdentifier::chunkId)
+                .containsExactly("new-ident-chunk");
     }
 
     @Test
