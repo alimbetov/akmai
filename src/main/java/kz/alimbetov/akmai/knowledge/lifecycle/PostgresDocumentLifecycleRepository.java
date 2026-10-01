@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import java.sql.ResultSet;
+import java.sql.Timestamp;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
@@ -58,7 +59,7 @@ public class PostgresDocumentLifecycleRepository
                 Long.class,
                 documentId,
                 policy.name(),
-                expiresAt
+                timestamp(expiresAt)
         );
         if (generation == null) {
             throw new IllegalStateException("Lifecycle activation returned no generation");
@@ -105,7 +106,7 @@ public class PostgresDocumentLifecycleRepository
                         rs.getString("document_id"),
                         rs.getLong("claim_generation")
                 ),
-                now,
+                timestamp(now),
                 retryLimit,
                 batchSize
         ));
@@ -138,8 +139,8 @@ public class PostgresDocumentLifecycleRepository
                   AND claim_generation = ?
                   AND lifecycle_status = 'DELETING'
                 """,
-                now,
-                now,
+                timestamp(now),
+                timestamp(now),
                 claim.documentId(),
                 claim.generation(),
                 claim.generation()
@@ -169,7 +170,7 @@ public class PostgresDocumentLifecycleRepository
                   AND lifecycle_status IN ('DELETE_PENDING', 'DELETING')
                 """,
                 sanitized,
-                now,
+                timestamp(now),
                 claim.documentId(),
                 claim.generation(),
                 claim.generation()
@@ -234,9 +235,9 @@ public class PostgresDocumentLifecycleRepository
                 """,
                 target.name(),
                 target.name(),
-                now,
+                timestamp(now),
                 error,
-                now,
+                timestamp(now),
                 claim.documentId(),
                 claim.generation(),
                 claim.generation(),
@@ -260,6 +261,10 @@ public class PostgresDocumentLifecycleRepository
                 instant(rs, "created_at"),
                 instant(rs, "updated_at")
         );
+    }
+
+    private Timestamp timestamp(Instant instant) {
+        return instant == null ? null : Timestamp.from(instant);
     }
 
     private Long nullableLong(ResultSet rs, String column) throws SQLException {
