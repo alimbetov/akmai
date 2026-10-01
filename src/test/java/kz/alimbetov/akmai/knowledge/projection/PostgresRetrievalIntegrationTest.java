@@ -15,6 +15,12 @@ import kz.alimbetov.akmai.knowledge.ingestion.EnrichedKnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.ingestion.PersistenceCoordinator;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
+import kz.alimbetov.akmai.rag.query.QueryChunk;
+import kz.alimbetov.akmai.rag.retrieval.KnowledgeExpansion;
+import kz.alimbetov.akmai.rag.retrieval.ReferenceRetrievalStrategy;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalContext;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -174,6 +180,101 @@ class PostgresRetrievalIntegrationTest {
         assertThat(identifierRepository.findExact("NEW-COORD", 10))
                 .extracting(DocumentIdentifier::chunkId)
                 .containsExactly("new-coordinator");
+    }
+
+    @Test
+    void referenceResolutionUsesPostgresProjectionAndCanonicalTargetText() {
+        DocumentIdentifierRepository identifierRepository =
+                new DocumentIdentifierRepository(jdbcTemplate);
+        PostgresIdentifierSearchIndex identifierIndex =
+                new PostgresIdentifierSearchIndex(
+                        identifierRepository,
+                        new IdentifierNormalizer(),
+                        jdbcTemplate
+                );
+        SearchProjection seed = projection(
+                "ref-seed",
+                "doc-ref",
+                0,
+                "См. документ REF-48."
+        );
+        seed = new SearchProjection(
+                seed.chunkId(),
+                seed.documentId(),
+                seed.parentChunkId(),
+                seed.chunkIndex(),
+                seed.text(),
+                seed.embeddingText(),
+                "ru",
+                seed.domain(),
+                seed.sectionPath(),
+                seed.identifiers(),
+                List.of("REF-48"),
+                seed.metadata(),
+                seed.projectionVersion()
+        );
+        SearchProjection target = projection(
+                "ref-target",
+                "doc-ref-target",
+                0,
+                "Канонический текст целевого документа."
+        );
+        repository.saveAll(List.of(seed, target));
+        identifierRepository.saveAll(List.of(new DocumentIdentifier(
+                "doc-ref-target",
+                "ref-target",
+                0,
+                IdentifierType.DOCUMENT_NUMBER,
+                "REF-48",
+                new IdentifierNormalizer().normalize("REF-48"),
+                "short context",
+                Instant.now()
+        )));
+
+        ReferenceRetrievalStrategy strategy =
+                new ReferenceRetrievalStrategy(repository, identifierIndex);
+        List<RetrievalHit> hits = strategy.retrieve(
+                new QueryChunk("q-ref", 0, "REF-48", "REF-48", "REF-48", List.of()),
+                new RetrievalContext(List.of(new RetrievalHit(
+                        RetrievalType.LEXICAL,
+                        "doc-ref",
+                        "ref-seed",
+                        seed.text(),
+                        Map.of()
+                )))
+        );
+
+        assertThat(hits).hasSize(1);
+        assertThat(hits.getFirst().chunkId()).isEqualTo("ref-target");
+        assertThat(hits.getFirst().text())
+                .isEqualTo("Канонический текст целевого документа.");
+    }
+
+    @Test
+    void neighborExpansionUsesPostgresCanonicalCoordinatesAndOrdering() {
+        repository.saveAll(List.of(
+                projection("neighbor-0", "doc-neighbor", 0, "before"),
+                projection("neighbor-1", "doc-neighbor", 1, "seed"),
+                projection("neighbor-2", "doc-neighbor", 2, "after")
+        ));
+
+        KnowledgeExpansion expansion = new KnowledgeExpansion(repository);
+        List<RetrievalHit> expanded = expansion.expand(List.of(
+                new RetrievalHit(
+                        RetrievalType.VECTOR,
+                        "doc-neighbor",
+                        "neighbor-1",
+                        "seed",
+                        Map.of()
+                )
+        ));
+
+        assertThat(expanded)
+                .extracting(RetrievalHit::chunkId)
+                .containsExactly("neighbor-1", "neighbor-0", "neighbor-2");
+        assertThat(expanded.subList(1, expanded.size()))
+                .allSatisfy(hit -> assertThat(hit.metadata())
+                        .containsEntry("expansion", "neighbor"));
     }
 
     @Test
