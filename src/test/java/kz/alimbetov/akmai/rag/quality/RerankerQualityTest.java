@@ -41,11 +41,13 @@ class RerankerQualityTest {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             Reranker reranker = new Reranker(
-                    (question, hit) -> switch (hit.chunkId()) {
-                        case "dose" -> 0.98;
-                        case "route" -> 0.85;
-                        default -> 0.10;
-                    },
+                    (question, hits) -> hits.stream()
+                            .map(hit -> switch (hit.chunkId()) {
+                                case "dose" -> 0.98;
+                                case "route" -> 0.85;
+                                default -> 0.10;
+                            })
+                            .toList(),
                     properties(),
                     new RetrievalObserver(new SimpleMeterRegistry()),
                     executor
