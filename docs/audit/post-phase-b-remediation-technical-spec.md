@@ -502,13 +502,14 @@ Shutdown MUST:
 
 Transport-level HTTP/JDBC timeouts MUST back application deadlines so cancellation is not dependent only on Thread.interrupt.
 
-Mutating vector operations MUST NOT be detached into a Future that is timed out and then compensated while the mutation can still continue. PgVectorStore.add/delete remain synchronous from the state-machine perspective. Their Ollama HTTP call and JDBC statements receive hard transport/statement timeouts; compensation starts only after the mutating call has conclusively returned or thrown. If an outer request deadline expires first, the request may return timeout, but the state-machine worker continues only until its bounded transport/JDBC calls terminate and then performs the normal failure/compensation transition.
+Embedding is the only network call in the ingestion publication path and occurs before publication DB mutation. It MUST NOT be detached into a Future whose timeout can race with later state transitions.
 
 Spring AI 1.0.3 auto-configuration shares one OllamaApi between chat and embedding, which cannot express the required independent transport deadlines. Replace that implicit sharing with explicit qualified beans:
-- vectorWriteOllamaApi + vectorWriteEmbeddingModel: same embedding model/profile, transport timeout <= ingestion.vector-write-timeout; injected into PgVectorStore used for writes;
-- retrievalOllamaApi + retrievalEmbeddingModel: same semantic embedding profile, transport timeout <= retrieval.strategy-timeout; used by PublishedVectorSearchRepository and semantic reranker;
-- chatOllamaApi + chatModel: chat transport timeout <= retrieval.answer-timeout.
-Timeout/client settings are operational and are NOT part of EmbeddingProfile semantic fingerprint.
+- vectorWriteOllamaApi + vectorWriteEmbeddingModel: same embedding model/profile, transport timeout <= akmai.vector.embedding-http-timeout; used only by GenerationEmbeddingService;
+- retrievalOllamaApi + retrievalEmbeddingModel: same semantic embedding profile, transport timeout <= akmai.retrieval.embedding-http-timeout and <= strategy timeout; used by PublishedVectorSearchRepository and semantic reranker;
+- chatOllamaApi + chatModel: chat transport timeout <= akmai.retrieval.answer-timeout.
+
+Publication and cleanup JDBC work is bounded by transaction/statement timeouts, not Future cancellation. Timeout/client settings are operational and are NOT part of EmbeddingProfile semantic fingerprint.
 
 ## 12. Fusion, reranking and authority
 
@@ -884,7 +885,7 @@ Add readiness contributors for:
 Liveness MUST remain process-local and MUST NOT fail only because Ollama is temporarily unavailable.
 
 Add bounded-cardinality Micrometer metrics for:
-- ingestion duration/chunks/failures/compensation;
+- ingestion duration/chunks/failures/publication rollback/stale-generation recovery;
 - vector add/delete/reconciliation latency;
 - generation state counts;
 - retrieval per-strategy latency/hits/status;
@@ -893,7 +894,7 @@ Add bounded-cardinality Micrometer metrics for:
 - context serialized tokens/chunks;
 - answer generation latency/failure;
 - citation validation failures;
-- retention claims/deletes/failures/stale claims/lease loss/heartbeats/backlog/run duration.
+- retention claims/deletes/failures/stale claims/lease loss/backlog/run duration.
 
 No document/question text in metric labels.
 
