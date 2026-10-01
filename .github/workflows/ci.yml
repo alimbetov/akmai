@@ -1,5 +1,5 @@
 name: CI
-# hybrid retrieval review gate
+# hybrid retrieval review gate v2
 
 on:
   push:
