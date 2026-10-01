@@ -56,7 +56,7 @@ public class ChunkRetentionService {
             List<String> chunkIds =
                     projectionRepository.findChunkIdsByDocumentId(claim.documentId());
 
-            if (!lifecycleRepository.isCurrentClaim(claim)) {
+            if (!lifecycleRepository.isCurrentClaim(claim, clock.instant())) {
                 return stale(claim);
             }
 
