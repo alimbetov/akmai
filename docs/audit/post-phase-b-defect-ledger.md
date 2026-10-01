@@ -14,7 +14,8 @@ Purpose: accumulate defects found by repeated deep audits and close them with re
 - Audit 6/10: completed — previously-unreviewed chunking, ingestion runtime, retention queue and executor lifecycle audit
 - Audit 7/10: completed — SQL/data-volume, Unicode, malformed-corpus, identity-serialization and distributed-clock audit
 - Audit 8/10: completed — invariant-driven architecture review (authority, semantic preservation, boundedness and verification architecture)
-- Audits 9/10 .. 10/10: pending
+- Audit 9/10: completed — counterexample-driven review of SQL semantics, distributed heartbeats, multilingual parsing, degraded retrieval outcomes and readiness
+- Audit 10/10: pending
 - A defect is never removed from this ledger. It moves through `OPEN -> IMPLEMENTING -> FIXED -> VERIFIED`.
 - `VERIFIED` requires an automated regression test and exact-SHA successful CI.
 
@@ -144,6 +145,20 @@ These are stress-model results, not production telemetry.
 | D58 | P1 | verification architecture | Critical vector consistency contracts are not exercised through the production Spring AI PgVectorStore adapter. Repository Testcontainers tests use PostgreSQL for relational projections/lifecycle while ingestion/retention tests mock `VectorStore`; the test tree contains no PgVectorStore/live vector-store E2E. Consequently physical ID behavior, metadata filters, real add/delete semantics and D01/D19 compensation assumptions cannot reach VERIFIED status from the current CI evidence alone | add a production-adapter E2E gate using PostgreSQL+pgvector and a deterministic embedding model/stub at the Spring AI adapter boundary; test real add/search/filter/delete, generation visibility and partial/failure compensation semantics | exact-SHA CI includes an E2E that instantiates the production PgVectorStore configuration and proves write/search/filter/delete/generation contracts without mocking VectorStore | OPEN |
 
 
+
+## Audit 9/10 findings
+
+| ID | Sev | Area | Defect | Required remediation | Verification | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| D59 | P1 | PostgreSQL lexical/data volume | KK/ZH trigram retrieval includes `lower(text_content) LIKE '%' || lower(?) || '%'` without escaping SQL LIKE metacharacters. Prepared binding prevents SQL injection but `%` and `_` inside the user query still act as wildcards. A query such as `%` can make the LIKE branch match the entire language corpus and force ranking over all matching rows; ordinary text such as `5%` also has non-literal semantics | escape `%`, `_` and the escape character and use an explicit `ESCAPE` clause; define a minimum/selectivity policy for very short trigram queries and keep the literal query semantics identical across languages | Testcontainers tests for `%`, `_`, `5%` and literal wildcard-containing KK/ZH queries prove only literal matches are returned; large-corpus EXPLAIN gate prevents wildcard-driven full-corpus ranking | OPEN |
+| D60 | P1 | retention/heartbeat concurrency | All active retention claims share one `ScheduledThreadPoolExecutor(1)` for heartbeat renewal, and each heartbeat performs synchronous JDBC work with no per-renewal timeout. One blocked/slow `renewLease` call can head-of-line block heartbeat execution for every other claim until their leases expire, causing unrelated workers to lose ownership and become reclaimable | remove the single heartbeat failure domain: batch/transactionally renew claims or use bounded isolated heartbeat concurrency, add DB/query deadlines and sufficient lease safety margin, and preserve per-claim fencing | deterministic test blocks renewal for claim A while claim B is active and proves B continues to renew before expiry; database-stall fault injection cannot expire all unrelated leases | OPEN |
+| D61 | P1 | multilingual/chunking | Document sentence segmentation requires whitespace after `。！？`. Normal Chinese prose typically has no whitespace between sentences, so text such as `剂量...。禁忌...。监测...。` remains one semantic unit. Medical classification then assigns one type to the combined block (for example CONTRAINDICATION wins because it is checked first) and atomic protection preserves the mixed facts together, violating the Chinese medical atomic-fact contract | implement language/script-aware sentence segmentation that splits Chinese punctuation without requiring whitespace, then classify/protect each sentence/fact independently | single-paragraph no-whitespace Chinese fixtures containing dosage + contraindication + monitoring produce separate correctly typed atomic units/chunks and round-trip all text | OPEN |
+| D62 | P1 | retrieval/failure semantics | `ParallelRetrievalExecutor` converts exceptional strategy futures to `List.of()`, so downstream code cannot distinguish a genuine zero-hit result from a backend failure. If all critical retrieval paths fail, `RagQuestionService` returns the normal “insufficient information” answer; identifier-strategy failure can also collapse to the same empty dependency state that currently triggers D25 global fallback | carry typed retrieval outcomes (hits, empty, failed, timed out, rejected) through plan execution; define per-strategy and aggregate degraded/fail-closed policy; never represent infrastructure failure as a normal zero-hit result | healthy zero-hit query returns the normal insufficient-information response, while all-strategy failure and exact-identifier backend failure produce an explicit degraded/error outcome and cannot trigger unrestricted semantic fallback | OPEN |
+| D63 | P2 | configuration/reranker | `RetrievalProperties.rerankerTimeout` is only `@NotNull`. Zero, negative, sub-millisecond and arbitrarily large durations pass startup validation. The implementation converts the duration with `toMillis()`; sub-millisecond positive values become 0 and behave as immediate timeout, while very large values defeat the intended bounded reranker contract | validate a positive operational range for reranker timeout and avoid lossy duration conversion for supported precision; reject impossible/unbounded timeout configurations at startup | configuration-binding tests reject zero/negative/too-small/too-large durations and prove the minimum accepted value produces a non-zero effective timeout | OPEN |
+| D64 | P2 | multilingual/references | `CrossReferenceExtractor` does not recognize common target-language legal-reference forms: Kazakh number-before-label forms such as `25-бап` / `1-тармақ`, or Chinese forms such as `第25条` / `第二十五条`. These references are silently absent from canonical chunks even after D27 adds a real reference index/producer | define canonical typed cross-reference parsing for KK/RU/EN/ZH, including language-native number/order forms, and normalize declarations versus references consistently | golden corpus extracts equivalent article/paragraph references from KK/RU/EN/ZH forms into the same typed canonical identity | OPEN |
+| D65 | P2 | readiness/operations | The application includes Actuator but defines no application readiness contract for the dependencies that make ingestion/RAG usable: Ollama chat, Ollama embeddings, and vector-store/model compatibility. With PostgreSQL healthy, process/DB health can remain green while both ingestion and final answer generation are unusable because Ollama/model state is unavailable or incompatible | add readiness contributors for required AI/model/vector capabilities, separate liveness from readiness, and include embedding-profile/dimension compatibility without performing expensive inference on every probe | application-context/integration test with healthy PostgreSQL but unavailable Ollama reports NOT_READY; compatible dependencies report READY; liveness remains independent of transient AI dependency failure | OPEN |
+
+
 ## Remediation order
 
 ### Wave 1 — consistency and visibility
@@ -168,7 +183,9 @@ D32 embedding profile / re-embedding lifecycle
 D04 canonical representative
 D05 identifier-only canonical resolution
 D06 RU/EN FTS indexes
+D59 literal/selective KK/ZH trigram queries
 D07 retrieval deadlines
+D62 typed retrieval failure outcomes
 D08 saturation isolation
 D43 executor shutdown/rejection semantics
 D51 identifier false-positive grammar
@@ -181,6 +198,7 @@ D26 reference fan-out/query amplification
 D53 expansion/context integration
 D55 query-decomposition overflow semantics
 D24 reranker poisoned-worker isolation
+D63 validated reranker timeout semantics
 D29 answer-generation deadline
 D23 exact assembled-context budget
 ```
@@ -190,6 +208,7 @@ D23 exact assembled-context budget
 ```text
 D09 retention shutdown race
 D40 queued-claim lease/retry semantics
+D60 heartbeat isolation / renewal deadlines
 D49 database-authoritative lease clock
 D45 stale-ingestion recovery fairness/paging
 D22 retention lease fencing
@@ -212,6 +231,8 @@ D16 ambiguous language routing
 D41 legal semantic polarity/token boundaries
 D42 Kazakh paragraph/subparagraph hierarchy
 D54 numbered medical-list semantic preservation
+D61 Chinese no-whitespace sentence atomicity
+D64 multilingual cross-reference grammar
 D56 final chunk hard-max invariant
 D57 exact embedding-payload budget
 D48 Unicode-safe oversized splitting
@@ -220,6 +241,7 @@ D17 request limits
 D36 chunking configuration invariants
 D37 ingestion idempotency semantics
 D30 metadata canonicalization
+D65 AI/vector readiness contract
 D18 authentication/authorization
 ```
 
