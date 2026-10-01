@@ -9,20 +9,17 @@ public class RetentionScheduler {
 
     private final RetentionWorkerPool workerPool;
     private final RetentionProperties properties;
-    private final DocumentLifecycleRepository lifecycleRepository;
-    private final DocumentOperationLock documentOperationLock;
+    private final DocumentGenerationRepository generationRepository;
     private final String workerId;
 
     public RetentionScheduler(
             RetentionWorkerPool workerPool,
             RetentionProperties properties,
-            DocumentLifecycleRepository lifecycleRepository,
-            DocumentOperationLock documentOperationLock
+            DocumentGenerationRepository generationRepository
     ) {
         this.workerPool = workerPool;
         this.properties = properties;
-        this.lifecycleRepository = lifecycleRepository;
-        this.documentOperationLock = documentOperationLock;
+        this.generationRepository = generationRepository;
         this.workerId = ManagementFactory.getRuntimeMXBean().getName();
     }
 
@@ -48,22 +45,14 @@ public class RetentionScheduler {
     }
 
     private void recoverAbandonedIngestions() {
-        java.time.Instant now = java.time.Instant.now();
-        java.time.Instant staleBefore = now.minus(properties.leaseDuration());
-        for (String documentId : lifecycleRepository.findStaleIngestionDocumentIds(
-                staleBefore,
-                properties.batchSize()
-        )) {
-            documentOperationLock.tryAcquire(documentId).ifPresent(handle -> {
-                try (handle) {
-                    lifecycleRepository.failStaleIngestion(
-                            documentId,
-                            staleBefore,
-                            now,
-                            "abandoned ingestion exceeded recovery timeout"
-                    );
-                }
-            });
+        for (int batch = 0; batch < properties.maxBatchesPerRun(); batch++) {
+            int recovered = generationRepository.failStaleIngestionBatch(
+                    properties.leaseDuration(),
+                    properties.batchSize()
+            );
+            if (recovered < properties.batchSize()) {
+                return;
+            }
         }
     }
 }
