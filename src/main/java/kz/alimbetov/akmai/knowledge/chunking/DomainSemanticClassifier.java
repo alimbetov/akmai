@@ -11,22 +11,6 @@ public class DomainSemanticClassifier {
     public SemanticUnitType classify(String text, KnowledgeDomain domain) {
         String value = text.toLowerCase(Locale.ROOT);
 
-        if (containsAny(value, "за исключением", "except", "unless", "қоспағанда", "除外")) {
-            return SemanticUnitType.EXCEPTION;
-        }
-        if (containsAny(value, "обязан", "must", "shall", "міндетті", "应当")) {
-            return SemanticUnitType.OBLIGATION;
-        }
-        if (containsAny(value, "запрещ", "must not", "prohibited", "тыйым", "禁止")) {
-            return SemanticUnitType.PROHIBITION;
-        }
-        if (containsAny(value, "вправе", "may", "құқылы", "可以")) {
-            return SemanticUnitType.RIGHT;
-        }
-        if (containsAny(value, "не позднее", "within", "days", "күн", "日内")) {
-            return SemanticUnitType.DEADLINE;
-        }
-
         if (domain == KnowledgeDomain.MEDICAL) {
             if (containsAny(value, "противопоказ", "contraindicat", "қарсы көрсет", "禁忌")) {
                 return SemanticUnitType.CONTRAINDICATION;
@@ -53,6 +37,22 @@ public class DomainSemanticClassifier {
             if (containsAny(value, "показан", "indication", "көрсетілім", "适应症")) {
                 return SemanticUnitType.INDICATION;
             }
+        }
+
+        if (containsAny(value, "за исключением", "except", "unless", "қоспағанда", "除外")) {
+            return SemanticUnitType.EXCEPTION;
+        }
+        if (containsAny(value, "обязан", "must", "shall", "міндетті", "应当")) {
+            return SemanticUnitType.OBLIGATION;
+        }
+        if (containsAny(value, "запрещ", "must not", "prohibited", "тыйым", "禁止")) {
+            return SemanticUnitType.PROHIBITION;
+        }
+        if (containsAny(value, "вправе", "may", "құқылы", "可以")) {
+            return SemanticUnitType.RIGHT;
+        }
+        if (containsAny(value, "не позднее", "within", "days", "күн", "日内")) {
+            return SemanticUnitType.DEADLINE;
         }
 
         return SemanticUnitType.PARAGRAPH;
