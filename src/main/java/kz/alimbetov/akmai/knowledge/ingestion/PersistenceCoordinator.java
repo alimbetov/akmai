@@ -34,14 +34,28 @@ public class PersistenceCoordinator {
     }
 
     public void persist(List<EnrichedKnowledgeChunk> chunks) {
+        if (chunks.isEmpty()) {
+            return;
+        }
+
         List<SearchProjection> projections = chunks.stream()
                 .map(projectionFactory::create)
                 .toList();
+
+        List<String> documentIds = projections.stream()
+                .map(SearchProjection::documentId)
+                .distinct()
+                .toList();
+
+        for (String documentId : documentIds) {
+            replaceDocument(documentId);
+        }
 
         projectionRepository.saveAll(projections);
 
         vectorStore.add(projections.stream()
                 .map(projection -> new Document(
+                        projection.chunkId(),
                         projection.embeddingText(),
                         vectorMetadata(projection)
                 ))
@@ -64,6 +78,15 @@ public class PersistenceCoordinator {
         if (!identifiers.isEmpty()) {
             identifierSearchIndex.index(identifiers);
         }
+    }
+
+    private void replaceDocument(String documentId) {
+        List<String> oldChunkIds = projectionRepository.findChunkIdsByDocumentId(documentId);
+        if (!oldChunkIds.isEmpty()) {
+            vectorStore.delete(oldChunkIds);
+        }
+        identifierSearchIndex.deleteByDocumentId(documentId);
+        projectionRepository.deleteByDocumentId(documentId);
     }
 
     private int pageNumber(SearchProjection projection) {
