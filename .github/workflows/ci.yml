@@ -1,5 +1,5 @@
 name: CI
-# retention cleanup service gate
+# retention timestamp binding gate
 
 on:
   push:
