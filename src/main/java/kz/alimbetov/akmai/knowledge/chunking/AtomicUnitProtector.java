@@ -16,6 +16,16 @@ public class AtomicUnitProtector {
         for (int i = 0; i < units.size(); i++) {
             SemanticUnit current = units.get(i);
 
+            if (domain == KnowledgeDomain.MEDICAL && isMedicalFact(current.type())) {
+                result.add(new SemanticUnit(
+                        current.text(),
+                        current.sectionPath(),
+                        current.type(),
+                        true
+                ));
+                continue;
+            }
+
             if (i + 1 < units.size()) {
                 SemanticUnit next = units.get(i + 1);
 
@@ -51,12 +61,15 @@ public class AtomicUnitProtector {
                     || current == SemanticUnitType.PARAGRAPH;
         }
 
-        if (domain == KnowledgeDomain.MEDICAL) {
-            return (current == SemanticUnitType.INDICATION && next == SemanticUnitType.DOSAGE)
-                    || (current == SemanticUnitType.DOSAGE && next == SemanticUnitType.CONTRAINDICATION);
-        }
-
         return false;
+    }
+
+    private boolean isMedicalFact(SemanticUnitType type) {
+        return type == SemanticUnitType.INDICATION
+                || type == SemanticUnitType.DOSAGE
+                || type == SemanticUnitType.CONTRAINDICATION
+                || type == SemanticUnitType.INTERACTION
+                || type == SemanticUnitType.MONITORING;
     }
 
     private boolean sameSection(SemanticUnit left, SemanticUnit right) {
