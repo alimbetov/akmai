@@ -35,7 +35,7 @@ The final code MUST satisfy all of the following at all times.
 4. Vector, lexical, identifier and reference retrieval MUST resolve the same published generation.
 5. Physical vectors MUST have one canonical identity implementation and one declared identity version.
 6. A missing vector manifest MUST be treated as reconciliation-required, never as proof that chunk IDs are physical vector IDs.
-7. All relational writes for one staged generation MUST be atomic or fully reconcilable.
+7. All persisted retrieval-state writes for one published generation MUST commit atomically with the published pointer.
 8. A retention worker may mutate state only while its generation/token/lease fence is valid.
 9. Distributed lease time MUST be decided by PostgreSQL time, not pod-local clocks.
 10. Retrieval infrastructure failure MUST NOT be represented as a normal zero-hit result.
@@ -69,6 +69,7 @@ Required logical columns:
 - attempt_count INTEGER NOT NULL
 - last_error VARCHAR(1000) NULL
 - row_version BIGINT NOT NULL
+- storage_schema_version SMALLINT NOT NULL
 - created_at / updated_at TIMESTAMPTZ
 
 Do not overload one status field with both ingestion and retention state.
@@ -217,7 +218,7 @@ The same idempotency key + same fingerprint returns the original completed resul
 
 ## 4. Migration contract
 
-Liquibase is the only runtime schema source of truth.
+Liquibase is the only runtime schema source of truth for AKMAI core relational tables, indexes and constraints. The sole exception is profile-scoped pgvector data tables whose vector dimension/index are runtime EmbeddingProfile attributes; those tables are owned exclusively by EmbeddingProfileStorageManager under the versioned DDL contract in section 8. No other component may create/alter retrieval schema.
 
 Do not silently edit historical applied changesets 001–006 in a way that breaks checksums on existing installations.
 
@@ -340,7 +341,7 @@ Different tuples MUST never produce identical pre-hash bytes.
 
 Use exactly one implementation everywhere.
 
-The physical ID MUST remain compatible with the configured Spring AI PgVectorStore UUID id type.
+The physical ID MUST be a canonical PostgreSQL UUID because every profile-scoped vector table uses UUID PRIMARY KEY.
 
 VectorIdentity v2 algorithm:
 1. canonical bytes = version byte 0x02 + length-prefixed NFC documentId + generation as signed 64-bit big-endian + length-prefixed chunkId;
@@ -416,7 +417,7 @@ The similarity score/threshold conversion MUST be defined once in PgVectorDistan
 
 Legacy public.vector_store is not used by normal new writes after this remediation. LegacyVectorReconciliationRepository handles it only for migration/reconciliation. New profile tables are the production vector adapter.
 
-D58 verification therefore targets the actual production PostgresGenerationVectorRepository + PublishedVectorSearchRepository + profile-table schema, not a mock and not an unused Spring AI PgVectorStore bean.
+D58 verification targets the actual production PostgresGenerationVectorRepository + PublishedVectorSearchRepository + EmbeddingProfileStorageManager schema contract, not a mock/generic VectorStore facade.
 
 ## 9. Transaction boundaries
 
@@ -760,7 +761,7 @@ Required RetentionWorkerPool behavior:
 5. execute the bounded cleanup transaction;
 6. release the permit in finally.
 
-Remove startHeartbeat, heartbeatExecutor, lostLeases and renewal scheduling from the normal retention design. retain renewLease only if another future maintenance operation genuinely requires a long lease; retention cleanup does not call it.
+Remove startHeartbeat, heartbeatExecutor, lostLeases and renewLease from the retention implementation/repository contract in this remediation scope.
 
 Shutdown:
 1. stop scheduler/claiming;
@@ -1197,7 +1198,7 @@ Tests: %, _, 5% mean literals and cannot match-all.
 
 ### D60 — single heartbeat thread failure domain
 Code: remove heartbeat renewal from retention; bounded immediate DB cleanup completes well inside lease.  
-Tests: retention has no heartbeat executor; multiple active cleanup transactions are independent and a blocked/timed-out transaction cannot expire another queued claim because claims are created only for available workers.
+Tests: retention has no heartbeat executor; claims are created only for available workers and each bounded cleanup transaction is independent; one timed-out cleanup cannot delay another claim in a shared renewal queue because no renewal queue exists.
 
 ### D61 — Chinese sentence boundary requires whitespace
 Code: script-aware segmenter splits 。！？ without whitespace.  
