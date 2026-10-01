@@ -1,5 +1,5 @@
 name: CI
-# additive lifecycle schema migration gate
+# bounded retention worker gate
 
 on:
   push:
