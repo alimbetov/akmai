@@ -21,7 +21,12 @@ public class DocumentIdentifierRepository {
                     document_id, chunk_id, page_number, identifier_type,
                     raw_value, normalized_value, context_text, created_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT DO NOTHING
+                ON CONFLICT (document_id, chunk_id, identifier_type, normalized_value)
+                DO UPDATE SET
+                    raw_value = EXCLUDED.raw_value,
+                    context_text = EXCLUDED.context_text,
+                    page_number = EXCLUDED.page_number,
+                    created_at = EXCLUDED.created_at
                 """,
                 identifiers,
                 100,
