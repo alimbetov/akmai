@@ -13,7 +13,8 @@ Purpose: accumulate defects found by repeated deep audits and close them with re
 - Audit 5/10: completed — system-analysis and architecture-contract review
 - Audit 6/10: completed — previously-unreviewed chunking, ingestion runtime, retention queue and executor lifecycle audit
 - Audit 7/10: completed — SQL/data-volume, Unicode, malformed-corpus, identity-serialization and distributed-clock audit
-- Audits 8/10 .. 10/10: pending
+- Audit 8/10: completed — invariant-driven architecture review (authority, semantic preservation, boundedness and verification architecture)
+- Audits 9/10 .. 10/10: pending
 - A defect is never removed from this ledger. It moves through `OPEN -> IMPLEMENTING -> FIXED -> VERIFIED`.
 - `VERIFIED` requires an automated regression test and exact-SHA successful CI.
 
@@ -128,6 +129,21 @@ These are stress-model results, not production telemetry.
 | D50 | P0 | chunk identity/data corruption | `ChunkIdentity` builds its SHA input by joining raw `documentId`, numeric `chunkIndex`, `sectionPath` and text with plain newline delimiters and no escaping/length-prefixing. Because document IDs/titles/section paths are not forbidden from containing newlines, different tuples can serialize to the exact same canonical byte string and therefore the exact same SHA-256. `knowledge_search_projection` uses `chunk_id` as a global PK and `ON CONFLICT (chunk_id) DO UPDATE` even rewrites `document_id`, so this deterministic serialization collision can silently reassign/overwrite another document's projection | replace delimiter concatenation with an unambiguous canonical encoding (length-prefixed/binary/structured serialization) and reject control characters in identifiers where appropriate; conflict updates must also enforce immutable ownership invariants | unit test proves formerly colliding tuples produce different IDs; PostgreSQL integration test proves a chunk ID can never migrate from one document owner to another on conflict | OPEN |
 
 
+
+## Audit 8/10 findings
+
+| ID | Sev | Area | Defect | Required remediation | Verification | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| D51 | P1 | identifier semantics | Business identifier regexes allow the marker (`№/no/number`) and separator to be absent while accepting letters-only values. Ordinary prose such as `contract termination`, `order status` or `case management` is therefore indexed/detected as CONTRACT_NUMBER=`termination`, ORDER_NUMBER=`status`, CASE_NUMBER=`management`. This poisons both ingestion identifier state and query planning; after D25 fail-closed scoping, such false positives can suppress otherwise valid semantic retrieval | require an unambiguous identifier signal (explicit marker, punctuation/shape policy, or type-specific validated value grammar); add negative-language corpora and confidence/capability semantics rather than treating every regex match as authoritative exact identity | ingestion and query tests prove ordinary domain prose after contract/order/case/document words produces no identifier, while real marked/shape-valid identifiers still resolve | OPEN |
+| D52 | P1 | retrieval authority | Exact identifier/reference evidence has no authority policy after retrieval. `ResultFusion` treats all channels as ordinary RRF evidence and `Reranker` semantically reranks every candidate regardless of evidence type, so an exact identifier target can be placed below a semantic-only candidate. This contradicts the architecture requirement that exact-match authority not be destroyed without an explicit policy | encode evidence authority in fusion/reranking policy; exact identifier/reference matches must be pinned, separately tiered, or explicitly policy-weighted before semantic reranking | mixed exact-identifier + semantic-noise test proves exact authoritative evidence cannot be demoted below non-authoritative candidates unless a configured policy explicitly allows it | OPEN |
+| D53 | P2 | retrieval expansion | Neighbor expansion runs after reranking but appends expanded neighbors after the complete ranked list. `ContextBudget` then consumes hits in order up to `contextMaxChunks`. When ranked candidates already fill the context (common when rerankerCandidates/vector+lexical exceed the 12-chunk default), all expansion work is discarded and cannot affect the answer | interleave/score expansion relative to its seed, reserve an explicit expansion budget, or perform expansion before final context selection with provenance-aware ranking | test with >contextMaxChunks ranked candidates proves a configured high-priority seed neighbor can enter final context and does not disappear solely because expansion was appended after all originals | OPEN |
+| D54 | P1 | chunking/domain semantics | `StructuralUnitExtractor` applies the generic numbered-heading pattern to every domain before semantic classification. Medical list items such as `1. Take 10 mg once daily.` become HEADING, and `SemanticChunker` deliberately skips `DomainSemanticClassifier` for headings. Numbered DOSAGE/CONTRAINDICATION/MONITORING facts can therefore lose their medical type and atomicity, especially when several short numbered items are grouped | make structural parsing domain-aware; generic numbered headings must not override medical semantic facts without a stronger structural signal, and domain classification must be able to refine structural units | numbered medical-list fixtures across RU/KK/EN/ZH preserve each dosage/contraindication/monitoring item as the correct atomic semantic type | OPEN |
+| D55 | P2 | query decomposition | `QueryDecomposer` silently truncates retrieval intent after `MAX_SEGMENTS=8`. For coordinated clauses the original compound clause itself consumes one slot, so the final independent intent can be dropped even sooner. Because multi-sentence input does not retain the full original as a retrieval unit, trailing intents receive no retrieval path and the caller gets no degradation signal | define explicit overflow semantics: preserve a catch-all original query, summarize/merge overflow, or return diagnostics; bound execution without silently losing user intents | 9+ intent and 8-way coordinated-query tests prove every intent remains represented by a retrieval unit or an explicit overflow/catch-all contract | OPEN |
+| D56 | P1 | chunking/boundedness | The configured `hardMaxTokens` is only enforced per `SemanticUnit`, not per final grouped chunk. In `SemanticChunker.group`, if the current group is below `minTokens`, a following unit can push the group beyond soft and hard limits because the pre-split condition is gated by `enoughContent`; the oversized group is then emitted after crossing the target | enforce hard max as an unconditional final-chunk invariant independent of minimum/target preferences; min/soft constraints may guide packing but can never override hard max | constructed sequence such as a sub-minimum first unit plus a near-hard-max second unit never emits a chunk whose estimated size exceeds hardMaxTokens | OPEN |
+| D57 | P2 | embedding payload budget | Chunk sizing is performed on unit/raw chunk text, but the actual embedding payload is later expanded by `EmbeddingTextBuilder` with document title, domain, language and full section path. Therefore even a raw chunk exactly within the configured hard limit can produce an embedding request above that limit; the character/3.2 estimator also does not represent the actual active model tokenizer | budget the exact serialized embedding payload with a tokenizer/profile-aware estimator, or reserve deterministic envelope overhead tied to the persisted embedding profile; distinguish raw-text and embedding-payload limits | long-title/deep-section fixture proves final `embeddingText` remains within the model/profile token limit, not merely raw chunk text | OPEN |
+| D58 | P1 | verification architecture | Critical vector consistency contracts are not exercised through the production Spring AI PgVectorStore adapter. Repository Testcontainers tests use PostgreSQL for relational projections/lifecycle while ingestion/retention tests mock `VectorStore`; the test tree contains no PgVectorStore/live vector-store E2E. Consequently physical ID behavior, metadata filters, real add/delete semantics and D01/D19 compensation assumptions cannot reach VERIFIED status from the current CI evidence alone | add a production-adapter E2E gate using PostgreSQL+pgvector and a deterministic embedding model/stub at the Spring AI adapter boundary; test real add/search/filter/delete, generation visibility and partial/failure compensation semantics | exact-SHA CI includes an E2E that instantiates the production PgVectorStore configuration and proves write/search/filter/delete/generation contracts without mocking VectorStore | OPEN |
+
+
 ## Remediation order
 
 ### Wave 1 — consistency and visibility
@@ -155,11 +171,15 @@ D06 RU/EN FTS indexes
 D07 retrieval deadlines
 D08 saturation isolation
 D43 executor shutdown/rejection semantics
+D51 identifier false-positive grammar
+D52 exact-match authority preservation
 D25 identifier-scope fail-closed semantics
 D35 collision-safe identifier identity
 D34 complete identifier capability contract
 D27 real cross-reference indexing contract
 D26 reference fan-out/query amplification
+D53 expansion/context integration
+D55 query-decomposition overflow semantics
 D24 reranker poisoned-worker isolation
 D29 answer-generation deadline
 D23 exact assembled-context budget
@@ -191,6 +211,9 @@ D15 language canonicalization
 D16 ambiguous language routing
 D41 legal semantic polarity/token boundaries
 D42 Kazakh paragraph/subparagraph hierarchy
+D54 numbered medical-list semantic preservation
+D56 final chunk hard-max invariant
+D57 exact embedding-payload budget
 D48 Unicode-safe oversized splitting
 D46 bounded derived identifier length
 D17 request limits
@@ -205,6 +228,7 @@ D18 authentication/authorization
 ```text
 all P0/P1 = VERIFIED
 all accepted P2 have explicit disposition
+D58 production PgVectorStore E2E gate
 full Testcontainers suite
 spotless
 mvn clean verify
