@@ -7,7 +7,8 @@ Purpose: accumulate defects found by repeated deep audits and close them with re
 ## Audit cadence
 
 - Audit 1/10: completed — initial deep audit after Phase B
-- Audits 2/10 .. 10/10: pending
+- Audit 2/10: completed — generation-publication model and citation failure-path audit
+- Audits 3/10 .. 10/10: pending
 - A defect is never removed from this ledger. It moves through `OPEN -> IMPLEMENTING -> FIXED -> VERIFIED`.
 - `VERIFIED` requires an automated regression test and exact-SHA successful CI.
 
@@ -42,6 +43,13 @@ Purpose: accumulate defects found by repeated deep audits and close them with re
 | D18 | P1 | security | HTTP ingestion and RAG endpoints have no authentication/authorization | explicit local-only profile or Spring Security/API auth | unauthorized request tests | OPEN |
 | D19 | P2 | identity | `VectorIdentity.physicalId` and runtime PersistenceCoordinator use incompatible vector ID schemes | one canonical vector identity implementation | identity contract test | OPEN |
 
+## Audit 2/10 findings
+
+| ID | Sev | Area | Defect | Required remediation | Verification | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| D20 | P0 | ingestion/publication | Lifecycle/vector data is generation-scoped, but `knowledge_search_projection` and `document_identifier` are not. New lexical projections and identifiers cannot be staged alongside generation N+1 without deleting or overwriting generation N before publication, so a true atomic multi-modality publication switch is impossible with the current schema | add generation identity to canonical projections and identifiers; stage rows per generation; make vector/lexical/identifier reads resolve only the published generation; retire old generation only after successful publication; compensate failed staged generation | integration contract: failed N+1 leaves N vector + lexical + identifier results unchanged and N+1 invisible; successful publish switches all retrieval modalities to N+1 together | OPEN |
+| D21 | P2 | citations/availability | `CitationValidator` parses the numeric body of every `[SOURCE n]` marker with `Integer.parseInt`; a model response containing an out-of-range integer marker throws `NumberFormatException` and fails the whole RAG request instead of treating the citation as invalid | parse citation numbers without overflow (bounded parse or guarded exception) and sanitize/record oversized markers as invalid | huge citation marker such as `[SOURCE 999999999999999999999]` does not throw and is removed/reported invalid | OPEN |
+
 ## Remediation order
 
 ### Wave 1 — consistency and visibility
@@ -50,6 +58,7 @@ Purpose: accumulate defects found by repeated deep audits and close them with re
 D01 orphan vectors
 D02 published-generation visibility
 D03 non-destructive replacement
+D20 generation-scoped lexical/identifier publication
 D19 vector identity canonicalization
 ```
 
@@ -75,6 +84,7 @@ D09 retention shutdown race
 D10 prompt injection boundary
 D11 citation requirement
 D12 citation sanitization
+D21 citation numeric overflow
 D13 provenance contract
 D14 expansion provenance
 D15 language canonicalization
