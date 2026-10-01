@@ -29,6 +29,7 @@ public class LexicalRetrievalStrategy implements RetrievalStrategy {
     ) {
         return repository.searchLexical(
                         queryChunk.semanticText(),
+                        queryChunk.language(),
                         List.copyOf(context.documentIds()),
                         properties.lexicalLimit()
                 ).stream()
