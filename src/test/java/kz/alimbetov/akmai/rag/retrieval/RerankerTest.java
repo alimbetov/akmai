@@ -19,7 +19,9 @@ class RerankerTest {
             RetrievalHit noise = hit("noise", 0.9, "noise-evidence");
             RetrievalHit relevant = hit("relevant", 0.8, "relevant-evidence");
             Reranker reranker = reranker(
-                    (question, hit) -> hit.chunkId().equals("relevant") ? 0.95 : 0.10,
+                    (question, hits) -> hits.stream()
+                            .map(hit -> hit.chunkId().equals("relevant") ? 0.95 : 0.10)
+                            .toList(),
                     executor,
                     Duration.ofSeconds(1)
             );
@@ -51,7 +53,7 @@ class RerankerTest {
                     hit("second", 0.8, "e2")
             );
             Reranker reranker = reranker(
-                    (question, hit) -> {
+                    (question, hits) -> {
                         throw new IllegalStateException("scorer unavailable");
                     },
                     executor,
@@ -73,13 +75,13 @@ class RerankerTest {
                     hit("second", 0.8, "e2")
             );
             Reranker reranker = reranker(
-                    (question, hit) -> {
+                    (question, hits) -> {
                         try {
                             Thread.sleep(200);
                         } catch (InterruptedException exception) {
                             Thread.currentThread().interrupt();
                         }
-                        return 1.0;
+                        return hits.stream().map(hit -> 1.0).toList();
                     },
                     executor,
                     Duration.ofMillis(20)
