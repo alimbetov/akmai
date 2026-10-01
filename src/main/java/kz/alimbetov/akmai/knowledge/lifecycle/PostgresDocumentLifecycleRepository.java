@@ -94,47 +94,66 @@ public class PostgresDocumentLifecycleRepository
     }
 
     @Override
-    public long activate(
-            String documentId,
-            RetentionPolicy policy,
-            Instant expiresAt
-    ) {
-        validatePolicy(policy, expiresAt);
+    public long reserveGeneration(String documentId) {
         Long generation = jdbcTemplate.queryForObject(
                 """
                 INSERT INTO knowledge_document_lifecycle (
                     document_id, lifecycle_policy, lifecycle_status,
-                    generation, claim_generation, claim_id, claimed_by, claimed_at, lease_until, expires_at,
-                    delete_started_at, deleted_at, attempt_count,
-                    last_error, row_version, created_at, updated_at
-                ) VALUES (?, ?, 'READY', 1, NULL, NULL, NULL, NULL, NULL, ?, NULL, NULL, 0, NULL, 0, now(), now())
+                    generation, claim_generation, claim_id, claimed_by,
+                    claimed_at, lease_until, expires_at, delete_started_at,
+                    deleted_at, attempt_count, last_error, row_version,
+                    created_at, updated_at
+                ) VALUES (?, 'PERMANENT', 'READY', 1, NULL, NULL, NULL,
+                          NULL, NULL, NULL, NULL, NULL, 0, NULL, 0, now(), now())
                 ON CONFLICT (document_id) DO UPDATE SET
-                    lifecycle_policy = EXCLUDED.lifecycle_policy,
-                    lifecycle_status = 'READY',
                     generation = knowledge_document_lifecycle.generation + 1,
                     claim_generation = NULL,
                     claim_id = NULL,
                     claimed_by = NULL,
                     claimed_at = NULL,
                     lease_until = NULL,
-                    expires_at = EXCLUDED.expires_at,
-                    delete_started_at = NULL,
-                    deleted_at = NULL,
-                    attempt_count = 0,
-                    last_error = NULL,
                     row_version = knowledge_document_lifecycle.row_version + 1,
                     updated_at = now()
                 RETURNING generation
                 """,
                 Long.class,
-                documentId,
-                policy.name(),
-                timestamp(expiresAt)
+                documentId
         );
         if (generation == null) {
-            throw new IllegalStateException("Lifecycle activation returned no generation");
+            throw new IllegalStateException("Lifecycle reservation returned no generation");
         }
         return generation;
+    }
+
+    @Override
+    public boolean activate(
+            String documentId,
+            long generation,
+            RetentionPolicy policy,
+            Instant expiresAt
+    ) {
+        validatePolicy(policy, expiresAt);
+        return jdbcTemplate.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET lifecycle_policy = ?,
+                    lifecycle_status = 'READY',
+                    expires_at = ?,
+                    delete_started_at = NULL,
+                    deleted_at = NULL,
+                    attempt_count = 0,
+                    last_error = NULL,
+                    row_version = row_version + 1,
+                    updated_at = now()
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND claim_generation IS NULL
+                """,
+                policy.name(),
+                timestamp(expiresAt),
+                documentId,
+                generation
+        ) == 1;
     }
 
     @Override
