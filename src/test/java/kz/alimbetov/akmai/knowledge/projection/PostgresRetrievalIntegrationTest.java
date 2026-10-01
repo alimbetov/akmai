@@ -22,6 +22,7 @@ import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
+import kz.alimbetov.akmai.rag.quality.RetrievalQualityMetrics;
 import kz.alimbetov.akmai.rag.retrieval.KnowledgeExpansion;
 import kz.alimbetov.akmai.rag.retrieval.ReferenceRetrievalStrategy;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalContext;
@@ -317,6 +318,58 @@ class PostgresRetrievalIntegrationTest {
                 .extracting(SearchProjection::chunkId).containsExactly("zh");
     }
 
+
+    @Test
+    void corpusBackedLexicalQualityGateCoversAllTargetLanguages() {
+        assertLexicalQuality(
+                "kk",
+                "шартты бұзу",
+                "quality-kk-target",
+                "Шартты бұзу талаптары және хабарлау тәртібі.",
+                List.of(
+                        projection("quality-kk-noise-1", "quality-kk-doc-1", 0, "Төлем мерзімі туралы жалпы ереже.", "kk"),
+                        projection("quality-kk-target", "quality-kk-doc-2", 0, "Шартты бұзу талаптары және хабарлау тәртібі.", "kk"),
+                        projection("quality-kk-noise-2", "quality-kk-doc-3", 0, "Құжаттарды сақтау мерзімі.", "kk")
+                )
+        );
+
+        assertLexicalQuality(
+                "ru",
+                "условия расторжения",
+                "quality-ru-target",
+                "Условия расторжения договора и порядок уведомления.",
+                List.of(
+                        projection("quality-ru-noise-1", "quality-ru-doc-1", 0, "Срок оплаты по договору.", "ru"),
+                        projection("quality-ru-target", "quality-ru-doc-2", 0, "Условия расторжения договора и порядок уведомления.", "ru"),
+                        projection("quality-ru-noise-2", "quality-ru-doc-3", 0, "Порядок хранения документов.", "ru")
+                )
+        );
+
+        assertLexicalQuality(
+                "en",
+                "contract termination",
+                "quality-en-target",
+                "Contract termination conditions and notice procedure.",
+                List.of(
+                        projection("quality-en-noise-1", "quality-en-doc-1", 0, "Payment deadline under the agreement.", "en"),
+                        projection("quality-en-target", "quality-en-doc-2", 0, "Contract termination conditions and notice procedure.", "en"),
+                        projection("quality-en-noise-2", "quality-en-doc-3", 0, "Document retention requirements.", "en")
+                )
+        );
+
+        assertLexicalQuality(
+                "zh",
+                "合同终止",
+                "quality-zh-target",
+                "合同终止条件和通知程序。",
+                List.of(
+                        projection("quality-zh-noise-1", "quality-zh-doc-1", 0, "合同付款期限。", "zh"),
+                        projection("quality-zh-target", "quality-zh-doc-2", 0, "合同终止条件和通知程序。", "zh"),
+                        projection("quality-zh-noise-2", "quality-zh-doc-3", 0, "文件保存要求。", "zh")
+                )
+        );
+    }
+
     private static EnrichedKnowledgeChunk enriched(
             String chunkId,
             String documentId,
@@ -362,6 +415,49 @@ class PostgresRetrievalIntegrationTest {
                 table
         );
         return count != null && count == 1;
+    }
+
+
+    private void assertLexicalQuality(
+            String language,
+            String query,
+            String relevantChunkId,
+            String relevantText,
+            List<SearchProjection> corpus
+    ) {
+        repository.saveAll(corpus);
+        List<String> documentIds = corpus.stream()
+                .map(SearchProjection::documentId)
+                .toList();
+        List<String> ranked = repository.searchLexical(
+                        query,
+                        language,
+                        documentIds,
+                        5
+                ).stream()
+                .map(SearchProjection::chunkId)
+                .toList();
+
+        assertThat(ranked).contains(relevantChunkId);
+        assertThat(RetrievalQualityMetrics.recallAtK(
+                ranked,
+                java.util.Set.of(relevantChunkId),
+                5
+        )).isEqualTo(1.0);
+        assertThat(RetrievalQualityMetrics.reciprocalRank(
+                ranked,
+                java.util.Set.of(relevantChunkId)
+        )).isEqualTo(1.0);
+        assertThat(RetrievalQualityMetrics.ndcgAtK(
+                ranked,
+                java.util.Set.of(relevantChunkId),
+                5
+        )).isEqualTo(1.0);
+        assertThat(corpus.stream()
+                .filter(item -> item.chunkId().equals(relevantChunkId))
+                .findFirst()
+                .orElseThrow()
+                .text()).isEqualTo(relevantText);
     }
 
     private static SearchProjection projection(
