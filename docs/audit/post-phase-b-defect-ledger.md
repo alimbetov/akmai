@@ -10,7 +10,8 @@ Purpose: accumulate defects found by repeated deep audits and close them with re
 - Audit 2/10: completed — generation-publication model and citation failure-path audit
 - Audit 3/10: completed — retention fencing, context budgeting and reranker isolation audit
 - Audit 4/10: completed — process simulation, queue/load envelope and cross-pipeline contract audit
-- Audits 5/10 .. 10/10: pending
+- Audit 5/10: completed — system-analysis and architecture-contract review
+- Audits 6/10 .. 10/10: pending
 - A defect is never removed from this ledger. It moves through `OPEN -> IMPLEMENTING -> FIXED -> VERIFIED`.
 - `VERIFIED` requires an automated regression test and exact-SHA successful CI.
 
@@ -84,16 +85,34 @@ These are stress-model results, not production telemetry.
 - The reranker model from Audit 3 is also load-sensitive: with one worker and a 20-entry queue, cancellation of queued `FutureTask` instances does not create a transport-level guarantee that the underlying embed call stopped; D24 remains a separate poisoned-worker concern.
 
 
+
+## Audit 5/10 findings
+
+| ID | Sev | Area | Defect | Required remediation | Verification | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| D31 | P0 | lifecycle/publication architecture | The lifecycle model has only one `generation` plus one `lifecycle_status`. `beginIngestion(N+1)` immediately increments `generation` and changes the document to `INGESTING`, so the system no longer has an authoritative representation that generation N is still the published READY generation while N+1 is staging. This makes the D02/D03/D20 target semantics impossible to express cleanly with the current state model | separate published/active generation from working/staging generation, or model generations as separate rows with an atomic published pointer; retrieval and retention must consume the published pointer while ingestion mutates only staging state | state-machine integration test: N remains explicitly published/searchable while N+1 is INGESTING/FAILED, then one atomic publication switch makes N+1 active | OPEN |
+| D32 | P1 | embedding lifecycle | Persisted vector state has no embedding provider/model/version/dimension/config fingerprint. Startup validation only checks configured pgvector dimensions/HNSW limits and does not prove the active embedding model matches persisted vectors. Changing the embedding model can silently query old vectors with a different embedding space (or fail later on dimension mismatch) with no mixed-profile detection or controlled re-embedding path | introduce a persisted EmbeddingProfile and associate every vector generation with it; validate active model/profile before serving, detect obsolete/mixed profiles, and implement generation-safe bounded re-embedding | same-dimension model/profile change is detected before mixed-space retrieval; dimension mismatch fails before writes; re-embedding crash preserves the prior published generation | OPEN |
+| D33 | P0 | database migration safety | Liquibase changeset `001-canonical-retrieval-schema.sql` executes `DROP TABLE IF EXISTS document_identifier CASCADE` before recreating the identifier table. Any upgrade from a deployment where `document_identifier` already contains data can destroy identifier state. The repository also contains a conflicting standalone `identifier-schema.sql`, so upgrade behavior depends on which historical schema source was used | replace destructive bootstrap logic with an additive/data-preserving migration path; establish Liquibase as the single schema source of truth; add explicit legacy-to-current migration if historical installations are supported | Testcontainers upgrade test seeds the legacy identifier schema/data, runs Liquibase, and proves all rows/constraints required by the repository survive | OPEN |
+| D34 | P2 | identifier capability contract | `IdentifierType` and README advertise CLAIM_NUMBER, PAYMENT_NUMBER, PROTOCOL_NUMBER, LETTER_NUMBER and DOCUMENT_ID, but production parser beans only exist for CONTRACT_NUMBER, ORDER_NUMBER, INVOICE_NUMBER, APPLICATION_NUMBER, CASE_NUMBER and DOCUMENT_NUMBER. The shared WRITE/READ extractor therefore cannot actually ingest or recognize several advertised identifier types | either implement parsers and normalization contracts for every advertised type or remove unsupported types from the capability contract/docs/API until implemented | parameterized ingestion/query tests for every supported IdentifierType, with startup/capability test proving no advertised type lacks a parser | OPEN |
+| D35 | P1 | identifier identity | `IdentifierNormalizer` removes all punctuation, so distinct identifiers such as `AB-12` and `AB/12` collapse to the same normalized key `AB12`. Exact lookup can therefore return the wrong document, and within one document/chunk the unique constraint can overwrite one occurrence with the other | define type-aware canonicalization that preserves semantically significant separators or adds an unambiguous canonical encoding; do not use one lossy normalization rule for all identifier types | collision corpus proves semantically distinct raw identifiers never share an exact-match identity unless the type contract explicitly declares them equivalent | OPEN |
+| D36 | P2 | configuration/chunking | `ChunkingProperties` has no validation. Invalid values and invalid ordering (`min > target`, `target > soft`, `soft > hard`, non-positive limits) are accepted at startup and can silently degrade chunking into one-character/one-unit fragmentation or violate configured hard/soft semantics | add validated configuration invariants for positive values and `min <= target <= soft <= hard`, with explicit safe upper bounds | application-context/property-binding tests reject invalid combinations at startup and accept documented defaults/overrides | OPEN |
+| D37 | P2 | API/ingestion idempotency | `POST /api/knowledge/text` has no idempotency/version precondition semantics. If a client loses a successful response and retries the same request, the retry is treated as a new ingestion generation, redoes embeddings/index writes and refreshes lifecycle/TTL state even though the logical command is identical | define idempotency semantics (idempotency key and/or content/version fingerprint with conditional generation advance), persist request identity/result, and make retries return the original outcome without republishing equivalent state | lost-response retry test proves the same logical request does not create a new generation or refresh TTL; changed content/version still creates a new generation | OPEN |
+| D38 | P2 | retention observability | The lifecycle specification requires structured retention logs and metrics for claimed/deleted/failed/stale/lease-lost work, backlog and run duration, but `RetentionScheduler`, `RetentionWorkerPool` and `ChunkRetentionService` emit none. Failures can persist only as row state without the operational signals required to detect a stuck backlog or repeated lease loss | add bounded-cardinality Micrometer metrics and structured lifecycle events for run, claim, delete, failure, stale claim, lease loss, recovery and backlog; never label with document text | meter/log tests distinguish successful deletion, retryable failure, stale claim and lease loss; backlog gauge changes with seeded lifecycle rows | OPEN |
+
+
 ## Remediation order
 
 ### Wave 1 — consistency and visibility
 
 ```text
+D33 migration safety / schema source of truth
+D31 active-vs-staging generation state model
+D20 generation-scoped lexical/identifier publication
+D03 non-destructive replacement
 D01 orphan vectors
 D02 published-generation visibility
-D03 non-destructive replacement
-D20 generation-scoped lexical/identifier publication
 D19 vector identity canonicalization
+D32 embedding profile / re-embedding lifecycle
 ```
 
 ### Wave 2 — retrieval correctness
@@ -105,6 +124,8 @@ D06 RU/EN FTS indexes
 D07 retrieval deadlines
 D08 saturation isolation
 D25 identifier-scope fail-closed semantics
+D35 collision-safe identifier identity
+D34 complete identifier capability contract
 D27 real cross-reference indexing contract
 D26 reference fan-out/query amplification
 D24 reranker poisoned-worker isolation
@@ -118,6 +139,7 @@ D23 exact assembled-context budget
 D09 retention shutdown race
 D22 retention lease fencing
 D28 JDBC/advisory-lock pool starvation
+D38 retention observability
 ```
 
 ### Wave 4 — trust, provenance and API boundaries
@@ -132,6 +154,8 @@ D14 expansion provenance
 D15 language canonicalization
 D16 ambiguous language routing
 D17 request limits
+D36 chunking configuration invariants
+D37 ingestion idempotency semantics
 D30 metadata canonicalization
 D18 authentication/authorization
 ```
