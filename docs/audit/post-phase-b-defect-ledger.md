@@ -15,7 +15,7 @@ Purpose: accumulate defects found by repeated deep audits and close them with re
 - Audit 7/10: completed — SQL/data-volume, Unicode, malformed-corpus, identity-serialization and distributed-clock audit
 - Audit 8/10: completed — invariant-driven architecture review (authority, semantic preservation, boundedness and verification architecture)
 - Audit 9/10: completed — counterexample-driven review of SQL semantics, distributed heartbeats, multilingual parsing, degraded retrieval outcomes and readiness
-- Audit 10/10: pending
+- Audit 10/10: completed — destructive QA / boundary, mutation-oracle and malformed-dependency review; remediation closeout and final exact-SHA regression gate remain pending
 - A defect is never removed from this ledger. It moves through `OPEN -> IMPLEMENTING -> FIXED -> VERIFIED`.
 - `VERIFIED` requires an automated regression test and exact-SHA successful CI.
 
@@ -159,6 +159,20 @@ These are stress-model results, not production telemetry.
 | D65 | P2 | readiness/operations | The application includes Actuator but defines no application readiness contract for the dependencies that make ingestion/RAG usable: Ollama chat, Ollama embeddings, and vector-store/model compatibility. With PostgreSQL healthy, process/DB health can remain green while both ingestion and final answer generation are unusable because Ollama/model state is unavailable or incompatible | add readiness contributors for required AI/model/vector capabilities, separate liveness from readiness, and include embedding-profile/dimension compatibility without performing expensive inference on every probe | application-context/integration test with healthy PostgreSQL but unavailable Ollama reports NOT_READY; compatible dependencies report READY; liveness remains independent of transient AI dependency failure | OPEN |
 
 
+
+## Audit 10/10 findings
+
+| ID | Sev | Area | Defect | Required remediation | Verification | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| D66 | P1 | retention/lease fencing | `markFailed` validates document/generation/claim token but does not require the lease to still be valid. A worker whose lease has already expired (but has not yet been reclaimed) can catch a cleanup error, transition the row to `DELETE_FAILED`, increment `attempt_count` and clear ownership as though it were still current. This can consume retry budget and overwrite the lifecycle state after ownership has logically expired | make every state-mutating completion/failure transition lease-fenced using the authoritative DB clock; an expired claim may report local failure but must not mutate lifecycle state | Testcontainers race expires a claim immediately before cleanup throws and proves the stale worker cannot call an effective `markFailed`/increment attempts; a current claim still can | OPEN |
+| D67 | P1 | reranker/model-response integrity | `EmbeddingSemanticRerankScorer` accepts non-finite vector components/scores and silently maps dimension mismatch to score 0. A NaN component produces a NaN cosine/rerank score; Java's reversed double comparator orders NaN ahead of finite scores, so a malformed embedding response can promote the corrupt candidate to rank 1 instead of triggering fallback | validate embedding batch shape, dimensions and every component/derived score as finite before ranking; malformed model output must fail the whole rerank attempt and fall back to original retrieval order | scorer/reranker tests with NaN, +Infinity, -Infinity and inconsistent dimensions prove no malformed score reaches sorting and original RRF order is preserved | OPEN |
+| D68 | P1 | persistence/transactionality | Canonical projections, identifiers and vector-generation manifests use `JdbcTemplate.batchUpdate(..., batchSize=100)` but `PersistenceCoordinator.persist` has no transaction spanning those relational writes. A failure in a later sub-batch can leave earlier sub-batches committed while lifecycle becomes `INGEST_FAILED`, creating deterministic partial relational state for documents with >100 rows | generation-scope the staged rows and make each relational staging phase atomic (transaction) or provide exact attempted-row compensation/reconciliation; never expose/retain an untracked successful prefix of a failed batch | Testcontainers fault injection with >100 projections/identifiers/manifests fails in the second sub-batch and proves zero staged rows remain visible/owned after failure (or the complete staged generation is durably reconcilable) | OPEN |
+| D69 | P2 | quality-metric oracle | Test `RetrievalQualityMetrics.ndcgAtK` counts duplicate appearances of the same relevant chunk repeatedly. For relevant `{A}` and ranking `[A, A]`, the implementation returns about 1.6309 even though normalized DCG must be in [0,1]. Duplicate-producing regressions can therefore inflate the quality gate rather than fail it | deduplicate document/chunk identity for metric gain (or explicitly define graded judgments) and assert metric range invariants; add property-based tests for duplicates/permutations | property tests guarantee 0 <= nDCG <= 1 and adding a duplicate of an already retrieved relevant chunk cannot increase gain beyond the ideal ranking | OPEN |
+| D70 | P1 | verification architecture | `MultilingualRetrievalQualityRegressionTest` compares hard-coded `baselineRanked` and hard-coded `finalRanked` lists; no production retrieval component participates. The test remains green if planner/vector/fusion/reranker production code is catastrophically broken. Documentation acknowledges the fixture is not pipeline-backed, while CI contains only normal `mvn clean verify` and no live/full retrieval quality job | make the sign-off quality gate execute the production retrieval pipeline over a versioned corpus with deterministic embeddings/adapters where possible, plus a separate live-model gate; fixtures may test metric arithmetic but must not serve as production non-regression evidence | mutation test deliberately breaks production ranking/fusion and proves the quality gate fails; exact-SHA CI publishes per-language Recall/MRR/nDCG from actual pipeline output | OPEN |
+| D71 | P1 | retention/vector identity | When a generation manifest is missing, retention/replacement infers legacy physical vector IDs from `projection.chunk_id`. Current runtime vectors use name-based UUID physical IDs, while `VectorIdentity` defines yet another `document::gN::chunk` form. Missing-manifest state therefore contains no proof that chunk IDs are the correct physical identity; cleanup can delete zero real vectors, delete relational state, and still mark the document `DELETED`, leaving retained vector data behind | persist/vector-version the physical identity scheme; treat a missing manifest as an explicit reconciliation state, not proof of a legacy scheme; enumerate/delete vectors through a verifiable generation/document predicate or audited migration mapping before marking DELETED | integration test seeds a missing-manifest generation using current physical IDs and proves retention cannot mark DELETED until every physical vector is verified absent; legacy migration fixture separately proves supported historical IDs | OPEN |
+| D72 | P2 | query parsing | Query decomposition treats any period followed by whitespace as a sentence boundary. Common legal/technical abbreviations such as `ст. 25`, `п. 3`, `Art. 25`, `No. 42` are split into separate retrieval units, severing the abbreviation from its number/context before identifier/reference/semantic planning | use abbreviation-aware sentence segmentation (or a locale-aware sentence boundary iterator with domain exceptions) and preserve abbreviation+number tokens as one retrieval unit | RU/EN legal query corpus proves `ст. 25`, `п. 3`, `Art. 25`, `No. 42` stay attached while genuine adjacent sentences still split | OPEN |
+
+
 ## Remediation order
 
 ### Wave 1 — consistency and visibility
@@ -167,6 +181,7 @@ These are stress-model results, not production telemetry.
 D33 migration safety / schema source of truth
 D31 active-vs-staging generation state model
 D20 generation-scoped lexical/identifier publication
+D68 atomic relational staging batches
 D03 non-destructive replacement
 D01 orphan vectors
 D39 bounded ingestion/vector-write deadline
@@ -197,7 +212,9 @@ D27 real cross-reference indexing contract
 D26 reference fan-out/query amplification
 D53 expansion/context integration
 D55 query-decomposition overflow semantics
+D72 abbreviation-safe query segmentation
 D24 reranker poisoned-worker isolation
+D67 finite/shape-valid reranker model responses
 D63 validated reranker timeout semantics
 D29 answer-generation deadline
 D23 exact assembled-context budget
@@ -210,9 +227,11 @@ D09 retention shutdown race
 D40 queued-claim lease/retry semantics
 D60 heartbeat isolation / renewal deadlines
 D49 database-authoritative lease clock
+D66 failure-transition lease fencing
 D45 stale-ingestion recovery fairness/paging
 D22 retention lease fencing
 D28 JDBC/advisory-lock pool starvation
+D71 manifest/physical-vector identity reconciliation
 D38 retention observability
 ```
 
@@ -250,6 +269,8 @@ D18 authentication/authorization
 ```text
 all P0/P1 = VERIFIED
 all accepted P2 have explicit disposition
+D69 bounded/correct retrieval-quality metrics
+D70 production-pipeline quality regression gate
 D58 production PgVectorStore E2E gate
 full Testcontainers suite
 spotless
