@@ -10,5 +10,9 @@ public interface SearchProjectionRepository {
 
     void deleteByDocumentId(String documentId);
 
+    List<SearchProjection> findByChunkIds(List<String> chunkIds);
+
+    List<SearchProjection> findAdjacent(String documentId, int chunkIndex, int radius);
+
     List<SearchProjection> searchLexical(String query, List<String> documentIds, int limit);
 }
