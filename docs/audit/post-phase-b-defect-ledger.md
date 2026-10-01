@@ -12,7 +12,8 @@ Purpose: accumulate defects found by repeated deep audits and close them with re
 - Audit 4/10: completed — process simulation, queue/load envelope and cross-pipeline contract audit
 - Audit 5/10: completed — system-analysis and architecture-contract review
 - Audit 6/10: completed — previously-unreviewed chunking, ingestion runtime, retention queue and executor lifecycle audit
-- Audits 7/10 .. 10/10: pending
+- Audit 7/10: completed — SQL/data-volume, Unicode, malformed-corpus, identity-serialization and distributed-clock audit
+- Audits 8/10 .. 10/10: pending
 - A defect is never removed from this ledger. It moves through `OPEN -> IMPLEMENTING -> FIXED -> VERIFIED`.
 - `VERIFIED` requires an automated regression test and exact-SHA successful CI.
 
@@ -113,6 +114,20 @@ These are stress-model results, not production telemetry.
 | D43 | P1 | executor/shutdown | The shared bounded executor uses `ThreadPoolExecutor.CallerRunsPolicy`. After an executor is shut down, that policy silently discards rejected tasks instead of throwing. Tasks submitted through `CompletableFuture.supplyAsync/thenApplyAsync` can therefore remain permanently incomplete, making ingestion/retrieval `join()` calls hang during shutdown races | use a rejection policy that completes asynchronous work exceptionally, coordinate graceful shutdown with request draining, and bound all joins/dependent stages with cancellation | shutdown-race tests prove tasks submitted after/while shutdown fail promptly and no ingestion/retrieval future remains incomplete | OPEN |
 
 
+
+## Audit 7/10 findings
+
+| ID | Sev | Area | Defect | Required remediation | Verification | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| D44 | P1 | Unicode/identity | Text, document identity and business identifiers have no explicit Unicode normalization boundary. Canonically equivalent strings (for example NFC `é` versus NFD `e + combining acute`) can produce different chunk SHA identities and different exact identifier keys; compatibility forms such as full-width Latin/digits also remain distinct unless explicitly normalized | define Unicode normalization policy at ingestion/query boundaries: NFC for canonical text/identity and a separately reviewed type-aware policy (optionally NFKC where semantically safe) for identifiers; apply the same normalization on WRITE and READ | corpus tests prove canonically equivalent Unicode forms resolve to the same logical identity while intentionally distinct compatibility/confusable characters follow the documented policy | OPEN |
+| D45 | P1 | lifecycle/data volume | Stale-ingestion recovery reads only one `batchSize` of oldest `INGESTING` rows per scheduler run and then performs non-blocking advisory-lock attempts. Locked rows are skipped but not replaced with later candidates. Multiple pods can select the same oldest batch and all waste capacity on the same contended rows, starving later stale ingestions indefinitely while `maxBatchesPerRun` applies only to retention deletion | make stale-ingestion recovery itself claim/page work with bounded `SKIP LOCKED`/fencing semantics or continue scanning until recovery capacity is filled; multi-pod workers must receive disjoint recoverable candidates | Testcontainers test with more than one batch plus permanently locked oldest rows proves later stale rows are still recovered in the same run and pods do not repeatedly select the same batch | OPEN |
+| D46 | P2 | malformed corpus/identifiers | Business identifier regexes capture unbounded values (`{2,}`), while `document_identifier.raw_value` and `normalized_value` are `VARCHAR(500)`. A document containing a syntactically matching contract/order/etc. token longer than 500 characters reaches persistence and fails the SQL write, turning one malformed identifier into whole-document ingestion failure | impose parser-level/canonical identifier length limits aligned with schema, reject or truncate only according to an explicit identifier contract, and expose malformed-identifier diagnostics without aborting unrelated content unless policy requires it | adversarial corpus with >500-character identifier tokens never reaches an oversized DB bind and has deterministic reject/skip behavior | OPEN |
+| D47 | P1 | RAG/context envelope security | `source`, `sectionPath`, `documentId` and other provenance fields are serialized into the model context without escaping or structural encoding. Because source/title/metadata are ingestion-controlled strings, embedded newlines or `[SOURCE n]` markers can forge source boundaries/instructions even if chunk text itself is later hardened, undermining citation/source separation | serialize context as an explicit structured/escaped envelope, validate provenance fields, and ensure untrusted metadata cannot emit control delimiters or synthetic source headers | malicious source/title metadata containing newlines, fake `[SOURCE n]` markers and instruction text remains data inside one source record and cannot alter citation numbering or prompt structure | OPEN |
+| D48 | P2 | Unicode/chunking | `OversizedUnitSplitter` chooses split offsets using UTF-16 `String.length()/substring` code-unit indexes and can fall back to an arbitrary `candidateEnd`. That boundary can land between a high/low surrogate, producing chunks with unpaired surrogates and corrupting supplementary Unicode characters before persistence/embedding | split only on Unicode code-point/grapheme-safe boundaries and make token/character budgeting explicit about code points versus UTF-16 units | oversized corpus beginning with an odd number of BMP code units followed by supplementary characters (emoji/CJK extension) never yields an unpaired surrogate and round-trips exactly after splitting/rejoin | OPEN |
+| D49 | P1 | distributed leases/PostgreSQL | Retention lease ownership and stale-ingestion timing use JVM-provided `Instant` values from each pod (`claimExpired`, `renewLease`, `isCurrentClaim`, scheduler recovery) rather than one authoritative database clock. Clock skew across pods can cause premature lease steal, delayed recovery, or inconsistent fencing decisions even though ownership is persisted in PostgreSQL | move lease/staleness comparisons and lease extension timestamps to PostgreSQL `clock_timestamp()/now()` semantics (or another single authoritative time source); application clocks may remain for observability/tests but not ownership correctness | multi-client integration test injects opposing application clock skew and proves claim/renew/reclaim behavior is unchanged because DB time decides ownership | OPEN |
+| D50 | P0 | chunk identity/data corruption | `ChunkIdentity` builds its SHA input by joining raw `documentId`, numeric `chunkIndex`, `sectionPath` and text with plain newline delimiters and no escaping/length-prefixing. Because document IDs/titles/section paths are not forbidden from containing newlines, different tuples can serialize to the exact same canonical byte string and therefore the exact same SHA-256. `knowledge_search_projection` uses `chunk_id` as a global PK and `ON CONFLICT (chunk_id) DO UPDATE` even rewrites `document_id`, so this deterministic serialization collision can silently reassign/overwrite another document's projection | replace delimiter concatenation with an unambiguous canonical encoding (length-prefixed/binary/structured serialization) and reject control characters in identifiers where appropriate; conflict updates must also enforce immutable ownership invariants | unit test proves formerly colliding tuples produce different IDs; PostgreSQL integration test proves a chunk ID can never migrate from one document owner to another on conflict | OPEN |
+
+
 ## Remediation order
 
 ### Wave 1 — consistency and visibility
@@ -125,7 +140,9 @@ D03 non-destructive replacement
 D01 orphan vectors
 D39 bounded ingestion/vector-write deadline
 D02 published-generation visibility
+D50 unambiguous chunk identity serialization
 D19 vector identity canonicalization
+D44 Unicode canonicalization boundary
 D32 embedding profile / re-embedding lifecycle
 ```
 
@@ -153,6 +170,8 @@ D23 exact assembled-context budget
 ```text
 D09 retention shutdown race
 D40 queued-claim lease/retry semantics
+D49 database-authoritative lease clock
+D45 stale-ingestion recovery fairness/paging
 D22 retention lease fencing
 D28 JDBC/advisory-lock pool starvation
 D38 retention observability
@@ -162,6 +181,7 @@ D38 retention observability
 
 ```text
 D10 prompt injection boundary
+D47 structured/escaped context envelope
 D11 citation requirement
 D12 citation sanitization
 D21 citation numeric overflow
@@ -171,6 +191,8 @@ D15 language canonicalization
 D16 ambiguous language routing
 D41 legal semantic polarity/token boundaries
 D42 Kazakh paragraph/subparagraph hierarchy
+D48 Unicode-safe oversized splitting
+D46 bounded derived identifier length
 D17 request limits
 D36 chunking configuration invariants
 D37 ingestion idempotency semantics
