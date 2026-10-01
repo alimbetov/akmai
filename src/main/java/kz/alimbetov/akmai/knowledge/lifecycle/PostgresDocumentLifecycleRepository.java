@@ -43,9 +43,9 @@ public class PostgresDocumentLifecycleRepository
                     generation, claim_generation, claim_id, claimed_by,
                     claimed_at, lease_until, expires_at, delete_started_at,
                     deleted_at, attempt_count, last_error, row_version,
-                    created_at, updated_at
+                    ingestion_started_at, created_at, updated_at
                 ) VALUES (?, ?, 'INGESTING', 1, NULL, NULL, NULL,
-                          NULL, NULL, ?, NULL, NULL, 0, NULL, 0, now(), now())
+                          NULL, NULL, ?, NULL, NULL, 0, NULL, 0, now(), now(), now())
                 ON CONFLICT (document_id) DO UPDATE SET
                     lifecycle_policy = EXCLUDED.lifecycle_policy,
                     lifecycle_status = 'INGESTING',
@@ -60,6 +60,7 @@ public class PostgresDocumentLifecycleRepository
                     deleted_at = NULL,
                     attempt_count = 0,
                     last_error = NULL,
+                    ingestion_started_at = now(),
                     row_version = knowledge_document_lifecycle.row_version + 1,
                     updated_at = now()
                 RETURNING generation
@@ -85,6 +86,7 @@ public class PostgresDocumentLifecycleRepository
                 """
                 UPDATE knowledge_document_lifecycle
                 SET lifecycle_status = 'READY',
+                    ingestion_started_at = NULL,
                     row_version = row_version + 1,
                     updated_at = ?
                 WHERE document_id = ?
@@ -97,6 +99,55 @@ public class PostgresDocumentLifecycleRepository
                 documentId,
                 generation
         ) == 1;
+    }
+
+    @Override
+    public boolean failIngestion(
+            String documentId,
+            long generation,
+            Instant now,
+            String error
+    ) {
+        return jdbcTemplate.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET lifecycle_status = 'INGEST_FAILED',
+                    ingestion_started_at = NULL,
+                    last_error = ?,
+                    row_version = row_version + 1,
+                    updated_at = ?
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND lifecycle_status = 'INGESTING'
+                """,
+                sanitizeError(error),
+                timestamp(now),
+                documentId,
+                generation
+        ) == 1;
+    }
+
+    @Override
+    public int failStaleIngestions(
+            Instant staleBefore,
+            Instant now,
+            String error
+    ) {
+        return jdbcTemplate.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET lifecycle_status = 'INGEST_FAILED',
+                    ingestion_started_at = NULL,
+                    last_error = ?,
+                    row_version = row_version + 1,
+                    updated_at = ?
+                WHERE lifecycle_status = 'INGESTING'
+                  AND ingestion_started_at < ?
+                """,
+                sanitizeError(error),
+                timestamp(now),
+                timestamp(staleBefore)
+        );
     }
 
     @Override
