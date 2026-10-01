@@ -46,6 +46,17 @@ class QueryDecomposerTest {
         );
     }
 
+
+    @Test
+    void splitsChineseSentencesWithoutWhitespace() {
+        assertThat(decomposer.decompose(
+                "剂量是多少？需要监测什么？"
+        )).containsExactly(
+                "剂量是多少？",
+                "需要监测什么？"
+        );
+    }
+
     @Test
     void doesNotSplitOrdinaryConjunctionWithoutIndependentIntents() {
         assertThat(decomposer.decompose(
