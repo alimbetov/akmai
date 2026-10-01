@@ -1,5 +1,7 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
+import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -13,27 +15,57 @@ public class CitationValidator {
     private static final Pattern SOURCE = Pattern.compile("\\[SOURCE\\s+(\\d+)]");
 
     public CitationValidation validate(String answer, List<RetrievalHit> context) {
-        Matcher matcher = SOURCE.matcher(answer == null ? "" : answer);
+        String input = answer == null ? "" : answer;
+        Matcher matcher = SOURCE.matcher(input);
         Set<Integer> cited = new LinkedHashSet<>();
-        Set<Integer> invalid = new LinkedHashSet<>();
+        List<Integer> invalid = new ArrayList<>();
+        StringBuffer sanitized = new StringBuffer();
+
         while (matcher.find()) {
-            int number = Integer.parseInt(matcher.group(1));
-            if (number >= 1 && number <= context.size()) {
+            Integer number = parseBounded(matcher.group(1));
+            boolean valid = number != null
+                    && number >= 1
+                    && number <= context.size();
+            if (valid) {
                 cited.add(number);
+                matcher.appendReplacement(
+                        sanitized,
+                        Matcher.quoteReplacement(matcher.group())
+                );
             } else {
-                invalid.add(number);
+                if (number != null) {
+                    invalid.add(number);
+                }
+                matcher.appendReplacement(sanitized, "");
             }
         }
-
-        String sanitized = answer == null ? "" : answer;
-        for (Integer number : invalid) {
-            sanitized = sanitized.replace("[SOURCE " + number + "]", "");
-        }
+        matcher.appendTail(sanitized);
 
         List<SourceRef> sources = cited.stream()
                 .map(number -> SourceRef.from(number, context.get(number - 1)))
                 .toList();
-        return new CitationValidation(sanitized, sources, List.copyOf(invalid));
+        return new CitationValidation(
+                sanitized.toString(),
+                sources,
+                List.copyOf(invalid)
+        );
+    }
+
+    public boolean hasValidCitation(String answer, List<RetrievalHit> context) {
+        return !validate(answer, context).citedSources().isEmpty();
+    }
+
+    private Integer parseBounded(String digits) {
+        try {
+            BigInteger value = new BigInteger(digits);
+            if (value.signum() < 0
+                    || value.compareTo(BigInteger.valueOf(Integer.MAX_VALUE)) > 0) {
+                return null;
+            }
+            return value.intValue();
+        } catch (NumberFormatException exception) {
+            return null;
+        }
     }
 
     public record CitationValidation(
