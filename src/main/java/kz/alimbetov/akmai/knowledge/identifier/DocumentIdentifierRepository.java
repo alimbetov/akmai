@@ -1,7 +1,6 @@
 package kz.alimbetov.akmai.knowledge.identifier;
 
 import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
