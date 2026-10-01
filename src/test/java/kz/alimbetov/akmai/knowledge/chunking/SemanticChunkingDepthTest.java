@@ -288,6 +288,22 @@ class SemanticChunkingDepthTest {
         );
     }
 
+
+    @Test
+    void medicalFactLabelsWinOverGenericDeonticLanguage() {
+        DomainSemanticClassifier classifier = new DomainSemanticClassifier();
+
+        assertThat(classifier.classify(
+                "Patients must take dosage 10 mg once daily.",
+                KnowledgeDomain.MEDICAL
+        )).isEqualTo(kz.alimbetov.akmai.knowledge.model.SemanticUnitType.DOSAGE);
+
+        assertThat(classifier.classify(
+                "Patients must monitor blood pressure weekly.",
+                KnowledgeDomain.MEDICAL
+        )).isEqualTo(kz.alimbetov.akmai.knowledge.model.SemanticUnitType.MONITORING);
+    }
+
     private void assertHierarchy(String id, String language, String text, String expectedLeaf) {
         var chunks = chunker.chunk(document(id, language, KnowledgeDomain.LEGAL, text));
         assertThat(chunks.getLast().sectionPath()).contains(expectedLeaf).contains(" > ");
