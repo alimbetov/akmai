@@ -27,6 +27,7 @@ import kz.alimbetov.akmai.rag.retrieval.ReferenceRetrievalStrategy;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalContext;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalTestProperties;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -251,7 +252,7 @@ class PostgresRetrievalIntegrationTest {
         )));
 
         ReferenceRetrievalStrategy strategy =
-                new ReferenceRetrievalStrategy(repository, identifierIndex);
+                new ReferenceRetrievalStrategy(repository, identifierIndex, RetrievalTestProperties.defaults());
         List<RetrievalHit> hits = strategy.retrieve(
                 new QueryChunk("q-ref", 0, "REF-48", "REF-48", "REF-48", List.of()),
                 new RetrievalContext(List.of(new RetrievalHit(
@@ -277,7 +278,7 @@ class PostgresRetrievalIntegrationTest {
                 projection("neighbor-2", "doc-neighbor", 2, "after")
         ));
 
-        KnowledgeExpansion expansion = new KnowledgeExpansion(repository);
+        KnowledgeExpansion expansion = new KnowledgeExpansion(repository, RetrievalTestProperties.defaults());
         List<RetrievalHit> expanded = expansion.expand(List.of(
                 new RetrievalHit(
                         RetrievalType.VECTOR,

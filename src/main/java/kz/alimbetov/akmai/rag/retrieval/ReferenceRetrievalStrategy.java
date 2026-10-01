@@ -14,17 +14,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class ReferenceRetrievalStrategy implements RetrievalStrategy {
 
-    private static final int MAX_REFERENCES = 20;
-
     private final SearchProjectionRepository repository;
     private final IdentifierSearchIndex identifierSearchIndex;
+    private final RetrievalProperties properties;
 
     public ReferenceRetrievalStrategy(
             SearchProjectionRepository repository,
-            IdentifierSearchIndex identifierSearchIndex
+            IdentifierSearchIndex identifierSearchIndex,
+            RetrievalProperties properties
     ) {
         this.repository = repository;
         this.identifierSearchIndex = identifierSearchIndex;
+        this.properties = properties;
     }
 
     @Override
@@ -48,8 +49,8 @@ public class ReferenceRetrievalStrategy implements RetrievalStrategy {
         repository.findByChunkIds(seedIds).stream()
                 .flatMap(seed -> seed.references().stream())
                 .distinct()
-                .limit(MAX_REFERENCES)
-                .flatMap(reference -> identifierSearchIndex.search(reference, 10).stream())
+                .limit(properties.referenceLimit())
+                .flatMap(reference -> identifierSearchIndex.search(reference, properties.identifierLimit()).stream())
                 .filter(identifier -> !seedIdSet.contains(identifier.chunkId()))
                 .forEach(identifier -> resolved.putIfAbsent(
                         identifier.chunkId(),

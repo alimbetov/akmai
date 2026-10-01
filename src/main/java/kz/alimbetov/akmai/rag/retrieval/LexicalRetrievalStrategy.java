@@ -10,9 +10,11 @@ import org.springframework.stereotype.Component;
 public class LexicalRetrievalStrategy implements RetrievalStrategy {
 
     private final SearchProjectionRepository repository;
+    private final RetrievalProperties properties;
 
-    public LexicalRetrievalStrategy(SearchProjectionRepository repository) {
+    public LexicalRetrievalStrategy(SearchProjectionRepository repository, RetrievalProperties properties) {
         this.repository = repository;
+        this.properties = properties;
     }
 
     @Override
@@ -28,7 +30,7 @@ public class LexicalRetrievalStrategy implements RetrievalStrategy {
         return repository.searchLexical(
                         queryChunk.semanticText(),
                         List.copyOf(context.documentIds()),
-                        10
+                        properties.lexicalLimit()
                 ).stream()
                 .map(projection -> new RetrievalHit(
                         RetrievalType.LEXICAL,

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 class ResultFusionTest {
 
-    private final ResultFusion fusion = new ResultFusion();
+    private final ResultFusion fusion = new ResultFusion(RetrievalTestProperties.defaults());
 
     @Test
     void rewardsEvidenceFromMultipleRetrievalChannels() {

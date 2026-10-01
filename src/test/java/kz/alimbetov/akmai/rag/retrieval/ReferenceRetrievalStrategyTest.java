@@ -59,7 +59,8 @@ class ReferenceRetrievalStrategyTest {
 
         ReferenceRetrievalStrategy subject = new ReferenceRetrievalStrategy(
                 repository,
-                identifierSearchIndex
+                identifierSearchIndex,
+                RetrievalTestProperties.defaults()
         );
 
         List<RetrievalHit> hits = subject.retrieve(

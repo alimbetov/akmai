@@ -12,9 +12,11 @@ import org.springframework.stereotype.Component;
 public class IdentifierRetrievalStrategy implements RetrievalStrategy {
 
     private final IdentifierSearchIndex searchIndex;
+    private final RetrievalProperties properties;
 
-    public IdentifierRetrievalStrategy(IdentifierSearchIndex searchIndex) {
+    public IdentifierRetrievalStrategy(IdentifierSearchIndex searchIndex, RetrievalProperties properties) {
         this.searchIndex = searchIndex;
+        this.properties = properties;
     }
 
     @Override
@@ -33,7 +35,7 @@ public class IdentifierRetrievalStrategy implements RetrievalStrategy {
                                 identifier.type(),
                                 identifier.normalizedValue(),
                                 MatchMode.EXACT,
-                                10
+                                properties.identifierLimit()
                         ))
                         .stream())
                 .map(hit -> new RetrievalHit(

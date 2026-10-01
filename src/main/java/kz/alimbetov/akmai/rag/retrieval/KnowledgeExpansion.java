@@ -14,27 +14,25 @@ import org.springframework.stereotype.Component;
 @Component
 public class KnowledgeExpansion {
 
-    private static final int MAX_SEEDS = 5;
-    private static final int NEIGHBOR_RADIUS = 1;
-    private static final int MAX_EXPANDED = 10;
-
     private final SearchProjectionRepository repository;
+    private final RetrievalProperties properties;
 
-    public KnowledgeExpansion(SearchProjectionRepository repository) {
+    public KnowledgeExpansion(SearchProjectionRepository repository, RetrievalProperties properties) {
         this.repository = repository;
+        this.properties = properties;
     }
 
     public List<RetrievalHit> expand(List<RetrievalHit> ranked) {
         Set<String> existing = new HashSet<>();
         List<String> seedIds = ranked.stream()
-                .limit(MAX_SEEDS)
+                .limit(properties.expansionSeeds())
                 .map(RetrievalHit::chunkId)
                 .filter(id -> id != null && !id.isBlank())
                 .filter(existing::add)
                 .toList();
 
         ranked.stream()
-                .skip(MAX_SEEDS)
+                .skip(properties.expansionSeeds())
                 .map(RetrievalHit::chunkId)
                 .filter(id -> id != null && !id.isBlank())
                 .forEach(existing::add);
@@ -48,7 +46,7 @@ public class KnowledgeExpansion {
 
         List<RetrievalHit> expanded = new ArrayList<>();
         for (String seedId : seedIds) {
-            if (expanded.size() >= MAX_EXPANDED) {
+            if (expanded.size() >= properties.expansionMax()) {
                 break;
             }
             SearchProjection seed = seeds.get(seedId);
@@ -59,10 +57,10 @@ public class KnowledgeExpansion {
             repository.findAdjacent(
                     seed.documentId(),
                     seed.chunkIndex(),
-                    NEIGHBOR_RADIUS
+                    properties.expansionRadius()
             ).stream()
                     .filter(projection -> existing.add(projection.chunkId()))
-                    .limit(MAX_EXPANDED - expanded.size())
+                    .limit(properties.expansionMax() - expanded.size())
                     .map(this::neighbor)
                     .forEach(expanded::add);
         }

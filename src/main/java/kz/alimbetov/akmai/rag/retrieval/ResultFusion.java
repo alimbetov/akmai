@@ -10,7 +10,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class ResultFusion {
 
-    private static final int RRF_K = 60;
+    private final RetrievalProperties properties;
+
+    public ResultFusion(RetrievalProperties properties) {
+        this.properties = properties;
+    }
 
     public List<RetrievalHit> fuse(List<RetrievalHit> hits) {
         Map<String, Accumulator> accumulated = new LinkedHashMap<>();
@@ -50,7 +54,7 @@ public class ResultFusion {
         return score instanceof Number number ? number.doubleValue() : null;
     }
 
-    private static final class Accumulator {
+    private final class Accumulator {
 
         private final RetrievalHit representative;
         private final List<RetrievalEvidence> evidence = new ArrayList<>();
@@ -62,7 +66,7 @@ public class ResultFusion {
 
         private void add(RetrievalEvidence item) {
             evidence.add(item);
-            fusedScore += 1.0 / (RRF_K + item.rank());
+            fusedScore += 1.0 / (properties.rrfK() + item.rank());
         }
 
         private RetrievalHit toHit() {

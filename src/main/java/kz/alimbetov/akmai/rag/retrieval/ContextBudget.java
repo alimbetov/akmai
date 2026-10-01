@@ -10,14 +10,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class ContextBudget {
 
-    private static final int MAX_TOKENS = 6000;
-    private static final int MAX_CHUNKS = 12;
-    private static final int MAX_CHUNKS_PER_DOCUMENT = 4;
-
     private final TokenEstimator tokenEstimator;
+    private final RetrievalProperties properties;
 
-    public ContextBudget(TokenEstimator tokenEstimator) {
+    public ContextBudget(TokenEstimator tokenEstimator, RetrievalProperties properties) {
         this.tokenEstimator = tokenEstimator;
+        this.properties = properties;
     }
 
     public List<RetrievalHit> apply(List<RetrievalHit> hits) {
@@ -26,17 +24,17 @@ public class ContextBudget {
         int tokens = 0;
 
         for (RetrievalHit hit : hits) {
-            if (selected.size() >= MAX_CHUNKS) {
+            if (selected.size() >= properties.contextMaxChunks()) {
                 break;
             }
 
             String documentId = hit.documentId() == null ? "" : hit.documentId();
-            if (perDocument.getOrDefault(documentId, 0) >= MAX_CHUNKS_PER_DOCUMENT) {
+            if (perDocument.getOrDefault(documentId, 0) >= properties.contextMaxChunksPerDocument()) {
                 continue;
             }
 
             int hitTokens = tokenEstimator.estimate(hit.text());
-            if (tokens + hitTokens > MAX_TOKENS) {
+            if (tokens + hitTokens > properties.contextMaxTokens()) {
                 continue;
             }
 

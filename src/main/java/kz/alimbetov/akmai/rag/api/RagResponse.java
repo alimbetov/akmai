@@ -7,9 +7,13 @@ public record RagResponse(
         List<Source> sources
 ) {
     public record Source(
+            int number,
+            String documentId,
+            String chunkId,
             String source,
             String language,
-            String sectionPath
+            String sectionPath,
+            String page
     ) {
     }
 }
