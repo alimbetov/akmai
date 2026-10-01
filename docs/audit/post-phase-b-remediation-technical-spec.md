@@ -428,26 +428,37 @@ D58 verification targets the actual production PostgresGenerationVectorRepositor
 
 ## 9. Transaction boundaries
 
-There are exactly three persistence transaction classes.
+There are five explicit persistence transaction classes.
 
 1. Generation allocation transaction:
    - short lifecycle/generation/idempotency state mutation;
-   - no Ollama/network calls.
+   - normal requests create generation_kind=INGESTION;
+   - no model/network calls.
 
-2. Generation publication transaction:
+2. Normal generation publication transaction:
    - projections + identifiers + reference graph + vector manifest + profile-scoped pgvector rows + generation state + published pointer + idempotency success;
    - all batchUpdate calls participate in the same transaction;
-   - no Ollama/network calls.
+   - no model/network calls.
 
-3. Cleanup transaction:
-   - claim fence validation + profile vector deletes + relational generation deletes + manifest delete + lifecycle/generation completion;
-   - no Ollama/network calls.
+3. Re-embedding candidate staging transaction:
+   - generation_kind=REEMBEDDING with migration_id;
+   - cloned canonical projections/identifiers/reference graph + target-profile vectors + manifest commit atomically;
+   - lifecycle.published_generation is not changed.
 
-Embedding/chat calls always occur outside DB transactions.
+4. Corpus profile cutover transaction:
+   - validates migration snapshot/candidates;
+   - retires source generations, publishes migration candidates, switches lifecycle pointers and active_profile_id atomically.
 
-A failure in batch 2 of any publication SQL batch rolls back batch 1 and every other publication write. There is no normal-path “partial relational/vector generation” to compensate.
+5. Cleanup transaction:
+   - validates retention claim or generation cleanup ownership;
+   - deletes profile vectors + relational generation rows + manifest and completes lifecycle/generation state atomically;
+   - no model/network calls.
 
-The generation journal remains the recovery journal for crashes before publication and ambiguous transaction outcomes. Stale STAGING rows contain no published retrieval state; recovery marks them FAILED after the configured stale threshold.
+Embedding/chat calls always occur outside database transactions.
+
+A failure in any later SQL batch rolls back every earlier write in that transaction.
+
+Normal stale-ingestion recovery considers only generation_kind=INGESTION. REEMBEDDING candidates belonging to the current migration_id are owned by ReembeddingService and are excluded from the ordinary stale-ingestion scheduler.
 
 ## 10. Retrieval execution contract
 
