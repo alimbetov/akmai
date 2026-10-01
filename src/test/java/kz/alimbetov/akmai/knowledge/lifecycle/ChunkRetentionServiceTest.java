@@ -21,7 +21,7 @@ import org.springframework.ai.vectorstore.VectorStore;
 class ChunkRetentionServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-10-01T22:30:00Z");
-    private static final RetentionClaim CLAIM = new RetentionClaim("doc-1", 7);
+    private static final RetentionClaim CLAIM = new RetentionClaim("doc-1", 7, "pod-a", NOW.plusSeconds(600));
 
     @Test
     void deletesAllRetrievalStateAndMarksDeleted() {
