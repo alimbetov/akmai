@@ -165,6 +165,38 @@ class SemanticChunkingDepthTest {
         );
     }
 
+
+    @Test
+    void retainsDocumentTitleAsLegalRootWhenBodyStartsBelowLawLevel() {
+        KnowledgeDocument document = new KnowledgeDocument(
+                "kk-title-root",
+                "Қазақстан Республикасының Шарттар туралы Заңы",
+                """
+                1-бөлім
+
+                2-тарау
+
+                25-бап. Шартты бұзу
+
+                1-тармақ
+
+                Банк шартты бұзуға құқылы.
+                """,
+                "kk",
+                KnowledgeDomain.LEGAL,
+                Map.of("source", "kk-title-root.md")
+        );
+
+        var chunks = chunker.chunk(document);
+
+        assertThat(chunks.getLast().sectionPath())
+                .startsWith("Қазақстан Республикасының Шарттар туралы Заңы > ")
+                .contains("1-бөлім")
+                .contains("2-тарау")
+                .contains("25-бап")
+                .contains("1-тармақ");
+    }
+
     @Test
     void emitsMedicalFactsAsSeparateAtomicChunksAcrossLanguages() {
         assertMedicalAtomic("med-ru", "ru", """
