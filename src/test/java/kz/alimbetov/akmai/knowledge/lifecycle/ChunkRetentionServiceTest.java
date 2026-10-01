@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.UUID;
 import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,7 @@ import org.springframework.ai.vectorstore.VectorStore;
 class ChunkRetentionServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-10-01T22:30:00Z");
-    private static final RetentionClaim CLAIM = new RetentionClaim("doc-1", 7, "pod-a", NOW.plusSeconds(600));
+    private static final RetentionClaim CLAIM = new RetentionClaim("doc-1", 7, UUID.fromString("00000000-0000-0000-0000-000000000007"), "pod-a", NOW.plusSeconds(600));
 
     @Test
     void deletesAllRetrievalStateAndMarksDeleted() {
