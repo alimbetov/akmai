@@ -1,5 +1,5 @@
 name: CI
-# lifecycle compile debt closure gate
+# retention generation test alignment gate
 
 on:
   push:
