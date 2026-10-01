@@ -11,14 +11,6 @@ public interface DocumentLifecycleRepository {
 
     boolean publishIngestion(String documentId, long generation, Instant now);
 
-    long reserveGeneration(String documentId);
-
-    boolean activate(
-            String documentId,
-            long generation,
-            RetentionPolicy policy,
-            Instant expiresAt
-    );
 
     List<RetentionClaim> claimExpired(
             Instant now,
