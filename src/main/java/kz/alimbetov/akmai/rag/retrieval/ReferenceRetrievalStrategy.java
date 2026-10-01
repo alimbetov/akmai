@@ -2,6 +2,10 @@ package kz.alimbetov.akmai.rag.retrieval;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
+import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import org.springframework.stereotype.Component;
@@ -9,10 +13,17 @@ import org.springframework.stereotype.Component;
 @Component
 public class ReferenceRetrievalStrategy implements RetrievalStrategy {
 
-    private final SearchProjectionRepository repository;
+    private static final int MAX_REFERENCES = 20;
 
-    public ReferenceRetrievalStrategy(SearchProjectionRepository repository) {
+    private final SearchProjectionRepository repository;
+    private final IdentifierSearchIndex identifierSearchIndex;
+
+    public ReferenceRetrievalStrategy(
+            SearchProjectionRepository repository,
+            IdentifierSearchIndex identifierSearchIndex
+    ) {
         this.repository = repository;
+        this.identifierSearchIndex = identifierSearchIndex;
     }
 
     @Override
@@ -25,37 +36,41 @@ public class ReferenceRetrievalStrategy implements RetrievalStrategy {
             QueryChunk queryChunk,
             RetrievalContext context
     ) {
-        List<String> referencedChunkIds = context.dependencyHits().stream()
-                .flatMap(hit -> references(hit).stream())
+        List<String> seedIds = context.dependencyHits().stream()
+                .map(RetrievalHit::chunkId)
+                .filter(id -> id != null && !id.isBlank())
                 .distinct()
-                .limit(20)
                 .toList();
 
-        return repository.findByChunkIds(referencedChunkIds).stream()
-                .map(projection -> new RetrievalHit(
+        Set<String> seedIdSet = Set.copyOf(seedIds);
+
+        return repository.findByChunkIds(seedIds).stream()
+                .flatMap(seed -> seed.references().stream())
+                .distinct()
+                .limit(MAX_REFERENCES)
+                .flatMap(reference -> identifierSearchIndex
+                        .search(reference, 10)
+                        .stream())
+                .filter(identifier -> !seedIdSet.contains(identifier.chunkId()))
+                .collect(Collectors.toMap(
+                        identifier -> identifier.chunkId(),
+                        identifier -> identifier,
+                        (left, right) -> left
+                ))
+                .values()
+                .stream()
+                .map(identifier -> new RetrievalHit(
                         RetrievalType.REFERENCE,
-                        projection.documentId(),
-                        projection.chunkId(),
-                        projection.text(),
+                        identifier.documentId(),
+                        identifier.chunkId(),
+                        identifier.contextText(),
                         Map.of(
-                                "language", projection.language(),
-                                "sectionPath", projection.sectionPath() == null
-                                        ? ""
-                                        : projection.sectionPath(),
+                                "identifierType", identifier.type().name(),
+                                "identifier", identifier.rawValue(),
+                                "pageNumber", identifier.pageNumber(),
                                 "expansion", "reference"
                         )
                 ))
-                .toList();
-    }
-
-    private List<String> references(RetrievalHit hit) {
-        Object value = hit.metadata().get("references");
-        if (!(value instanceof String references) || references.isBlank()) {
-            return List.of();
-        }
-        return List.of(references.split(",")).stream()
-                .map(String::trim)
-                .filter(reference -> !reference.isBlank())
                 .toList();
     }
 }
