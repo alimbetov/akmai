@@ -57,10 +57,14 @@ public class SemanticChunker {
                 .map(unit -> new SemanticUnit(
                         unit.text(),
                         unit.sectionPath(),
-                        unit.type().name().equals("HEADING")
-                                ? unit.type()
-                                : classifier.classify(unit.text(), document.domain()),
-                        unit.protectedAtom()
+                        unit.type() == SemanticUnitType.HEADING
+                                ? SemanticUnitType.HEADING
+                                : classifier.classify(
+                                        unit.text(),
+                                        document.domain()
+                                ),
+                        unit.protectedAtom(),
+                        unit.structuralRole()
                 ))
                 .toList();
 
@@ -68,28 +72,50 @@ public class SemanticChunker {
                 atomicUnitProtector.protect(classified, document.domain());
 
         List<SemanticUnit> boundedUnits = protectedUnits.stream()
-                .flatMap(unit -> oversizedUnitSplitter
-                        .split(unit, properties.hardMaxTokens())
-                        .stream())
+                .flatMap(unit -> {
+                    int overhead = tokenEstimator.estimate(
+                            embeddingTextBuilder.build(
+                                    document,
+                                    unit.sectionPath(),
+                                    ""
+                            )
+                    );
+                    int payloadBudget = Math.max(
+                            1,
+                            properties.hardMaxTokens() - overhead
+                    );
+                    return oversizedUnitSplitter
+                            .split(unit, payloadBudget)
+                            .stream();
+                })
                 .toList();
 
-        List<List<SemanticUnit>> groups = group(boundedUnits, document.domain());
+        List<List<SemanticUnit>> groups = group(
+                boundedUnits,
+                document
+        );
         List<KnowledgeChunk> chunks = new ArrayList<>();
 
         for (int i = 0; i < groups.size(); i++) {
             List<SemanticUnit> group = groups.get(i);
-            String rawText = group.stream()
-                    .map(SemanticUnit::text)
-                    .reduce((a, b) -> a + "\n\n" + b)
-                    .orElse("");
+            String rawText = rawText(group);
+            String sectionPath = sectionPath(group, document);
+            String normalizedChunk = normalizer.normalize(rawText);
+            String embeddingText = embeddingTextBuilder.build(
+                    document,
+                    sectionPath,
+                    rawText
+            );
+            if (tokenEstimator.estimate(embeddingText) > properties.hardMaxTokens()) {
+                throw new IllegalStateException(
+                        "Final embedding payload exceeds hard token limit"
+                );
+            }
 
-            String sectionPath = group.stream()
-                    .map(SemanticUnit::sectionPath)
-                    .filter(value -> value != null && !value.isBlank())
-                    .reduce((a, b) -> b)
-                    .orElse(document.title());
-
-            Map<String, Object> metadata = new LinkedHashMap<>(document.metadata());
+            Map<String, Object> metadata = new LinkedHashMap<>(
+                    document.metadata() == null ? Map.of() : document.metadata()
+            );
+            metadata.values().removeIf(java.util.Objects::isNull);
             metadata.put("documentId", document.documentId());
             metadata.put("chunkIndex", i);
             metadata.put("language", document.language());
@@ -101,29 +127,29 @@ public class SemanticChunker {
                             document.documentId(),
                             i,
                             sectionPath,
-                            normalizer.normalize(rawText)
+                            normalizedChunk
                     ),
                     document.documentId(),
                     null,
                     i,
                     rawText,
-                    normalizer.normalize(rawText),
-                    embeddingTextBuilder.build(document, sectionPath, rawText),
+                    normalizedChunk,
+                    embeddingText,
                     document.title(),
                     sectionPath,
                     document.language(),
                     document.domain(),
                     referenceExtractor.extract(rawText),
-                    metadata
+                    Map.copyOf(metadata)
             ));
         }
 
-        return chunks;
+        return List.copyOf(chunks);
     }
 
     private List<List<SemanticUnit>> group(
             List<SemanticUnit> units,
-            KnowledgeDomain domain
+            KnowledgeDocument document
     ) {
         List<List<SemanticUnit>> groups = new ArrayList<>();
         List<SemanticUnit> current = new ArrayList<>();
@@ -135,22 +161,24 @@ public class SemanticChunker {
             boolean sectionChanged = currentSection != null
                     && unit.sectionPath() != null
                     && !currentSection.equals(unit.sectionPath());
-
-            boolean wouldExceedSoftMax =
-                    currentTokens + unitTokens > properties.softMaxTokens();
-
-            boolean enoughContent =
-                    currentTokens >= properties.minTokens();
-
-            boolean medicalAtomicBoundary = domain == KnowledgeDomain.MEDICAL
+            boolean enoughContent = currentTokens >= properties.minTokens();
+            boolean medicalAtomicBoundary = document.domain() == KnowledgeDomain.MEDICAL
                     && unit.protectedAtom()
                     && unit.type() != SemanticUnitType.HEADING
                     && !current.isEmpty();
 
+            List<SemanticUnit> candidate = new ArrayList<>(current);
+            candidate.add(unit);
+            boolean exceedsHard = embeddingTokens(candidate, document)
+                    > properties.hardMaxTokens();
+            boolean exceedsSoft = currentTokens + unitTokens
+                    > properties.softMaxTokens();
+
             if (!current.isEmpty()
-                    && (medicalAtomicBoundary
+                    && (exceedsHard
+                    || medicalAtomicBoundary
                     || (sectionChanged && enoughContent)
-                    || (wouldExceedSoftMax && enoughContent))) {
+                    || (exceedsSoft && enoughContent))) {
                 groups.add(List.copyOf(current));
                 current.clear();
                 currentTokens = 0;
@@ -160,7 +188,13 @@ public class SemanticChunker {
             currentTokens += unitTokens;
             currentSection = unit.sectionPath();
 
-            if ((domain == KnowledgeDomain.MEDICAL
+            if (embeddingTokens(current, document) > properties.hardMaxTokens()) {
+                throw new IllegalStateException(
+                        "A single bounded semantic unit exceeds final hard limit"
+                );
+            }
+
+            if ((document.domain() == KnowledgeDomain.MEDICAL
                     && unit.protectedAtom()
                     && unit.type() != SemanticUnitType.HEADING)
                     || (currentTokens >= properties.targetTokens()
@@ -176,5 +210,36 @@ public class SemanticChunker {
         }
 
         return groups;
+    }
+
+    private int embeddingTokens(
+            List<SemanticUnit> units,
+            KnowledgeDocument document
+    ) {
+        return tokenEstimator.estimate(
+                embeddingTextBuilder.build(
+                        document,
+                        sectionPath(units, document),
+                        rawText(units)
+                )
+        );
+    }
+
+    private String rawText(List<SemanticUnit> group) {
+        return group.stream()
+                .map(SemanticUnit::text)
+                .reduce((a, b) -> a + "\n\n" + b)
+                .orElse("");
+    }
+
+    private String sectionPath(
+            List<SemanticUnit> group,
+            KnowledgeDocument document
+    ) {
+        return group.stream()
+                .map(SemanticUnit::sectionPath)
+                .filter(value -> value != null && !value.isBlank())
+                .reduce((a, b) -> b)
+                .orElse(document.title());
     }
 }
