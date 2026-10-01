@@ -1,5 +1,5 @@
 name: CI
-# retrieval integration postgres expansion gate
+# lifecycle repository postgres gate
 
 on:
   push:
