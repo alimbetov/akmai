@@ -69,12 +69,19 @@ public class Reranker {
                 .mapToDouble(RetrievalHit::fusedScore)
                 .max()
                 .orElse(0.0);
-        return candidates.stream()
-                .map(hit -> withRerankScore(
-                        hit,
-                        scorer.score(question, hit),
-                        maxFused
-                ))
+        List<Double> semanticScores = scorer.score(question, candidates);
+        if (semanticScores.size() != candidates.size()) {
+            throw new IllegalStateException("Rerank scorer returned unexpected score count");
+        }
+        List<RetrievalHit> scored = new ArrayList<>(candidates.size());
+        for (int i = 0; i < candidates.size(); i++) {
+            scored.add(withRerankScore(
+                    candidates.get(i),
+                    semanticScores.get(i),
+                    maxFused
+            ));
+        }
+        return scored.stream()
                 .sorted(Comparator.comparingDouble(this::rerankScore).reversed())
                 .toList();
     }
