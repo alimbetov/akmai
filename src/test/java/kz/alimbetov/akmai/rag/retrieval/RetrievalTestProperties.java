@@ -1,5 +1,7 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
+import java.time.Duration;
+
 public final class RetrievalTestProperties {
 
     private RetrievalTestProperties() {
@@ -20,7 +22,11 @@ public final class RetrievalTestProperties {
                 10,
                 6000,
                 12,
-                4
+                4,
+                true,
+                20,
+                Duration.ofSeconds(2),
+                0.15
         );
     }
 }
