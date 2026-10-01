@@ -1,5 +1,5 @@
 name: CI
-# retrieval integration postgres expansion gate
+# unique claim fencing gate
 
 on:
   push:
