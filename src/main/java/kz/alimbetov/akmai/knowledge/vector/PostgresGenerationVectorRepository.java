@@ -90,19 +90,17 @@ public class PostgresGenerationVectorRepository {
             return 0;
         }
         String table = storageManager.qualified(profile);
-        Integer count = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM " + table + " WHERE id = ANY (?)",
-                Integer.class,
-                jdbcTemplate.getDataSource()
-                        .getConnection()
-                        .createArrayOf(
-                                "uuid",
-                                ids.stream()
-                                        .map(UUID::fromString)
-                                        .toArray(UUID[]::new)
-                        )
+        return jdbcTemplate.query(
+                "SELECT count(*) FROM " + table + " WHERE id::text = ANY (?)",
+                ps -> ps.setArray(
+                        1,
+                        ps.getConnection().createArrayOf("varchar", ids.toArray())
+                ),
+                rs -> {
+                    rs.next();
+                    return rs.getInt(1);
+                }
         );
-        return count == null ? 0 : count;
     }
 
     private String json(Map<String, Object> metadata) {
