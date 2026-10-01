@@ -12,4 +12,6 @@ public interface IdentifierSearchIndex {
     List<DocumentIdentifier> search(IdentifierSearchQuery query);
 
     void deleteByDocumentId(String documentId);
+
+    void deleteGeneration(String documentId, long generation);
 }
