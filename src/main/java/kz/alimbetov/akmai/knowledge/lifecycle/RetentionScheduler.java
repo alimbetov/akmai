@@ -10,16 +10,19 @@ public class RetentionScheduler {
     private final RetentionWorkerPool workerPool;
     private final RetentionProperties properties;
     private final DocumentLifecycleRepository lifecycleRepository;
+    private final DocumentOperationLock documentOperationLock;
     private final String workerId;
 
     public RetentionScheduler(
             RetentionWorkerPool workerPool,
             RetentionProperties properties,
-            DocumentLifecycleRepository lifecycleRepository
+            DocumentLifecycleRepository lifecycleRepository,
+            DocumentOperationLock documentOperationLock
     ) {
         this.workerPool = workerPool;
         this.properties = properties;
         this.lifecycleRepository = lifecycleRepository;
+        this.documentOperationLock = documentOperationLock;
         this.workerId = ManagementFactory.getRuntimeMXBean().getName();
     }
 
@@ -32,12 +35,7 @@ public class RetentionScheduler {
             return;
         }
 
-        java.time.Instant now = java.time.Instant.now();
-        lifecycleRepository.failStaleIngestions(
-                now.minus(properties.leaseDuration()),
-                now,
-                "abandoned ingestion exceeded recovery timeout"
-        );
+        recoverAbandonedIngestions();
 
         for (int batch = 0; batch < properties.maxBatchesPerRun(); batch++) {
             if (workerPool.availableCapacity() == 0) {
@@ -48,4 +46,25 @@ public class RetentionScheduler {
             }
         }
     }
+
+    private void recoverAbandonedIngestions() {
+        java.time.Instant now = java.time.Instant.now();
+        java.time.Instant staleBefore = now.minus(properties.leaseDuration());
+        for (String documentId : lifecycleRepository.findStaleIngestionDocumentIds(
+                staleBefore,
+                properties.batchSize()
+        )) {
+            documentOperationLock.tryAcquire(documentId).ifPresent(handle -> {
+                try (handle) {
+                    lifecycleRepository.failStaleIngestion(
+                            documentId,
+                            staleBefore,
+                            now,
+                            "abandoned ingestion exceeded recovery timeout"
+                    );
+                }
+            });
+        }
+    }
 }
+
