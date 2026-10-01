@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -48,6 +49,7 @@ public class PostgresDocumentLifecycleRepository
                     lifecycle_status = 'READY',
                     generation = knowledge_document_lifecycle.generation + 1,
                     claim_generation = NULL,
+                    claim_id = NULL,
                     claimed_by = NULL,
                     claimed_at = NULL,
                     lease_until = NULL,
@@ -81,6 +83,7 @@ public class PostgresDocumentLifecycleRepository
     ) {
         validateClaimArguments(batchSize, retryLimit, workerId, leaseDuration);
         Instant leaseUntil = now.plus(leaseDuration);
+        UUID claimId = UUID.randomUUID();
 
         return transactionTemplate.execute(status -> jdbcTemplate.query(
                 """
@@ -104,6 +107,7 @@ public class PostgresDocumentLifecycleRepository
                 UPDATE knowledge_document_lifecycle lifecycle
                 SET lifecycle_status = 'DELETE_PENDING',
                     claim_generation = lifecycle.generation,
+                    claim_id = ?,
                     claimed_by = ?,
                     claimed_at = ?,
                     lease_until = ?,
@@ -117,11 +121,12 @@ public class PostgresDocumentLifecycleRepository
                 FROM candidates
                 WHERE lifecycle.document_id = candidates.document_id
                 RETURNING lifecycle.document_id, lifecycle.claim_generation,
-                          lifecycle.claimed_by, lifecycle.lease_until
+                          lifecycle.claim_id, lifecycle.claimed_by, lifecycle.lease_until
                 """,
                 (rs, rowNum) -> new RetentionClaim(
                         rs.getString("document_id"),
                         rs.getLong("claim_generation"),
+                        rs.getObject("claim_id", UUID.class),
                         rs.getString("claimed_by"),
                         rs.getTimestamp("lease_until").toInstant()
                 ),
@@ -129,6 +134,7 @@ public class PostgresDocumentLifecycleRepository
                 retryLimit,
                 timestamp(now),
                 batchSize,
+                claimId,
                 workerId,
                 timestamp(now),
                 timestamp(leaseUntil)
@@ -201,6 +207,7 @@ public class PostgresDocumentLifecycleRepository
                 SET lifecycle_status = 'DELETED',
                     deleted_at = ?,
                     claim_generation = NULL,
+                    claim_id = NULL,
                     claimed_by = NULL,
                     claimed_at = NULL,
                     lease_until = NULL,
@@ -238,6 +245,7 @@ public class PostgresDocumentLifecycleRepository
                     attempt_count = attempt_count + 1,
                     last_error = ?,
                     claim_generation = NULL,
+                    claim_id = NULL,
                     claimed_by = NULL,
                     claimed_at = NULL,
                     lease_until = NULL,
