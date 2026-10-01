@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.knowledge.lifecycle;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -38,15 +39,18 @@ public class PostgresDocumentLifecycleRepository
                 """
                 INSERT INTO knowledge_document_lifecycle (
                     document_id, lifecycle_policy, lifecycle_status,
-                    generation, claim_generation, expires_at,
+                    generation, claim_generation, claimed_by, claimed_at, lease_until, expires_at,
                     delete_started_at, deleted_at, attempt_count,
                     last_error, row_version, created_at, updated_at
-                ) VALUES (?, ?, 'READY', 1, NULL, ?, NULL, NULL, 0, NULL, 0, now(), now())
+                ) VALUES (?, ?, 'READY', 1, NULL, NULL, NULL, NULL, ?, NULL, NULL, 0, NULL, 0, now(), now())
                 ON CONFLICT (document_id) DO UPDATE SET
                     lifecycle_policy = EXCLUDED.lifecycle_policy,
                     lifecycle_status = 'READY',
                     generation = knowledge_document_lifecycle.generation + 1,
                     claim_generation = NULL,
+                    claimed_by = NULL,
+                    claimed_at = NULL,
+                    lease_until = NULL,
                     expires_at = EXCLUDED.expires_at,
                     delete_started_at = NULL,
                     deleted_at = NULL,
@@ -71,14 +75,12 @@ public class PostgresDocumentLifecycleRepository
     public List<RetentionClaim> claimExpired(
             Instant now,
             int batchSize,
-            int retryLimit
+            int retryLimit,
+            String workerId,
+            Duration leaseDuration
     ) {
-        if (batchSize <= 0) {
-            throw new IllegalArgumentException("batchSize must be > 0");
-        }
-        if (retryLimit <= 0) {
-            throw new IllegalArgumentException("retryLimit must be > 0");
-        }
+        validateClaimArguments(batchSize, retryLimit, workerId, leaseDuration);
+        Instant leaseUntil = now.plus(leaseDuration);
 
         return transactionTemplate.execute(status -> jdbcTemplate.query(
                 """
@@ -86,9 +88,15 @@ public class PostgresDocumentLifecycleRepository
                     SELECT document_id
                     FROM knowledge_document_lifecycle
                     WHERE lifecycle_policy = 'TTL'
-                      AND lifecycle_status IN ('READY', 'DELETE_FAILED')
                       AND expires_at <= ?
                       AND attempt_count < ?
+                      AND (
+                          lifecycle_status IN ('READY', 'DELETE_FAILED')
+                          OR (
+                              lifecycle_status IN ('DELETE_PENDING', 'DELETING')
+                              AND lease_until < ?
+                          )
+                      )
                     ORDER BY expires_at, document_id
                     FOR UPDATE SKIP LOCKED
                     LIMIT ?
@@ -96,56 +104,124 @@ public class PostgresDocumentLifecycleRepository
                 UPDATE knowledge_document_lifecycle lifecycle
                 SET lifecycle_status = 'DELETE_PENDING',
                     claim_generation = lifecycle.generation,
+                    claimed_by = ?,
+                    claimed_at = ?,
+                    lease_until = ?,
+                    attempt_count = CASE
+                        WHEN lifecycle.lifecycle_status IN ('DELETE_PENDING', 'DELETING')
+                            THEN lifecycle.attempt_count + 1
+                        ELSE lifecycle.attempt_count
+                    END,
                     row_version = lifecycle.row_version + 1,
                     updated_at = now()
                 FROM candidates
                 WHERE lifecycle.document_id = candidates.document_id
-                RETURNING lifecycle.document_id, lifecycle.claim_generation
+                RETURNING lifecycle.document_id, lifecycle.claim_generation,
+                          lifecycle.claimed_by, lifecycle.lease_until
                 """,
                 (rs, rowNum) -> new RetentionClaim(
                         rs.getString("document_id"),
-                        rs.getLong("claim_generation")
+                        rs.getLong("claim_generation"),
+                        rs.getString("claimed_by"),
+                        rs.getTimestamp("lease_until").toInstant()
                 ),
                 timestamp(now),
                 retryLimit,
-                batchSize
+                timestamp(now),
+                batchSize,
+                workerId,
+                timestamp(now),
+                timestamp(leaseUntil)
         ));
     }
 
     @Override
     public boolean markDeleting(RetentionClaim claim, Instant now) {
-        return updateClaimState(
-                claim,
-                LifecycleStatus.DELETE_PENDING,
-                LifecycleStatus.DELETING,
-                now,
-                null
+        return jdbcTemplate.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET lifecycle_status = 'DELETING',
+                    delete_started_at = ?,
+                    row_version = row_version + 1,
+                    updated_at = ?
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND claim_generation = ?
+                  AND claimed_by = ?
+                  AND lease_until >= ?
+                  AND lifecycle_status = 'DELETE_PENDING'
+                """,
+                timestamp(now),
+                timestamp(now),
+                claim.documentId(),
+                claim.generation(),
+                claim.generation(),
+                claim.workerId(),
+                timestamp(now)
+        ) == 1;
+    }
+
+    @Override
+    public boolean renewLease(
+            RetentionClaim claim,
+            Instant now,
+            Duration leaseDuration
+    ) {
+        if (leaseDuration == null || leaseDuration.isZero() || leaseDuration.isNegative()) {
+            throw new IllegalArgumentException("leaseDuration must be positive");
+        }
+        return jdbcTemplate.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET lease_until = ?,
+                    row_version = row_version + 1,
+                    updated_at = ?
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND claim_generation = ?
+                  AND claimed_by = ?
+                  AND lease_until >= ?
+                  AND lifecycle_status IN ('DELETE_PENDING', 'DELETING')
+                """,
+                timestamp(now.plus(leaseDuration)),
+                timestamp(now),
+                claim.documentId(),
+                claim.generation(),
+                claim.generation(),
+                claim.workerId(),
+                timestamp(now)
         ) == 1;
     }
 
     @Override
     public boolean markDeleted(RetentionClaim claim, Instant now) {
-        int updated = jdbcTemplate.update(
+        return jdbcTemplate.update(
                 """
                 UPDATE knowledge_document_lifecycle
                 SET lifecycle_status = 'DELETED',
                     deleted_at = ?,
                     claim_generation = NULL,
+                    claimed_by = NULL,
+                    claimed_at = NULL,
+                    lease_until = NULL,
                     last_error = NULL,
                     row_version = row_version + 1,
                     updated_at = ?
                 WHERE document_id = ?
                   AND generation = ?
                   AND claim_generation = ?
+                  AND claimed_by = ?
+                  AND lease_until >= ?
                   AND lifecycle_status = 'DELETING'
                 """,
                 timestamp(now),
                 timestamp(now),
                 claim.documentId(),
                 claim.generation(),
-                claim.generation()
-        );
-        return updated == 1;
+                claim.generation(),
+                claim.workerId(),
+                timestamp(now)
+        ) == 1;
     }
 
     @Override
@@ -155,31 +231,35 @@ public class PostgresDocumentLifecycleRepository
             String error
     ) {
         String sanitized = sanitizeError(error);
-        int updated = jdbcTemplate.update(
+        return jdbcTemplate.update(
                 """
                 UPDATE knowledge_document_lifecycle
                 SET lifecycle_status = 'DELETE_FAILED',
                     attempt_count = attempt_count + 1,
                     last_error = ?,
                     claim_generation = NULL,
+                    claimed_by = NULL,
+                    claimed_at = NULL,
+                    lease_until = NULL,
                     row_version = row_version + 1,
                     updated_at = ?
                 WHERE document_id = ?
                   AND generation = ?
                   AND claim_generation = ?
+                  AND claimed_by = ?
                   AND lifecycle_status IN ('DELETE_PENDING', 'DELETING')
                 """,
                 sanitized,
                 timestamp(now),
                 claim.documentId(),
                 claim.generation(),
-                claim.generation()
-        );
-        return updated == 1;
+                claim.generation(),
+                claim.workerId()
+        ) == 1;
     }
 
     @Override
-    public boolean isCurrentClaim(RetentionClaim claim) {
+    public boolean isCurrentClaim(RetentionClaim claim, Instant now) {
         Integer count = jdbcTemplate.queryForObject(
                 """
                 SELECT count(*)
@@ -187,12 +267,16 @@ public class PostgresDocumentLifecycleRepository
                 WHERE document_id = ?
                   AND generation = ?
                   AND claim_generation = ?
+                  AND claimed_by = ?
+                  AND lease_until >= ?
                   AND lifecycle_status IN ('DELETE_PENDING', 'DELETING')
                 """,
                 Integer.class,
                 claim.documentId(),
                 claim.generation(),
-                claim.generation()
+                claim.generation(),
+                claim.workerId(),
+                timestamp(now)
         );
         return count != null && count == 1;
     }
@@ -210,41 +294,6 @@ public class PostgresDocumentLifecycleRepository
         ).stream().findFirst();
     }
 
-    private int updateClaimState(
-            RetentionClaim claim,
-            LifecycleStatus expected,
-            LifecycleStatus target,
-            Instant now,
-            String error
-    ) {
-        return jdbcTemplate.update(
-                """
-                UPDATE knowledge_document_lifecycle
-                SET lifecycle_status = ?,
-                    delete_started_at = CASE
-                        WHEN ? = 'DELETING' THEN ?
-                        ELSE delete_started_at
-                    END,
-                    last_error = ?,
-                    row_version = row_version + 1,
-                    updated_at = ?
-                WHERE document_id = ?
-                  AND generation = ?
-                  AND claim_generation = ?
-                  AND lifecycle_status = ?
-                """,
-                target.name(),
-                target.name(),
-                timestamp(now),
-                error,
-                timestamp(now),
-                claim.documentId(),
-                claim.generation(),
-                claim.generation(),
-                expected.name()
-        );
-    }
-
     private DocumentLifecycle map(ResultSet rs, int rowNum) throws SQLException {
         return new DocumentLifecycle(
                 rs.getString("document_id"),
@@ -252,6 +301,9 @@ public class PostgresDocumentLifecycleRepository
                 LifecycleStatus.valueOf(rs.getString("lifecycle_status")),
                 rs.getLong("generation"),
                 nullableLong(rs, "claim_generation"),
+                rs.getString("claimed_by"),
+                instant(rs, "claimed_at"),
+                instant(rs, "lease_until"),
                 instant(rs, "expires_at"),
                 instant(rs, "delete_started_at"),
                 instant(rs, "deleted_at"),
@@ -275,6 +327,26 @@ public class PostgresDocumentLifecycleRepository
     private Instant instant(ResultSet rs, String column) throws SQLException {
         var timestamp = rs.getTimestamp(column);
         return timestamp == null ? null : timestamp.toInstant();
+    }
+
+    private void validateClaimArguments(
+            int batchSize,
+            int retryLimit,
+            String workerId,
+            Duration leaseDuration
+    ) {
+        if (batchSize <= 0) {
+            throw new IllegalArgumentException("batchSize must be > 0");
+        }
+        if (retryLimit <= 0) {
+            throw new IllegalArgumentException("retryLimit must be > 0");
+        }
+        if (workerId == null || workerId.isBlank()) {
+            throw new IllegalArgumentException("workerId must not be blank");
+        }
+        if (leaseDuration == null || leaseDuration.isZero() || leaseDuration.isNegative()) {
+            throw new IllegalArgumentException("leaseDuration must be positive");
+        }
     }
 
     private void validatePolicy(RetentionPolicy policy, Instant expiresAt) {
