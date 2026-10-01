@@ -11,6 +11,12 @@ public interface DocumentLifecycleRepository {
 
     boolean publishIngestion(String documentId, long generation, Instant now);
 
+    boolean failIngestion(String documentId, long generation, Instant now, String error);
+
+    List<String> findStaleIngestionDocumentIds(Instant staleBefore, int limit);
+
+    boolean failStaleIngestion(String documentId, Instant staleBefore, Instant now, String error);
+
 
     List<RetentionClaim> claimExpired(
             Instant now,
@@ -23,6 +29,8 @@ public interface DocumentLifecycleRepository {
     boolean markDeleting(RetentionClaim claim, Instant now);
 
     boolean renewLease(RetentionClaim claim, Instant now, Duration leaseDuration);
+
+    boolean releaseClaim(RetentionClaim claim, Instant now);
 
     boolean markDeleted(RetentionClaim claim, Instant now);
 

@@ -74,40 +74,50 @@ public class PersistenceCoordinator {
                     expiration()
             );
 
-            replacePreviousGeneration(documentId, previous);
-            projectionRepository.saveAll(projections);
+            try {
+                replacePreviousGeneration(documentId, previous);
+                projectionRepository.saveAll(projections);
 
-            List<Document> vectors = projections.stream()
-                    .map(projection -> new Document(
-                            vectorId(documentId, generation, projection.chunkId()),
-                            projection.embeddingText(),
-                            vectorMetadata(projection, generation)
-                    ))
-                    .toList();
-            vectorStore.add(vectors);
+                List<Document> vectors = projections.stream()
+                        .map(projection -> new Document(
+                                vectorId(documentId, generation, projection.chunkId()),
+                                projection.embeddingText(),
+                                vectorMetadata(projection, generation)
+                        ))
+                        .toList();
+                vectorStore.add(vectors);
 
-            vectorGenerationRepository.save(
-                    documentId,
-                    generation,
-                    projections.stream()
-                            .map(projection -> new VectorGenerationEntry(
-                                    vectorId(documentId, generation, projection.chunkId()),
-                                    projection.chunkId()
-                            ))
-                            .toList()
-            );
-
-            List<DocumentIdentifier> identifiers = identifiers(projections);
-            if (!identifiers.isEmpty()) {
-                identifierSearchIndex.index(identifiers);
-            }
-
-            if (!lifecycleRepository.publishIngestion(
-                    documentId, generation, Instant.now()
-            )) {
-                throw new IllegalStateException(
-                        "Lifecycle generation changed while document lock was held"
+                vectorGenerationRepository.save(
+                        documentId,
+                        generation,
+                        projections.stream()
+                                .map(projection -> new VectorGenerationEntry(
+                                        vectorId(documentId, generation, projection.chunkId()),
+                                        projection.chunkId()
+                                ))
+                                .toList()
                 );
+
+                List<DocumentIdentifier> identifiers = identifiers(projections);
+                if (!identifiers.isEmpty()) {
+                    identifierSearchIndex.index(identifiers);
+                }
+
+                if (!lifecycleRepository.publishIngestion(
+                        documentId, generation, Instant.now()
+                )) {
+                    throw new IllegalStateException(
+                            "Lifecycle generation changed while document lock was held"
+                    );
+                }
+            } catch (RuntimeException exception) {
+                lifecycleRepository.failIngestion(
+                        documentId,
+                        generation,
+                        Instant.now(),
+                        exception.getClass().getSimpleName() + ": " + exception.getMessage()
+                );
+                throw exception;
             }
         }
     }

@@ -1,5 +1,5 @@
 name: CI
-# bounded retention worker gate
+# production lifecycle hardening compile gate
 
 on:
   push:
