@@ -254,7 +254,7 @@ class PostgresRetrievalIntegrationTest {
         ReferenceRetrievalStrategy strategy =
                 new ReferenceRetrievalStrategy(repository, identifierIndex, RetrievalTestProperties.defaults());
         List<RetrievalHit> hits = strategy.retrieve(
-                new QueryChunk("q-ref", 0, "REF-48", "REF-48", "REF-48", List.of()),
+                new QueryChunk("q-ref", 0, "REF-48", "REF-48", "REF-48", "ru", List.of()),
                 new RetrievalContext(List.of(new RetrievalHit(
                         RetrievalType.LEXICAL,
                         "doc-ref",
