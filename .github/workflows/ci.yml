@@ -1,5 +1,5 @@
 name: CI
-# multi-pod lease recovery gate
+# lease-aware API remediation gate
 
 on:
   push:
