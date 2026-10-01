@@ -1,5 +1,5 @@
 name: CI
-# retrieval integration quality gate
+# retrieval integration postgres expansion gate
 
 on:
   push:
