@@ -48,6 +48,9 @@ akmai:
     batch-size: ${AKMAI_RETENTION_BATCH_SIZE:500}
     max-batches-per-run: ${AKMAI_RETENTION_MAX_BATCHES:20}
     retry-limit: ${AKMAI_RETENTION_RETRY_LIMIT:5}
+    worker-parallelism: ${AKMAI_RETENTION_WORKER_PARALLELISM:4}
+    queue-capacity: ${AKMAI_RETENTION_QUEUE_CAPACITY:16}
+    lease-duration: ${AKMAI_RETENTION_LEASE_DURATION:10m}
     default-policy: ${AKMAI_RETENTION_DEFAULT_POLICY:PERMANENT}
     default-ttl: ${AKMAI_RETENTION_DEFAULT_TTL:90d}
   chunking:
