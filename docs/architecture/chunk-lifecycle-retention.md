@@ -78,6 +78,9 @@ Required fields:
 - `last_error` nullable
 - `generation` BIGINT NOT NULL — monotonically increases on each accepted reingestion
 - `claim_generation` BIGINT nullable — generation captured when retention claims the row
+- `claimed_by` nullable — opaque pod/worker identity
+- `claimed_at` nullable
+- `lease_until` nullable — claim recovery deadline
 - optimistic row version if required by the chosen locking implementation
 
 Indexes MUST support selection by `lifecycle_status, expires_at`.
@@ -114,6 +117,9 @@ akmai:
     batch-size: 500
     max-batches-per-run: 20
     retry-limit: 5
+    worker-parallelism: 4
+    queue-capacity: 16
+    lease-duration: 10m
     default-policy: PERMANENT
     default-ttl: 90d
 ```
@@ -122,6 +128,8 @@ The scheduler only orchestrates. Business deletion logic belongs in
 `ChunkRetentionService`.
 
 One scheduled run MUST be bounded by both batch size and maximum batches.
+
+Per-pod execution MUST also use a fixed-size worker pool and bounded queue. Queue saturation must apply backpressure; it must not create unbounded threads/tasks. Cluster concurrency is therefore bounded by `pod_count × worker_parallelism`.
 
 ## 8. Claiming and concurrency
 
@@ -144,7 +152,9 @@ FOR UPDATE SKIP LOCKED
 LIMIT :batchSize;
 ```
 
-The claim transaction changes selected rows to `DELETE_PENDING`, copies `generation` into
+Every application pod may run the retention scheduler. There is deliberately no singleton scheduler requirement: PostgreSQL claiming distributes work across pods.
+
+The claim transaction changes selected rows to `DELETE_PENDING`, records `claimed_by`, `claimed_at`, `lease_until`, copies `generation` into
 `claim_generation`, and commits before external vector cleanup begins.
 
 Every destructive step MUST verify that the lifecycle row still has
@@ -153,6 +163,8 @@ Every destructive step MUST verify that the lifecycle row still has
 vector deletion when its claim generation no longer matches.
 
 Do not hold a database transaction open while calling the vector store.
+
+Claims are leases, not permanent ownership. If a pod crashes, work in `DELETE_PENDING`, `DELETING`, or `DELETE_FAILED` becomes reclaimable after `lease_until`. Reclaiming increments the attempt counter where appropriate and must preserve generation fencing. A healthy worker may renew its lease for a bounded operation if needed.
 
 ## 9. Deletion algorithm
 
@@ -267,7 +279,11 @@ Lifecycle state is server-owned.
 - PERMANENT document is not claimable;
 - concurrent claims are disjoint (`SKIP LOCKED`);
 - failed item becomes retryable;
-- retry-limit item is not reclaimed.
+- retry-limit item is not reclaimed;
+- two concurrent pods receive disjoint claims;
+- an unexpired lease cannot be stolen;
+- an expired lease is reclaimable after simulated pod death;
+- a stale owner/generation cannot complete a reclaimed item.
 
 ### Retention integration
 
