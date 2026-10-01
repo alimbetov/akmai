@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -59,9 +60,8 @@ class ParallelRetrievalExecutorTest {
                     executor
             );
 
-            var future = java.util.concurrent.CompletableFuture.supplyAsync(
-                    () -> subject.execute(plan()),
-                    executor
+            var future = CompletableFuture.supplyAsync(
+                    () -> subject.execute(plan())
             );
 
             assertThat(started.await(2, TimeUnit.SECONDS)).isTrue();
