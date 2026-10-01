@@ -7,6 +7,9 @@ CREATE TABLE knowledge_document_lifecycle (
     lifecycle_status   VARCHAR(32) NOT NULL,
     generation         BIGINT NOT NULL DEFAULT 1,
     claim_generation   BIGINT,
+    claimed_by         VARCHAR(200),
+    claimed_at         TIMESTAMPTZ,
+    lease_until        TIMESTAMPTZ,
     expires_at         TIMESTAMPTZ,
     delete_started_at  TIMESTAMPTZ,
     deleted_at         TIMESTAMPTZ,
@@ -38,5 +41,5 @@ CREATE INDEX idx_knowledge_lifecycle_retention
     WHERE lifecycle_policy = 'TTL';
 
 CREATE INDEX idx_knowledge_lifecycle_claim
-    ON knowledge_document_lifecycle (lifecycle_status, claim_generation)
+    ON knowledge_document_lifecycle (lifecycle_status, lease_until, claim_generation)
     WHERE lifecycle_status IN ('DELETE_PENDING', 'DELETING', 'DELETE_FAILED');
