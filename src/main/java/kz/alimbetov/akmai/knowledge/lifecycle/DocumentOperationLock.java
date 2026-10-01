@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.knowledge.lifecycle;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Optional;
 import javax.sql.DataSource;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +14,31 @@ public class DocumentOperationLock {
 
     public DocumentOperationLock(DataSource dataSource) {
         this.dataSource = dataSource;
+    }
+
+    public Optional<LockHandle> tryAcquire(String documentId) {
+        try {
+            Connection connection = dataSource.getConnection();
+            try (PreparedStatement statement =
+                    connection.prepareStatement("SELECT pg_try_advisory_lock(hashtextextended(?, 0))")) {
+                statement.setString(1, documentId);
+                try (var result = statement.executeQuery()) {
+                    if (result.next() && result.getBoolean(1)) {
+                        return Optional.of(new LockHandle(connection, documentId));
+                    }
+                }
+            } catch (RuntimeException | SQLException exception) {
+                connection.close();
+                throw exception;
+            }
+            connection.close();
+            return Optional.empty();
+        } catch (SQLException exception) {
+            throw new IllegalStateException(
+                    "Cannot try document operation lock for " + documentId,
+                    exception
+            );
+        }
     }
 
     public LockHandle acquire(String documentId) {
