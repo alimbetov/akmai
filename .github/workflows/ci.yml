@@ -1,5 +1,5 @@
 name: CI
-# centralized lifecycle race gate
+# lifecycle compile debt closure gate
 
 on:
   push:
