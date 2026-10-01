@@ -1,12 +1,12 @@
 package kz.alimbetov.akmai.rag.service;
 
 import java.util.List;
-import java.util.Objects;
 import kz.alimbetov.akmai.rag.api.RagResponse;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
 import kz.alimbetov.akmai.rag.retrieval.ContextAssembler;
 import kz.alimbetov.akmai.rag.retrieval.ContextBudget;
+import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.KnowledgeExpansion;
 import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
 import kz.alimbetov.akmai.rag.retrieval.Reranker;
@@ -28,6 +28,7 @@ public class RagQuestionService {
     private final KnowledgeExpansion knowledgeExpansion;
     private final ContextBudget contextBudget;
     private final ContextAssembler contextAssembler;
+    private final CitationValidator citationValidator;
     private final ChatClient chatClient;
 
     public RagQuestionService(
@@ -39,6 +40,7 @@ public class RagQuestionService {
             KnowledgeExpansion knowledgeExpansion,
             ContextBudget contextBudget,
             ContextAssembler contextAssembler,
+            CitationValidator citationValidator,
             ChatClient.Builder chatClientBuilder
     ) {
         this.queryChunker = queryChunker;
@@ -49,6 +51,7 @@ public class RagQuestionService {
         this.knowledgeExpansion = knowledgeExpansion;
         this.contextBudget = contextBudget;
         this.contextAssembler = contextAssembler;
+        this.citationValidator = citationValidator;
         this.chatClient = chatClientBuilder.build();
     }
 
@@ -88,15 +91,21 @@ public class RagQuestionService {
                 .call()
                 .content();
 
-        List<RagResponse.Source> sources = bounded.stream()
-                .map(hit -> new RagResponse.Source(
-                        Objects.toString(hit.metadata().get("source"), hit.documentId()),
-                        Objects.toString(hit.metadata().get("language"), "unknown"),
-                        Objects.toString(hit.metadata().get("sectionPath"), "unknown")
+        CitationValidator.CitationValidation validation =
+                citationValidator.validate(answer, bounded);
+
+        List<RagResponse.Source> sources = validation.citedSources().stream()
+                .map(source -> new RagResponse.Source(
+                        source.number(),
+                        source.documentId(),
+                        source.chunkId(),
+                        source.source(),
+                        source.language(),
+                        source.sectionPath(),
+                        source.page()
                 ))
-                .distinct()
                 .toList();
 
-        return new RagResponse(answer, sources);
+        return new RagResponse(validation.answer(), sources);
     }
 }
