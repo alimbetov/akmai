@@ -85,6 +85,26 @@ public class PostgresGenerationVectorRepository {
         return deleted;
     }
 
+    public int countExisting(EmbeddingProfile profile, List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        String table = storageManager.qualified(profile);
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM " + table + " WHERE id = ANY (?)",
+                Integer.class,
+                jdbcTemplate.getDataSource()
+                        .getConnection()
+                        .createArrayOf(
+                                "uuid",
+                                ids.stream()
+                                        .map(UUID::fromString)
+                                        .toArray(UUID[]::new)
+                        )
+        );
+        return count == null ? 0 : count;
+    }
+
     private String json(Map<String, Object> metadata) {
         try {
             return objectMapper.writeValueAsString(metadata);
