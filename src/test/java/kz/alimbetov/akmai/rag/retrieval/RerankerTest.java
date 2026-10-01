@@ -138,9 +138,14 @@ class RerankerTest {
                 new ArrayBlockingQueue<>(1),
                 new ThreadPoolExecutor.AbortPolicy()
         );
+        CountDownLatch started = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         try {
-            executor.submit(() -> await(release));
+            executor.submit(() -> {
+                started.countDown();
+                await(release);
+            });
+            assertThat(started.await(1, TimeUnit.SECONDS)).isTrue();
             executor.submit(() -> await(release));
 
             List<RetrievalHit> original = List.of(
