@@ -39,13 +39,23 @@ The final Phase B ranked fixtures must satisfy, per language:
 - final nDCG@5 >= B1 baseline nDCG@5;
 - all relevant deterministic fixtures remain inside Recall@5.
 
-The contract is implemented by:
+The metric arithmetic and deterministic ranking contract are implemented by:
 
 `MultilingualRetrievalQualityBaselineTest`
 
 and:
 
 `MultilingualRetrievalQualityRegressionTest`
+
+Those tests use deterministic ranked fixtures. They do not claim to execute the retrieval pipeline.
+
+A corpus-backed PostgreSQL lexical gate is implemented by:
+
+`PostgresRetrievalIntegrationTest.corpusBackedLexicalQualityGateCoversAllTargetLanguages`
+
+It persists KK/RU/EN/ZH corpus rows, executes the real PostgreSQL lexical repository and evaluates the returned ranking with Recall@5, MRR and nDCG@5.
+
+Full vector + Ollama + fusion + reranker evaluation remains the separate live E2E gate described below.
 
 ### Legal hierarchy acceptance
 
@@ -69,7 +79,7 @@ KK/RU/EN/ZH fixtures cover all five fact types.
 
 ### Multi-intent acceptance
 
-A complex question retains the original query and may produce bounded subqueries.
+A coordinated multi-intent clause retains the original clause and may produce bounded subqueries. Multi-sentence input is decomposed into bounded sentence retrieval units; the full multi-sentence text is not duplicated as an extra retrieval unit, avoiding unnecessary identifier and planner fan-out.
 
 The planner must preserve deterministic execution topology for every retrieval unit:
 
@@ -97,7 +107,7 @@ Stable step identity is derived from the canonical retrieval unit and retrieval 
 2. Reranking must preserve or improve Recall@K; ranking gains are measured by MRR/nDCG.
 3. Language-specific retrieval changes must report per-language metrics, not only an average.
 4. Deterministic benchmark and acceptance tests run in normal CI.
-5. Live Ollama/pgvector evaluation is a separate E2E gate and must use the same benchmark case/result model.
+5. Live Ollama/pgvector evaluation is a separate E2E gate and must use the same benchmark case/result model. Normal CI proves deterministic metric logic, PostgreSQL lexical retrieval, planner/chunking contracts and reranker fallback semantics; it does not claim live model quality.
 6. Any accepted quality regression requires an explicit documented reason and threshold change.
 7. Phase B is not green until the final exact PR-head SHA completes the GitHub Actions `verify` job successfully.
 
