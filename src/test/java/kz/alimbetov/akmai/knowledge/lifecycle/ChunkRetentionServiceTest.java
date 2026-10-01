@@ -35,8 +35,8 @@ class ChunkRetentionServiceTest {
         when(lock.acquire("doc-1")).thenReturn(mock(DocumentOperationLock.LockHandle.class));
         when(lifecycle.markDeleting(CLAIM, NOW)).thenReturn(true);
         when(lifecycle.isCurrentClaim(CLAIM)).thenReturn(true);
-        when(projections.findChunkIdsByDocumentId("doc-1"))
-                .thenReturn(List.of("chunk-a", "chunk-b"));
+        when(vectorGenerations.findVectorIds("doc-1", 7))
+                .thenReturn(List.of("doc-1::g7::chunk-a", "doc-1::g7::chunk-b"));
         when(lifecycle.markDeleted(CLAIM, NOW)).thenReturn(true);
 
         RetentionCleanupResult result =
@@ -47,7 +47,7 @@ class ChunkRetentionServiceTest {
 
         InOrder order = inOrder(lifecycle, projections, identifiers, vectors);
         order.verify(lifecycle).markDeleting(CLAIM, NOW);
-        order.verify(projections).findChunkIdsByDocumentId("doc-1");
+        order.verify(lifecycle).isCurrentClaim(CLAIM, NOW);
         order.verify(lifecycle).isCurrentClaim(CLAIM);
         order.verify(vectors).delete(List.of("chunk-a", "chunk-b"));
         order.verify(lifecycle).isCurrentClaim(CLAIM);
@@ -62,6 +62,9 @@ class ChunkRetentionServiceTest {
         SearchProjectionRepository projections = mock(SearchProjectionRepository.class);
         IdentifierSearchIndex identifiers = mock(IdentifierSearchIndex.class);
         VectorStore vectors = mock(VectorStore.class);
+        VectorGenerationRepository vectorGenerations = mock(VectorGenerationRepository.class);
+        DocumentOperationLock lock = mock(DocumentOperationLock.class);
+        when(lock.acquire("doc-1")).thenReturn(mock(DocumentOperationLock.LockHandle.class));
         when(lifecycle.markDeleting(CLAIM, NOW)).thenReturn(true);
         when(projections.findChunkIdsByDocumentId("doc-1"))
                 .thenReturn(List.of("chunk-a"));
@@ -82,6 +85,9 @@ class ChunkRetentionServiceTest {
         SearchProjectionRepository projections = mock(SearchProjectionRepository.class);
         IdentifierSearchIndex identifiers = mock(IdentifierSearchIndex.class);
         VectorStore vectors = mock(VectorStore.class);
+        VectorGenerationRepository vectorGenerations = mock(VectorGenerationRepository.class);
+        DocumentOperationLock lock = mock(DocumentOperationLock.class);
+        when(lock.acquire("doc-1")).thenReturn(mock(DocumentOperationLock.LockHandle.class));
         when(lifecycle.markDeleting(CLAIM, NOW)).thenReturn(true);
         when(projections.findChunkIdsByDocumentId("doc-1"))
                 .thenReturn(List.of("old-chunk"));
@@ -102,6 +108,9 @@ class ChunkRetentionServiceTest {
         SearchProjectionRepository projections = mock(SearchProjectionRepository.class);
         IdentifierSearchIndex identifiers = mock(IdentifierSearchIndex.class);
         VectorStore vectors = mock(VectorStore.class);
+        VectorGenerationRepository vectorGenerations = mock(VectorGenerationRepository.class);
+        DocumentOperationLock lock = mock(DocumentOperationLock.class);
+        when(lock.acquire("doc-1")).thenReturn(mock(DocumentOperationLock.LockHandle.class));
         when(lifecycle.markDeleting(CLAIM, NOW)).thenReturn(true);
         when(lifecycle.isCurrentClaim(CLAIM)).thenReturn(true);
         when(projections.findChunkIdsByDocumentId("doc-1"))
@@ -128,6 +137,9 @@ class ChunkRetentionServiceTest {
         SearchProjectionRepository projections = mock(SearchProjectionRepository.class);
         IdentifierSearchIndex identifiers = mock(IdentifierSearchIndex.class);
         VectorStore vectors = mock(VectorStore.class);
+        VectorGenerationRepository vectorGenerations = mock(VectorGenerationRepository.class);
+        DocumentOperationLock lock = mock(DocumentOperationLock.class);
+        when(lock.acquire("doc-1")).thenReturn(mock(DocumentOperationLock.LockHandle.class));
         when(lifecycle.markDeleting(CLAIM, NOW)).thenReturn(true);
         when(lifecycle.isCurrentClaim(CLAIM)).thenReturn(true);
         when(projections.findChunkIdsByDocumentId("doc-1")).thenReturn(List.of());
