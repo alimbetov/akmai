@@ -21,6 +21,7 @@ class RetrievalPlannerTest {
                 "условия договора KZ-2026-001847",
                 "условия договора KZ-2026-001847",
                 "условия договора",
+                "ru",
                 List.of(new DetectedIdentifier(
                         IdentifierType.CONTRACT_NUMBER,
                         "KZ-2026-001847",
@@ -47,7 +48,7 @@ class RetrievalPlannerTest {
     void semanticQueryCreatesIndependentVectorAndLexicalRoots() {
         QueryChunk query = new QueryChunk(
                 "q1", 0, "условия расторжения", "условия расторжения",
-                "условия расторжения", List.of()
+                "условия расторжения", "ru", List.of()
         );
 
         RetrievalPlan plan = planner.plan(List.of(query));
