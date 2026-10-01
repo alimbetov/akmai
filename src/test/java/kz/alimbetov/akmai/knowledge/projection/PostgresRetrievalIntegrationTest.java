@@ -22,7 +22,6 @@ import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.jdbc.core.JdbcTemplate;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -157,7 +156,6 @@ class PostgresRetrievalIntegrationTest {
                 "legacy obsolete coordinator",
                 "OLD-COORD"
         )));
-        when(vectorStore.delete(List.of("old-coordinator"))).thenReturn(true);
         coordinator.persist(List.of(enriched(
                 "new-coordinator",
                 "doc-coordinator",
