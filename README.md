@@ -248,3 +248,44 @@ Target mixed-query flow:
                          v
                  pgvector filtered by documentId
 ```
+
+
+## AKMAI parallel pipeline
+
+```text
+             WRITE                       READ
+               |                           |
+               v                           v
+            Document                    Question
+               |                           |
+               v                           v
+        SemanticChunker              QueryChunker
+               |                           |
+               v                           v
+       KnowledgeChunk[]               QueryChunk[]
+               |                           |
+               v                           v
+ ParallelIngestionExecutor     ParallelRetrievalExecutor
+               |                           |
+       +-------+-------+           +-------+-------+
+       v       v       v           v       v       v
+      IDs     refs   vectors       IDs    vector lexical
+       |       |       |           |       |       |
+       +-------+-------+           +-------+-------+
+               |                           |
+               v                           v
+     PersistenceCoordinator           ResultFusion
+               |                           |
+               v                           v
+        Search projections             Reranker
+                                           |
+                                           v
+                                    ContextAssembler
+                                           |
+                                           v
+                                          Qwen
+```
+
+The same `IdentifierExtractor` and `IdentifierParser[]` rules are shared by WRITE and READ. Document chunks are enriched concurrently before persistence; questions are decomposed into independent query chunks and applicable retrieval strategies are executed concurrently. Both executors use bounded configurable thread pools rather than unbounded `parallelStream()`.
+
+Current implementations cover identifier and vector retrieval. Lexical/reference retrieval, a learned reranker and a local search index are explicit extension points rather than being coupled to `RagQuestionService`.
