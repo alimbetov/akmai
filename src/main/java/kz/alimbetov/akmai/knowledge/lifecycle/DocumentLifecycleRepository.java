@@ -13,7 +13,9 @@ public interface DocumentLifecycleRepository {
 
     boolean failIngestion(String documentId, long generation, Instant now, String error);
 
-    int failStaleIngestions(Instant staleBefore, Instant now, String error);
+    List<String> findStaleIngestionDocumentIds(Instant staleBefore, int limit);
+
+    boolean failStaleIngestion(String documentId, Instant staleBefore, Instant now, String error);
 
 
     List<RetentionClaim> claimExpired(
