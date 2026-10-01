@@ -78,6 +78,8 @@ class PostgresRetrievalIntegrationTest {
     void liquibaseCreatesCanonicalRetrievalSchema() {
         assertThat(tableExists("knowledge_search_projection")).isTrue();
         assertThat(tableExists("document_identifier")).isTrue();
+        assertThat(indexExists("idx_knowledge_search_text_trgm")).isTrue();
+        assertThat(indexExists("idx_knowledge_search_section_trgm")).isTrue();
     }
 
     @Test
@@ -401,6 +403,21 @@ class PostgresRetrievalIntegrationTest {
                 )),
                 List.of()
         );
+    }
+
+
+    private static boolean indexExists(String index) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                SELECT count(*)
+                  FROM pg_indexes
+                 WHERE schemaname = 'public'
+                   AND indexname = ?
+                """,
+                Integer.class,
+                index
+        );
+        return count != null && count == 1;
     }
 
     private static boolean tableExists(String table) {
