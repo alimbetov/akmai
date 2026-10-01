@@ -1,5 +1,5 @@
 name: CI
-# unique claim fencing gate
+# post-merge lifecycle baseline gate
 
 on:
   push:
