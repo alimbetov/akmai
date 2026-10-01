@@ -230,6 +230,35 @@ public class PostgresDocumentLifecycleRepository
     }
 
     @Override
+    public boolean releaseClaim(RetentionClaim claim, Instant now) {
+        return jdbcTemplate.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET lifecycle_status = 'READY',
+                    claim_generation = NULL,
+                    claim_id = NULL,
+                    claimed_by = NULL,
+                    claimed_at = NULL,
+                    lease_until = NULL,
+                    row_version = row_version + 1,
+                    updated_at = ?
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND claim_generation = ?
+                  AND claim_id = ?
+                  AND claimed_by = ?
+                  AND lifecycle_status = 'DELETE_PENDING'
+                """,
+                timestamp(now),
+                claim.documentId(),
+                claim.generation(),
+                claim.generation(),
+                claim.claimId(),
+                claim.workerId()
+        ) == 1;
+    }
+
+    @Override
     public boolean markDeleted(RetentionClaim claim, Instant now) {
         return jdbcTemplate.update(
                 """
