@@ -1,5 +1,5 @@
 name: CI
-# claim token fencing baseline gate
+# additive lifecycle schema migration gate
 
 on:
   push:
