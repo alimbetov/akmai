@@ -26,29 +26,56 @@ public class EmbeddingSemanticRerankScorer implements SemanticRerankScorer {
 
         List<float[]> embeddings = embeddingModel.embed(inputs);
         if (embeddings.size() != inputs.size()) {
-            throw new IllegalStateException("Embedding model returned unexpected vector count");
+            throw new IllegalStateException(
+                    "Embedding model returned unexpected vector count"
+            );
         }
 
-        float[] questionVector = embeddings.getFirst();
-        return embeddings.subList(1, embeddings.size()).stream()
-                .map(hitVector -> cosine(questionVector, hitVector))
-                .toList();
+        float[] questionVector = requireVector(embeddings.getFirst(), -1);
+        List<Double> scores = new ArrayList<>(hits.size());
+        for (int i = 1; i < embeddings.size(); i++) {
+            float[] candidate = requireVector(embeddings.get(i), questionVector.length);
+            double score = cosine(questionVector, candidate);
+            if (!Double.isFinite(score)) {
+                throw new IllegalStateException("Rerank score is not finite");
+            }
+            scores.add(score);
+        }
+        return List.copyOf(scores);
+    }
+
+    private float[] requireVector(float[] value, int expectedDimensions) {
+        if (value == null || value.length == 0) {
+            throw new IllegalStateException("Embedding vector is empty");
+        }
+        if (expectedDimensions > 0 && value.length != expectedDimensions) {
+            throw new IllegalStateException("Embedding dimensions do not match");
+        }
+        for (float component : value) {
+            if (!Float.isFinite(component)) {
+                throw new IllegalStateException(
+                        "Embedding vector contains a non-finite component"
+                );
+            }
+        }
+        return value;
     }
 
     private double cosine(float[] left, float[] right) {
-        if (left.length != right.length || left.length == 0) {
-            return 0.0;
-        }
         double dot = 0.0;
         double leftNorm = 0.0;
         double rightNorm = 0.0;
         for (int i = 0; i < left.length; i++) {
-            dot += left[i] * right[i];
-            leftNorm += left[i] * left[i];
-            rightNorm += right[i] * right[i];
+            dot += (double) left[i] * right[i];
+            leftNorm += (double) left[i] * left[i];
+            rightNorm += (double) right[i] * right[i];
         }
-        if (leftNorm == 0.0 || rightNorm == 0.0) {
-            return 0.0;
+        if (!Double.isFinite(dot)
+                || !Double.isFinite(leftNorm)
+                || !Double.isFinite(rightNorm)
+                || leftNorm == 0.0
+                || rightNorm == 0.0) {
+            throw new IllegalStateException("Embedding vectors cannot be scored");
         }
         return dot / (Math.sqrt(leftNorm) * Math.sqrt(rightNorm));
     }
