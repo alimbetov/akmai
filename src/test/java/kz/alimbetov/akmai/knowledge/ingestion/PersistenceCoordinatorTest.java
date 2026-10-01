@@ -39,7 +39,7 @@ class PersistenceCoordinatorTest {
                 projections
         );
 
-        coordinator.persist(List.of(chunk("new-a", "doc-1", 0)));
+        coordinator.persist(List.of(chunk("new-a", "doc-1", 0)), 2);
 
         InOrder order = inOrder(vectorStore, identifiers, projections);
         order.verify(projections).findChunkIdsByDocumentId("doc-1");
@@ -69,7 +69,7 @@ class PersistenceCoordinatorTest {
         coordinator.persist(List.of(
                 chunk("stable-1", "doc-1", 0),
                 chunk("stable-2", "doc-1", 1)
-        ));
+        ), 7);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<Document>> captor = ArgumentCaptor.forClass(List.class);
@@ -77,7 +77,16 @@ class PersistenceCoordinatorTest {
 
         assertThat(captor.getValue())
                 .extracting(Document::getId)
+                .containsExactly(
+                        "doc-1::g7::stable-1",
+                        "doc-1::g7::stable-2"
+                );
+        assertThat(captor.getValue())
+                .extracting(document -> document.getMetadata().get("chunkId"))
                 .containsExactly("stable-1", "stable-2");
+        assertThat(captor.getValue())
+                .extracting(document -> document.getMetadata().get("generation"))
+                .containsOnly(7L);
     }
 
     private EnrichedKnowledgeChunk chunk(
