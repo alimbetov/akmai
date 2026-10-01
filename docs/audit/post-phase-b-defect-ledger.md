@@ -4,7 +4,7 @@ Branch: `fix/post-phase-b-defect-remediation`
 
 Purpose: accumulate defects found by repeated deep audits and close them with reproducible tests and exact-SHA CI evidence.
 
-Canonical remediation implementation contract: `docs/audit/post-phase-b-remediation-technical-spec.md`. All D01–D72 code changes, regression tests and verification evidence MUST conform to that specification.
+Canonical remediation implementation contract: `docs/audit/post-phase-b-remediation-technical-spec.md`. All D01–D72 code changes, regression tests and verification evidence MUST conform to that specification. Defect descriptions and audit-time `Required remediation` cells remain historical evidence of what was found; if an audit-time mechanism differs from the reviewed technical specification, the specification is authoritative while the original verification intent remains mandatory.
 
 ## Audit cadence
 
@@ -273,7 +273,7 @@ all P0/P1 = VERIFIED
 all accepted P2 have explicit disposition
 D69 bounded/correct retrieval-quality metrics
 D70 production-pipeline quality regression gate
-D58 production PgVectorStore E2E gate
+D58 production profile-scoped pgvector repository E2E gate
 full Testcontainers suite
 spotless
 mvn clean verify
