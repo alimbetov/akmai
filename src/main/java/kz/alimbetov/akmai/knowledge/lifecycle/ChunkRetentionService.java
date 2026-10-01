@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
+import kz.alimbetov.akmai.knowledge.ingestion.VectorIdentity;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
@@ -61,7 +62,11 @@ public class ChunkRetentionService {
             }
 
             if (!chunkIds.isEmpty()) {
-                vectorStore.delete(chunkIds);
+                vectorStore.delete(chunkIds.stream()
+                        .map(chunkId -> VectorIdentity.physicalId(
+                                claim.documentId(), claim.generation(), chunkId
+                        ))
+                        .toList());
             }
 
             /*
