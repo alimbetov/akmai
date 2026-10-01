@@ -13,9 +13,11 @@ import org.springframework.stereotype.Component;
 public class VectorRetrievalStrategy implements RetrievalStrategy {
 
     private final VectorStore vectorStore;
+    private final RetrievalProperties properties;
 
-    public VectorRetrievalStrategy(VectorStore vectorStore) {
+    public VectorRetrievalStrategy(VectorStore vectorStore, RetrievalProperties properties) {
         this.vectorStore = vectorStore;
+        this.properties = properties;
     }
 
     @Override
@@ -30,8 +32,8 @@ public class VectorRetrievalStrategy implements RetrievalStrategy {
     ) {
         SearchRequest.Builder request = SearchRequest.builder()
                 .query(queryChunk.semanticText())
-                .topK(5)
-                .similarityThreshold(0.65);
+                .topK(properties.vectorTopK())
+                .similarityThreshold(properties.vectorSimilarityThreshold());
 
         Set<String> documentIds = context.documentIds();
         if (!documentIds.isEmpty()) {
