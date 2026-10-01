@@ -5,7 +5,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
-import kz.alimbetov.akmai.knowledge.KnowledgeDomain;
+import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import org.junit.jupiter.api.Test;
