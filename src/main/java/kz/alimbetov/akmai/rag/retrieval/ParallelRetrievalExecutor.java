@@ -3,9 +3,9 @@ package kz.alimbetov.akmai.rag.retrieval;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -57,16 +57,27 @@ public class ParallelRetrievalExecutor {
                 .map(dependency -> schedule(dependency, plan, futures))
                 .toList();
 
+        List<CompletableFuture<List<RetrievalHit>>> isolatedDependencies =
+                dependencies.stream()
+                        .map(this::isolateFailure)
+                        .toList();
+
         CompletableFuture<Void> ready = CompletableFuture.allOf(
-                dependencies.toArray(CompletableFuture[]::new)
+                isolatedDependencies.toArray(CompletableFuture[]::new)
         );
 
         CompletableFuture<List<RetrievalHit>> future = ready.thenApplyAsync(
-                ignored -> executeStep(step, dependencies),
+                ignored -> executeStep(step, isolatedDependencies),
                 retrievalExecutor
         );
         futures.put(step.id(), future);
         return future;
+    }
+
+    private CompletableFuture<List<RetrievalHit>> isolateFailure(
+            CompletableFuture<List<RetrievalHit>> future
+    ) {
+        return future.exceptionally(ignored -> List.of());
     }
 
     private List<RetrievalHit> executeStep(
