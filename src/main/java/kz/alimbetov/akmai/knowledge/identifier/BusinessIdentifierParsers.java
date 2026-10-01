@@ -10,7 +10,7 @@ public final class BusinessIdentifierParsers {
     @Component
     public static class ContractNumberParser extends RegexIdentifierParser {
         public ContractNumberParser(IdentifierNormalizer normalizer) {
-            super("(?:договор|contract)\\s*(?:№|no\\.?|number)?\\s*[:#-]?\\s*([\\p{L}0-9][\\p{L}0-9./_-]{2,})", normalizer);
+            super("(?:договор(?:а|у|ом|е|ы|ов)?|contract)\\s*(?:№|no\\.?|number)?\\s*[:#-]?\\s*([\\p{L}0-9][\\p{L}0-9./_-]{2,})", normalizer);
         }
         @Override public IdentifierType type() { return IdentifierType.CONTRACT_NUMBER; }
     }
@@ -18,7 +18,7 @@ public final class BusinessIdentifierParsers {
     @Component
     public static class OrderNumberParser extends RegexIdentifierParser {
         public OrderNumberParser(IdentifierNormalizer normalizer) {
-            super("(?:заказ|order)\\s*(?:№|no\\.?|number)?\\s*[:#-]?\\s*([\\p{L}0-9][\\p{L}0-9./_-]{2,})", normalizer);
+            super("(?:заказ(?:а|у|ом|е|ы|ов)?|order)\\s*(?:№|no\\.?|number)?\\s*[:#-]?\\s*([\\p{L}0-9][\\p{L}0-9./_-]{2,})", normalizer);
         }
         @Override public IdentifierType type() { return IdentifierType.ORDER_NUMBER; }
     }
@@ -42,7 +42,7 @@ public final class BusinessIdentifierParsers {
     @Component
     public static class CaseNumberParser extends RegexIdentifierParser {
         public CaseNumberParser(IdentifierNormalizer normalizer) {
-            super("(?:дело|case)\\s*(?:№|no\\.?|number)?\\s*[:#-]?\\s*([\\p{L}0-9][\\p{L}0-9./_-]{2,})", normalizer);
+            super("(?:дел(?:о|а|у|ом|е)|case)\\s*(?:№|no\\.?|number)?\\s*[:#-]?\\s*([\\p{L}0-9][\\p{L}0-9./_-]{2,})", normalizer);
         }
         @Override public IdentifierType type() { return IdentifierType.CASE_NUMBER; }
     }
@@ -50,7 +50,7 @@ public final class BusinessIdentifierParsers {
     @Component
     public static class DocumentNumberParser extends RegexIdentifierParser {
         public DocumentNumberParser(IdentifierNormalizer normalizer) {
-            super("(?:документ|document)\\s*(?:№|no\\.?|number)?\\s*[:#-]?\\s*([\\p{L}0-9][\\p{L}0-9./_-]{2,})", normalizer);
+            super("(?:документ(?:а|у|ом|е|ы|ов)?|document)\\s*(?:№|no\\.?|number)?\\s*[:#-]?\\s*([\\p{L}0-9][\\p{L}0-9./_-]{2,})", normalizer);
         }
         @Override public IdentifierType type() { return IdentifierType.DOCUMENT_NUMBER; }
     }
