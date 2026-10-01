@@ -54,7 +54,7 @@ public class ResultFusion {
         return score instanceof Number number ? number.doubleValue() : null;
     }
 
-    private static final class Accumulator {
+    private final class Accumulator {
 
         private final RetrievalHit representative;
         private final List<RetrievalEvidence> evidence = new ArrayList<>();
