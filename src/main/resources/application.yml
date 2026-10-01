@@ -7,6 +7,10 @@ spring:
     username: ${DB_USERNAME:akmai}
     password: ${DB_PASSWORD:akmai}
 
+  sql:
+    init:
+      mode: always
+
   ai:
     model:
       embedding: ollama
