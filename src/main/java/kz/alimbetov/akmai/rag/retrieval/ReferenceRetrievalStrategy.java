@@ -1,30 +1,29 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
-import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ReferenceRetrievalStrategy implements RetrievalStrategy {
 
-    private final SearchProjectionRepository repository;
-    private final IdentifierSearchIndex identifierSearchIndex;
+    private final SearchProjectionRepository projectionRepository;
+    private final ReferenceGraphRepository referenceGraphRepository;
     private final RetrievalProperties properties;
 
     public ReferenceRetrievalStrategy(
-            SearchProjectionRepository repository,
-            IdentifierSearchIndex identifierSearchIndex,
+            SearchProjectionRepository projectionRepository,
+            ReferenceGraphRepository referenceGraphRepository,
             RetrievalProperties properties
     ) {
-        this.repository = repository;
-        this.identifierSearchIndex = identifierSearchIndex;
+        this.projectionRepository = projectionRepository;
+        this.referenceGraphRepository = referenceGraphRepository;
         this.properties = properties;
     }
 
@@ -38,66 +37,61 @@ public class ReferenceRetrievalStrategy implements RetrievalStrategy {
             QueryChunk queryChunk,
             RetrievalContext context
     ) {
-        List<String> seedIds = context.dependencyHits().stream()
-                .map(RetrievalHit::chunkId)
-                .filter(id -> id != null && !id.isBlank())
-                .distinct()
-                .toList();
-        Set<String> seedIdSet = Set.copyOf(seedIds);
-
-        LinkedHashMap<String, DocumentIdentifier> resolved = new LinkedHashMap<>();
-        repository.findByChunkIds(seedIds).stream()
-                .flatMap(seed -> seed.references().stream())
-                .distinct()
-                .limit(properties.referenceLimit())
-                .flatMap(reference -> identifierSearchIndex.search(reference, properties.identifierLimit()).stream())
-                .filter(identifier -> !seedIdSet.contains(identifier.chunkId()))
-                .forEach(identifier -> resolved.putIfAbsent(
-                        identifier.chunkId(),
-                        identifier
-                ));
-
-        if (resolved.isEmpty()) {
-            return List.of();
+        Map<String, List<String>> seedIdsByDocument = new LinkedHashMap<>();
+        for (RetrievalHit hit : context.dependencyHits()) {
+            if (hit.documentId() == null || hit.documentId().isBlank()
+                    || hit.chunkId() == null || hit.chunkId().isBlank()) {
+                continue;
+            }
+            seedIdsByDocument.computeIfAbsent(
+                    hit.documentId(),
+                    ignored -> new ArrayList<>()
+            ).add(hit.chunkId());
         }
 
-        Map<String, SearchProjection> targets = new LinkedHashMap<>();
-        repository.findByChunkIds(List.copyOf(resolved.keySet()))
-                .forEach(projection -> targets.putIfAbsent(
-                        projection.chunkId(),
-                        projection
+        List<RetrievalHit> result = new ArrayList<>();
+        int remaining = properties.referenceLimit();
+
+        for (Map.Entry<String, List<String>> entry : seedIdsByDocument.entrySet()) {
+            if (remaining <= 0) {
+                break;
+            }
+            String documentId = entry.getKey();
+            List<String> seeds = entry.getValue().stream().distinct().toList();
+            List<String> targetIds = referenceGraphRepository.resolveSameDocumentTargets(
+                    documentId,
+                    seeds,
+                    remaining
+            );
+            List<SearchProjection> targets =
+                    projectionRepository.findByDocumentAndChunkIds(
+                            documentId,
+                            targetIds
+                    );
+            for (SearchProjection target : targets) {
+                if (remaining-- <= 0) {
+                    break;
+                }
+                Map<String, Object> metadata =
+                        new LinkedHashMap<>(target.metadata());
+                metadata.put("language", target.language());
+                metadata.put("sectionPath", target.sectionPath() == null
+                        ? ""
+                        : target.sectionPath());
+                metadata.put("chunkIndex", target.chunkIndex());
+                metadata.put("generation", target.generation());
+                metadata.put("authorityTier", 0);
+                metadata.put("authority", "EXACT_REFERENCE");
+                metadata.put("expansion", "reference");
+                result.add(new RetrievalHit(
+                        RetrievalType.REFERENCE,
+                        target.documentId(),
+                        target.chunkId(),
+                        target.text(),
+                        metadata
                 ));
-
-        return resolved.entrySet().stream()
-                .map(entry -> targetHit(entry.getValue(), targets.get(entry.getKey())))
-                .filter(hit -> hit != null)
-                .toList();
-    }
-
-    private RetrievalHit targetHit(
-            DocumentIdentifier identifier,
-            SearchProjection projection
-    ) {
-        if (projection == null) {
-            return null;
+            }
         }
-
-        Map<String, Object> metadata = new LinkedHashMap<>(projection.metadata());
-        metadata.put("identifierType", identifier.type().name());
-        metadata.put("identifier", identifier.rawValue());
-        metadata.put("pageNumber", identifier.pageNumber());
-        metadata.put("language", projection.language());
-        metadata.put("sectionPath", projection.sectionPath() == null
-                ? ""
-                : projection.sectionPath());
-        metadata.put("expansion", "reference");
-
-        return new RetrievalHit(
-                RetrievalType.REFERENCE,
-                projection.documentId(),
-                projection.chunkId(),
-                projection.text(),
-                metadata
-        );
+        return List.copyOf(result);
     }
 }
