@@ -7,6 +7,7 @@ CREATE TABLE knowledge_document_lifecycle (
     lifecycle_status   VARCHAR(32) NOT NULL,
     generation         BIGINT NOT NULL DEFAULT 1,
     claim_generation   BIGINT,
+    claim_id           UUID,
     claimed_by         VARCHAR(200),
     claimed_at         TIMESTAMPTZ,
     lease_until        TIMESTAMPTZ,
