@@ -30,6 +30,9 @@ class ChunkRetentionServiceTest {
         SearchProjectionRepository projections = mock(SearchProjectionRepository.class);
         IdentifierSearchIndex identifiers = mock(IdentifierSearchIndex.class);
         VectorStore vectors = mock(VectorStore.class);
+        VectorGenerationRepository vectorGenerations = mock(VectorGenerationRepository.class);
+        DocumentOperationLock lock = mock(DocumentOperationLock.class);
+        when(lock.acquire("doc-1")).thenReturn(mock(DocumentOperationLock.LockHandle.class));
         when(lifecycle.markDeleting(CLAIM, NOW)).thenReturn(true);
         when(lifecycle.isCurrentClaim(CLAIM)).thenReturn(true);
         when(projections.findChunkIdsByDocumentId("doc-1"))
@@ -143,13 +146,17 @@ class ChunkRetentionServiceTest {
             DocumentLifecycleRepository lifecycle,
             SearchProjectionRepository projections,
             IdentifierSearchIndex identifiers,
-            VectorStore vectors
+            VectorStore vectors,
+            VectorGenerationRepository vectorGenerations,
+            DocumentOperationLock lock
     ) {
         return new ChunkRetentionService(
                 lifecycle,
                 projections,
                 identifiers,
                 vectors,
+                vectorGenerations,
+                lock,
                 Clock.fixed(NOW, ZoneOffset.UTC)
         );
     }
