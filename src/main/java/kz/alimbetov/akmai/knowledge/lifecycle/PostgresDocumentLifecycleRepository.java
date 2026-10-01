@@ -30,6 +30,70 @@ public class PostgresDocumentLifecycleRepository
     }
 
     @Override
+    public long beginIngestion(
+            String documentId,
+            RetentionPolicy policy,
+            Instant expiresAt
+    ) {
+        validatePolicy(policy, expiresAt);
+        Long generation = jdbcTemplate.queryForObject(
+                """
+                INSERT INTO knowledge_document_lifecycle (
+                    document_id, lifecycle_policy, lifecycle_status,
+                    generation, claim_generation, claim_id, claimed_by,
+                    claimed_at, lease_until, expires_at, delete_started_at,
+                    deleted_at, attempt_count, last_error, row_version,
+                    created_at, updated_at
+                ) VALUES (?, ?, 'INGESTING', 1, NULL, NULL, NULL, NULL, NULL, ?,
+                          NULL, NULL, 0, NULL, 0, now(), now())
+                ON CONFLICT (document_id) DO UPDATE SET
+                    lifecycle_policy = EXCLUDED.lifecycle_policy,
+                    lifecycle_status = 'INGESTING',
+                    generation = knowledge_document_lifecycle.generation + 1,
+                    claim_generation = NULL,
+                    claim_id = NULL,
+                    claimed_by = NULL,
+                    claimed_at = NULL,
+                    lease_until = NULL,
+                    expires_at = EXCLUDED.expires_at,
+                    delete_started_at = NULL,
+                    deleted_at = NULL,
+                    attempt_count = 0,
+                    last_error = NULL,
+                    row_version = knowledge_document_lifecycle.row_version + 1,
+                    updated_at = now()
+                RETURNING generation
+                """,
+                Long.class,
+                documentId,
+                policy.name(),
+                timestamp(expiresAt)
+        );
+        if (generation == null) {
+            throw new IllegalStateException("Lifecycle ingestion returned no generation");
+        }
+        return generation;
+    }
+
+    @Override
+    public boolean publishIngestion(String documentId, long generation, Instant now) {
+        return jdbcTemplate.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET lifecycle_status = 'READY',
+                    row_version = row_version + 1,
+                    updated_at = ?
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND lifecycle_status = 'INGESTING'
+                """,
+                timestamp(now),
+                documentId,
+                generation
+        ) == 1;
+    }
+
+    @Override
     public long activate(
             String documentId,
             RetentionPolicy policy,
