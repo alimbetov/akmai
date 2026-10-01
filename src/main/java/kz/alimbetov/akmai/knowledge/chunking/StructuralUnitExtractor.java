@@ -18,7 +18,7 @@ public class StructuralUnitExtractor {
 
     private static final Pattern MARKDOWN_HEADING = Pattern.compile("^(#{1,6})\\s+(.+)$");
     private static final Pattern LEGAL_HEADING = Pattern.compile(
-            "^(LAW|ЗАКОН|ЗАҢ|法律|PART|ЧАСТЬ|БӨЛІМ|编|CHAPTER|ГЛАВА|ТАРАУ|章|SECTION|РАЗДЕЛ|БӨЛІК|节|ARTICLE|СТАТЬЯ|БАП|条|PARAGRAPH|ПАРАГРАФ|ТАРМАҚ|款|SUBPARAGRAPH|ПОДПАРАГРАФ|ТАРМАҚША|项)\\b.*$",
+            "^(LAW|ЗАКОН|ЗАҢ|法律|PART|ЧАСТЬ|БӨЛІМ|编|CHAPTER|ГЛАВА|ТАРАУ|章|SECTION|РАЗДЕЛ|БӨЛІК|节|ARTICLE|СТАТЬЯ|БАП|条|PARAGRAPH|ПАРАГРАФ|ТАРМАҚ|款|SUBPARAGRAPH|ПОДПАРАГРАФ|ТАРМАҚША|项)(?=\\s|$|[.:：]).*$",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
     );
     private static final Pattern NUMBERED_HEADING = Pattern.compile("^\\d+(?:\\.\\d+)*[.)]?\\s+.+$");
