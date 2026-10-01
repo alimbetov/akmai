@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDocument;
 import kz.alimbetov.akmai.knowledge.model.SemanticUnit;
@@ -22,6 +21,7 @@ public class SemanticChunker {
     private final TokenEstimator tokenEstimator;
     private final ChunkingProperties properties;
     private final OversizedUnitSplitter oversizedUnitSplitter;
+    private final ChunkIdentity chunkIdentity;
 
     public SemanticChunker(
             TextNormalizer normalizer,
@@ -32,7 +32,8 @@ public class SemanticChunker {
             EmbeddingTextBuilder embeddingTextBuilder,
             TokenEstimator tokenEstimator,
             ChunkingProperties properties,
-            OversizedUnitSplitter oversizedUnitSplitter
+            OversizedUnitSplitter oversizedUnitSplitter,
+            ChunkIdentity chunkIdentity
     ) {
         this.normalizer = normalizer;
         this.unitExtractor = unitExtractor;
@@ -43,6 +44,7 @@ public class SemanticChunker {
         this.tokenEstimator = tokenEstimator;
         this.properties = properties;
         this.oversizedUnitSplitter = oversizedUnitSplitter;
+        this.chunkIdentity = chunkIdentity;
     }
 
     public List<KnowledgeChunk> chunk(KnowledgeDocument document) {
@@ -93,7 +95,12 @@ public class SemanticChunker {
             metadata.put("sectionPath", sectionPath);
 
             chunks.add(new KnowledgeChunk(
-                    UUID.randomUUID().toString(),
+                    chunkIdentity.create(
+                            document.documentId(),
+                            i,
+                            sectionPath,
+                            normalizer.normalize(rawText)
+                    ),
                     document.documentId(),
                     null,
                     i,
