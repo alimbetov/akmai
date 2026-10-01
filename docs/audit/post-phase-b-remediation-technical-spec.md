@@ -599,7 +599,7 @@ Document content and every provenance field are untrusted data. The system promp
 
 Do not permit source metadata to create fake source separators.
 
-ContextBudget MUST estimate the exact serialized envelope plus deterministic framing overhead, not only hit.text.
+ChatTokenBudgetService MUST budget the complete serialized model input and reserve configured output capacity. contextMaxTokens is only an additional ceiling on retrieved context; ModelTokenBudgetRegistry provides the exact or verified upper-bound counter used for the final request-size invariant.
 
 CitationValidator MUST:
 - parse source numbers without integer overflow;
