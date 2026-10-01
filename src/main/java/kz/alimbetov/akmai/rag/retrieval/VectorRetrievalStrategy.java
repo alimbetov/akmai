@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.rag.retrieval;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -23,20 +24,21 @@ public class VectorRetrievalStrategy implements RetrievalStrategy {
     }
 
     @Override
-    public boolean supports(QueryChunk queryChunk) {
-        return !queryChunk.semanticText().isBlank();
-    }
+    public List<RetrievalHit> retrieve(
+            QueryChunk queryChunk,
+            RetrievalContext context
+    ) {
+        SearchRequest.Builder request = SearchRequest.builder()
+                .query(queryChunk.semanticText())
+                .topK(5)
+                .similarityThreshold(0.65);
 
-    @Override
-    public List<RetrievalHit> retrieve(QueryChunk queryChunk) {
-        var documents = vectorStore.similaritySearch(
-                SearchRequest.builder()
-                        .query(queryChunk.semanticText())
-                        .topK(5)
-                        .similarityThreshold(0.65)
-                        .build()
-        );
+        Set<String> documentIds = context.documentIds();
+        if (!documentIds.isEmpty()) {
+            request.filterExpression(documentFilter(documentIds));
+        }
 
+        var documents = vectorStore.similaritySearch(request.build());
         if (documents == null) {
             return List.of();
         }
@@ -50,5 +52,17 @@ public class VectorRetrievalStrategy implements RetrievalStrategy {
                         new HashMap<>(document.getMetadata())
                 ))
                 .toList();
+    }
+
+    private String documentFilter(Set<String> documentIds) {
+        return documentIds.stream()
+                .map(this::quote)
+                .map(id -> "documentId == " + id)
+                .reduce((left, right) -> "(" + left + " || " + right + ")")
+                .orElseThrow();
+    }
+
+    private String quote(String value) {
+        return "'" + value.replace("'", "''") + "'";
     }
 }
