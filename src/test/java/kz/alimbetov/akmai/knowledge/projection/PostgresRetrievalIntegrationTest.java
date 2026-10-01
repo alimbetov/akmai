@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.knowledge.projection;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,11 @@ import kz.alimbetov.akmai.knowledge.identifier.IdentifierType;
 import kz.alimbetov.akmai.knowledge.identifier.search.PostgresIdentifierSearchIndex;
 import kz.alimbetov.akmai.knowledge.ingestion.EnrichedKnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.ingestion.PersistenceCoordinator;
+import kz.alimbetov.akmai.knowledge.lifecycle.DocumentOperationLock;
+import kz.alimbetov.akmai.knowledge.lifecycle.PostgresDocumentLifecycleRepository;
+import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
+import kz.alimbetov.akmai.knowledge.lifecycle.RetentionProperties;
+import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
@@ -27,6 +33,8 @@ import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import static org.mockito.Mockito.mock;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -153,7 +161,18 @@ class PostgresRetrievalIntegrationTest {
                 vectorStore,
                 identifierIndex,
                 new SearchProjectionFactory(),
-                repository
+                repository,
+                new PostgresDocumentLifecycleRepository(
+                        jdbcTemplate,
+                        new TransactionTemplate(new DataSourceTransactionManager(jdbcTemplate.getDataSource()))
+                ),
+                new VectorGenerationRepository(jdbcTemplate),
+                new DocumentOperationLock(jdbcTemplate.getDataSource()),
+                new RetentionProperties(
+                        true, "0 30 3 * * *", "UTC", 100, 20, 5,
+                        4, 16, Duration.ofMinutes(10),
+                        RetentionPolicy.PERMANENT, Duration.ofDays(90)
+                )
         );
 
         coordinator.persist(List.of(enriched(

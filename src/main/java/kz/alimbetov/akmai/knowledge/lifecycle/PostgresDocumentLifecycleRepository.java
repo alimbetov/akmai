@@ -30,7 +30,7 @@ public class PostgresDocumentLifecycleRepository
     }
 
     @Override
-    public long activate(
+    public long beginIngestion(
             String documentId,
             RetentionPolicy policy,
             Instant expiresAt
@@ -40,13 +40,15 @@ public class PostgresDocumentLifecycleRepository
                 """
                 INSERT INTO knowledge_document_lifecycle (
                     document_id, lifecycle_policy, lifecycle_status,
-                    generation, claim_generation, claim_id, claimed_by, claimed_at, lease_until, expires_at,
-                    delete_started_at, deleted_at, attempt_count,
-                    last_error, row_version, created_at, updated_at
-                ) VALUES (?, ?, 'READY', 1, NULL, NULL, NULL, NULL, NULL, ?, NULL, NULL, 0, NULL, 0, now(), now())
+                    generation, claim_generation, claim_id, claimed_by,
+                    claimed_at, lease_until, expires_at, delete_started_at,
+                    deleted_at, attempt_count, last_error, row_version,
+                    created_at, updated_at
+                ) VALUES (?, ?, 'INGESTING', 1, NULL, NULL, NULL,
+                          NULL, NULL, ?, NULL, NULL, 0, NULL, 0, now(), now())
                 ON CONFLICT (document_id) DO UPDATE SET
                     lifecycle_policy = EXCLUDED.lifecycle_policy,
-                    lifecycle_status = 'READY',
+                    lifecycle_status = 'INGESTING',
                     generation = knowledge_document_lifecycle.generation + 1,
                     claim_generation = NULL,
                     claim_id = NULL,
@@ -68,9 +70,33 @@ public class PostgresDocumentLifecycleRepository
                 timestamp(expiresAt)
         );
         if (generation == null) {
-            throw new IllegalStateException("Lifecycle activation returned no generation");
+            throw new IllegalStateException("Lifecycle ingestion returned no generation");
         }
         return generation;
+    }
+
+    @Override
+    public boolean publishIngestion(
+            String documentId,
+            long generation,
+            Instant now
+    ) {
+        return jdbcTemplate.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET lifecycle_status = 'READY',
+                    row_version = row_version + 1,
+                    updated_at = ?
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND lifecycle_status = 'INGESTING'
+                  AND claim_generation IS NULL
+                  AND claim_id IS NULL
+                """,
+                timestamp(now),
+                documentId,
+                generation
+        ) == 1;
     }
 
     @Override
@@ -153,6 +179,7 @@ public class PostgresDocumentLifecycleRepository
                 WHERE document_id = ?
                   AND generation = ?
                   AND claim_generation = ?
+                  AND claim_id = ?
                   AND claimed_by = ?
                   AND lease_until >= ?
                   AND lifecycle_status = 'DELETE_PENDING'
@@ -162,6 +189,7 @@ public class PostgresDocumentLifecycleRepository
                 claim.documentId(),
                 claim.generation(),
                 claim.generation(),
+                claim.claimId(),
                 claim.workerId(),
                 timestamp(now)
         ) == 1;
@@ -185,6 +213,7 @@ public class PostgresDocumentLifecycleRepository
                 WHERE document_id = ?
                   AND generation = ?
                   AND claim_generation = ?
+                  AND claim_id = ?
                   AND claimed_by = ?
                   AND lease_until >= ?
                   AND lifecycle_status IN ('DELETE_PENDING', 'DELETING')
@@ -194,6 +223,7 @@ public class PostgresDocumentLifecycleRepository
                 claim.documentId(),
                 claim.generation(),
                 claim.generation(),
+                claim.claimId(),
                 claim.workerId(),
                 timestamp(now)
         ) == 1;
@@ -217,6 +247,7 @@ public class PostgresDocumentLifecycleRepository
                 WHERE document_id = ?
                   AND generation = ?
                   AND claim_generation = ?
+                  AND claim_id = ?
                   AND claimed_by = ?
                   AND lease_until >= ?
                   AND lifecycle_status = 'DELETING'
@@ -226,6 +257,7 @@ public class PostgresDocumentLifecycleRepository
                 claim.documentId(),
                 claim.generation(),
                 claim.generation(),
+                claim.claimId(),
                 claim.workerId(),
                 timestamp(now)
         ) == 1;
@@ -254,6 +286,7 @@ public class PostgresDocumentLifecycleRepository
                 WHERE document_id = ?
                   AND generation = ?
                   AND claim_generation = ?
+                  AND claim_id = ?
                   AND claimed_by = ?
                   AND lifecycle_status IN ('DELETE_PENDING', 'DELETING')
                 """,
@@ -262,6 +295,7 @@ public class PostgresDocumentLifecycleRepository
                 claim.documentId(),
                 claim.generation(),
                 claim.generation(),
+                claim.claimId(),
                 claim.workerId()
         ) == 1;
     }
@@ -275,6 +309,7 @@ public class PostgresDocumentLifecycleRepository
                 WHERE document_id = ?
                   AND generation = ?
                   AND claim_generation = ?
+                  AND claim_id = ?
                   AND claimed_by = ?
                   AND lease_until >= ?
                   AND lifecycle_status IN ('DELETE_PENDING', 'DELETING')
@@ -283,6 +318,7 @@ public class PostgresDocumentLifecycleRepository
                 claim.documentId(),
                 claim.generation(),
                 claim.generation(),
+                claim.claimId(),
                 claim.workerId(),
                 timestamp(now)
         );

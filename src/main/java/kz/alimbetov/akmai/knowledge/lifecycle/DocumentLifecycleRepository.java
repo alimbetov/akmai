@@ -7,7 +7,10 @@ import java.util.Optional;
 
 public interface DocumentLifecycleRepository {
 
-    long activate(String documentId, RetentionPolicy policy, Instant expiresAt);
+    long beginIngestion(String documentId, RetentionPolicy policy, Instant expiresAt);
+
+    boolean publishIngestion(String documentId, long generation, Instant now);
+
 
     List<RetentionClaim> claimExpired(
             Instant now,

@@ -70,11 +70,11 @@ class PostgresDocumentLifecycleRepositoryTest {
     @Test
     void claimsOnlyExpiredTtlDocuments() {
         Instant now = Instant.parse("2026-10-01T10:00:00Z");
-        repository.activate("expired", RetentionPolicy.TTL, now.minusSeconds(60));
-        repository.activate("future", RetentionPolicy.TTL, now.plusSeconds(60));
-        repository.activate("permanent", RetentionPolicy.PERMANENT, null);
+        activate("expired", RetentionPolicy.TTL, now.minusSeconds(60));
+        activate("future", RetentionPolicy.TTL, now.plusSeconds(60));
+        activate("permanent", RetentionPolicy.PERMANENT, null);
 
-        List<RetentionClaim> claims = repository.claimExpired(now, 10, 5);
+        List<RetentionClaim> claims = repository.claimExpired(now, 10, 5, "pod-a", Duration.ofMinutes(10));
 
         assertThat(claims)
                 .extracting(RetentionClaim::documentId)
@@ -88,17 +88,17 @@ class PostgresDocumentLifecycleRepositoryTest {
     @Test
     void failedClaimIsRetryableUntilRetryLimit() {
         Instant now = Instant.parse("2026-10-01T10:00:00Z");
-        repository.activate("retry", RetentionPolicy.TTL, now.minusSeconds(60));
+        activate("retry", RetentionPolicy.TTL, now.minusSeconds(60));
 
-        RetentionClaim first = repository.claimExpired(now, 1, 2).getFirst();
+        RetentionClaim first = repository.claimExpired(now, 1, 2, "pod-a", Duration.ofMinutes(10)).getFirst();
         assertThat(repository.markDeleting(first, now)).isTrue();
         assertThat(repository.markFailed(first, now, "temporary\nvector failure")).isTrue();
 
-        RetentionClaim second = repository.claimExpired(now, 1, 2).getFirst();
+        RetentionClaim second = repository.claimExpired(now, 1, 2, "pod-a", Duration.ofMinutes(10)).getFirst();
         assertThat(repository.markDeleting(second, now)).isTrue();
         assertThat(repository.markFailed(second, now, "still failing")).isTrue();
 
-        assertThat(repository.claimExpired(now, 1, 2)).isEmpty();
+        assertThat(repository.claimExpired(now, 1, 2, "pod-a", Duration.ofMinutes(10))).isEmpty();
         DocumentLifecycle lifecycle =
                 repository.findByDocumentId("retry").orElseThrow();
         assertThat(lifecycle.status()).isEqualTo(LifecycleStatus.DELETE_FAILED);
@@ -109,18 +109,18 @@ class PostgresDocumentLifecycleRepositoryTest {
     @Test
     void reingestionInvalidatesOldRetentionClaim() {
         Instant now = Instant.parse("2026-10-01T10:00:00Z");
-        long firstGeneration = repository.activate(
-                "reingested",
-                RetentionPolicy.TTL,
-                now.minusSeconds(60)
+        long firstGeneration = repository.beginIngestion(
+                "reingested", RetentionPolicy.TTL, now.minusSeconds(60)
         );
-        RetentionClaim stale = repository.claimExpired(now, 1, 5).getFirst();
+        assertThat(repository.publishIngestion("reingested", firstGeneration, now.minusSeconds(30)))
+                .isTrue();
+        RetentionClaim stale = repository.claimExpired(now, 1, 5, "pod-a", Duration.ofMinutes(10)).getFirst();
 
-        long secondGeneration = repository.activate(
-                "reingested",
-                RetentionPolicy.PERMANENT,
-                null
+        long secondGeneration = repository.beginIngestion(
+                "reingested", RetentionPolicy.PERMANENT, null
         );
+        assertThat(repository.publishIngestion("reingested", secondGeneration, now))
+                .isTrue();
 
         assertThat(firstGeneration).isEqualTo(1);
         assertThat(secondGeneration).isEqualTo(2);
@@ -134,7 +134,7 @@ class PostgresDocumentLifecycleRepositoryTest {
     void concurrentClaimsAreDisjoint() {
         Instant now = Instant.parse("2026-10-01T10:00:00Z");
         for (int i = 0; i < 10; i++) {
-            repository.activate(
+            activate(
                     "doc-" + i,
                     RetentionPolicy.TTL,
                     now.minusSeconds(60 + i)
@@ -145,12 +145,12 @@ class PostgresDocumentLifecycleRepositoryTest {
         CompletableFuture<List<RetentionClaim>> first =
                 CompletableFuture.supplyAsync(() -> {
                     await(start);
-                    return repository.claimExpired(now, 5, 5);
+                    return repository.claimExpired(now, 5, 5, "pod-a", Duration.ofMinutes(10));
                 }, executor);
         CompletableFuture<List<RetentionClaim>> second =
                 CompletableFuture.supplyAsync(() -> {
                     await(start);
-                    return repository.claimExpired(now, 5, 5);
+                    return repository.claimExpired(now, 5, 5, "pod-b", Duration.ofMinutes(10));
                 }, executor);
 
         start.countDown();
@@ -164,14 +164,14 @@ class PostgresDocumentLifecycleRepositoryTest {
         assertThat(firstIds).hasSize(5);
         assertThat(secondIds).hasSize(5);
         assertThat(firstIds).doesNotContainAnyElementsOf(secondIds);
-        assertThat(repository.claimExpired(now, 10, 5)).isEmpty();
+        assertThat(repository.claimExpired(now, 10, 5, "pod-a", Duration.ofMinutes(10))).isEmpty();
     }
 
     @Test
     void stateTransitionsRequireMatchingGeneration() {
         Instant now = Instant.parse("2026-10-01T10:00:00Z");
-        repository.activate("stateful", RetentionPolicy.TTL, now.minusSeconds(1));
-        RetentionClaim claim = repository.claimExpired(now, 1, 5).getFirst();
+        activate("stateful", RetentionPolicy.TTL, now.minusSeconds(1));
+        RetentionClaim claim = repository.claimExpired(now, 1, 5, "pod-a", Duration.ofMinutes(10)).getFirst();
 
         assertThat(repository.markDeleting(claim, now)).isTrue();
         assertThat(repository.markDeleted(claim, now.plusSeconds(1))).isTrue();
@@ -186,7 +186,7 @@ class PostgresDocumentLifecycleRepositoryTest {
     @Test
     void expiredLeaseCanBeReclaimedByAnotherPod() {
         Instant now = Instant.parse("2026-10-01T10:00:00Z");
-        repository.activate("crashed", RetentionPolicy.TTL, now.minusSeconds(60));
+        activate("crashed", RetentionPolicy.TTL, now.minusSeconds(60));
 
         RetentionClaim podA = repository.claimExpired(
                 now, 1, 5, "pod-a", Duration.ofMinutes(10)
@@ -211,7 +211,7 @@ class PostgresDocumentLifecycleRepositoryTest {
     @Test
     void leaseCanBeRenewedOnlyByCurrentOwner() {
         Instant now = Instant.parse("2026-10-01T10:00:00Z");
-        repository.activate("long-job", RetentionPolicy.TTL, now.minusSeconds(60));
+        activate("long-job", RetentionPolicy.TTL, now.minusSeconds(60));
         RetentionClaim claim = repository.claimExpired(
                 now, 1, 5, "pod-a", Duration.ofMinutes(10)
         ).getFirst();
@@ -235,7 +235,7 @@ class PostgresDocumentLifecycleRepositoryTest {
     @Test
     void reclaimedClaimInvalidatesPreviousTokenEvenForSamePod() {
         Instant now = Instant.parse("2026-10-01T10:00:00Z");
-        repository.activate("same-pod", RetentionPolicy.TTL, now.minusSeconds(60));
+        activate("same-pod", RetentionPolicy.TTL, now.minusSeconds(60));
 
         RetentionClaim first = repository.claimExpired(
                 now, 1, 5, "pod-a", Duration.ofMinutes(10)
@@ -248,6 +248,18 @@ class PostgresDocumentLifecycleRepositoryTest {
         assertThat(repository.isCurrentClaim(first, now.plusSeconds(601))).isFalse();
         assertThat(repository.isCurrentClaim(reclaimed, now.plusSeconds(601))).isTrue();
         assertThat(repository.markDeleting(first, now.plusSeconds(601))).isFalse();
+    }
+
+
+    private void activate(
+            String documentId,
+            RetentionPolicy policy,
+            Instant expiresAt
+    ) {
+        long generation = repository.beginIngestion(documentId, policy, expiresAt);
+        assertThat(repository.publishIngestion(
+                documentId, generation, Instant.parse("2026-10-01T09:59:00Z")
+        )).isTrue();
     }
 
     private static void await(CountDownLatch latch) {
