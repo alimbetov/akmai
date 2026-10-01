@@ -1,6 +1,8 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
+import java.util.List;
+
 public interface SemanticRerankScorer {
 
-    double score(String question, RetrievalHit hit);
+    List<Double> score(String question, List<RetrievalHit> hits);
 }
