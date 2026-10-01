@@ -6,6 +6,7 @@ import java.util.UUID;
 import kz.alimbetov.akmai.knowledge.chunking.TextNormalizer;
 import kz.alimbetov.akmai.knowledge.identifier.DetectedIdentifier;
 import kz.alimbetov.akmai.knowledge.identifier.IdentifierExtractor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -13,22 +14,42 @@ public class QueryChunker {
 
     private final TextNormalizer normalizer;
     private final IdentifierExtractor identifierExtractor;
+    private final QueryLanguageDetector languageDetector;
+    private final QueryDecomposer decomposer;
 
     public QueryChunker(
             TextNormalizer normalizer,
-            IdentifierExtractor identifierExtractor
+            IdentifierExtractor identifierExtractor,
+            QueryLanguageDetector languageDetector
+    ) {
+        this(
+                normalizer,
+                identifierExtractor,
+                languageDetector,
+                new QueryDecomposer(normalizer)
+        );
+    }
+
+    @Autowired
+    public QueryChunker(
+            TextNormalizer normalizer,
+            IdentifierExtractor identifierExtractor,
+            QueryLanguageDetector languageDetector,
+            QueryDecomposer decomposer
     ) {
         this.normalizer = normalizer;
         this.identifierExtractor = identifierExtractor;
+        this.languageDetector = languageDetector;
+        this.decomposer = decomposer;
     }
 
     public List<QueryChunk> chunk(String question) {
         String normalized = normalizer.normalize(question);
-        List<String> segments = List.of(normalized.split("(?<=[.!?;])\\s+"));
+        List<String> segments = decomposer.decompose(normalized);
         List<QueryChunk> result = new ArrayList<>();
 
         for (String segment : segments) {
-            if (segment.isBlank()) {
+            if (segment.isBlank() || result.size() >= QueryDecomposer.MAX_SEGMENTS) {
                 continue;
             }
 
@@ -42,6 +63,9 @@ public class QueryChunker {
 
             // Multiple independent identifiers in one clause become separate retrieval units.
             for (DetectedIdentifier identifier : identifiers) {
+                if (result.size() >= QueryDecomposer.MAX_SEGMENTS) {
+                    break;
+                }
                 result.add(newChunk(
                         result.size(),
                         segment,
@@ -68,6 +92,7 @@ public class QueryChunker {
                 text,
                 normalizer.normalize(text),
                 semantic.isBlank() ? text : semantic,
+                languageDetector.detect(text),
                 identifiers
         );
     }

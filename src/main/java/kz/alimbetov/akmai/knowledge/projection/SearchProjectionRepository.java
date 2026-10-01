@@ -14,5 +14,10 @@ public interface SearchProjectionRepository {
 
     List<SearchProjection> findAdjacent(String documentId, int chunkIndex, int radius);
 
-    List<SearchProjection> searchLexical(String query, List<String> documentIds, int limit);
+    List<SearchProjection> searchLexical(
+            String query,
+            String language,
+            List<String> documentIds,
+            int limit
+    );
 }

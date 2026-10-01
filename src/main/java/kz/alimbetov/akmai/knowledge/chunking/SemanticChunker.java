@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDocument;
+import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.model.SemanticUnit;
+import kz.alimbetov.akmai.knowledge.model.SemanticUnitType;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -71,7 +73,7 @@ public class SemanticChunker {
                         .stream())
                 .toList();
 
-        List<List<SemanticUnit>> groups = group(boundedUnits);
+        List<List<SemanticUnit>> groups = group(boundedUnits, document.domain());
         List<KnowledgeChunk> chunks = new ArrayList<>();
 
         for (int i = 0; i < groups.size(); i++) {
@@ -119,7 +121,10 @@ public class SemanticChunker {
         return chunks;
     }
 
-    private List<List<SemanticUnit>> group(List<SemanticUnit> units) {
+    private List<List<SemanticUnit>> group(
+            List<SemanticUnit> units,
+            KnowledgeDomain domain
+    ) {
         List<List<SemanticUnit>> groups = new ArrayList<>();
         List<SemanticUnit> current = new ArrayList<>();
         int currentTokens = 0;
@@ -137,8 +142,14 @@ public class SemanticChunker {
             boolean enoughContent =
                     currentTokens >= properties.minTokens();
 
+            boolean medicalAtomicBoundary = domain == KnowledgeDomain.MEDICAL
+                    && unit.protectedAtom()
+                    && unit.type() != SemanticUnitType.HEADING
+                    && !current.isEmpty();
+
             if (!current.isEmpty()
-                    && ((sectionChanged && enoughContent)
+                    && (medicalAtomicBoundary
+                    || (sectionChanged && enoughContent)
                     || (wouldExceedSoftMax && enoughContent))) {
                 groups.add(List.copyOf(current));
                 current.clear();
@@ -149,8 +160,11 @@ public class SemanticChunker {
             currentTokens += unitTokens;
             currentSection = unit.sectionPath();
 
-            if (currentTokens >= properties.targetTokens()
-                    && !unit.protectedAtom()) {
+            if ((domain == KnowledgeDomain.MEDICAL
+                    && unit.protectedAtom()
+                    && unit.type() != SemanticUnitType.HEADING)
+                    || (currentTokens >= properties.targetTokens()
+                    && !unit.protectedAtom())) {
                 groups.add(List.copyOf(current));
                 current.clear();
                 currentTokens = 0;

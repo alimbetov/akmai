@@ -11,6 +11,34 @@ public class DomainSemanticClassifier {
     public SemanticUnitType classify(String text, KnowledgeDomain domain) {
         String value = text.toLowerCase(Locale.ROOT);
 
+        if (domain == KnowledgeDomain.MEDICAL) {
+            if (containsAny(value, "противопоказ", "contraindicat", "қарсы көрсет", "禁忌")) {
+                return SemanticUnitType.CONTRAINDICATION;
+            }
+            if (containsAny(value, "доз", "dose", "dosage", "доза", "剂量")) {
+                return SemanticUnitType.DOSAGE;
+            }
+            if (containsAny(value, "взаимодейств", "interaction", "өзара әрекет", "相互作用")) {
+                return SemanticUnitType.INTERACTION;
+            }
+            if (containsAny(
+                    value,
+                    "мониторинг",
+                    "контролировать",
+                    "monitoring",
+                    "monitor ",
+                    "бақылау",
+                    "бақылаңыз",
+                    "监测",
+                    "监控"
+            )) {
+                return SemanticUnitType.MONITORING;
+            }
+            if (containsAny(value, "показан", "indication", "көрсетілім", "适应症")) {
+                return SemanticUnitType.INDICATION;
+            }
+        }
+
         if (containsAny(value, "за исключением", "except", "unless", "қоспағанда", "除外")) {
             return SemanticUnitType.EXCEPTION;
         }
@@ -25,21 +53,6 @@ public class DomainSemanticClassifier {
         }
         if (containsAny(value, "не позднее", "within", "days", "күн", "日内")) {
             return SemanticUnitType.DEADLINE;
-        }
-
-        if (domain == KnowledgeDomain.MEDICAL) {
-            if (containsAny(value, "противопоказ", "contraindicat", "қарсы көрсет", "禁忌")) {
-                return SemanticUnitType.CONTRAINDICATION;
-            }
-            if (containsAny(value, "доз", "dose", "dosage", "доза", "剂量")) {
-                return SemanticUnitType.DOSAGE;
-            }
-            if (containsAny(value, "взаимодейств", "interaction", "өзара әрекет", "相互作用")) {
-                return SemanticUnitType.INTERACTION;
-            }
-            if (containsAny(value, "показан", "indication", "көрсетілім", "适应症")) {
-                return SemanticUnitType.INDICATION;
-            }
         }
 
         return SemanticUnitType.PARAGRAPH;

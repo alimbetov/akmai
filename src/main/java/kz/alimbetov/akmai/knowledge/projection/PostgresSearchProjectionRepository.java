@@ -125,42 +125,145 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
     @Override
     public List<SearchProjection> searchLexical(
             String query,
+            String language,
             List<String> documentIds,
             int limit
     ) {
-        if (documentIds == null || documentIds.isEmpty()) {
-            return jdbcTemplate.query(
-                    """
-                    SELECT * FROM knowledge_search_projection
-                    WHERE search_vector @@ websearch_to_tsquery('simple', ?)
-                    ORDER BY ts_rank(search_vector, websearch_to_tsquery('simple', ?)) DESC
-                    LIMIT ?
-                    """,
-                    this::map,
-                    query,
-                    query,
-                    limit
-            );
-        }
+        LexicalSearchLanguage searchLanguage = LexicalSearchLanguage.from(language);
+        return switch (searchLanguage) {
+            case RU -> searchFts(query, language, documentIds, limit, "russian");
+            case EN -> searchFts(query, language, documentIds, limit, "english");
+            case KK, ZH -> searchTrigram(query, language, documentIds, limit);
+            case UNKNOWN -> searchSimple(query, documentIds, limit);
+        };
+    }
 
-        return jdbcTemplate.query(
-                """
-                SELECT * FROM knowledge_search_projection
-                WHERE search_vector @@ websearch_to_tsquery('simple', ?)
-                  AND document_id = ANY (?)
-                ORDER BY ts_rank(search_vector, websearch_to_tsquery('simple', ?)) DESC
+    private List<SearchProjection> searchFts(
+            String query,
+            String language,
+            List<String> documentIds,
+            int limit,
+            String configuration
+    ) {
+        String sql = """
+                SELECT *,
+                       ts_rank(
+                           to_tsvector(?::regconfig, coalesce(section_path, '') || ' ' || text_content),
+                           websearch_to_tsquery(?::regconfig, ?)
+                       ) AS lexical_rank
+                FROM knowledge_search_projection
+                WHERE language = ?
+                  AND to_tsvector(
+                        ?::regconfig,
+                        coalesce(section_path, '') || ' ' || text_content
+                      ) @@ websearch_to_tsquery(?::regconfig, ?)
+                """ + documentFilter(documentIds) + """
+                ORDER BY lexical_rank DESC, chunk_id
                 LIMIT ?
-                """,
+                """;
+        return jdbcTemplate.query(
+                sql,
                 ps -> {
-                    ps.setString(1, query);
-                    ps.setArray(2, ps.getConnection().createArrayOf(
-                            "varchar", documentIds.toArray()
-                    ));
-                    ps.setString(3, query);
-                    ps.setInt(4, limit);
+                    int i = 1;
+                    ps.setString(i++, configuration);
+                    ps.setString(i++, configuration);
+                    ps.setString(i++, query);
+                    ps.setString(i++, language);
+                    ps.setString(i++, configuration);
+                    ps.setString(i++, configuration);
+                    ps.setString(i++, query);
+                    i = bindDocumentIds(ps, i, documentIds);
+                    ps.setInt(i, limit);
                 },
                 this::map
         );
+    }
+
+    private List<SearchProjection> searchTrigram(
+            String query,
+            String language,
+            List<String> documentIds,
+            int limit
+    ) {
+        String sql = """
+                SELECT *,
+                       greatest(
+                           similarity(lower(text_content), lower(?)),
+                           similarity(lower(coalesce(section_path, '')), lower(?))
+                       ) AS lexical_rank
+                FROM knowledge_search_projection
+                WHERE language = ?
+                  AND (
+                      lower(text_content) % lower(?)
+                      OR lower(coalesce(section_path, '')) % lower(?)
+                      OR lower(text_content) LIKE '%' || lower(?) || '%'
+                  )
+                """ + documentFilter(documentIds) + """
+                ORDER BY lexical_rank DESC, chunk_id
+                LIMIT ?
+                """;
+        return jdbcTemplate.query(
+                sql,
+                ps -> {
+                    int i = 1;
+                    ps.setString(i++, query);
+                    ps.setString(i++, query);
+                    ps.setString(i++, language);
+                    ps.setString(i++, query);
+                    ps.setString(i++, query);
+                    ps.setString(i++, query);
+                    i = bindDocumentIds(ps, i, documentIds);
+                    ps.setInt(i, limit);
+                },
+                this::map
+        );
+    }
+
+    private List<SearchProjection> searchSimple(
+            String query,
+            List<String> documentIds,
+            int limit
+    ) {
+        String sql = """
+                SELECT *,
+                       ts_rank(search_vector, websearch_to_tsquery('simple', ?)) AS lexical_rank
+                FROM knowledge_search_projection
+                WHERE search_vector @@ websearch_to_tsquery('simple', ?)
+                """ + documentFilter(documentIds) + """
+                ORDER BY lexical_rank DESC, chunk_id
+                LIMIT ?
+                """;
+        return jdbcTemplate.query(
+                sql,
+                ps -> {
+                    int i = 1;
+                    ps.setString(i++, query);
+                    ps.setString(i++, query);
+                    i = bindDocumentIds(ps, i, documentIds);
+                    ps.setInt(i, limit);
+                },
+                this::map
+        );
+    }
+
+    private String documentFilter(List<String> documentIds) {
+        return documentIds == null || documentIds.isEmpty()
+                ? ""
+                : " AND document_id = ANY (?) ";
+    }
+
+    private int bindDocumentIds(
+            java.sql.PreparedStatement ps,
+            int index,
+            List<String> documentIds
+    ) throws SQLException {
+        if (documentIds != null && !documentIds.isEmpty()) {
+            ps.setArray(
+                    index++,
+                    ps.getConnection().createArrayOf("varchar", documentIds.toArray())
+            );
+        }
+        return index;
     }
 
     private SearchProjection map(ResultSet rs, int rowNum) throws SQLException {

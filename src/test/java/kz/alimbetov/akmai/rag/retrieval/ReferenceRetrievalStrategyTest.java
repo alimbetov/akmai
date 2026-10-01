@@ -64,7 +64,7 @@ class ReferenceRetrievalStrategyTest {
         );
 
         List<RetrievalHit> hits = subject.retrieve(
-                new QueryChunk("q", 0, "q", "q", "q", List.of()),
+                new QueryChunk("q", 0, "q", "q", "q", "ru", List.of()),
                 new RetrievalContext(List.of(new RetrievalHit(
                         RetrievalType.LEXICAL,
                         "doc",

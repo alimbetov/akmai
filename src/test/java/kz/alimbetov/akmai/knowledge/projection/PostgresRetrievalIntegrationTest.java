@@ -22,6 +22,7 @@ import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
+import kz.alimbetov.akmai.rag.quality.RetrievalQualityMetrics;
 import kz.alimbetov.akmai.rag.retrieval.KnowledgeExpansion;
 import kz.alimbetov.akmai.rag.retrieval.ReferenceRetrievalStrategy;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalContext;
@@ -30,6 +31,7 @@ import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalTestProperties;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -54,6 +56,12 @@ class PostgresRetrievalIntegrationTest {
     static JdbcTemplate jdbcTemplate;
     static PostgresSearchProjectionRepository repository;
 
+    @BeforeEach
+    void cleanupDatabase() {
+        jdbcTemplate.update("TRUNCATE TABLE document_identifier RESTART IDENTITY CASCADE");
+        jdbcTemplate.update("TRUNCATE TABLE knowledge_search_projection CASCADE");
+    }
+
     @BeforeAll
     static void migrate() throws Exception {
         PGSimpleDataSource dataSource = new PGSimpleDataSource();
@@ -77,6 +85,8 @@ class PostgresRetrievalIntegrationTest {
     void liquibaseCreatesCanonicalRetrievalSchema() {
         assertThat(tableExists("knowledge_search_projection")).isTrue();
         assertThat(tableExists("document_identifier")).isTrue();
+        assertThat(indexExists("idx_knowledge_search_text_trgm")).isTrue();
+        assertThat(indexExists("idx_knowledge_search_section_trgm")).isTrue();
     }
 
     @Test
@@ -88,7 +98,7 @@ class PostgresRetrievalIntegrationTest {
                 "legacy obsolete marker"
         )));
 
-        assertThat(repository.searchLexical("obsolete", List.of("doc-1"), 10))
+        assertThat(repository.searchLexical("obsolete", "en", List.of("doc-1"), 10))
                 .extracting(SearchProjection::chunkId)
                 .containsExactly("old-chunk");
 
@@ -102,9 +112,9 @@ class PostgresRetrievalIntegrationTest {
 
         assertThat(repository.findChunkIdsByDocumentId("doc-1"))
                 .containsExactly("new-chunk");
-        assertThat(repository.searchLexical("obsolete", List.of("doc-1"), 10))
+        assertThat(repository.searchLexical("obsolete", "en", List.of("doc-1"), 10))
                 .isEmpty();
-        assertThat(repository.searchLexical("replacement", List.of("doc-1"), 10))
+        assertThat(repository.searchLexical("replacement", "en", List.of("doc-1"), 10))
                 .extracting(SearchProjection::chunkId)
                 .containsExactly("new-chunk");
     }
@@ -193,6 +203,7 @@ class PostgresRetrievalIntegrationTest {
                 .containsExactly("new-coordinator");
         assertThat(repository.searchLexical(
                 "obsolete",
+                "en",
                 List.of("doc-coordinator"),
                 10
         )).isEmpty();
@@ -254,7 +265,7 @@ class PostgresRetrievalIntegrationTest {
         ReferenceRetrievalStrategy strategy =
                 new ReferenceRetrievalStrategy(repository, identifierIndex, RetrievalTestProperties.defaults());
         List<RetrievalHit> hits = strategy.retrieve(
-                new QueryChunk("q-ref", 0, "REF-48", "REF-48", "REF-48", List.of()),
+                new QueryChunk("q-ref", 0, "REF-48", "REF-48", "REF-48", "ru", List.of()),
                 new RetrievalContext(List.of(new RetrievalHit(
                         RetrievalType.LEXICAL,
                         "doc-ref",
@@ -300,20 +311,72 @@ class PostgresRetrievalIntegrationTest {
     @Test
     void lexicalIndexSupportsExactTokensAcrossTargetLanguages() {
         repository.saveAll(List.of(
-                projection("kk", "doc-kk", 0, "келісімшарт төлем мерзімі"),
-                projection("ru", "doc-ru", 0, "договор срок оплаты"),
-                projection("en", "doc-en", 0, "contract payment deadline"),
-                projection("zh", "doc-zh", 0, "合同 付款 期限")
+                projection("kk", "doc-kk", 0, "келісімшарт төлем мерзімі", "kk"),
+                projection("ru", "doc-ru", 0, "договор срок оплаты", "ru"),
+                projection("en", "doc-en", 0, "contract payment deadline", "en"),
+                projection("zh", "doc-zh", 0, "合同付款期限", "zh")
         ));
 
-        assertThat(repository.searchLexical("келісімшарт", List.of(), 10))
-                .extracting(SearchProjection::chunkId).contains("kk");
-        assertThat(repository.searchLexical("договор", List.of(), 10))
-                .extracting(SearchProjection::chunkId).contains("ru");
-        assertThat(repository.searchLexical("contract", List.of(), 10))
-                .extracting(SearchProjection::chunkId).contains("en");
-        assertThat(repository.searchLexical("合同", List.of(), 10))
-                .extracting(SearchProjection::chunkId).contains("zh");
+        assertThat(repository.searchLexical("келісімшарт", "kk", List.of(), 10))
+                .extracting(SearchProjection::chunkId).containsExactly("kk");
+        assertThat(repository.searchLexical("договоры", "ru", List.of(), 10))
+                .extracting(SearchProjection::chunkId).containsExactly("ru");
+        assertThat(repository.searchLexical("contracts", "en", List.of(), 10))
+                .extracting(SearchProjection::chunkId).containsExactly("en");
+        assertThat(repository.searchLexical("付款期限", "zh", List.of(), 10))
+                .extracting(SearchProjection::chunkId).containsExactly("zh");
+    }
+
+
+    @Test
+    void corpusBackedLexicalQualityGateCoversAllTargetLanguages() {
+        assertLexicalQuality(
+                "kk",
+                "шартты бұзу",
+                "quality-kk-target",
+                "Шартты бұзу талаптары және хабарлау тәртібі.",
+                List.of(
+                        projection("quality-kk-noise-1", "quality-kk-doc-1", 0, "Төлем мерзімі туралы жалпы ереже.", "kk"),
+                        projection("quality-kk-target", "quality-kk-doc-2", 0, "Шартты бұзу талаптары және хабарлау тәртібі.", "kk"),
+                        projection("quality-kk-noise-2", "quality-kk-doc-3", 0, "Құжаттарды сақтау мерзімі.", "kk")
+                )
+        );
+
+        assertLexicalQuality(
+                "ru",
+                "условия расторжения",
+                "quality-ru-target",
+                "Условия расторжения договора и порядок уведомления.",
+                List.of(
+                        projection("quality-ru-noise-1", "quality-ru-doc-1", 0, "Срок оплаты по договору.", "ru"),
+                        projection("quality-ru-target", "quality-ru-doc-2", 0, "Условия расторжения договора и порядок уведомления.", "ru"),
+                        projection("quality-ru-noise-2", "quality-ru-doc-3", 0, "Порядок хранения документов.", "ru")
+                )
+        );
+
+        assertLexicalQuality(
+                "en",
+                "contract termination",
+                "quality-en-target",
+                "Contract termination conditions and notice procedure.",
+                List.of(
+                        projection("quality-en-noise-1", "quality-en-doc-1", 0, "Payment deadline under the agreement.", "en"),
+                        projection("quality-en-target", "quality-en-doc-2", 0, "Contract termination conditions and notice procedure.", "en"),
+                        projection("quality-en-noise-2", "quality-en-doc-3", 0, "Document retention requirements.", "en")
+                )
+        );
+
+        assertLexicalQuality(
+                "zh",
+                "合同终止",
+                "quality-zh-target",
+                "合同终止条件和通知程序。",
+                List.of(
+                        projection("quality-zh-noise-1", "quality-zh-doc-1", 0, "合同付款期限。", "zh"),
+                        projection("quality-zh-target", "quality-zh-doc-2", 0, "合同终止条件和通知程序。", "zh"),
+                        projection("quality-zh-noise-2", "quality-zh-doc-3", 0, "文件保存要求。", "zh")
+                )
+        );
     }
 
     private static EnrichedKnowledgeChunk enriched(
@@ -349,6 +412,21 @@ class PostgresRetrievalIntegrationTest {
         );
     }
 
+
+    private static boolean indexExists(String index) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                SELECT count(*)
+                  FROM pg_indexes
+                 WHERE schemaname = 'public'
+                   AND indexname = ?
+                """,
+                Integer.class,
+                index
+        );
+        return count != null && count == 1;
+    }
+
     private static boolean tableExists(String table) {
         Integer count = jdbcTemplate.queryForObject(
                 """
@@ -363,11 +441,64 @@ class PostgresRetrievalIntegrationTest {
         return count != null && count == 1;
     }
 
+
+    private void assertLexicalQuality(
+            String language,
+            String query,
+            String relevantChunkId,
+            String relevantText,
+            List<SearchProjection> corpus
+    ) {
+        repository.saveAll(corpus);
+        List<String> documentIds = corpus.stream()
+                .map(SearchProjection::documentId)
+                .toList();
+        List<String> ranked = repository.searchLexical(
+                        query,
+                        language,
+                        documentIds,
+                        5
+                ).stream()
+                .map(SearchProjection::chunkId)
+                .toList();
+
+        assertThat(ranked).contains(relevantChunkId);
+        assertThat(RetrievalQualityMetrics.recallAtK(
+                ranked,
+                java.util.Set.of(relevantChunkId),
+                5
+        )).isEqualTo(1.0);
+        assertThat(RetrievalQualityMetrics.reciprocalRank(
+                ranked,
+                java.util.Set.of(relevantChunkId)
+        )).isEqualTo(1.0);
+        assertThat(RetrievalQualityMetrics.ndcgAtK(
+                ranked,
+                java.util.Set.of(relevantChunkId),
+                5
+        )).isEqualTo(1.0);
+        assertThat(corpus.stream()
+                .filter(item -> item.chunkId().equals(relevantChunkId))
+                .findFirst()
+                .orElseThrow()
+                .text()).isEqualTo(relevantText);
+    }
+
     private static SearchProjection projection(
             String chunkId,
             String documentId,
             int chunkIndex,
             String text
+    ) {
+        return projection(chunkId, documentId, chunkIndex, text, "en");
+    }
+
+    private static SearchProjection projection(
+            String chunkId,
+            String documentId,
+            int chunkIndex,
+            String text,
+            String language
     ) {
         return new SearchProjection(
                 chunkId,
@@ -376,7 +507,7 @@ class PostgresRetrievalIntegrationTest {
                 chunkIndex,
                 text,
                 text,
-                "und",
+                language,
                 KnowledgeDomain.GENERAL,
                 "integration",
                 List.of(),

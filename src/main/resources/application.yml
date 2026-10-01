@@ -53,6 +53,10 @@ akmai:
     context-max-tokens: ${AKMAI_RETRIEVAL_CONTEXT_MAX_TOKENS:6000}
     context-max-chunks: ${AKMAI_RETRIEVAL_CONTEXT_MAX_CHUNKS:12}
     context-max-chunks-per-document: ${AKMAI_RETRIEVAL_CONTEXT_MAX_CHUNKS_PER_DOCUMENT:4}
+    reranker-enabled: ${AKMAI_RERANKER_ENABLED:true}
+    reranker-candidates: ${AKMAI_RERANKER_CANDIDATES:20}
+    reranker-timeout: ${AKMAI_RERANKER_TIMEOUT:2s}
+    reranker-fused-weight: ${AKMAI_RERANKER_FUSED_WEIGHT:0.15}
   retention:
     enabled: ${AKMAI_RETENTION_ENABLED:true}
     cron: "${AKMAI_RETENTION_CRON:0 30 3 * * *}"

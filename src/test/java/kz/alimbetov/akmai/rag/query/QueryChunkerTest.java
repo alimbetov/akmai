@@ -18,7 +18,36 @@ class QueryChunkerTest {
                 new BusinessIdentifierParsers.ContractNumberParser(normalizer),
                 new BusinessIdentifierParsers.OrderNumberParser(normalizer)
         ));
-        return new QueryChunker(new TextNormalizer(), extractor);
+        return new QueryChunker(new TextNormalizer(), extractor, new QueryLanguageDetector());
+    }
+
+    @Test
+    void detectsTargetLanguages() {
+        assertThat(chunker().chunk("Құжаттың төлем мерзімі қандай?").getFirst().language())
+                .isEqualTo("kk");
+        assertThat(chunker().chunk("Какой срок оплаты?").getFirst().language())
+                .isEqualTo("ru");
+        assertThat(chunker().chunk("What is the payment deadline?").getFirst().language())
+                .isEqualTo("en");
+        assertThat(chunker().chunk("付款期限是什么？").getFirst().language())
+                .isEqualTo("zh");
+    }
+
+
+    @Test
+    void preservesOriginalMultiIntentQueryAndAddsBoundedRetrievalSubqueries() {
+        var chunks = chunker().chunk(
+                "What dosage applies and what monitoring is required?"
+        );
+
+        assertThat(chunks)
+                .extracting(QueryChunk::rawText)
+                .containsExactly(
+                        "What dosage applies and what monitoring is required?",
+                        "What dosage applies",
+                        "what monitoring is required?"
+                );
+        assertThat(chunks).hasSizeLessThanOrEqualTo(QueryDecomposer.MAX_SEGMENTS);
     }
 
     @Test

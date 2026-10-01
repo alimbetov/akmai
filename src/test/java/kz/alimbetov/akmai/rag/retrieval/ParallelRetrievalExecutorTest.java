@@ -236,6 +236,7 @@ class ParallelRetrievalExecutorTest {
                 "query",
                 "query",
                 "query",
+                "en",
                 List.of()
         );
     }
