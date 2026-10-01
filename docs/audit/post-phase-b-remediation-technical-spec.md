@@ -4,6 +4,7 @@ Branch: fix/post-phase-b-defect-remediation
 Source ledger: docs/audit/post-phase-b-defect-ledger.md  
 Scope: D01–D72  
 Status: implementation contract  
+Specification consistency review: completed; the binding decisions below supersede any earlier audit-time alternatives.  
 Rule: this document is one implementation scope. Section numbering is navigation only; it does not define separate delivery phases or independently releasable parts.
 
 ## 1. Purpose
@@ -56,7 +57,7 @@ Required logical columns:
 - lifecycle_policy PERMANENT|TTL
 - retention_status ACTIVE|DELETE_PENDING|DELETING|DELETE_FAILED|DELETED
 - published_generation BIGINT NULL
-- next_generation BIGINT NOT NULL
+- next_generation BIGINT NOT NULL — the next value to allocate, initialized to 1
 - claim_generation BIGINT NULL
 - claim_id UUID NULL
 - claimed_by VARCHAR(200) NULL
@@ -72,13 +73,19 @@ Required logical columns:
 
 Do not overload one status field with both ingestion and retention state.
 
+Generation allocation is exact: in one PostgreSQL transaction read N = next_generation, increment next_generation to N+1, and insert generation N as STAGING. Never derive a generation from MAX(generation).
+
+ACTIVE means “not in a retention deletion workflow”; it MAY temporarily have published_generation=NULL for a never-published document. Retrieval still requires both retention_status=ACTIVE and published_generation IS NOT NULL.
+
+After knowledge_document_generation exists, add a DEFERRABLE composite foreign key from (document_id, published_generation) to (document_id, generation). Publication and deletion transactions MUST keep the pointer and generation journal consistent.
+
 ### 3.2 Generation journal
 
 Add knowledge_document_generation:
 
 - document_id VARCHAR(100)
 - generation BIGINT
-- generation_status STAGING|PUBLISHED|FAILED|RETIRED
+- generation_status STAGING|PUBLISHED|FAILED|RETIRED|CLEANED
 - embedding_profile_id VARCHAR(128)
 - content_fingerprint VARCHAR(64)
 - physical_id_version SMALLINT
@@ -86,6 +93,7 @@ Add knowledge_document_generation:
 - published_at TIMESTAMPTZ NULL
 - failed_at TIMESTAMPTZ NULL
 - retired_at TIMESTAMPTZ NULL
+- cleaned_at TIMESTAMPTZ NULL
 - last_error VARCHAR(1000) NULL
 - cleanup_required BOOLEAN NOT NULL DEFAULT false
 - PRIMARY KEY(document_id, generation)
@@ -95,7 +103,10 @@ Required constraints/indexes:
 - generation > 0;
 - one PUBLISHED generation per document at most;
 - lookup by generation_status/started_at for stale recovery;
-- FK from generation-scoped relational state where practical.
+- FK from generation-scoped relational state where practical;
+- allowed transitions are STAGING -> PUBLISHED|FAILED, PUBLISHED -> RETIRED, FAILED|RETIRED -> CLEANED;
+- lifecycle.published_generation may reference only a PUBLISHED generation;
+- retention deletion of the currently published generation atomically clears lifecycle.published_generation, changes retention_status to DELETED and changes that generation PUBLISHED -> RETIRED; physical/relational cleanup then changes RETIRED -> CLEANED.
 
 ### 3.3 Generation-scoped projections
 
@@ -153,10 +164,12 @@ StructuralAnchor:
 - canonicalValue
 - rawValue
 
-Persist generation-scoped targets and edges, either as dedicated tables or equivalent normalized relational structures:
+Persist generation-scoped targets and edges in the following dedicated tables:
 
 - knowledge_reference_target(document_id, generation, chunk_id, type, canonical_value, ...)
-- knowledge_reference_edge(document_id, generation, source_chunk_id, type, canonical_value, raw_value, ...)
+- knowledge_reference_edge(document_id, generation, source_chunk_id, type, canonical_value, raw_value, target_scope, target_document_id, ...)
+
+Target uniqueness is (document_id, generation, type, canonical_value). A reference without an explicit external document/instrument identifier has target_scope=SAME_DOCUMENT and resolves only inside the source document. Cross-document resolution is allowed only when the parsed reference contains an explicit target document/instrument identity; then target_scope=EXPLICIT_DOCUMENT and target_document_id is mandatory.
 
 Reference retrieval MUST resolve published edges to published targets. Heading declarations MUST create targets, not outgoing self-reference edges.
 
@@ -173,9 +186,16 @@ Add knowledge_embedding_profile:
 - canonical config fingerprint
 - created_at
 
-Every generation MUST reference one profile.
+Every non-legacy generation MUST reference one profile.
 
-Startup readiness MUST compare the configured active profile against persisted published generations. Same-dimension but different model/profile is incompatible unless the explicit re-embedding flow is used.
+Add a singleton knowledge_embedding_runtime row with:
+- active_profile_id;
+- migration_profile_id nullable;
+- migration_status IDLE|STAGING|READY_TO_CUTOVER;
+- row_version;
+- updated_at.
+
+Every retrieval-visible generation MUST use active_profile_id. Startup readiness MUST compare the configured serving profile against knowledge_embedding_runtime.active_profile_id. Same-dimension but different model/profile is incompatible unless the corpus-level re-embedding flow in section 23 is active.
 
 ### 3.7 Idempotency journal
 
@@ -186,10 +206,14 @@ Add knowledge_ingestion_request:
 - request_fingerprint VARCHAR(64)
 - generation BIGINT NULL
 - request_status IN_PROGRESS|SUCCEEDED|FAILED
+- generation BIGINT NULL
+- claim_id UUID NULL
+- lease_until TIMESTAMPTZ NULL
 - response_json JSONB NULL
+- last_error VARCHAR(1000) NULL
 - created_at / updated_at
 
-The same idempotency key + same fingerprint returns the original completed result. Same key + different fingerprint returns 409.
+The same idempotency key + same fingerprint returns the original completed result. Same key + different fingerprint returns 409. Concurrent same-key execution is lease-fenced with PostgreSQL time: an unexpired IN_PROGRESS row returns 409 INGESTION_IN_PROGRESS plus Retry-After; an expired row may be reclaimed. A reclaimed request MUST inspect its linked generation before allocating another one: if that generation is PUBLISHED, finalize SUCCEEDED and return the original result; if STAGING/FAILED, reconcile it before retrying.
 
 ## 4. Migration contract
 
@@ -213,6 +237,12 @@ Required migration files after reconciliation should cover:
 Remove src/main/resources/db/identifier-schema.sql from runtime authority. If historical documentation is required, move it under docs/legacy and clearly mark it non-executable.
 
 Every schema migration MUST have an upgrade Testcontainers fixture. A clean-database test is not sufficient for D33.
+
+Legacy backfill rules are explicit:
+- existing READY lifecycle rows may be converted to a PUBLISHED generation only when their current generation and relational rows are internally consistent;
+- existing INGESTING/INGEST_FAILED rows are never guessed to be published; convert them to FAILED/reconciliation-required and leave published_generation NULL unless prior publication can be proven from durable data;
+- pre-profile vectors are assigned a sentinel embedding profile legacy-unknown and physical_id_version=0. Readiness remains DOWN while any retrieval-visible generation uses legacy-unknown. An operator must explicitly attest/map the historical profile or run re-ingestion/re-embedding; the application MUST NOT assume the currently configured model created legacy vectors;
+- legacy rows without a verifiable vector manifest enter reconciliation-required state rather than being declared clean.
 
 ## 5. Core Java model changes
 
@@ -242,9 +272,9 @@ PersistenceCoordinator MUST be redesigned around staging, not destructive replac
 Required sequence for one document:
 
 1. Acquire the document-operation lock.
-2. Begin generation N+1 in PostgreSQL:
-   - atomically increment next_generation;
-   - insert knowledge_document_generation as STAGING;
+2. Begin generation N in PostgreSQL:
+   - atomically allocate N = next_generation and increment next_generation to N+1;
+   - insert knowledge_document_generation generation N as STAGING;
    - leave lifecycle.published_generation unchanged.
 3. Build all SearchProjection, DocumentIdentifier, reference target/edge and vector manifest entries in memory.
 4. In one PostgreSQL transaction stage:
@@ -259,14 +289,16 @@ Required sequence for one document:
    - mark generation FAILED;
    - published_generation remains N;
    - rethrow a bounded domain exception.
-7. Publish in one PostgreSQL transaction:
-   - verify N+1 is STAGING;
-   - retire prior PUBLISHED generation N if present;
-   - mark N+1 PUBLISHED;
-   - set lifecycle.published_generation=N+1;
+7. Publish the newly allocated generation G in one PostgreSQL transaction:
+   - verify G is STAGING;
+   - retire the prior PUBLISHED generation P if present;
+   - mark G PUBLISHED;
+   - set lifecycle.published_generation=G;
    - set retention_status=ACTIVE;
    - refresh retention policy/expiry according to the accepted request.
-8. Only after publication, clean physical/relational state belonging to retired N. Failure to retire old physical state is an operability/reconciliation issue, not a reason to roll back the new published pointer.
+8. Only after publication, clean physical/relational state belonging to retired P. Failure to retire old physical state is an operability/reconciliation issue, not a reason to roll back the new published pointer.
+
+Re-ingestion versus retention is explicit. While holding the document-operation lock, begin-generation MUST invalidate any DELETE_PENDING claim token before creating STAGING work. If the document was already expired/DELETE_FAILED, it remains non-servable until the new generation publishes. Retention claiming MUST exclude documents that have a STAGING generation. If retention already reached DELETING, it necessarily owns the same document lock first; ingestion waits until that cleanup completes and then starts from the resulting lifecycle state.
 9. Reconciliation MUST be able to clean stale STAGING/FAILED/RETIRED generations from the generation journal + manifests.
 
 No method may delete the old published generation before the new generation is published.
@@ -282,7 +314,7 @@ Replace newline-delimited concatenation with an unambiguous binary/length-prefix
 - NFC-normalized sectionPath;
 - NFC-normalized normalizedText.
 
-Hash with SHA-256 and encode deterministic lowercase hex/base64url. Prefix with an identity version if useful.
+Serialize a version byte 0x02 followed by 32-bit big-endian byte lengths and UTF-8 bytes for every variable field, plus chunkIndex as signed 64-bit big-endian. Hash the resulting bytes with SHA-256 and encode exactly as "c2_" + 64 lowercase hexadecimal characters.
 
 Different tuples MUST never produce identical pre-hash bytes.
 
@@ -290,9 +322,14 @@ Different tuples MUST never produce identical pre-hash bytes.
 
 Use exactly one implementation everywhere.
 
-Recommended physical form:
+The physical ID MUST remain compatible with the configured Spring AI PgVectorStore UUID id type.
 
-v2:<sha256(length-prefixed(documentId), generation, chunkId)>
+VectorIdentity v2 algorithm:
+1. canonical bytes = version byte 0x02 + length-prefixed NFC documentId + generation as signed 64-bit big-endian + length-prefixed chunkId;
+2. digest = SHA-256(canonical bytes);
+3. take the first 16 digest bytes;
+4. set RFC 4122 variant bits and UUID version bits to version 8/custom;
+5. construct java.util.UUID and use UUID.toString().
 
 The exact encoding MUST be deterministic, versioned and tested. PersistenceCoordinator MUST NOT implement its own vector ID function.
 
@@ -312,12 +349,21 @@ The generic VectorStore similaritySearch path cannot by itself express “metada
 
 Introduce PublishedVectorSearchRepository implemented for the production PostgreSQL/pgvector storage.
 
+Pin the physical vector layout in configuration instead of relying on Spring AI defaults:
+- spring.ai.vectorstore.pgvector.schema-name=public (or explicitly configured value);
+- table-name=vector_store (or explicitly configured value);
+- id-type=UUID;
+- distance-type and dimensions are injected into the custom repository from the same configuration used to construct PgVectorStore.
+
+Vector metadata owned by AKMAI MUST use versioned reserved keys: akmaiMetadataVersion, akmaiDocumentId, akmaiGeneration, akmaiEmbeddingProfileId and akmaiChunkId.
+
 It MUST:
 
 - obtain the query embedding through the configured EmbeddingModel;
 - query the actual Spring AI pgvector table;
-- join/filter vector metadata documentId + generation against knowledge_document_lifecycle.published_generation;
-- exclude non-ACTIVE/DELETED documents;
+- join/filter reserved vector metadata documentId + generation against knowledge_document_lifecycle.published_generation;
+- require retention_status='ACTIVE' and published_generation IS NOT NULL;
+- require vector embedding profile = knowledge_embedding_runtime.active_profile_id;
 - apply optional explicit document scope;
 - apply configured distance/similarity threshold and topK;
 - return canonical RetrievalHit provenance;
@@ -364,9 +410,15 @@ Identifier dependency rules:
 - identifier requested and exact lookup EMPTY -> dependent semantic retrieval is fail-closed/explicit fallback, never silently global;
 - identifier lookup FAILED/TIMED_OUT/REJECTED -> dependent steps do not reinterpret that state as EMPTY.
 
+Aggregate failure policy is exact:
+- if an identifier is present, IDENTIFIER is critical for that query unit;
+- without an identifier, VECTOR and LEXICAL are alternative primary strategies: at least one must finish SUCCESS or EMPTY; if both FAILED/TIMED_OUT/REJECTED, the unit is criticalFailure;
+- REFERENCE and expansion are optional/degraded;
+- reranker failure falls back to fused order and is degraded, not critical.
+
 RagQuestionService MUST distinguish:
-- healthy zero evidence -> “insufficient information” response;
-- infrastructure/dependency failure -> stable degraded/503 error contract.
+- healthy zero evidence -> deterministic service-generated “insufficient information” response;
+- critical retrieval failure -> stable degraded/503 error contract.
 
 ## 11. Deadlines and executor semantics
 
@@ -391,6 +443,8 @@ Shutdown MUST:
 - guarantee no CompletableFuture remains forever incomplete.
 
 Transport-level HTTP/JDBC timeouts MUST back application deadlines so cancellation is not dependent only on Thread.interrupt.
+
+Mutating vector operations MUST NOT be detached into a Future that is timed out and then compensated while the mutation can still continue. PgVectorStore.add/delete remain synchronous from the state-machine perspective. Their Ollama HTTP call and JDBC statements receive hard transport/statement timeouts; compensation starts only after the mutating call has conclusively returned or thrown. If an outer request deadline expires first, the request may return timeout, but the state-machine worker continues only until its bounded transport/JDBC calls terminate and then performs the normal failure/compensation transition.
 
 ## 12. Fusion, reranking and authority
 
@@ -424,12 +478,17 @@ Any malformed model response fails the entire rerank attempt and falls back to t
 
 KnowledgeExpansion MUST not append neighbors behind an already full context.
 
-Implement one explicit policy:
-- expand high-ranked seeds before final context selection;
-- score/interleave neighbor with its seed; or
-- reserve a bounded expansion quota.
+Use a deterministic bounded interleave policy.
 
-ContextBudget applies only after expansion integration.
+Add retrieval.context-expansion-max-chunks, validated as 0..contextMaxChunks. After reranking:
+1. take expansionSeeds highest-ranked canonical hits;
+2. fetch unique adjacent neighbors ordered by absolute chunk distance then chunkIndex;
+3. walk the ranked list in order and emit each ranked hit;
+4. immediately after a seed, emit at most one not-yet-emitted nearest neighbor while the expansion-context quota remains;
+5. after the quota is exhausted, emit remaining ranked hits only;
+6. ContextBudget then applies token/per-document/max-chunk limits and may backfill later ranked hits if an inserted neighbor does not fit.
+
+This policy guarantees expansion can influence context while bounding how many higher-ranked base hits it can displace.
 
 Neighbor hits MUST carry full canonical Provenance.
 
@@ -457,7 +516,7 @@ ContextBudget MUST estimate the exact serialized envelope plus deterministic fra
 CitationValidator MUST:
 - parse source numbers without integer overflow;
 - remove invalid markers with the same regex grammar used for detection;
-- require at least one valid citation for a non-empty grounded factual answer;
+- for every model-generated nonblank answer produced from nonempty context, require at least one valid citation; the only citation-free “insufficient information” answer is the deterministic service-generated fallback, never arbitrary model text;
 - return only actually cited SourceRef entries;
 - never expose an out-of-range/fabricated source as valid.
 
@@ -495,9 +554,14 @@ WRITE and READ use the same canonicalization version.
 
 ### 16.2 Language canonicalization
 
-Map accepted aliases to KnowledgeLanguage KK/RU/EN/ZH at request ingestion. Persist only canonical codes.
+Map the following case-insensitive trimmed aliases at request ingestion and persist only canonical codes:
+- kk: kk, kaz, kazakh;
+- ru: ru, rus, russian;
+- en: en, eng, english;
+- zh: zh, zho, chi, chinese.
+Any other value is a validation error.
 
-QueryLanguageDetector MUST represent ambiguity. Shared Cyrillic without Kazakh-specific evidence MUST NOT automatically be treated as confidently Russian. Use UNKNOWN/ambiguous candidates and a documented lexical fallback.
+QueryLanguageDetector returns LanguageDecision(primary, candidates, confidence). Clear Han -> zh; Kazakh-specific Cyrillic -> kk; clear Latin -> en. Shared Cyrillic without Kazakh-specific evidence returns primary=UNKNOWN, candidates=[kk,ru]. Lexical retrieval for that decision executes bounded KK and RU lexical searches and fuses them; it MUST NOT silently force RU. UNKNOWN with no script evidence uses a bounded language-neutral fallback and vector retrieval.
 
 ### 16.3 Structural and semantic typing
 
@@ -546,7 +610,7 @@ Ordinary phrases such as contract termination, order status and case management 
 
 Enforce raw/canonical length <= 500 before persistence.
 
-Implement or remove from advertised capability every IdentifierType. If CLAIM_NUMBER, PAYMENT_NUMBER, PROTOCOL_NUMBER, LETTER_NUMBER and DOCUMENT_ID remain supported enum/API values, each MUST have a production parser and tests.
+For this remediation, remove CLAIM_NUMBER, PAYMENT_NUMBER, PROTOCOL_NUMBER, LETTER_NUMBER and DOCUMENT_ID from the advertised/supported IdentifierType contract because no validated production grammar exists for them. Keep only types with implemented WRITE/READ parsers. Reintroduction requires a separate grammar specification and tests.
 
 Prefix/partial LIKE search MUST escape wildcard semantics where literal behavior is intended.
 
@@ -561,6 +625,8 @@ Support at least:
 - ZH: 第25条, 第二十五条 and supported paragraph forms.
 
 Structural declarations create StructuralAnchor targets. Mentions create CrossReference edges.
+
+Resolution scope is mandatory: SAME_DOCUMENT references query targets only for source documentId + published generation. EXPLICIT_DOCUMENT references first resolve their explicit target document identity and then query that document's published target. A bare "Article 25" MUST NOT search Article 25 globally across every document.
 
 Batch resolution MUST:
 - deduplicate references before SQL;
@@ -616,13 +682,13 @@ For vector deletion:
 
 Do not claim work before execution capacity exists.
 
-Preferred implementation:
-- acquire a worker permit first;
+Required implementation:
+- acquire worker permits first;
 - claim at most the number of acquired permits;
 - submit immediately;
 - no claim waits un-heartbeated in a general queue.
 
-Heartbeat executor MUST not be a single blocking failure domain. Size it to active worker parallelism or use an equivalent isolated/bounded renewal design.
+Heartbeat uses ScheduledThreadPoolExecutor(workerParallelism). There is at most one scheduled renewal task per active worker/claim. Every renewal has a JDBC statement timeout shorter than heartbeatPeriod; therefore one blocked renewal occupies at most one heartbeat thread and cannot head-of-line block unrelated claims.
 
 Every renewal has a DB timeout shorter than heartbeat interval. One blocked claim renewal MUST NOT prevent unrelated claims from renewing.
 
@@ -633,13 +699,15 @@ Shutdown order:
 4. stop heartbeat;
 5. terminate worker executor.
 
-Stale-ingestion recovery MUST page/claim beyond a contended oldest batch and distribute work across pods instead of repeatedly selecting the same rows.
+Stale-ingestion recovery MUST use one atomic PostgreSQL UPDATE ... FROM (SELECT ... FOR UPDATE SKIP LOCKED LIMIT :batch) operation on STAGING generation-journal rows to mark them FAILED with cleanup_required=true. It does not acquire the document advisory lock merely to mark stale state. Publication remains conditional on generation_status=STAGING, so a writer that resumes after stale recovery cannot publish. External cleanup is handled later by the generation reconciliation worker. Repeated batches continue up to a configured max-batches-per-run.
 
 ## 22. Document operation lock
 
 Do not consume a connection from the main application pool for the full external ingestion/cleanup critical section.
 
-Implement a dedicated lock DataSource/Hikari pool for session advisory locks, with its own bounded maximum and timeout, or an equivalent leased distributed document lock.
+Implement a dedicated lock DataSource/Hikari pool to the same PostgreSQL instance for session advisory locks. Do not reuse the main JdbcTemplate pool.
+
+Lock acquisition uses pg_try_advisory_lock in a bounded retry loop until akmai.lock.acquire-timeout; pg_advisory_lock without a bound is forbidden. The lock-pool maximum MUST be >= the maximum number of concurrent ingestion + retention critical sections admitted by local executors, or those executors must acquire a lock-pool permit before starting.
 
 The main SQL pool MUST remain available while document locks are held.
 
@@ -647,21 +715,24 @@ Add a small-pool integration test proving concurrent different-document operatio
 
 ## 23. Embedding lifecycle and re-embedding
 
-EmbeddingProfileResolver builds the active profile fingerprint from provider/model/dimensions/distance/tokenizer configuration.
+EmbeddingProfileResolver builds the serving profile fingerprint from provider/model/dimensions/distance/tokenizer configuration.
 
 Startup:
-- active profile must be persisted/resolved;
-- incompatible published profiles make readiness DOWN unless re-embedding migration mode is explicitly enabled.
+- knowledge_embedding_runtime.active_profile_id is the only profile allowed in retrieval-visible generations;
+- configured serving model/profile must equal active_profile_id for readiness UP;
+- a different configured model enters explicit corpus-migration maintenance mode and normal RAG/ingestion remains unavailable until cutover.
 
-ReembeddingService:
-- reads canonical published content;
-- creates a new STAGING generation using the new profile;
-- stages manifests/relational state;
-- writes new vectors;
-- atomically publishes only on success;
-- crash/failure leaves the prior generation published.
+ReembeddingService performs a corpus-level cutover, not per-document publication:
+1. acquire a global embedding-migration advisory lock and set migration_status=STAGING with migration_profile_id=Y;
+2. reject ordinary ingestion while migration is active;
+3. snapshot every currently ACTIVE published document and stage a candidate generation under profile Y without changing any lifecycle.published_generation;
+4. write and verify all candidate vectors/manifests;
+5. if any candidate fails, mark the migration failed/IDLE, keep active_profile_id=X and keep every old published pointer unchanged; reconcile Y candidates;
+6. when every snapshot document has a verified candidate, enter READY_TO_CUTOVER;
+7. in one PostgreSQL transaction update every snapshot lifecycle.published_generation to its Y candidate, retire the corresponding X generations, mark candidates PUBLISHED and change knowledge_embedding_runtime.active_profile_id to Y;
+8. resume ingestion/RAG on Y and asynchronously clean retired X generations.
 
-Mixed vector spaces MUST never participate in one retrieval result.
+New documents cannot enter the publication set during the migration because ingestion is rejected. Mixed profile spaces are therefore never retrieval-visible in one corpus state.
 
 ## 24. API validation, errors, auth and idempotency
 
@@ -699,7 +770,7 @@ Add Spring Security.
 Minimum supported contract:
 - health liveness/readiness endpoints unauthenticated;
 - /api/** authenticated;
-- configurable API-key/Bearer mechanism for current deployment;
+- use X-AKMAI-API-Key with a single externally supplied secret for the current deployment; compare in constant time and never log the secret;
 - explicit local-only development profile may permit unauthenticated access only when intentionally enabled;
 - production startup fails closed when required credentials are absent.
 
@@ -709,9 +780,12 @@ Accept Idempotency-Key for ingestion.
 
 Canonical request fingerprint includes normalized documentId/title/text/source/language/domain/metadata and any retention inputs.
 
-Same key/same fingerprint returns original successful KnowledgeIngestionResponse and does not create a new generation or refresh TTL.
+Canonical fingerprint uses deterministic canonical JSON: recursively sorted object keys, normalized Unicode strings, canonical language/domain values, and stable JSON number representation before SHA-256.
 
-Same key/different fingerprint -> 409.
+Same key/same fingerprint and SUCCEEDED returns the stored KnowledgeIngestionResponse and does not create a new generation or refresh TTL.
+Same key/same fingerprint and unexpired IN_PROGRESS returns 409 INGESTION_IN_PROGRESS with Retry-After.
+Same key/same fingerprint and expired IN_PROGRESS is reclaimed using DB time and follows the generation-inspection rules in section 3.7.
+Same key/different fingerprint -> 409 IDEMPOTENCY_KEY_REUSE.
 
 ## 25. Readiness and observability
 
@@ -850,8 +924,8 @@ Code: neighbor built from canonical SearchProjection + Provenance.
 Tests: expanded neighbor citation retains source/page/domain/language/section.
 
 ### D15 — language spelling/case mismatch
-Code: canonical KnowledgeLanguage at API write boundary.  
-Tests: RU/russian/Ru aliases normalize or invalid aliases reject per contract; storage uses canonical code only.
+Code: canonical KnowledgeLanguage at API write boundary using the exact alias map in section 16.2.  
+Tests: RU/russian/Ru normalize to ru; unsupported aliases reject; storage uses canonical code only.
 
 ### D16 — ambiguous Kazakh/Russian
 Code: detector supports ambiguous/unknown result and multi-language fallback.  
@@ -926,8 +1000,8 @@ Code: preservation migration, additive upgrade path, Liquibase-only runtime sche
 Tests: seed legacy schema/data, run full changelog, verify rows and constraints survive.
 
 ### D34 — advertised identifier types missing parsers
-Code: implement every advertised parser or remove unsupported enum/API/docs entries.  
-Tests: parameterized capability test guarantees each supported type has WRITE and READ parser coverage.
+Code: remove unsupported CLAIM_NUMBER, PAYMENT_NUMBER, PROTOCOL_NUMBER, LETTER_NUMBER and DOCUMENT_ID from the supported enum/API/docs contract; retain only types with validated parsers.  
+Tests: parameterized capability test guarantees each remaining supported type has WRITE and READ parser coverage.
 
 ### D35 — punctuation-colliding identifier canonicalization
 Code: type-aware canonicalizer preserving significant separators.  
@@ -970,7 +1044,7 @@ Code: NFC text/identity boundary; reviewed type-aware identifier compatibility n
 Tests: NFC/NFD logical equivalents behave per canonical policy; distinct confusables remain distinct.
 
 ### D45 — stale-ingestion recovery starvation
-Code: DB-backed claim/paging or continue scanning beyond locked oldest batch with disjoint multi-pod work.  
+Code: atomically mark stale STAGING generation rows FAILED/cleanup_required via PostgreSQL FOR UPDATE SKIP LOCKED batched update; reconciliation performs external cleanup.  
 Tests: locked first batch does not starve later stale rows in same run.
 
 ### D46 — oversized extracted identifiers
@@ -1002,7 +1076,7 @@ Code: authority tier retained through fusion/rerank.
 Tests: exact target cannot rank below semantic-only candidate under default policy.
 
 ### D53 — expansion discarded by context ordering
-Code: integrate expansion before final context cutoff/reserve quota.  
+Code: use the deterministic ranked-hit/nearest-neighbor interleave algorithm and context-expansion-max-chunks quota from section 13.  
 Tests: useful neighbor survives even when original ranked list exceeds contextMaxChunks.
 
 ### D54 — numbered medical facts become headings
@@ -1183,6 +1257,11 @@ akmai.api.max-metadata-bytes
 akmai.security.enabled  
 akmai.security.api-key or equivalent external secret binding  
 akmai.lock.datasource.* / dedicated lock-pool settings  
+akmai.lock.acquire-timeout  
+akmai.retention.vector-delete-timeout  
+akmai.retention.heartbeat-db-timeout  
+akmai.retrieval.context-expansion-max-chunks  
+akmai.idempotency.lease-duration  
 embedding profile/token budget settings needed by active model
 
 Keep secrets out of committed application.yml values. Defaults must be safe for local development and explicit for production.
@@ -1194,6 +1273,7 @@ The following outcomes MUST be deterministic.
 - Failed N+1 ingestion with published N -> N stays published; N+1 FAILED; cleanup is retryable.
 - Crash after staging relational state but before vector add -> stale STAGING generation is reconcilable and invisible.
 - Crash during partial vector add -> complete attempted IDs are known from manifest and reconcilable.
+- A vector add/delete timeout is never followed by concurrent compensation while the mutating call can still run; transport/JDBC termination is confirmed first.
 - Crash after vectors but before publication -> vectors remain unpublished/invisible and are reconcilable.
 - Crash immediately after publication -> N+1 remains published; old N may remain physically but is invisible and cleanup can resume.
 - Retrieval backend failure -> degraded/error status, never fabricated zero evidence.
