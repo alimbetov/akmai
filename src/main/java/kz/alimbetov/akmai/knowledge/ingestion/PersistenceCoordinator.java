@@ -68,7 +68,11 @@ public class PersistenceCoordinator {
             DocumentLifecycle previous = lifecycleRepository
                     .findByDocumentId(documentId)
                     .orElse(null);
-            long generation = previous == null ? 1 : previous.generation() + 1;
+            long generation = lifecycleRepository.beginIngestion(
+                    documentId,
+                    retentionProperties.defaultPolicy(),
+                    expiration()
+            );
 
             replacePreviousGeneration(documentId, previous);
             projectionRepository.saveAll(projections);
@@ -98,12 +102,9 @@ public class PersistenceCoordinator {
                 identifierSearchIndex.index(identifiers);
             }
 
-            long publishedGeneration = lifecycleRepository.activate(
-                    documentId,
-                    retentionProperties.defaultPolicy(),
-                    expiration()
-            );
-            if (publishedGeneration != generation) {
+            if (!lifecycleRepository.publishIngestion(
+                    documentId, generation, Instant.now()
+            )) {
                 throw new IllegalStateException(
                         "Lifecycle generation changed while document lock was held"
                 );
