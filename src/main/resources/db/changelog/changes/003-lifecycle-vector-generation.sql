@@ -7,11 +7,7 @@ CREATE TABLE knowledge_document_vector_generation (
     vector_id     VARCHAR(300) NOT NULL,
     chunk_id      VARCHAR(200) NOT NULL,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (document_id, generation, vector_id),
-    CONSTRAINT fk_vector_generation_lifecycle
-        FOREIGN KEY (document_id)
-        REFERENCES knowledge_document_lifecycle(document_id)
-        ON DELETE CASCADE
+    PRIMARY KEY (document_id, generation, vector_id)
 );
 
 CREATE INDEX idx_vector_generation_document_generation
