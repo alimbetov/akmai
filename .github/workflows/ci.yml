@@ -1,5 +1,5 @@
 name: CI
-# deterministic generation race gate
+# centralized lifecycle race gate
 
 on:
   push:
