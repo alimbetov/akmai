@@ -83,7 +83,9 @@
                 <version>2.44.3</version>
                 <configuration>
                     <java>
-                        <googleJavaFormat/>
+                        <removeUnusedImports/>
+                        <trimTrailingWhitespace/>
+                        <endWithNewline/>
                     </java>
                 </configuration>
             </plugin>
