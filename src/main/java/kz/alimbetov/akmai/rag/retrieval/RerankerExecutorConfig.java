@@ -1,7 +1,9 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
-import kz.alimbetov.akmai.config.BoundedExecutorFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -10,6 +12,13 @@ public class RerankerExecutorConfig {
 
     @Bean(name = "rerankerExecutor", destroyMethod = "shutdown")
     public ExecutorService rerankerExecutor(RetrievalProperties properties) {
-        return BoundedExecutorFactory.create(1, properties.rerankerCandidates());
+        return new ThreadPoolExecutor(
+                1,
+                1,
+                0L,
+                TimeUnit.MILLISECONDS,
+                new ArrayBlockingQueue<>(properties.rerankerCandidates()),
+                new ThreadPoolExecutor.AbortPolicy()
+        );
     }
 }
