@@ -68,6 +68,23 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
     }
 
     @Override
+    public List<String> findChunkIdsByDocumentId(String documentId) {
+        return jdbcTemplate.queryForList(
+                "SELECT chunk_id FROM knowledge_search_projection WHERE document_id = ?",
+                String.class,
+                documentId
+        );
+    }
+
+    @Override
+    public void deleteByDocumentId(String documentId) {
+        jdbcTemplate.update(
+                "DELETE FROM knowledge_search_projection WHERE document_id = ?",
+                documentId
+        );
+    }
+
+    @Override
     public List<SearchProjection> searchLexical(
             String query,
             List<String> documentIds,
