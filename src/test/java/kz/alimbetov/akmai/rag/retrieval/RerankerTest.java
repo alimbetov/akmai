@@ -129,7 +129,7 @@ class RerankerTest {
     }
 
     @Test
-    void saturatedExecutorRejectsImmediatelyAndFallsBackWithoutCallerRuns() {
+    void saturatedExecutorRejectsImmediatelyAndFallsBackWithoutCallerRuns() throws Exception {
         ThreadPoolExecutor executor = new ThreadPoolExecutor(
                 1,
                 1,
@@ -138,14 +138,14 @@ class RerankerTest {
                 new ArrayBlockingQueue<>(1),
                 new ThreadPoolExecutor.AbortPolicy()
         );
-        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch workerStarted = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         try {
             executor.submit(() -> {
-                started.countDown();
+                workerStarted.countDown();
                 await(release);
             });
-            assertThat(started.await(1, TimeUnit.SECONDS)).isTrue();
+            assertThat(workerStarted.await(1, TimeUnit.SECONDS)).isTrue();
             executor.submit(() -> await(release));
 
             List<RetrievalHit> original = List.of(
@@ -160,9 +160,9 @@ class RerankerTest {
                     Duration.ofSeconds(1)
             );
 
-            long started = System.nanoTime();
+            long startedAt = System.nanoTime();
             assertThat(reranker.rerank(original, "question")).isEqualTo(original);
-            assertThat(Duration.ofNanos(System.nanoTime() - started))
+            assertThat(Duration.ofNanos(System.nanoTime() - startedAt))
                     .isLessThan(Duration.ofMillis(200));
         } finally {
             release.countDown();
