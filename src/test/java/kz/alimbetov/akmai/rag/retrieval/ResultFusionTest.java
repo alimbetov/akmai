@@ -30,6 +30,20 @@ class ResultFusionTest {
     }
 
     @Test
+    void ranksEachQueryChunkIndependently() {
+        RetrievalHit q1 = hit(RetrievalType.LEXICAL, "q1-first", "q1");
+        RetrievalHit q2 = hit(RetrievalType.LEXICAL, "q2-first", "q2");
+
+        List<RetrievalHit> fused = fusion.fuse(List.of(q1, q2));
+
+        assertThat(fused.get(0).fusedScore())
+                .isEqualTo(fused.get(1).fusedScore());
+        assertThat(fused)
+                .allSatisfy(hit -> assertThat(hit.evidence().getFirst().rank())
+                        .isEqualTo(1));
+    }
+
+    @Test
     void toleratesMissingChunkId() {
         RetrievalHit hit = new RetrievalHit(
                 RetrievalType.IDENTIFIER,
@@ -43,6 +57,20 @@ class ResultFusionTest {
     }
 
     private RetrievalHit hit(RetrievalType type, String chunkId) {
-        return new RetrievalHit(type, "doc", chunkId, chunkId, Map.of());
+        return hit(type, chunkId, "q1");
+    }
+
+    private RetrievalHit hit(
+            RetrievalType type,
+            String chunkId,
+            String queryChunkId
+    ) {
+        return new RetrievalHit(
+                type,
+                "doc",
+                chunkId,
+                chunkId,
+                Map.of("queryChunkId", queryChunkId)
+        );
     }
 }
