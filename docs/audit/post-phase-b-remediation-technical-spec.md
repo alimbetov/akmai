@@ -267,41 +267,59 @@ Collections/maps crossing service boundaries MUST be defensively copied and vali
 
 ## 6. Publication and persistence algorithm
 
-PersistenceCoordinator MUST be redesigned around staging, not destructive replacement.
+The production design MUST exploit the actual deployment fact that canonical relational state and pgvector rows are stored in the same PostgreSQL database. Do not keep vector persistence behind an opaque VectorStore mutation boundary.
 
-Required sequence for one document:
+Remove VectorStore mutation calls from PersistenceCoordinator. Introduce:
 
-1. Acquire the document-operation lock.
-2. Begin generation N in PostgreSQL:
-   - atomically allocate N = next_generation and increment next_generation to N+1;
-   - insert knowledge_document_generation generation N as STAGING;
-   - leave lifecycle.published_generation unchanged.
-3. Build all SearchProjection, DocumentIdentifier, reference target/edge and vector manifest entries in memory.
-4. In one PostgreSQL transaction stage:
-   - generation-scoped projections;
-   - generation-scoped identifiers;
-   - reference targets/edges;
-   - complete vector manifest for every intended physical vector ID.
-5. Call vectorStore.add for generation N+1 using the exact IDs already in the manifest.
-6. If vector add throws:
-   - delete ALL attempted vector IDs from the manifest, not only confirmed IDs;
-   - if compensation itself fails, set cleanup_required=true;
-   - mark generation FAILED;
-   - published_generation remains N;
-   - rethrow a bounded domain exception.
-7. Publish the newly allocated generation G in one PostgreSQL transaction:
-   - verify G is STAGING;
-   - retire the prior PUBLISHED generation P if present;
+- GenerationEmbeddingService — computes embeddings through the qualified vectorWriteEmbeddingModel, validates count/dimension/finiteness and performs no database writes;
+- GenerationPublicationService — owns generation allocation/publication state machine;
+- GenerationPublicationRepository — performs one atomic PostgreSQL publication transaction;
+- PostgresGenerationVectorRepository — inserts/deletes pgvector rows using PGvector/JdbcTemplate inside caller transactions;
+- PublishedVectorSearchRepository — performs published-only similarity search.
+
+Required normal ingestion sequence:
+
+1. Validate/idempotency-claim the request.
+2. Allocate generation G in a short PostgreSQL transaction:
+   - lock/create lifecycle row;
+   - reject new allocation while embedding migration blocks ingestion;
+   - G = next_generation; increment next_generation;
+   - insert generation G as STAGING with the current active embedding_profile_id and request/idempotency identity.
+3. Release the transaction. Build canonical chunks/projections/identifiers/reference graph in memory.
+4. Generate every embedding for G outside any database transaction using GenerationEmbeddingService and the profile captured at allocation time.
+5. If embedding generation fails or times out:
+   - mark G FAILED with no publication change;
+   - no vector/projection/identifier rows exist for G;
+   - published generation P remains unchanged.
+6. Build vector IDs, reserved metadata and manifest rows in memory.
+7. Publish G in ONE PostgreSQL transaction:
+   - SELECT the lifecycle row FOR UPDATE;
+   - require G is still STAGING;
+   - require G.embedding_profile_id still equals knowledge_embedding_runtime.active_profile_id;
+   - reject publication if lifecycle.published_generation > G (a newer request already won);
+   - insert all generation-scoped projections;
+   - insert all generation-scoped identifiers;
+   - insert all reference targets/edges;
+   - insert the complete vector manifest;
+   - insert every pgvector row for G into the vector table belonging to G.embedding_profile_id;
+   - retire prior PUBLISHED generation P if present;
    - mark G PUBLISHED;
-   - set lifecycle.published_generation=G;
-   - set retention_status=ACTIVE;
-   - refresh retention policy/expiry according to the accepted request.
-8. Only after publication, clean physical/relational state belonging to retired P. Failure to retire old physical state is an operability/reconciliation issue, not a reason to roll back the new published pointer.
+   - set lifecycle.published_generation=G and retention_status=ACTIVE;
+   - apply retention policy/expiry;
+   - finalize the idempotency journal as SUCCEEDED with the response.
+8. Commit. Publication becomes visible atomically across vector/lexical/identifier/reference modalities.
+9. Clean retired P asynchronously in a separate database transaction; cleanup failure cannot roll back G publication.
 
-Re-ingestion versus retention is explicit. While holding the document-operation lock, begin-generation MUST invalidate any DELETE_PENDING claim token before creating STAGING work. If the document was already expired/DELETE_FAILED, it remains non-servable until the new generation publishes. Retention claiming MUST exclude documents that have a STAGING generation. If retention already reached DELETING, it necessarily owns the same document lock first; ingestion waits until that cleanup completes and then starts from the resulting lifecycle state.
-9. Reconciliation MUST be able to clean stale STAGING/FAILED/RETIRED generations from the generation journal + manifests.
+A generation with a smaller number than the already-published generation is SUPERSEDED: its publish transaction inserts no retrieval state and a follow-up transition marks it FAILED/SUPERSEDED. A newer STAGING generation does not prevent an older G from publishing temporarily; if the newer generation later succeeds it atomically supersedes G. This gives deterministic last-successful-generation semantics without holding a document lock across Ollama calls.
 
-No method may delete the old published generation before the new generation is published.
+Unknown transaction outcome handling is mandatory. If JDBC reports a connection/commit failure where commit outcome is uncertain, PublicationOutcomeResolver re-reads generation G, lifecycle.published_generation and idempotency state before taking any failure action:
+- if G is PUBLISHED and is/was the committed pointer, treat publication as successful;
+- if G remains STAGING with no rows committed, mark/retry according to policy;
+- never perform destructive compensation based only on an ambiguous commit exception.
+
+Re-ingestion versus retention is coordinated through lifecycle row transactions, not a long-lived advisory lock. Generation allocation atomically invalidates a DELETE_PENDING claim token if cleanup has not started and retention claiming excludes documents with STAGING generations. If retention cleanup has already locked the lifecycle row and commits first, ingestion subsequently starts from DELETED state. If generation allocation commits first, the stale retention claim fails its fence.
+
+No old published generation is deleted before the new generation transaction commits.
 
 ## 7. Canonical identity
 
@@ -343,49 +361,85 @@ Add VectorReconciliationService / PublishedVectorAdminRepository able to enumera
 
 If enumeration cannot prove absence, retention MUST fail/retry and MUST NOT mark DELETED.
 
-## 8. Published vector retrieval
+## 8. Profile-scoped pgvector storage and published retrieval
 
-The generic VectorStore similaritySearch path cannot by itself express “metadata generation equals the per-document published_generation” for an unscoped multi-document search.
+A fixed PostgreSQL vector(N) column cannot host generations from embedding profiles with different dimensions. Therefore vector storage is profile-scoped.
 
-Introduce PublishedVectorSearchRepository implemented for the production PostgreSQL/pgvector storage.
+Extend knowledge_embedding_profile with:
+- vector_schema;
+- vector_table;
+- index_type;
+- distance_type;
+- dimensions.
 
-Pin the physical vector layout in configuration instead of relying on Spring AI defaults:
-- spring.ai.vectorstore.pgvector.schema-name=public (or explicitly configured value);
-- table-name=vector_store (or explicitly configured value);
-- id-type=UUID;
-- distance-type and dimensions are injected into the custom repository from the same configuration used to construct PgVectorStore.
+EmbeddingProfileStorageManager deterministically derives table name as akmai_vector_p_<first16 lowercase hex chars of profile_id>. Identifiers are generated by AKMAI, validated against [a-z_][a-z0-9_]* and never taken from user metadata.
 
-Vector metadata owned by AKMAI MUST use versioned reserved keys: akmaiMetadataVersion, akmaiDocumentId, akmaiGeneration, akmaiEmbeddingProfileId and akmaiChunkId. User metadata keys beginning with "akmai" are rejected at ingestion so they cannot shadow authority metadata. schema-name and table-name configuration values MUST pass a strict SQL-identifier validator before they are interpolated into custom SQL.
+For each profile, ensure a PostgreSQL table equivalent to:
 
-It MUST:
+- id UUID PRIMARY KEY;
+- content TEXT NOT NULL;
+- metadata JSONB NOT NULL;
+- embedding VECTOR(profile.dimensions) NOT NULL.
 
-- obtain the query embedding through the configured EmbeddingModel;
-- query the actual Spring AI pgvector table;
-- join/filter reserved vector metadata documentId + generation against knowledge_document_lifecycle.published_generation;
-- require retention_status='ACTIVE' and published_generation IS NOT NULL;
-- require vector embedding profile = knowledge_embedding_runtime.active_profile_id;
-- apply optional explicit document scope;
-- apply configured distance/similarity threshold and topK;
-- return canonical RetrievalHit provenance;
-- reject non-finite query/vector results.
+Create the configured HNSW/IVFFlat/exact index using that profile's distance type. DDL runs before any generation may reference the profile. Profile registration is serialized by a short database transaction/advisory transaction lock; no long-lived session lock is held during embedding work.
 
-Do not solve D02 by post-filtering a too-small topK after similaritySearch; that can underfill with unpublished candidates.
+PostgresGenerationVectorRepository MUST:
+- accept already-computed finite embeddings;
+- insert vector rows with canonical UUID VectorIdentity;
+- participate in the caller's Spring transaction on the main DataSource;
+- batch inserts are allowed but the enclosing publication transaction makes all batches atomic;
+- delete only by generation manifest/profile table inside cleanup transactions.
 
-D58 requires production-adapter E2E coverage of this repository and real PgVectorStore add/delete behavior.
+Reserved metadata keys are:
+- akmaiMetadataVersion;
+- akmaiDocumentId;
+- akmaiGeneration;
+- akmaiEmbeddingProfileId;
+- akmaiChunkId.
 
-Create explicit VectorStoreConfig instead of relying on the auto-configured bean. It MUST construct PgVectorStore with vectorWriteEmbeddingModel, configured PgVectorStoreProperties and a vectorMutationJdbcTemplate using the main DataSource but a bounded JDBC statement/query timeout. PublishedVectorSearchRepository uses retrievalEmbeddingModel plus a separate vectorSearchJdbcTemplate with retrieval DB timeout. PublishedVectorAdminRepository uses the mutation template. This keeps Spring AI's real add/delete adapter while making DB timeout and table/schema/id-type semantics explicit.
+User metadata keys beginning with "akmai" are rejected.
 
-PublishedVectorSearchRepository MUST reproduce the configured PgDistanceType operator and Spring AI score/threshold semantics exactly. It MUST cast only AKMAI-owned reserved metadata fields and must never trust arbitrary user metadata as generation/profile authority.
+PublishedVectorSearchRepository:
+- resolves knowledge_embedding_runtime.active_profile_id;
+- obtains the active profile/table/distance configuration;
+- generates the query vector with retrievalEmbeddingModel for that exact active profile;
+- queries only that profile table;
+- joins reserved documentId/generation metadata to knowledge_document_lifecycle;
+- requires retention_status='ACTIVE';
+- requires lifecycle.published_generation = vector generation;
+- applies optional explicit document scope;
+- applies the profile distance operator, configured threshold and topK;
+- returns canonical published RetrievalHit provenance;
+- rejects non-finite query/model results.
+
+The similarity score/threshold conversion MUST be defined once in PgVectorDistancePolicy and shared by search tests; do not duplicate Spring AI's implicit formulas.
+
+Legacy public.vector_store is not used by normal new writes after this remediation. LegacyVectorReconciliationRepository handles it only for migration/reconciliation. New profile tables are the production vector adapter.
+
+D58 verification therefore targets the actual production PostgresGenerationVectorRepository + PublishedVectorSearchRepository + profile-table schema, not a mock and not an unused Spring AI PgVectorStore bean.
 
 ## 9. Transaction boundaries
 
-Add GenerationStagingService using TransactionTemplate over the main DataSource. Repository batch methods remain persistence primitives, but only GenerationStagingService may orchestrate a complete staging write.
+There are exactly three persistence transaction classes.
 
-One staging transaction MUST include projections, identifiers, reference graph and vector manifests. batchUpdate chunking at 100 rows is allowed only inside that transaction.
+1. Generation allocation transaction:
+   - short lifecycle/generation/idempotency state mutation;
+   - no Ollama/network calls.
 
-Fault in batch 2 MUST roll back batch 1.
+2. Generation publication transaction:
+   - projections + identifiers + reference graph + vector manifest + profile-scoped pgvector rows + generation state + published pointer + idempotency success;
+   - all batchUpdate calls participate in the same transaction;
+   - no Ollama/network calls.
 
-External/model/vector calls MUST NOT be presented as one ACID transaction with PostgreSQL. Their recovery journal is knowledge_document_generation + vector manifest.
+3. Cleanup transaction:
+   - claim fence validation + profile vector deletes + relational generation deletes + manifest delete + lifecycle/generation completion;
+   - no Ollama/network calls.
+
+Embedding/chat calls always occur outside DB transactions.
+
+A failure in batch 2 of any publication SQL batch rolls back batch 1 and every other publication write. There is no normal-path “partial relational/vector generation” to compensate.
+
+The generation journal remains the recovery journal for crashes before publication and ambiguous transaction outcomes. Stale STAGING rows contain no published retrieval state; recovery marks them FAILED after the configured stale threshold.
 
 ## 10. Retrieval execution contract
 
@@ -662,95 +716,108 @@ Integration tests MUST inspect representative EXPLAIN plans on a sufficiently la
 
 ## 20. Retention concurrency model
 
-Retention claims the currently published generation only.
+Retention is entirely PostgreSQL-backed after this redesign; vector deletion is no longer an external VectorStore call.
 
-Repository lease methods MUST use PostgreSQL clock_timestamp()/now() for:
-- claim time;
-- lease_until;
-- current-claim checks;
-- renewal;
-- expiry/reclaim;
-- failure/deleted transitions.
+Claiming:
+- acquire worker capacity before claiming;
+- claim only retention_status ACTIVE/DELETE_FAILED rows whose TTL expired, published_generation IS NOT NULL and no STAGING generation exists;
+- use one transaction with FOR UPDATE SKIP LOCKED;
+- set DELETE_PENDING, claim_generation=published_generation, claim_id, claimed_by, claimed_at and lease_until using PostgreSQL clock time.
 
-Remove correctness dependence on pod-local Clock from production repository APIs.
+Cleanup:
+- one cleanup transaction SELECTs the lifecycle row FOR UPDATE;
+- require matching claim_id, claim_generation, expected state and unexpired lease using DB time;
+- transition DELETE_PENDING -> DELETING inside the transaction;
+- resolve the claimed generation's embedding profile/vector table and verified manifest;
+- delete exactly those vector UUIDs from that profile table;
+- delete reference edges/targets, identifiers, projections and manifest for exactly claim_generation;
+- change generation PUBLISHED -> RETIRED -> CLEANED;
+- clear lifecycle.published_generation;
+- set retention_status=DELETED, deleted_at=DB time and clear claim fields;
+- commit atomically.
 
-markDeleting, markDeleted, markFailed and releaseClaim MUST all require:
-- document_id;
-- generation;
-- claim_id;
-- expected state;
-- unexpired lease according to DB time.
+If any SQL/vector delete fails, the transaction rolls back. A separate markFailed transaction may change DELETE_PENDING/DELETING to DELETE_FAILED and increment attempt_count only while the same claim token is still unexpired. If the lease expired, markFailed is a no-op.
 
-After physical vector deletion returns successfully, call one GenerationCleanupRepository.completeRetentionCleanup(claim) transaction. That transaction:
-1. locks/validates the lifecycle row;
-2. requires matching claim_id, claim_generation, expected deletion state and an unexpired lease using DB time;
-3. deletes reference edges/targets, identifiers, projections and vector manifest for exactly the claimed generation;
-4. changes that generation to CLEANED;
-5. clears lifecycle.published_generation;
-6. changes retention_status to DELETED and clears claim fields.
+Because cleanup is one database transaction, a worker cannot leave “vectors deleted but relational state still committed” or vice versa. The cleanup transaction timeout MUST be strictly less than leaseDuration/2.
 
-If the fence is stale, the transaction changes nothing. If SQL fails, it rolls back completely; the already-completed vector delete is idempotently repeated on retry.
+Re-ingestion races are serialized by the lifecycle row lock/fences described in section 6; retention does not use DocumentOperationLock.
 
-For vector deletion:
-- verify current claim immediately before external delete;
-- delete only generation-scoped physical IDs from a verified manifest;
-- a stale worker can at worst delete its old claimed generation, never the newly published generation.
+## 21. Retention scheduling without queued leases or heartbeat
 
-## 21. Retention scheduling and heartbeat
+The heartbeat subsystem is removed.
 
-Do not claim work before execution capacity exists.
+Rationale: after vector storage becomes PostgreSQL-transactional, a claimed cleanup consists only of one bounded database transaction. Claims are created only when a worker slot already exists, so no claimed job waits in an executor queue. A lease comfortably larger than the cleanup transaction timeout is sufficient for crash recovery.
 
-Required implementation:
-- acquire worker permits first;
-- claim at most the number of acquired permits;
-- submit immediately;
-- no claim waits un-heartbeated in a general queue.
+Required RetentionWorkerPool behavior:
+1. acquire one local worker semaphore permit;
+2. atomically claim at most the number of permits acquired;
+3. submit each claim immediately to a fixed worker executor with no unbounded queue;
+4. if submission is rejected, release the database claim immediately and release the permit;
+5. execute the bounded cleanup transaction;
+6. release the permit in finally.
 
-Heartbeat uses ScheduledThreadPoolExecutor(workerParallelism). There is at most one scheduled renewal task per active worker/claim. Every renewal has a JDBC statement timeout shorter than heartbeatPeriod; therefore one blocked renewal occupies at most one heartbeat thread and cannot head-of-line block unrelated claims.
+Remove startHeartbeat, heartbeatExecutor, lostLeases and renewal scheduling from the normal retention design. retain renewLease only if another future maintenance operation genuinely requires a long lease; retention cleanup does not call it.
 
-Every renewal has a DB timeout shorter than heartbeat interval. One blocked claim renewal MUST NOT prevent unrelated claims from renewing.
-
-Shutdown order:
+Shutdown:
 1. stop scheduler/claiming;
-2. let active workers complete or timeout;
-3. keep heartbeat alive while workers are active;
-4. stop heartbeat;
-5. terminate worker executor.
+2. stop accepting submissions;
+3. await active cleanup transactions for a bounded duration;
+4. interrupt/cancel remaining workers;
+5. release local permits; DB leases recover crashed work naturally.
 
-Stale-ingestion recovery MUST use one atomic PostgreSQL UPDATE ... FROM (SELECT ... FOR UPDATE SKIP LOCKED LIMIT :batch) operation on STAGING generation-journal rows to mark them FAILED with cleanup_required=true. It does not acquire the document advisory lock merely to mark stale state. Publication remains conditional on generation_status=STAGING, so a writer that resumes after stale recovery cannot publish. External cleanup is handled later by the generation reconciliation worker. Repeated batches continue up to a configured max-batches-per-run.
+This structural removal is the remediation for D09 and D60. D40 is closed by permit-before-claim/no-claimed-queue semantics.
 
-## 22. Document operation lock
+Stale-ingestion recovery uses an atomic PostgreSQL UPDATE ... FROM (SELECT ... FOR UPDATE SKIP LOCKED LIMIT :batch) over STAGING generation rows to mark them FAILED with cleanup_required=true. It repeats bounded batches and requires no document advisory lock.
 
-Do not consume a connection from the main application pool for the full external ingestion/cleanup critical section.
+## 22. Per-document concurrency without long-lived advisory locks
 
-Implement a dedicated lock DataSource/Hikari pool to the same PostgreSQL instance for session advisory locks. Do not reuse the main JdbcTemplate pool.
+Remove DocumentOperationLock from ingestion, retention and stale recovery.
 
-DocumentOperationLock owns a Semaphore whose permit count equals the dedicated lock Hikari maximumPoolSize. A caller MUST acquire a permit within akmai.lock.acquire-timeout before requesting a lock-pool connection. It then uses pg_try_advisory_lock in a bounded retry loop until the same deadline. pg_advisory_lock without a bound is forbidden. Closing LockHandle releases the advisory lock, connection and semaphore permit in finally.
+Same-document concurrency is controlled by:
+- monotonic generation allocation under lifecycle row lock;
+- conditional publication under lifecycle row lock;
+- “newer published generation wins” comparison;
+- generation-scoped relational/vector keys;
+- retention claim_generation/claim_id fences.
 
-The main SQL pool MUST remain available while document locks are held.
+No JDBC connection is held across chunking, enrichment, embedding or other network calls.
 
-Add a small-pool integration test proving concurrent different-document operations do not deadlock/starve waiting for a second connection.
+Delete the dedicated session-advisory lock design from the remediation target. A short transaction-scoped advisory lock MAY be used only for global schema/profile registration where no network work occurs, but it is not part of document correctness.
 
-## 23. Embedding lifecycle and re-embedding
+D28 verification uses a deliberately tiny main Hikari pool and concurrent same/different-document ingestions plus retention. Operations must make progress without requiring a second connection per document lock because no session lock connection exists.
 
-EmbeddingProfileResolver builds the serving profile fingerprint from provider/model/dimensions/distance/tokenizer configuration.
+## 23. Embedding lifecycle and corpus-level re-embedding
+
+EmbeddingProfileResolver fingerprints provider/model/dimensions/distance/tokenizer configuration. Each profile owns one profile-scoped vector table from section 8.
+
+knowledge_embedding_runtime is the corpus-level authority:
+- active_profile_id;
+- migration_profile_id nullable;
+- migration_status IDLE|PREPARING|STAGING|READY_TO_CUTOVER;
+- row_version;
+- updated_at.
+
+Normal ingestion may allocate only while migration_status=IDLE and always captures active_profile_id.
 
 Startup:
-- knowledge_embedding_runtime.active_profile_id is the only profile allowed in retrieval-visible generations;
-- configured serving model/profile must equal active_profile_id for readiness UP;
-- a different configured model enters explicit corpus-migration maintenance mode and normal RAG/ingestion remains unavailable until cutover.
+- if no runtime row and no published data exist, register the configured profile, create its vector table and set it active;
+- configured serving profile must equal active_profile_id for readiness UP;
+- legacy-unknown or profile mismatch keeps readiness DOWN.
 
-ReembeddingService performs a corpus-level cutover, not per-document publication:
-1. acquire a global embedding-migration advisory lock and set migration_status=STAGING with migration_profile_id=Y;
-2. stop new retention claims and ordinary ingestion, then wait a bounded period for already-active retention workers to drain; RAG remains NOT_READY during migration;
-3. snapshot every currently ACTIVE published document and stage a candidate generation under profile Y without changing any lifecycle.published_generation;
-4. write and verify all candidate vectors/manifests;
-5. if any candidate fails, mark the migration failed/IDLE, keep active_profile_id=X and keep every old published pointer unchanged; reconcile Y candidates;
-6. when every snapshot document has a verified candidate, enter READY_TO_CUTOVER;
-7. in one PostgreSQL transaction update every snapshot lifecycle.published_generation to its Y candidate, retire the corresponding X generations, mark candidates PUBLISHED and change knowledge_embedding_runtime.active_profile_id to Y;
-8. resume retention claiming, ingestion and RAG on Y and asynchronously clean retired X generations.
+ReembeddingService performs one corpus cutover:
+1. atomically IDLE -> PREPARING, which blocks new ingestion and new retention claims but permits already-allocated STAGING generations to finish/fail;
+2. wait a bounded period until no normal STAGING generations and no active retention claims remain; otherwise abort migration and return to IDLE;
+3. register target profile Y and its vector table, then PREPARING -> STAGING;
+4. snapshot every ACTIVE document and its current published generation;
+5. for each snapshot document, create a candidate generation under Y, compute Y embeddings, and in a per-document staging transaction insert candidate projections/identifiers/reference graph/manifest/Y vector rows while leaving candidate generation STAGING and leaving lifecycle.published_generation unchanged;
+6. any candidate failure aborts cutover: active_profile_id stays X, all old pointers stay unchanged, Y candidates are cleaned, migration returns IDLE; readiness requires serving config X or a successful retry;
+7. after every snapshot candidate is verified, set READY_TO_CUTOVER;
+8. one PostgreSQL cutover transaction locks knowledge_embedding_runtime, verifies the snapshot is still valid, changes each old X generation PUBLISHED -> RETIRED, each Y candidate STAGING -> PUBLISHED, each lifecycle.published_generation to its Y candidate, then active_profile_id=Y and migration_status=IDLE;
+9. resume retention, ingestion and RAG; asynchronously clean retired X generations/table rows.
 
-TTL expirations that occur during maintenance are processed after claiming resumes. New documents cannot enter the publication set during the migration because ingestion is rejected. Retention cannot remove a snapshot document during staging because claims are paused after active workers drain. Mixed profile spaces are therefore never retrieval-visible in one corpus state. If migration fails while the process is configured for Y but active_profile_id remains X, readiness stays DOWN until the migration is retried successfully or the operator restores serving configuration X.
+A dimension or distance-type change is safe because X and Y use separate fixed-dimension vector tables. Mixed embedding spaces are never searched together: PublishedVectorSearchRepository reads only active_profile_id's table.
+
+A target profile table may be dropped only after no generation journal row references it in PUBLISHED/STAGING/RETIRED state and legacy/reconciliation policy permits removal.
 
 ## 24. API validation, errors, auth and idempotency
 
@@ -865,36 +932,39 @@ Compute actual ranked chunk IDs and per-language Recall@5/10, MRR and nDCG.
 
 A mutation that reverses fusion ranking or makes vector retrieval empty MUST fail the production quality gate.
 
-### 26.3 PgVector E2E
+### 26.3 Production pgvector E2E
 
-A Testcontainers PostgreSQL image with pgvector MUST instantiate the actual Spring AI PgVectorStore configuration.
+A Testcontainers PostgreSQL image with pgvector MUST exercise the actual production vector repositories.
 
 Test:
-- add real vectors using deterministic embedding model;
-- metadata persistence;
+- profile table creation for at least two different dimensions;
+- deterministic embedding generation;
+- atomic publication of vector + relational state;
 - published-generation vector visibility;
 - document scope;
-- similarity threshold;
-- delete exact physical IDs;
-- partial/failure compensation path where injectable;
-- reconciliation from metadata when manifest is absent.
+- distance/threshold semantics;
+- transaction rollback on a deliberately failing later vector batch;
+- exact UUID deletion in retention/retired-generation cleanup;
+- legacy vector reconciliation when manifest/profile identity is missing.
 
-Mock VectorStore tests remain useful unit tests but cannot verify D01/D02/D19/D58/D71.
+Mock vector tests may remain unit tests but cannot verify D01/D02/D19/D32/D58/D71.
+
+## 27. Defect-by-defect implementation and test contract
 
 ## 27. Defect-by-defect implementation and test contract
 
 The following mapping is mandatory. A defect may share implementation with other defects, but it MUST have an explicit regression assertion.
 
 ### D01 — orphan vectors after partial add
-Code: manifest-first staging; compute/store all intended physical IDs before vectorStore.add; on any add exception delete the complete attempted set; mark cleanup_required if compensation fails; reconciliation consumes manifest.  
-Tests: keep failedVectorWriteCompensatesEntireNewGenerationIdSet; add PgVector integration/fault test and crash-reconciliation test.
+Code: remove opaque vectorStore.add mutation path. Compute embeddings first, then insert vector rows + manifest + all relational generation state inside the single publication PostgreSQL transaction. A failed/partial batch rolls back entirely.  
+Tests: replace the old partial-add mock oracle with a real pgvector transaction fault test proving a later-batch failure leaves zero vector/manifest/projection rows and the previous published generation intact.
 
 ### D02 — published-generation retrieval visibility
-Code: every vector/lexical/identifier/reference read is constrained to lifecycle.published_generation and ACTIVE retention state.  
+Code: every vector/lexical/identifier/reference read is constrained to lifecycle.published_generation, ACTIVE retention state and corpus active_profile_id for vectors.  
 Tests: failed/staging generation is invisible in all strategies; successful publication switches all modalities together.
 
 ### D03 — destructive re-ingestion
-Code: remove replacePreviousGeneration-before-publish behavior; old generation cleanup starts only after atomic publication of new generation.  
+Code: generation publication transaction retires the previous generation only in the same commit that publishes the new one; retired cleanup runs only after commit.  
 Tests: keep failedReplacementKeepsPreviousReadyGenerationIntact and extend to lexical/identifier/reference/vector E2E.
 
 ### D04 — wrong fusion representative
@@ -918,8 +988,8 @@ Code: retrieval executor AbortPolicy/fail-fast result status; no work on HTTP ca
 Tests: saturated executor returns REJECTED/degraded promptly and scorer/strategy never executes on caller.
 
 ### D09 — retention shutdown race
-Code: shutdown ordering keeps heartbeat alive until active workers finish; heartbeat startup failure enters cleanup/finally.  
-Tests: shutdown while work queued/active leaks no reservations or claims.
+Code: remove the heartbeat subsystem; permit-before-claim and one bounded DB cleanup transaction make heartbeat startup/shutdown unnecessary.  
+Tests: shutdown with active cleanup leaks no local permit or database claim; expired claims remain reclaimable after process loss.
 
 ### D10 — prompt injection from retrieved text
 Code: structured JSON context + explicit untrusted-data system rule.  
@@ -958,7 +1028,7 @@ Code: Spring Security auth contract, health exceptions, local-only explicit bypa
 Tests: unauthenticated API rejected; authenticated accepted; health probes remain accessible.
 
 ### D19 — incompatible vector IDs
-Code: all code calls VectorIdentity.physicalId; delete duplicate local algorithm.  
+Code: all profile vector repositories/manifests call the UUID-compatible VectorIdentity v2 algorithm; delete every duplicate/local ID algorithm.  
 Tests: persistence manifest/vector document/retention use exactly the same ID.
 
 ### D20 — relational state not generation-scoped
@@ -970,8 +1040,8 @@ Code: guarded/bounded parse; oversized markers become invalid.
 Tests: extremely large SOURCE number never throws.
 
 ### D22 — stale retention destructive tail
-Code: fence-aware SQL deletes and re-check before every external destructive operation.  
-Tests: lose claim between vector phase and relational cleanup; stale worker cannot mutate tail.
+Code: vector and relational deletion are one PostgreSQL cleanup transaction after a single row-lock/fence validation; there is no external destructive tail.  
+Tests: expire/reclaim the claim before cleanup transaction starts and prove stale cleanup changes zero vector/relational/lifecycle rows.
 
 ### D23 — context budget ignores envelope
 Code: estimate exact serialized ContextEnvelope + framing.  
@@ -994,8 +1064,8 @@ Code: StructuralAnchor targets + CrossReference edges persisted by normal ingest
 Tests: ingest real source and target documents; reference retrieval works without manual DB inserts.
 
 ### D28 — advisory lock main-pool starvation
-Code: dedicated lock Hikari DataSource + semaphore-bounded pg_try_advisory_lock acquisition outside the main SQL pool.  
-Tests: tiny main pool + concurrent different-document locks completes without starvation.
+Code: remove long-lived document advisory locks entirely; use generation/lifecycle row transactions and CAS publication.  
+Tests: tiny main pool + concurrent same/different-document ingestion/retention completes without connection starvation.
 
 ### D29 — no final LLM deadline
 Code: AnswerGenerationService with application + transport deadline.  
@@ -1006,12 +1076,12 @@ Code: metadata validator/canonicalizer; core provenance typed; RetrievalHit rece
 Tests: null-containing request rejected/sanitized deterministically; retrieval never throws Map.copyOf NPE.
 
 ### D31 — lifecycle cannot represent published N + staging N+1
-Code: published_generation pointer + knowledge_document_generation journal.  
+Code: published_generation pointer + knowledge_document_generation journal; multiple STAGING generations may coexist while exactly one generation is PUBLISHED.  
 Tests: state-machine test explicitly observes N PUBLISHED while N+1 STAGING/FAILED.
 
 ### D32 — no embedding profile lifecycle
-Code: persisted EmbeddingProfile + generation FK + readiness + ReembeddingService.  
-Tests: same-dimension model change detected; dimension mismatch detected; reembedding failure preserves old publication.
+Code: persisted EmbeddingProfile + profile-scoped vector tables + corpus active_profile_id + corpus-level cutover ReembeddingService.  
+Tests: same-dimension and different-dimension migrations stage in separate profile tables; any failure preserves X globally; successful cutover switches every snapshot document and active_profile_id atomically.
 
 ### D33 — destructive/schema-drift migration
 Code: preservation migration, additive upgrade path, Liquibase-only runtime schema.  
@@ -1038,11 +1108,11 @@ Code: metrics and structured events for claim/delete/fail/stale/lease/recovery/b
 Tests: SimpleMeterRegistry assertions for all outcomes; no high-cardinality document text labels.
 
 ### D39 — unbounded vector/embedding ingestion
-Code: vector-write application/transport deadline; failure compensation and lock release.  
-Tests: never-returning dependency fails within bound and document lock becomes acquirable.
+Code: qualified vectorWriteEmbeddingModel has hard HTTP transport timeout; no DB transaction/lock is held while Ollama runs. Embedding failure marks STAGING generation FAILED.  
+Tests: never-returning embedding fails within bound, leaves no retrieval rows and does not consume a database lock/connection after timeout.
 
 ### D40 — queued claim lease/retry consumption
-Code: claim only available execution permits; no un-heartbeated claimed queue; retry count represents cleanup failures, not queue waits.  
+Code: fixed worker permits are acquired before DB claim and claimed work is submitted immediately with no claimed queue; retry count changes only after an executed cleanup failure.  
 Tests: saturated workers cannot consume retry budget before cleanup begins.
 
 ### D41 — legal polarity/substring classifier
@@ -1113,17 +1183,17 @@ Tests: sub-min first unit + near-hard second never emits >hardMax.
 Code: budget exact EmbeddingTextBuilder output with embedding profile estimator.  
 Tests: long title/deep section still respects model limit.
 
-### D58 — no production PgVector E2E
-Code/test infrastructure: real PgVectorStore Testcontainers gate with deterministic EmbeddingModel.  
-Tests: add/search/filter/delete/publication/compensation/reconciliation use production adapter.
+### D58 — no production pgvector E2E
+Code/test infrastructure: real pgvector Testcontainers gate for PostgresGenerationVectorRepository, PublishedVectorSearchRepository and profile-table schema with deterministic EmbeddingModel.  
+Tests: profile creation, atomic insert/publication, search/filter/delete/rollback/reconciliation use the actual production repositories.
 
 ### D59 — LIKE wildcard semantics
 Code: literal escaping and ESCAPE clause for KK/ZH fallback; minimum/selectivity rule.  
 Tests: %, _, 5% mean literals and cannot match-all.
 
 ### D60 — single heartbeat thread failure domain
-Code: isolated/bounded per-claim renewal concurrency + DB query timeout.  
-Tests: blocked renewal A does not stop renewal B.
+Code: remove heartbeat renewal from retention; bounded immediate DB cleanup completes well inside lease.  
+Tests: retention has no heartbeat executor; multiple active cleanup transactions are independent and a blocked/timed-out transaction cannot expire another queued claim because claims are created only for available workers.
 
 ### D61 — Chinese sentence boundary requires whitespace
 Code: script-aware segmenter splits 。！？ without whitespace.  
@@ -1146,7 +1216,7 @@ Code: readiness contributors for Ollama chat/embed/profile/pgvector; liveness se
 Tests: DB healthy + Ollama unavailable => readiness DOWN, liveness UP.
 
 ### D66 — expired worker can markFailed
-Code: markFailed SQL requires claim token + generation + unexpired DB-time lease.  
+Code: cleanup/markFailed transactions require claim token + generation + unexpired DB-time lease; stale failure transition is a no-op.  
 Tests: expiry immediately before cleanup exception prevents state/retry mutation.
 
 ### D67 — NaN/Infinity reranker scores
@@ -1154,8 +1224,8 @@ Code: finite/shape checks before cosine and before sorting.
 Tests: NaN/+Inf/-Inf/dimension mismatch cause safe fallback, never rank promotion.
 
 ### D68 — relational batch partial commit
-Code: one staging transaction around all relational batch writes.  
-Tests: deliberate second-batch failure (>100 rows) rolls back entire staged relational generation.
+Code: one publication transaction contains every relational batch plus vector rows and pointer switch.  
+Tests: deliberate second-batch failure (>100 rows) rolls back the entire generation and leaves prior publication unchanged.
 
 ### D69 — nDCG duplicate inflation
 Code: unique relevance gain; range invariant.  
@@ -1166,7 +1236,7 @@ Code/test: production pipeline benchmark generates final rankings; fixtures only
 Tests: intentional ranking mutation causes gate failure.
 
 ### D71 — missing manifest guesses wrong physical vector IDs
-Code: reconciliation enumerates actual vectors by metadata and identity version; never guess chunk ID.  
+Code: new generations always commit manifest and profile vector rows atomically. Legacy reconciliation queries the declared legacy profile/table by reserved/legacy metadata and never guesses chunk_id as a physical UUID.  
 Tests: missing manifest + current UUID/v2 IDs cannot mark DELETED until all actual vectors verified absent.
 
 ### D72 — abbreviation sentence splitting
@@ -1209,13 +1279,13 @@ PostgreSQL/Testcontainers:
 - RetentionLeaseClockIntegrationTest
 - RetentionFailureFenceIntegrationTest
 - StaleIngestionRecoveryIntegrationTest
-- DocumentOperationLockIntegrationTest
+- ConcurrentGenerationPublicationIntegrationTest
 - IdempotencyIntegrationTest
 
 PgVector production-adapter:
-- PgVectorPublicationIntegrationTest
-- PgVectorCompensationIntegrationTest
-- PgVectorReconciliationIntegrationTest
+- PostgresVectorPublicationIntegrationTest
+- PostgresVectorRollbackIntegrationTest
+- PostgresVectorReconciliationIntegrationTest
 - PublishedVectorSearchIntegrationTest
 
 End-to-end service:
@@ -1274,10 +1344,9 @@ akmai.api.max-question-chars
 akmai.api.max-metadata-bytes  
 akmai.security.enabled  
 akmai.security.api-key — external secret only; consumed as X-AKMAI-API-Key  
-akmai.lock.datasource.* / dedicated lock-pool settings  
-akmai.lock.acquire-timeout  
-akmai.retention.vector-delete-timeout  
-akmai.retention.heartbeat-db-timeout  
+akmai.vector.embedding-http-timeout  
+akmai.vector.db-transaction-timeout  
+akmai.retention.cleanup-transaction-timeout  
 akmai.retrieval.context-expansion-max-chunks  
 akmai.idempotency.lease-duration  
 embedding profile/token budget settings needed by active model
@@ -1290,8 +1359,8 @@ The following outcomes MUST be deterministic.
 
 - Failed N+1 ingestion with published N -> N stays published; N+1 FAILED; cleanup is retryable.
 - Crash after staging relational state but before vector add -> stale STAGING generation is reconcilable and invisible.
-- Crash during partial vector add -> complete attempted IDs are known from manifest and reconcilable.
-- A vector add/delete timeout is never followed by concurrent compensation while the mutating call can still run; transport/JDBC termination is confirmed first.
+- Failure/crash during the publication DB transaction -> PostgreSQL rolls back vector + manifest + relational rows + pointer together; generation remains non-published and is recoverable.
+- Embedding timeout occurs before any publication DB mutation and therefore requires no vector compensation.
 - Crash after vectors but before publication -> vectors remain unpublished/invisible and are reconcilable.
 - Crash immediately after publication -> N+1 remains published; old N may remain physically but is invisible and cleanup can resume.
 - Retrieval backend failure -> degraded/error status, never fabricated zero evidence.
