@@ -18,7 +18,8 @@ class SemanticChunkerTest {
             new EmbeddingTextBuilder(),
             new TokenEstimator(),
             new ChunkingProperties(750, 1200, 1800, 100),
-            new OversizedUnitSplitter(new TokenEstimator())
+            new OversizedUnitSplitter(new TokenEstimator()),
+            new ChunkIdentity()
     );
 
     @Test
@@ -45,6 +46,23 @@ class SemanticChunkerTest {
                 .contains("За исключением");
         assertThat(chunks.getFirst().references())
                 .anyMatch(value -> value.toLowerCase().contains("48"));
+    }
+
+    @Test
+    void createsStableChunkIdsForSameDocumentContent() {
+        KnowledgeDocument document = new KnowledgeDocument(
+                "stable-1",
+                "Stable",
+                "Одинаковый текст документа.",
+                "ru",
+                KnowledgeDomain.GENERAL,
+                Map.of("source", "stable.md")
+        );
+
+        var first = chunker.chunk(document);
+        var second = chunker.chunk(document);
+
+        assertThat(first.getFirst().chunkId()).isEqualTo(second.getFirst().chunkId());
     }
 
     @Test
