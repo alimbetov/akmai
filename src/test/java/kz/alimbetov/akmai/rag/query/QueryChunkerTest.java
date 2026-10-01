@@ -24,7 +24,7 @@ class QueryChunkerTest {
     @Test
     void usesSameIdentifierParsersForQuestionAndSeparatesMultipleIdentifiers() {
         var chunks = chunker().chunk(
-                "Сравни условия договоров KZ-2026-001847 и KZ-2025-009812."
+                "Условия договора KZ-2026-001847. Сравни с договором KZ-2025-009812."
         );
 
         assertThat(chunks).hasSize(2);
