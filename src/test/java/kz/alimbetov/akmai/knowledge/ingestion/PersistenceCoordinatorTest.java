@@ -1,7 +1,9 @@
 package kz.alimbetov.akmai.knowledge.ingestion;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -78,6 +80,61 @@ class PersistenceCoordinatorTest {
         verify(fixture.vectorStore).delete(List.of("v4-a", "v4-b"));
         verify(fixture.vectorGenerations).deleteGeneration("doc-1", 4L);
         verify(fixture.lifecycle).beginIngestion("doc-1", RetentionPolicy.PERMANENT, null);
+    }
+
+
+    @Test
+    void failedReplacementKeepsPreviousReadyGenerationIntact() {
+        Fixture fixture = fixture();
+        var previous = mock(kz.alimbetov.akmai.knowledge.lifecycle.DocumentLifecycle.class);
+        when(previous.generation()).thenReturn(4L);
+        when(fixture.lifecycle.findByDocumentId("doc-1"))
+                .thenReturn(java.util.Optional.of(previous));
+        when(fixture.lifecycle.beginIngestion("doc-1", RetentionPolicy.PERMANENT, null))
+                .thenReturn(5L);
+        when(fixture.vectorGenerations.findVectorIds("doc-1", 4L))
+                .thenReturn(List.of("v4-a", "v4-b"));
+        doThrow(new IllegalStateException("vector store unavailable"))
+                .when(fixture.vectorStore)
+                .add(org.mockito.ArgumentMatchers.anyList());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                        fixture.coordinator.persist(List.of(chunk("stable-1", "doc-1", 0))))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("vector store unavailable");
+
+        verify(fixture.vectorStore, never()).delete(List.of("v4-a", "v4-b"));
+        verify(fixture.vectorGenerations, never()).deleteGeneration("doc-1", 4L);
+    }
+
+    @Test
+    void failedVectorWriteCompensatesEntireNewGenerationIdSet() {
+        Fixture fixture = fixture();
+        when(fixture.lifecycle.findByDocumentId("doc-1"))
+                .thenReturn(java.util.Optional.empty());
+        when(fixture.lifecycle.beginIngestion("doc-1", RetentionPolicy.PERMANENT, null))
+                .thenReturn(1L);
+        when(fixture.projections.findChunkIdsByDocumentId("doc-1"))
+                .thenReturn(List.of());
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Document>> added = ArgumentCaptor.forClass(List.class);
+        doThrow(new IllegalStateException("partial vector write"))
+                .when(fixture.vectorStore)
+                .add(added.capture());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                        fixture.coordinator.persist(List.of(
+                                chunk("stable-1", "doc-1", 0),
+                                chunk("stable-2", "doc-1", 1)
+                        )))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("partial vector write");
+
+        List<String> attemptedIds = added.getValue().stream()
+                .map(Document::getId)
+                .toList();
+        verify(fixture.vectorStore).delete(attemptedIds);
     }
 
     private Fixture fixture() {
