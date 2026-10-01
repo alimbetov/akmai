@@ -36,16 +36,12 @@ public class ParallelIngestionExecutor {
     }
 
     private EnrichedKnowledgeChunk enrich(KnowledgeChunk chunk) {
-        var identifiersFuture = CompletableFuture.supplyAsync(
-                () -> identifierExtractor.extract(chunk.rawText()),
-                ingestionExecutor
-        );
-
-        // Cross references were identified during semantic chunk construction.
-        // Keeping them on the enriched model makes persistence/search projections symmetric.
+        // Chunks are already processed concurrently by the bounded executor.
+        // Do not submit nested work to the same fixed pool: that can deadlock
+        // when every worker waits for another task from the saturated pool.
         return new EnrichedKnowledgeChunk(
                 chunk,
-                identifiersFuture.join(),
+                identifierExtractor.extract(chunk.rawText()),
                 chunk.references()
         );
     }
