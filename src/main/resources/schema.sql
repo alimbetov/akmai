@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS knowledge_search_projection (
     language          VARCHAR(32) NOT NULL,
     domain            VARCHAR(50) NOT NULL,
     section_path      TEXT,
+    identifiers_json  JSONB NOT NULL DEFAULT '[]'::jsonb,
     references_json   JSONB NOT NULL DEFAULT '[]'::jsonb,
     metadata_json     JSONB NOT NULL DEFAULT '{}'::jsonb,
     projection_version INTEGER NOT NULL DEFAULT 1,
