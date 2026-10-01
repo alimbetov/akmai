@@ -1,4 +1,5 @@
 name: CI
+# persistence gate
 
 on:
   push:
