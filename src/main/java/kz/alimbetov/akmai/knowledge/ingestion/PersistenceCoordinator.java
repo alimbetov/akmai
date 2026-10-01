@@ -47,6 +47,12 @@ public class PersistenceCoordinator {
                 .distinct()
                 .toList();
 
+        if (documentIds.size() != 1) {
+            throw new IllegalArgumentException(
+                    "A persistence batch must contain exactly one document"
+            );
+        }
+
         for (String documentId : documentIds) {
             replaceDocument(documentId);
         }
