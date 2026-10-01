@@ -355,7 +355,7 @@ Pin the physical vector layout in configuration instead of relying on Spring AI 
 - id-type=UUID;
 - distance-type and dimensions are injected into the custom repository from the same configuration used to construct PgVectorStore.
 
-Vector metadata owned by AKMAI MUST use versioned reserved keys: akmaiMetadataVersion, akmaiDocumentId, akmaiGeneration, akmaiEmbeddingProfileId and akmaiChunkId.
+Vector metadata owned by AKMAI MUST use versioned reserved keys: akmaiMetadataVersion, akmaiDocumentId, akmaiGeneration, akmaiEmbeddingProfileId and akmaiChunkId. User metadata keys beginning with "akmai" are rejected at ingestion so they cannot shadow authority metadata. schema-name and table-name configuration values MUST pass a strict SQL-identifier validator before they are interpolated into custom SQL.
 
 It MUST:
 
@@ -373,7 +373,7 @@ Do not solve D02 by post-filtering a too-small topK after similaritySearch; that
 
 D58 requires production-adapter E2E coverage of this repository and real PgVectorStore add/delete behavior.
 
-Create explicit VectorStoreConfig instead of relying on the auto-configured bean. It MUST construct PgVectorStore with the configured PgVectorStoreProperties and a dedicated vector JdbcTemplate using the main DataSource but a bounded JDBC query timeout. The same layout properties are injected into PublishedVectorSearchRepository and PublishedVectorAdminRepository. This keeps Spring AI's real add/delete adapter while making DB timeout and table/schema/id-type semantics explicit.
+Create explicit VectorStoreConfig instead of relying on the auto-configured bean. It MUST construct PgVectorStore with vectorWriteEmbeddingModel, configured PgVectorStoreProperties and a vectorMutationJdbcTemplate using the main DataSource but a bounded JDBC statement/query timeout. PublishedVectorSearchRepository uses retrievalEmbeddingModel plus a separate vectorSearchJdbcTemplate with retrieval DB timeout. PublishedVectorAdminRepository uses the mutation template. This keeps Spring AI's real add/delete adapter while making DB timeout and table/schema/id-type semantics explicit.
 
 PublishedVectorSearchRepository MUST reproduce the configured PgDistanceType operator and Spring AI score/threshold semantics exactly. It MUST cast only AKMAI-owned reserved metadata fields and must never trust arbitrary user metadata as generation/profile authority.
 
@@ -449,6 +449,12 @@ Shutdown MUST:
 Transport-level HTTP/JDBC timeouts MUST back application deadlines so cancellation is not dependent only on Thread.interrupt.
 
 Mutating vector operations MUST NOT be detached into a Future that is timed out and then compensated while the mutation can still continue. PgVectorStore.add/delete remain synchronous from the state-machine perspective. Their Ollama HTTP call and JDBC statements receive hard transport/statement timeouts; compensation starts only after the mutating call has conclusively returned or thrown. If an outer request deadline expires first, the request may return timeout, but the state-machine worker continues only until its bounded transport/JDBC calls terminate and then performs the normal failure/compensation transition.
+
+Spring AI 1.0.3 auto-configuration shares one OllamaApi between chat and embedding, which cannot express the required independent transport deadlines. Replace that implicit sharing with explicit qualified beans:
+- vectorWriteOllamaApi + vectorWriteEmbeddingModel: same embedding model/profile, transport timeout <= ingestion.vector-write-timeout; injected into PgVectorStore used for writes;
+- retrievalOllamaApi + retrievalEmbeddingModel: same semantic embedding profile, transport timeout <= retrieval.strategy-timeout; used by PublishedVectorSearchRepository and semantic reranker;
+- chatOllamaApi + chatModel: chat transport timeout <= retrieval.answer-timeout.
+Timeout/client settings are operational and are NOT part of EmbeddingProfile semantic fingerprint.
 
 ## 12. Fusion, reranking and authority
 
@@ -614,7 +620,7 @@ Ordinary phrases such as contract termination, order status and case management 
 
 Enforce raw/canonical length <= 500 before persistence.
 
-For this remediation, remove CLAIM_NUMBER, PAYMENT_NUMBER, PROTOCOL_NUMBER, LETTER_NUMBER and DOCUMENT_ID from the advertised/supported IdentifierType contract because no validated production grammar exists for them. Keep only types with implemented WRITE/READ parsers. Reintroduction requires a separate grammar specification and tests.
+For this remediation, introduce IdentifierCapabilityRegistry and advertise/support only CONTRACT_NUMBER, ORDER_NUMBER, INVOICE_NUMBER, APPLICATION_NUMBER, CASE_NUMBER and DOCUMENT_NUMBER. Legacy enum constants CLAIM_NUMBER, PAYMENT_NUMBER, PROTOCOL_NUMBER, LETTER_NUMBER and DOCUMENT_ID may remain in the persistence enum solely to read historical rows, but they MUST NOT be returned by supportedTypes(), instantiated by production parsers or advertised in README/API capability docs. Reintroduction requires a separate grammar specification and tests.
 
 Prefix/partial LIKE search MUST escape wildcard semantics where literal behavior is intended.
 
@@ -736,15 +742,15 @@ Startup:
 
 ReembeddingService performs a corpus-level cutover, not per-document publication:
 1. acquire a global embedding-migration advisory lock and set migration_status=STAGING with migration_profile_id=Y;
-2. reject ordinary ingestion while migration is active;
+2. stop new retention claims and ordinary ingestion, then wait a bounded period for already-active retention workers to drain; RAG remains NOT_READY during migration;
 3. snapshot every currently ACTIVE published document and stage a candidate generation under profile Y without changing any lifecycle.published_generation;
 4. write and verify all candidate vectors/manifests;
 5. if any candidate fails, mark the migration failed/IDLE, keep active_profile_id=X and keep every old published pointer unchanged; reconcile Y candidates;
 6. when every snapshot document has a verified candidate, enter READY_TO_CUTOVER;
 7. in one PostgreSQL transaction update every snapshot lifecycle.published_generation to its Y candidate, retire the corresponding X generations, mark candidates PUBLISHED and change knowledge_embedding_runtime.active_profile_id to Y;
-8. resume ingestion/RAG on Y and asynchronously clean retired X generations.
+8. resume retention claiming, ingestion and RAG on Y and asynchronously clean retired X generations.
 
-New documents cannot enter the publication set during the migration because ingestion is rejected. Mixed profile spaces are therefore never retrieval-visible in one corpus state.
+TTL expirations that occur during maintenance are processed after claiming resumes. New documents cannot enter the publication set during the migration because ingestion is rejected. Retention cannot remove a snapshot document during staging because claims are paused after active workers drain. Mixed profile spaces are therefore never retrieval-visible in one corpus state. If migration fails while the process is configured for Y but active_profile_id remains X, readiness stays DOWN until the migration is retried successfully or the operator restores serving configuration X.
 
 ## 24. API validation, errors, auth and idempotency
 
@@ -1012,8 +1018,8 @@ Code: preservation migration, additive upgrade path, Liquibase-only runtime sche
 Tests: seed legacy schema/data, run full changelog, verify rows and constraints survive.
 
 ### D34 — advertised identifier types missing parsers
-Code: remove unsupported CLAIM_NUMBER, PAYMENT_NUMBER, PROTOCOL_NUMBER, LETTER_NUMBER and DOCUMENT_ID from the supported enum/API/docs contract; retain only types with validated parsers.  
-Tests: parameterized capability test guarantees each remaining supported type has WRITE and READ parser coverage.
+Code: add IdentifierCapabilityRegistry; advertise only the six parser-backed types. Keep unsupported enum constants legacy-only if required for persisted-row compatibility.  
+Tests: parameterized capability test guarantees each advertised type has WRITE and READ parser coverage and every legacy-only type is absent from supportedTypes().
 
 ### D35 — punctuation-colliding identifier canonicalization
 Code: type-aware canonicalizer preserving significant separators.  
