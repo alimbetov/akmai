@@ -201,3 +201,91 @@ A future persistence layer should store canonical documents, chunks, relations a
 7. multilingual KK/RU/EN/ZH retrieval benchmark
 8. hybrid search and reranking
 9. retrieval evaluation
+
+
+## Business identifier index
+
+Akmai extracts exact business identifiers independently from semantic embeddings.
+
+Supported initial types include:
+
+- CONTRACT_NUMBER
+- DOCUMENT_NUMBER
+- ORDER_NUMBER
+- INVOICE_NUMBER
+- APPLICATION_NUMBER
+- CASE_NUMBER
+- CLAIM_NUMBER
+- PAYMENT_NUMBER
+- PROTOCOL_NUMBER
+- LETTER_NUMBER
+- DOCUMENT_ID
+
+The canonical model is:
+
+```text
+DocumentPage -> SemanticChunk -> IdentifierExtractor
+                              -> DocumentIdentifier
+                              -> PostgreSQL source of truth
+                              -> IdentifierSearchIndex
+```
+
+Each identifier is addressed by `documentId + chunkId + pageNumber`. Values are normalized for exact lookup, while the raw value and surrounding context are retained.
+
+`document_identifier` is range-partitioned by `created_at`. Partition creation is kept out of the ingestion hot path: a scheduler prepares the current and next two monthly partitions, while a DEFAULT partition provides a safety fallback.
+
+The search layer is intentionally abstracted behind `IdentifierSearchIndex`. PostgreSQL is the initial implementation. A future local index such as Lucene can be rebuilt from the canonical PostgreSQL table without changing ingestion or the domain model.
+
+Target mixed-query flow:
+
+```text
+"Какие штрафы в договоре KZ-2026-001847?"
+          |
+          +--> exact identifier lookup -> documentId
+          |
+          +--> semantic query "Какие штрафы?"
+                         |
+                         v
+                 pgvector filtered by documentId
+```
+
+
+## AKMAI parallel pipeline
+
+```text
+             WRITE                       READ
+               |                           |
+               v                           v
+            Document                    Question
+               |                           |
+               v                           v
+        SemanticChunker              QueryChunker
+               |                           |
+               v                           v
+       KnowledgeChunk[]               QueryChunk[]
+               |                           |
+               v                           v
+ ParallelIngestionExecutor     ParallelRetrievalExecutor
+               |                           |
+       +-------+-------+           +-------+-------+
+       v       v       v           v       v       v
+      IDs     refs   vectors       IDs    vector lexical
+       |       |       |           |       |       |
+       +-------+-------+           +-------+-------+
+               |                           |
+               v                           v
+     PersistenceCoordinator           ResultFusion
+               |                           |
+               v                           v
+        Search projections             Reranker
+                                           |
+                                           v
+                                    ContextAssembler
+                                           |
+                                           v
+                                          Qwen
+```
+
+The same `IdentifierExtractor` and `IdentifierParser[]` rules are shared by WRITE and READ. Document chunks are enriched concurrently before persistence; questions are decomposed into independent query chunks and applicable retrieval strategies are executed concurrently. Both executors use bounded configurable thread pools rather than unbounded `parallelStream()`.
+
+Current implementations cover identifier and vector retrieval. Lexical/reference retrieval, a learned reranker and a local search index are explicit extension points rather than being coupled to `RagQuestionService`.

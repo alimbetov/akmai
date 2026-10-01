@@ -2,49 +2,62 @@ package kz.alimbetov.akmai.rag.service;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import kz.alimbetov.akmai.rag.api.RagResponse;
+import kz.alimbetov.akmai.rag.query.QueryChunk;
+import kz.alimbetov.akmai.rag.query.QueryChunker;
+import kz.alimbetov.akmai.rag.retrieval.ContextAssembler;
+import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
+import kz.alimbetov.akmai.rag.retrieval.Reranker;
+import kz.alimbetov.akmai.rag.retrieval.ResultFusion;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
+import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
+import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlanner;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.document.Document;
-import org.springframework.ai.vectorstore.SearchRequest;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
 @Service
 public class RagQuestionService {
 
-    private final VectorStore vectorStore;
+    private final QueryChunker queryChunker;
+    private final RetrievalPlanner retrievalPlanner;
+    private final ParallelRetrievalExecutor retrievalExecutor;
+    private final ResultFusion resultFusion;
+    private final Reranker reranker;
+    private final ContextAssembler contextAssembler;
     private final ChatClient chatClient;
 
     public RagQuestionService(
-            VectorStore vectorStore,
+            QueryChunker queryChunker,
+            RetrievalPlanner retrievalPlanner,
+            ParallelRetrievalExecutor retrievalExecutor,
+            ResultFusion resultFusion,
+            Reranker reranker,
+            ContextAssembler contextAssembler,
             ChatClient.Builder chatClientBuilder
     ) {
-        this.vectorStore = vectorStore;
+        this.queryChunker = queryChunker;
+        this.retrievalPlanner = retrievalPlanner;
+        this.retrievalExecutor = retrievalExecutor;
+        this.resultFusion = resultFusion;
+        this.reranker = reranker;
+        this.contextAssembler = contextAssembler;
         this.chatClient = chatClientBuilder.build();
     }
 
     public RagResponse ask(String question) {
-        List<Document> documents = vectorStore.similaritySearch(
-                SearchRequest.builder()
-                        .query(question)
-                        .topK(5)
-                        .similarityThreshold(0.65)
-                        .build()
-        );
+        List<QueryChunk> queryChunks = queryChunker.chunk(question);
+        RetrievalPlan plan = retrievalPlanner.plan(queryChunks);
+        List<RetrievalHit> retrieved = retrievalExecutor.execute(plan);
+        List<RetrievalHit> fused = resultFusion.fuse(retrieved);
+        List<RetrievalHit> ranked = reranker.rerank(fused, question);
 
-        if (documents == null || documents.isEmpty()) {
-            return new RagResponse(
-                    "В базе знаний недостаточно информации.",
-                    List.of()
-            );
+        if (ranked.isEmpty()) {
+            return new RagResponse("В базе знаний недостаточно информации.", List.of());
         }
 
-        String context = buildContext(documents);
+        String context = contextAssembler.assemble(ranked);
 
-        String answer = chatClient
-                .prompt()
+        String answer = chatClient.prompt()
                 .system("""
                         Ты ассистент корпоративной базы знаний.
                         Отвечай только на основании предоставленного CONTEXT.
@@ -65,40 +78,15 @@ public class RagQuestionService {
                 .call()
                 .content();
 
-        List<RagResponse.Source> sources = documents.stream()
-                .map(document -> new RagResponse.Source(
-                        Objects.toString(document.getMetadata().get("source"), "unknown"),
-                        Objects.toString(document.getMetadata().get("language"), "unknown"),
-                        Objects.toString(document.getMetadata().get("sectionPath"), "unknown")
+        List<RagResponse.Source> sources = ranked.stream()
+                .map(hit -> new RagResponse.Source(
+                        Objects.toString(hit.metadata().get("source"), hit.documentId()),
+                        Objects.toString(hit.metadata().get("language"), "unknown"),
+                        Objects.toString(hit.metadata().get("sectionPath"), "unknown")
                 ))
                 .distinct()
                 .toList();
 
         return new RagResponse(answer, sources);
-    }
-
-    private String buildContext(List<Document> documents) {
-        return IntStream.range(0, documents.size())
-                .mapToObj(index -> {
-                    Document document = documents.get(index);
-
-                    return """
-                            [SOURCE %d]
-                            source: %s
-                            language: %s
-                            section: %s
-                            references: %s
-
-                            %s
-                            """.formatted(
-                            index + 1,
-                            document.getMetadata().get("source"),
-                            document.getMetadata().get("language"),
-                            document.getMetadata().get("sectionPath"),
-                            document.getMetadata().get("references"),
-                            document.getText()
-                    );
-                })
-                .collect(Collectors.joining("\n\n"));
     }
 }

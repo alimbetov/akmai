@@ -7,6 +7,10 @@ spring:
     username: ${DB_USERNAME:akmai}
     password: ${DB_PASSWORD:akmai}
 
+  sql:
+    init:
+      mode: always
+
   ai:
     model:
       embedding: ollama
@@ -26,6 +30,10 @@ spring:
         distance-type: COSINE_DISTANCE
 
 akmai:
+  ingestion:
+    parallelism: ${AKMAI_INGESTION_PARALLELISM:8}
+  retrieval:
+    parallelism: ${AKMAI_RETRIEVAL_PARALLELISM:8}
   chunking:
     target-tokens: 750
     soft-max-tokens: 1200

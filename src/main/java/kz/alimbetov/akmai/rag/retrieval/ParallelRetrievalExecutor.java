@@ -1,0 +1,95 @@
+package kz.alimbetov.akmai.rag.retrieval;
+
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
+import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalStep;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+
+@Service
+public class ParallelRetrievalExecutor {
+
+    private final Map<RetrievalType, RetrievalStrategy> strategies;
+    private final Executor retrievalExecutor;
+
+    public ParallelRetrievalExecutor(
+            List<RetrievalStrategy> strategies,
+            @Qualifier("retrievalExecutor") Executor retrievalExecutor
+    ) {
+        this.strategies = new EnumMap<>(RetrievalType.class);
+        strategies.forEach(strategy -> this.strategies.put(strategy.type(), strategy));
+        this.retrievalExecutor = retrievalExecutor;
+    }
+
+    public List<RetrievalHit> execute(RetrievalPlan plan) {
+        Map<String, CompletableFuture<List<RetrievalHit>>> futures = new HashMap<>();
+
+        for (RetrievalStep step : plan.steps()) {
+            schedule(step, plan, futures);
+        }
+
+        return plan.steps().stream()
+                .flatMap(step -> futures.get(step.id()).join().stream())
+                .toList();
+    }
+
+    private CompletableFuture<List<RetrievalHit>> schedule(
+            RetrievalStep step,
+            RetrievalPlan plan,
+            Map<String, CompletableFuture<List<RetrievalHit>>> futures
+    ) {
+        CompletableFuture<List<RetrievalHit>> existing = futures.get(step.id());
+        if (existing != null) {
+            return existing;
+        }
+
+        List<CompletableFuture<List<RetrievalHit>>> dependencies = step.dependsOn().stream()
+                .map(id -> findStep(plan, id))
+                .map(dependency -> schedule(dependency, plan, futures))
+                .toList();
+
+        CompletableFuture<Void> ready = CompletableFuture.allOf(
+                dependencies.toArray(CompletableFuture[]::new)
+        );
+
+        CompletableFuture<List<RetrievalHit>> future = ready.thenApplyAsync(
+                ignored -> executeStep(step, dependencies),
+                retrievalExecutor
+        );
+        futures.put(step.id(), future);
+        return future;
+    }
+
+    private List<RetrievalHit> executeStep(
+            RetrievalStep step,
+            List<CompletableFuture<List<RetrievalHit>>> dependencies
+    ) {
+        RetrievalStrategy strategy = strategies.get(step.type());
+        if (strategy == null) {
+            return List.of();
+        }
+
+        List<RetrievalHit> dependencyHits = new ArrayList<>();
+        dependencies.forEach(future -> dependencyHits.addAll(future.join()));
+
+        return strategy.retrieve(
+                step.queryChunk(),
+                new RetrievalContext(List.copyOf(dependencyHits))
+        );
+    }
+
+    private RetrievalStep findStep(RetrievalPlan plan, String id) {
+        return plan.steps().stream()
+                .filter(step -> step.id().equals(id))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Unknown retrieval dependency: " + id
+                ));
+    }
+}
