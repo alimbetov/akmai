@@ -34,12 +34,11 @@ For a document that is no longer active, no stale retrieval state may remain in:
 `TTL`
 : The document becomes eligible for retention after `expires_at`.
 
-`REPLACE_ON_REINGESTION`
-: The current document state is replaced by a newer ingestion of the same document identity.
-This policy is not a substitute for TTL and MUST NOT cause the nightly worker to delete an
-otherwise active document.
+`REPLACE_ON_REINGESTION` is NOT a retention policy. It is the existing ingestion replacement
+behavior and remains separate from retention. Retention policy contains only `PERMANENT` and
+`TTL`; this separation prevents ingestion semantics from leaking into expiration selection.
 
-Default policy MUST be configurable. Production defaults SHOULD be conservative; permanent
+Default retention policy MUST be configurable. Production defaults SHOULD be conservative; permanent
 knowledge must never disappear because a scheduler inferred a TTL.
 
 ## 4. Lifecycle states
@@ -77,7 +76,9 @@ Required fields:
 - `deleted_at` nullable
 - `attempt_count`
 - `last_error` nullable
-- optimistic claim/version field if required by the chosen locking implementation
+- `generation` BIGINT NOT NULL — monotonically increases on each accepted reingestion
+- `claim_generation` BIGINT nullable — generation captured when retention claims the row
+- optimistic row version if required by the chosen locking implementation
 
 Indexes MUST support selection by `lifecycle_status, expires_at`.
 
@@ -143,8 +144,13 @@ FOR UPDATE SKIP LOCKED
 LIMIT :batchSize;
 ```
 
-The claim transaction changes selected rows to `DELETE_PENDING` and commits before external
-vector cleanup begins.
+The claim transaction changes selected rows to `DELETE_PENDING`, copies `generation` into
+`claim_generation`, and commits before external vector cleanup begins.
+
+Every destructive step MUST verify that the lifecycle row still has
+`generation = claim_generation` and is in the expected deletion state. Reingestion increments
+`generation` before publishing the new generation. A stale retention worker MUST abort before
+vector deletion when its claim generation no longer matches.
 
 Do not hold a database transaction open while calling the vector store.
 
@@ -153,8 +159,8 @@ Do not hold a database transaction open while calling the vector store.
 For each claimed document:
 
 1. transition `DELETE_PENDING -> DELETING`;
-2. read canonical chunk IDs by document ID;
-3. delete those chunk IDs from the vector store;
+2. verify `generation = claim_generation` and read canonical chunk IDs for the claimed generation;
+3. re-check the generation fence immediately before vector deletion, then delete only those chunk IDs from the vector store;
 4. delete document identifiers;
 5. delete canonical search projections;
 6. verify/record completion;
@@ -284,8 +290,8 @@ Assert:
 ### Reingestion race
 
 Prove that reingestion and retention cannot silently delete the newly ingested generation.
-The implementation MUST use a generation/version or equivalent optimistic fencing if this
-race is possible in the selected transaction design.
+The implementation MUST use generation fencing. A stale retention claim from generation N
+must be unable to delete retrieval state published by reingestion generation N+1.
 
 This is a mandatory design gate, not an optional future enhancement.
 
