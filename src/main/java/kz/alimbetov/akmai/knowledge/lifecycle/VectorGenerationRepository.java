@@ -18,14 +18,25 @@ public class VectorGenerationRepository {
             long generation,
             List<VectorGenerationEntry> entries
     ) {
-        if (entries.isEmpty()) {
+        save(documentId, generation, null, (short) 2, entries);
+    }
+
+    public void save(
+            String documentId,
+            long generation,
+            String embeddingProfileId,
+            short physicalIdVersion,
+            List<VectorGenerationEntry> entries
+    ) {
+        if (entries == null || entries.isEmpty()) {
             return;
         }
         jdbcTemplate.batchUpdate(
                 """
                 INSERT INTO knowledge_document_vector_generation (
-                    document_id, generation, vector_id, chunk_id
-                ) VALUES (?, ?, ?, ?)
+                    document_id, generation, vector_id, chunk_id,
+                    embedding_profile_id, physical_id_version
+                ) VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT (document_id, generation, vector_id) DO NOTHING
                 """,
                 entries,
@@ -35,6 +46,8 @@ public class VectorGenerationRepository {
                     ps.setLong(2, generation);
                     ps.setString(3, entry.vectorId());
                     ps.setString(4, entry.chunkId());
+                    ps.setString(5, embeddingProfileId);
+                    ps.setShort(6, physicalIdVersion);
                 }
         );
     }
@@ -52,6 +65,22 @@ public class VectorGenerationRepository {
                 documentId,
                 generation
         );
+    }
+
+    public String findEmbeddingProfileId(String documentId, long generation) {
+        return jdbcTemplate.query(
+                """
+                SELECT embedding_profile_id
+                FROM knowledge_document_vector_generation
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND embedding_profile_id IS NOT NULL
+                LIMIT 1
+                """,
+                (rs, rowNum) -> rs.getString(1),
+                documentId,
+                generation
+        ).stream().findFirst().orElse(null);
     }
 
     public void deleteGeneration(String documentId, long generation) {
