@@ -1,5 +1,5 @@
 name: CI
-# retention generation test alignment gate
+# claim token fencing baseline gate
 
 on:
   push:
