@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 
 class ContextBudgetTest {
 
-    private final ContextBudget budget = new ContextBudget(new TokenEstimator());
+    private final ContextBudget budget = new ContextBudget(new TokenEstimator(), RetrievalTestProperties.defaults());
 
     @Test
     void limitsDominanceBySingleDocument() {
