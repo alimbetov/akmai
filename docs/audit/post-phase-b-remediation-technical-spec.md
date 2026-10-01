@@ -1360,7 +1360,10 @@ No test should depend on live nondeterministic model output unless it is explici
 
 Add documented properties with validated bounds, including:
 
-akmai.ingestion.vector-write-timeout  
+akmai.vector.dimensions  
+akmai.vector.index-type — HNSW|NONE  
+akmai.vector.distance-type — COSINE_DISTANCE only in this remediation  
+akmai.vector.batch-size  
 akmai.retrieval.request-timeout  
 akmai.retrieval.strategy-timeout  
 akmai.retrieval.answer-timeout  
@@ -1375,8 +1378,13 @@ akmai.vector.db-transaction-timeout
 akmai.retrieval.embedding-http-timeout  
 akmai.retention.cleanup-transaction-timeout  
 akmai.retrieval.context-expansion-max-chunks  
+akmai.retrieval.answer-reserved-tokens  
 akmai.idempotency.lease-duration  
 embedding profile/token budget settings needed by active model
+
+Before implementation completes, remove the spring.ai.vectorstore.pgvector.* application.yml block and the spring-ai-starter-vector-store-pgvector dependency. Add com.pgvector:pgvector:0.1.6 explicitly. Replace VectorStorageProperties with @Validated AkmaiVectorProperties under akmai.vector.
+
+All Duration values require explicit minimum/maximum. cleanup-transaction-timeout MUST be less than half of retention lease-duration; context-expansion-max-chunks MUST be <= context-max-chunks; answer-reserved-tokens MUST be positive and smaller than the configured chat context window.
 
 Keep secrets out of committed application.yml values. Defaults must be safe for local development and explicit for production.
 
