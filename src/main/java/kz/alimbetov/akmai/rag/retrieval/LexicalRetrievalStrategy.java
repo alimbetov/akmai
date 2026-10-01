@@ -1,11 +1,19 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
+import java.util.HashMap;
 import java.util.List;
+import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import org.springframework.stereotype.Component;
 
 @Component
 public class LexicalRetrievalStrategy implements RetrievalStrategy {
+
+    private final SearchProjectionRepository repository;
+
+    public LexicalRetrievalStrategy(SearchProjectionRepository repository) {
+        this.repository = repository;
+    }
 
     @Override
     public RetrievalType type() {
@@ -17,8 +25,18 @@ public class LexicalRetrievalStrategy implements RetrievalStrategy {
             QueryChunk queryChunk,
             RetrievalContext context
     ) {
-        // Projection contract is intentionally present before the concrete local
-        // lexical index. This keeps RetrievalPlanner stable when Lucene/FTS is added.
-        return List.of();
+        return repository.searchLexical(
+                        queryChunk.semanticText(),
+                        List.copyOf(context.documentIds()),
+                        10
+                ).stream()
+                .map(projection -> new RetrievalHit(
+                        RetrievalType.LEXICAL,
+                        projection.documentId(),
+                        projection.chunkId(),
+                        projection.text(),
+                        new HashMap<>(projection.metadata())
+                ))
+                .toList();
     }
 }

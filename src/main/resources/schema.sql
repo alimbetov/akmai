@@ -27,3 +27,27 @@ CREATE INDEX IF NOT EXISTS idx_document_identifier_document
 
 CREATE INDEX IF NOT EXISTS idx_document_identifier_trgm
     ON document_identifier USING GIN (normalized_value gin_trgm_ops);
+
+
+CREATE TABLE IF NOT EXISTS knowledge_search_projection (
+    chunk_id        VARCHAR(100) PRIMARY KEY,
+    document_id     VARCHAR(100) NOT NULL,
+    parent_chunk_id VARCHAR(100),
+    chunk_index     INTEGER NOT NULL,
+    text_content    TEXT NOT NULL,
+    language        VARCHAR(32) NOT NULL,
+    section_path    TEXT,
+    search_vector   TSVECTOR GENERATED ALWAYS AS (
+        to_tsvector(
+            'simple',
+            coalesce(section_path, '') || ' ' || coalesce(text_content, '')
+        )
+    ) STORED,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_search_document
+    ON knowledge_search_projection (document_id, chunk_index);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_search_fts
+    ON knowledge_search_projection USING GIN (search_vector);
