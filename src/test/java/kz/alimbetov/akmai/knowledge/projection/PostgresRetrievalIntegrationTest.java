@@ -3,18 +3,26 @@ package kz.alimbetov.akmai.knowledge.projection;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.time.Instant;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
+import kz.alimbetov.akmai.knowledge.identifier.IdentifierNormalizer;
 import kz.alimbetov.akmai.knowledge.identifier.IdentifierType;
+import kz.alimbetov.akmai.knowledge.identifier.search.PostgresIdentifierSearchIndex;
+import kz.alimbetov.akmai.knowledge.ingestion.EnrichedKnowledgeChunk;
+import kz.alimbetov.akmai.knowledge.ingestion.PersistenceCoordinator;
+import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.jdbc.core.JdbcTemplate;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -126,6 +134,51 @@ class PostgresRetrievalIntegrationTest {
     }
 
     @Test
+    void coordinatorReingestionReplacesCanonicalAndIdentifierStateTogether() {
+        DocumentIdentifierRepository identifierRepository =
+                new DocumentIdentifierRepository(jdbcTemplate);
+        PostgresIdentifierSearchIndex identifierIndex =
+                new PostgresIdentifierSearchIndex(
+                        identifierRepository,
+                        new IdentifierNormalizer(),
+                        jdbcTemplate
+                );
+        VectorStore vectorStore = mock(VectorStore.class);
+        PersistenceCoordinator coordinator = new PersistenceCoordinator(
+                vectorStore,
+                identifierIndex,
+                new SearchProjectionFactory(),
+                repository
+        );
+
+        coordinator.persist(List.of(enriched(
+                "old-coordinator",
+                "doc-coordinator",
+                "legacy obsolete coordinator",
+                "OLD-COORD"
+        )));
+        when(vectorStore.delete(List.of("old-coordinator"))).thenReturn(true);
+        coordinator.persist(List.of(enriched(
+                "new-coordinator",
+                "doc-coordinator",
+                "current coordinator replacement",
+                "NEW-COORD"
+        )));
+
+        assertThat(repository.findChunkIdsByDocumentId("doc-coordinator"))
+                .containsExactly("new-coordinator");
+        assertThat(repository.searchLexical(
+                "obsolete",
+                List.of("doc-coordinator"),
+                10
+        )).isEmpty();
+        assertThat(identifierRepository.findExact("OLD-COORD", 10)).isEmpty();
+        assertThat(identifierRepository.findExact("NEW-COORD", 10))
+                .extracting(DocumentIdentifier::chunkId)
+                .containsExactly("new-coordinator");
+    }
+
+    @Test
     void lexicalIndexSupportsExactTokensAcrossTargetLanguages() {
         repository.saveAll(List.of(
                 projection("kk", "doc-kk", 0, "келісімшарт төлем мерзімі"),
@@ -142,6 +195,39 @@ class PostgresRetrievalIntegrationTest {
                 .extracting(SearchProjection::chunkId).contains("en");
         assertThat(repository.searchLexical("合同", List.of(), 10))
                 .extracting(SearchProjection::chunkId).contains("zh");
+    }
+
+    private static EnrichedKnowledgeChunk enriched(
+            String chunkId,
+            String documentId,
+            String text,
+            String identifierValue
+    ) {
+        KnowledgeChunk chunk = new KnowledgeChunk(
+                chunkId,
+                documentId,
+                null,
+                0,
+                text,
+                text,
+                text,
+                "integration",
+                "integration",
+                "en",
+                KnowledgeDomain.GENERAL,
+                List.of(),
+                Map.of("source", "integration")
+        );
+        return new EnrichedKnowledgeChunk(
+                chunk,
+                List.of(new kz.alimbetov.akmai.knowledge.identifier.DetectedIdentifier(
+                        IdentifierType.DOCUMENT_NUMBER,
+                        identifierValue,
+                        identifierValue,
+                        text
+                )),
+                List.of()
+        );
     }
 
     private static boolean tableExists(String table) {
