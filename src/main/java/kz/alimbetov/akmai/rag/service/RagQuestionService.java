@@ -10,6 +10,8 @@ import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
 import kz.alimbetov.akmai.rag.retrieval.Reranker;
 import kz.alimbetov.akmai.rag.retrieval.ResultFusion;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
+import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
+import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlanner;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 public class RagQuestionService {
 
     private final QueryChunker queryChunker;
+    private final RetrievalPlanner retrievalPlanner;
     private final ParallelRetrievalExecutor retrievalExecutor;
     private final ResultFusion resultFusion;
     private final Reranker reranker;
@@ -25,6 +28,7 @@ public class RagQuestionService {
 
     public RagQuestionService(
             QueryChunker queryChunker,
+            RetrievalPlanner retrievalPlanner,
             ParallelRetrievalExecutor retrievalExecutor,
             ResultFusion resultFusion,
             Reranker reranker,
@@ -32,6 +36,7 @@ public class RagQuestionService {
             ChatClient.Builder chatClientBuilder
     ) {
         this.queryChunker = queryChunker;
+        this.retrievalPlanner = retrievalPlanner;
         this.retrievalExecutor = retrievalExecutor;
         this.resultFusion = resultFusion;
         this.reranker = reranker;
@@ -41,7 +46,8 @@ public class RagQuestionService {
 
     public RagResponse ask(String question) {
         List<QueryChunk> queryChunks = queryChunker.chunk(question);
-        List<RetrievalHit> retrieved = retrievalExecutor.execute(queryChunks);
+        RetrievalPlan plan = retrievalPlanner.plan(queryChunks);
+        List<RetrievalHit> retrieved = retrievalExecutor.execute(plan);
         List<RetrievalHit> fused = resultFusion.fuse(retrieved);
         List<RetrievalHit> ranked = reranker.rerank(fused, question);
 
