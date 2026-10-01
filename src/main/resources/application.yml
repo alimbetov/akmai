@@ -9,7 +9,10 @@ spring:
 
   sql:
     init:
-      mode: always
+      mode: never
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
 
   ai:
     model:
@@ -38,12 +41,6 @@ akmai:
   retrieval:
     parallelism: ${AKMAI_RETRIEVAL_PARALLELISM:8}
     queue-capacity: ${AKMAI_RETRIEVAL_QUEUE_CAPACITY:64}
-  storage:
-    partitions:
-      enabled: ${AKMAI_PARTITIONS_ENABLED:true}
-      months-ahead: ${AKMAI_PARTITIONS_MONTHS_AHEAD:2}
-      cron: "${AKMAI_PARTITIONS_CRON:0 15 2 * * *}"
-      zone: ${AKMAI_PARTITIONS_ZONE:UTC}
   chunking:
     target-tokens: 750
     soft-max-tokens: 1200

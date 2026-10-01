@@ -1,9 +1,14 @@
 package kz.alimbetov.akmai.knowledge.projection;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import kz.alimbetov.akmai.knowledge.identifier.DetectedIdentifier;
+import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -11,9 +16,14 @@ import org.springframework.stereotype.Repository;
 public class PostgresSearchProjectionRepository implements SearchProjectionRepository {
 
     private final JdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper;
 
-    public PostgresSearchProjectionRepository(JdbcTemplate jdbcTemplate) {
+    public PostgresSearchProjectionRepository(
+            JdbcTemplate jdbcTemplate,
+            ObjectMapper objectMapper
+    ) {
         this.jdbcTemplate = jdbcTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -22,15 +32,22 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
                 """
                 INSERT INTO knowledge_search_projection (
                     chunk_id, document_id, parent_chunk_id, chunk_index,
-                    text_content, language, section_path
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    text_content, embedding_text, language, domain, section_path,
+                    identifiers_json, references_json, metadata_json, projection_version
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?)
                 ON CONFLICT (chunk_id) DO UPDATE SET
                     document_id = EXCLUDED.document_id,
                     parent_chunk_id = EXCLUDED.parent_chunk_id,
                     chunk_index = EXCLUDED.chunk_index,
                     text_content = EXCLUDED.text_content,
+                    embedding_text = EXCLUDED.embedding_text,
                     language = EXCLUDED.language,
+                    domain = EXCLUDED.domain,
                     section_path = EXCLUDED.section_path,
+                    identifiers_json = EXCLUDED.identifiers_json,
+                    references_json = EXCLUDED.references_json,
+                    metadata_json = EXCLUDED.metadata_json,
+                    projection_version = EXCLUDED.projection_version,
                     updated_at = now()
                 """,
                 projections,
@@ -41,9 +58,32 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
                     ps.setString(3, p.parentChunkId());
                     ps.setInt(4, p.chunkIndex());
                     ps.setString(5, p.text());
-                    ps.setString(6, p.language());
-                    ps.setString(7, p.sectionPath());
+                    ps.setString(6, p.embeddingText());
+                    ps.setString(7, p.language());
+                    ps.setString(8, p.domain().name());
+                    ps.setString(9, p.sectionPath());
+                    ps.setString(10, writeJson(p.identifiers()));
+                    ps.setString(11, writeJson(p.references()));
+                    ps.setString(12, writeJson(p.metadata()));
+                    ps.setInt(13, p.projectionVersion());
                 }
+        );
+    }
+
+    @Override
+    public List<String> findChunkIdsByDocumentId(String documentId) {
+        return jdbcTemplate.queryForList(
+                "SELECT chunk_id FROM knowledge_search_projection WHERE document_id = ?",
+                String.class,
+                documentId
+        );
+    }
+
+    @Override
+    public void deleteByDocumentId(String documentId) {
+        jdbcTemplate.update(
+                "DELETE FROM knowledge_search_projection WHERE document_id = ?",
+                documentId
         );
     }
 
@@ -95,16 +135,30 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
                 rs.getString("parent_chunk_id"),
                 rs.getInt("chunk_index"),
                 rs.getString("text_content"),
-                rs.getString("text_content"),
+                rs.getString("embedding_text"),
                 rs.getString("language"),
+                KnowledgeDomain.valueOf(rs.getString("domain")),
                 rs.getString("section_path"),
-                List.of(),
-                List.of(),
-                Map.of(
-                        "source", rs.getString("document_id"),
-                        "language", rs.getString("language"),
-                        "sectionPath", rs.getString("section_path")
-                )
+                readJson(rs.getString("identifiers_json"), new TypeReference<List<DetectedIdentifier>>() {}),
+                readJson(rs.getString("references_json"), new TypeReference<List<String>>() {}),
+                readJson(rs.getString("metadata_json"), new TypeReference<Map<String, Object>>() {}),
+                rs.getInt("projection_version")
         );
+    }
+
+    private String writeJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Cannot serialize search projection JSON", exception);
+        }
+    }
+
+    private <T> T readJson(String json, TypeReference<T> type) throws SQLException {
+        try {
+            return objectMapper.readValue(json, type);
+        } catch (JsonProcessingException exception) {
+            throw new SQLException("Cannot deserialize search projection JSON", exception);
+        }
     }
 }
