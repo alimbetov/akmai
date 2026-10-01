@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import org.springframework.stereotype.Component;
@@ -24,27 +26,46 @@ public class KnowledgeExpansion {
 
     public List<RetrievalHit> expand(List<RetrievalHit> ranked) {
         Set<String> existing = new HashSet<>();
+        List<String> seedIds = ranked.stream()
+                .limit(MAX_SEEDS)
+                .map(RetrievalHit::chunkId)
+                .filter(id -> id != null && !id.isBlank())
+                .filter(existing::add)
+                .toList();
+
         ranked.stream()
+                .skip(MAX_SEEDS)
                 .map(RetrievalHit::chunkId)
                 .filter(id -> id != null && !id.isBlank())
                 .forEach(existing::add);
 
+        Map<String, SearchProjection> seeds = repository.findByChunkIds(seedIds).stream()
+                .collect(Collectors.toMap(
+                        SearchProjection::chunkId,
+                        Function.identity(),
+                        (left, right) -> left
+                ));
+
         List<RetrievalHit> expanded = new ArrayList<>();
-        ranked.stream().limit(MAX_SEEDS).forEach(seed -> {
-            Integer chunkIndex = integerMetadata(seed, "chunkIndex");
-            if (chunkIndex == null || seed.documentId() == null) {
-                return;
+        for (String seedId : seedIds) {
+            if (expanded.size() >= MAX_EXPANDED) {
+                break;
             }
+            SearchProjection seed = seeds.get(seedId);
+            if (seed == null) {
+                continue;
+            }
+
             repository.findAdjacent(
                     seed.documentId(),
-                    chunkIndex,
+                    seed.chunkIndex(),
                     NEIGHBOR_RADIUS
             ).stream()
                     .filter(projection -> existing.add(projection.chunkId()))
                     .limit(MAX_EXPANDED - expanded.size())
                     .map(this::neighbor)
                     .forEach(expanded::add);
-        });
+        }
 
         List<RetrievalHit> result = new ArrayList<>(ranked);
         result.addAll(expanded);
@@ -66,10 +87,5 @@ public class KnowledgeExpansion {
                         "expansion", "neighbor"
                 )
         );
-    }
-
-    private Integer integerMetadata(RetrievalHit hit, String key) {
-        Object value = hit.metadata().get(key);
-        return value instanceof Number number ? number.intValue() : null;
     }
 }
