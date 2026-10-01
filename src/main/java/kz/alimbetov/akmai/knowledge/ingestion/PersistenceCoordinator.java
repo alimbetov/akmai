@@ -33,7 +33,7 @@ public class PersistenceCoordinator {
         this.projectionRepository = projectionRepository;
     }
 
-    public void persist(List<EnrichedKnowledgeChunk> chunks) {
+    public void persist(List<EnrichedKnowledgeChunk> chunks, long generation) {
         if (chunks.isEmpty()) {
             return;
         }
@@ -61,9 +61,11 @@ public class PersistenceCoordinator {
 
         vectorStore.add(projections.stream()
                 .map(projection -> new Document(
-                        projection.chunkId(),
+                        VectorIdentity.physicalId(
+                                projection.documentId(), generation, projection.chunkId()
+                        ),
                         projection.embeddingText(),
-                        vectorMetadata(projection)
+                        vectorMetadata(projection, generation)
                 ))
                 .toList());
 
@@ -100,9 +102,10 @@ public class PersistenceCoordinator {
         return page instanceof Number number ? number.intValue() : 0;
     }
 
-    private Map<String, Object> vectorMetadata(SearchProjection projection) {
+    private Map<String, Object> vectorMetadata(SearchProjection projection, long generation) {
         Map<String, Object> metadata = new HashMap<>(projection.metadata());
         metadata.put("chunkId", projection.chunkId());
+        metadata.put("generation", generation);
         metadata.put("documentId", projection.documentId());
         metadata.put("source", projection.metadata().getOrDefault("source", "unknown"));
         metadata.put("references", String.join(",", projection.references()));
