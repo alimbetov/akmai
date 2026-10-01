@@ -1,5 +1,5 @@
 name: CI
-# post-merge lifecycle baseline gate
+# generation-scoped vector fencing gate
 
 on:
   push:
