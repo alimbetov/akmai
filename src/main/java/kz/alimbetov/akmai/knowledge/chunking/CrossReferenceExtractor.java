@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 public class CrossReferenceExtractor {
 
     private static final Pattern REFERENCE = Pattern.compile(
-            "(?i)(?:стать(?:я|и)|пункт(?:а|е|у)?|article|section|clause|бап|тармақ)\\s+[0-9]+(?:\\.[0-9]+)*"
+            "(?i)(?:стать(?:я|и|е|ю|ёй|ей)|пункт(?:а|е|у)?|article|section|clause|бап|тармақ)\\s+[0-9]+(?:\\.[0-9]+)*"
     );
 
     public List<String> extract(String text) {
