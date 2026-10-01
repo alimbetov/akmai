@@ -34,6 +34,11 @@ public class StructuralUnitExtractor {
         List<SemanticUnit> units = new ArrayList<>();
         Deque<Heading> hierarchy = new ArrayDeque<>();
         String currentSection = document.title();
+        if (document.domain() == kz.alimbetov.akmai.knowledge.model.KnowledgeDomain.LEGAL
+                && document.title() != null
+                && !document.title().isBlank()) {
+            hierarchy.addLast(new Heading(1, document.title()));
+        }
 
         for (String block : normalizedText.split("\\n\\s*\\n")) {
             String value = block.trim();
