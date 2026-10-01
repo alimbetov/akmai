@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalStep;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
 class ParallelRetrievalExecutorTest {
@@ -57,7 +58,8 @@ class ParallelRetrievalExecutorTest {
 
             ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
                     List.of(vector, lexical, reference),
-                    executor
+                    executor,
+                    new RetrievalObserver(new SimpleMeterRegistry())
             );
 
             var future = CompletableFuture.supplyAsync(
@@ -117,7 +119,8 @@ class ParallelRetrievalExecutorTest {
 
             ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
                     List.of(vector, lexical, reference),
-                    executor
+                    executor,
+                    new RetrievalObserver(new SimpleMeterRegistry())
             );
 
             assertThat(subject.execute(plan()))
@@ -134,7 +137,8 @@ class ParallelRetrievalExecutorTest {
         try {
             ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
                     List.of(),
-                    executor
+                    executor,
+                    new RetrievalObserver(new SimpleMeterRegistry())
             );
             QueryChunk query = query();
             RetrievalPlan cycle = new RetrievalPlan(List.of(
