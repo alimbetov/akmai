@@ -7,9 +7,11 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
@@ -19,13 +21,13 @@ public class Reranker {
     private final SemanticRerankScorer scorer;
     private final RetrievalProperties properties;
     private final RetrievalObserver observer;
-    private final Executor executor;
+    private final ExecutorService executor;
 
     public Reranker(
             SemanticRerankScorer scorer,
             RetrievalProperties properties,
             RetrievalObserver observer,
-            @Qualifier("rerankerExecutor") Executor executor
+            @Qualifier("rerankerExecutor") ExecutorService executor
     ) {
         this.scorer = scorer;
         this.properties = properties;
@@ -42,14 +44,20 @@ public class Reranker {
         List<RetrievalHit> candidates = hits.subList(0, candidateCount);
         List<RetrievalHit> tail = hits.subList(candidateCount, hits.size());
         Instant started = Instant.now();
+        Future<List<RetrievalHit>> future;
 
         try {
-            List<RetrievalHit> reranked = CompletableFuture.supplyAsync(
-                            () -> score(candidates, question),
-                            executor
-                    )
-                    .orTimeout(properties.rerankerTimeout().toMillis(), TimeUnit.MILLISECONDS)
-                    .join();
+            future = executor.submit(() -> score(candidates, question));
+        } catch (RuntimeException exception) {
+            observer.rerankFailure(Duration.between(started, Instant.now()), exception);
+            return hits;
+        }
+
+        try {
+            List<RetrievalHit> reranked = future.get(
+                    properties.rerankerTimeout().toMillis(),
+                    TimeUnit.MILLISECONDS
+            );
             observer.rerankSuccess(
                     Duration.between(started, Instant.now()),
                     candidateCount
@@ -58,7 +66,20 @@ public class Reranker {
             result.addAll(reranked);
             result.addAll(tail);
             return List.copyOf(result);
+        } catch (TimeoutException exception) {
+            future.cancel(true);
+            observer.rerankFailure(Duration.between(started, Instant.now()), exception);
+            return hits;
+        } catch (InterruptedException exception) {
+            future.cancel(true);
+            Thread.currentThread().interrupt();
+            observer.rerankFailure(Duration.between(started, Instant.now()), exception);
+            return hits;
+        } catch (ExecutionException exception) {
+            observer.rerankFailure(Duration.between(started, Instant.now()), exception);
+            return hits;
         } catch (RuntimeException exception) {
+            future.cancel(true);
             observer.rerankFailure(Duration.between(started, Instant.now()), exception);
             return hits;
         }
