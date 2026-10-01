@@ -98,11 +98,15 @@ class RetentionGenerationFencingIntegrationTest {
         );
 
         Instant recovery = Instant.parse("2026-10-01T10:00:00Z");
-        assertThat(lifecycle.failStaleIngestions(
-                recovery.minus(Duration.ofMinutes(10)),
+        Instant staleBefore = recovery.minus(Duration.ofMinutes(10));
+        assertThat(lifecycle.findStaleIngestionDocumentIds(staleBefore, 10))
+                .containsExactly("doc-crash");
+        assertThat(lifecycle.failStaleIngestion(
+                "doc-crash",
+                staleBefore,
                 recovery,
                 "abandoned ingestion exceeded recovery timeout"
-        )).isEqualTo(1);
+        )).isTrue();
         assertThat(lifecycle.findByDocumentId("doc-crash").orElseThrow().status())
                 .isEqualTo(LifecycleStatus.INGEST_FAILED);
 
