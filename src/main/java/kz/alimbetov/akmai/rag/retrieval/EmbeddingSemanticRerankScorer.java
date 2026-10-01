@@ -1,5 +1,6 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Component;
@@ -15,9 +16,22 @@ public class EmbeddingSemanticRerankScorer implements SemanticRerankScorer {
 
     @Override
     public List<Double> score(String question, List<RetrievalHit> hits) {
-        float[] questionVector = embeddingModel.embed(question);
-        return hits.stream()
-                .map(hit -> cosine(questionVector, embeddingModel.embed(hit.text())))
+        if (hits.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> inputs = new ArrayList<>(hits.size() + 1);
+        inputs.add(question);
+        hits.stream().map(RetrievalHit::text).forEach(inputs::add);
+
+        List<float[]> embeddings = embeddingModel.embed(inputs);
+        if (embeddings.size() != inputs.size()) {
+            throw new IllegalStateException("Embedding model returned unexpected vector count");
+        }
+
+        float[] questionVector = embeddings.getFirst();
+        return embeddings.subList(1, embeddings.size()).stream()
+                .map(hitVector -> cosine(questionVector, hitVector))
                 .toList();
     }
 
