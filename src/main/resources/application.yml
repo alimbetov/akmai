@@ -35,6 +35,14 @@ spring:
         max-document-batch-size: ${AKMAI_VECTOR_BATCH_SIZE:64}
 
 akmai:
+  vector:
+    dimensions: ${AKMAI_VECTOR_DIMENSIONS:1024}
+    index-type: ${AKMAI_VECTOR_INDEX_TYPE:HNSW}
+    distance-type: ${AKMAI_VECTOR_DISTANCE_TYPE:COSINE_DISTANCE}
+    max-document-batch-size: ${AKMAI_VECTOR_BATCH_SIZE:64}
+    embedding-http-timeout: ${AKMAI_VECTOR_EMBEDDING_TIMEOUT:30s}
+    db-transaction-timeout: ${AKMAI_VECTOR_DB_TIMEOUT:30s}
+    tokenizer-profile: ${AKMAI_VECTOR_TOKENIZER_PROFILE:conservative-v1}
   ingestion:
     parallelism: ${AKMAI_INGESTION_PARALLELISM:8}
     queue-capacity: ${AKMAI_INGESTION_QUEUE_CAPACITY:128}
