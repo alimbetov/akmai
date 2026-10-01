@@ -1,5 +1,5 @@
 name: CI
-# retrieval integration final gate
+# retrieval integration remediation gate
 
 on:
   push:
