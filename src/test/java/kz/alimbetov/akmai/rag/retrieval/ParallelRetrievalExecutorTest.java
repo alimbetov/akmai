@@ -76,6 +76,59 @@ class ParallelRetrievalExecutorTest {
     }
 
     @Test
+    void failedRootDoesNotSuppressHealthyHybridBranchOrDownstreamStep() {
+        ExecutorService executor = Executors.newFixedThreadPool(3);
+        try {
+            RetrievalStrategy vector = new RetrievalStrategy() {
+                @Override
+                public RetrievalType type() {
+                    return RetrievalType.VECTOR;
+                }
+
+                @Override
+                public List<RetrievalHit> retrieve(
+                        QueryChunk queryChunk,
+                        RetrievalContext context
+                ) {
+                    throw new IllegalStateException("vector unavailable");
+                }
+            };
+            RetrievalStrategy lexical = immediate(
+                    RetrievalType.LEXICAL,
+                    "lexical"
+            );
+            RetrievalStrategy reference = new RetrievalStrategy() {
+                @Override
+                public RetrievalType type() {
+                    return RetrievalType.REFERENCE;
+                }
+
+                @Override
+                public List<RetrievalHit> retrieve(
+                        QueryChunk queryChunk,
+                        RetrievalContext context
+                ) {
+                    assertThat(context.dependencyHits())
+                            .extracting(RetrievalHit::chunkId)
+                            .containsExactly("lexical");
+                    return List.of(hit(RetrievalType.REFERENCE, "reference"));
+                }
+            };
+
+            ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
+                    List.of(vector, lexical, reference),
+                    executor
+            );
+
+            assertThat(subject.execute(plan()))
+                    .extracting(RetrievalHit::chunkId)
+                    .containsExactly("lexical", "reference");
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
     void rejectsCyclicDependencyGraphInsteadOfRecursingForever() {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
@@ -119,6 +172,26 @@ class ParallelRetrievalExecutorTest {
                         List.of("v", "l")
                 )
         ));
+    }
+
+    private RetrievalStrategy immediate(
+            RetrievalType type,
+            String chunkId
+    ) {
+        return new RetrievalStrategy() {
+            @Override
+            public RetrievalType type() {
+                return type;
+            }
+
+            @Override
+            public List<RetrievalHit> retrieve(
+                    QueryChunk queryChunk,
+                    RetrievalContext context
+            ) {
+                return List.of(hit(type, chunkId));
+            }
+        };
     }
 
     private RetrievalStrategy blocking(
