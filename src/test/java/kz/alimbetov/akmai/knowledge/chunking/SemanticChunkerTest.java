@@ -17,7 +17,8 @@ class SemanticChunkerTest {
             new CrossReferenceExtractor(),
             new EmbeddingTextBuilder(),
             new TokenEstimator(),
-            new ChunkingProperties(750, 1200, 1800, 100)
+            new ChunkingProperties(750, 1200, 1800, 100),
+            new OversizedUnitSplitter(new TokenEstimator())
     );
 
     @Test

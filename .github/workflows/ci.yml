@@ -20,4 +20,3 @@ jobs:
       - name: Test and verify
         run: mvn -B clean verify
 
-# hardening gate revision
