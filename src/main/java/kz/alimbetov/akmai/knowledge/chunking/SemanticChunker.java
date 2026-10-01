@@ -21,6 +21,7 @@ public class SemanticChunker {
     private final EmbeddingTextBuilder embeddingTextBuilder;
     private final TokenEstimator tokenEstimator;
     private final ChunkingProperties properties;
+    private final OversizedUnitSplitter oversizedUnitSplitter;
 
     public SemanticChunker(
             TextNormalizer normalizer,
@@ -30,7 +31,8 @@ public class SemanticChunker {
             CrossReferenceExtractor referenceExtractor,
             EmbeddingTextBuilder embeddingTextBuilder,
             TokenEstimator tokenEstimator,
-            ChunkingProperties properties
+            ChunkingProperties properties,
+            OversizedUnitSplitter oversizedUnitSplitter
     ) {
         this.normalizer = normalizer;
         this.unitExtractor = unitExtractor;
@@ -40,6 +42,7 @@ public class SemanticChunker {
         this.embeddingTextBuilder = embeddingTextBuilder;
         this.tokenEstimator = tokenEstimator;
         this.properties = properties;
+        this.oversizedUnitSplitter = oversizedUnitSplitter;
     }
 
     public List<KnowledgeChunk> chunk(KnowledgeDocument document) {
@@ -60,7 +63,13 @@ public class SemanticChunker {
         List<SemanticUnit> protectedUnits =
                 atomicUnitProtector.protect(classified, document.domain());
 
-        List<List<SemanticUnit>> groups = group(protectedUnits);
+        List<SemanticUnit> boundedUnits = protectedUnits.stream()
+                .flatMap(unit -> oversizedUnitSplitter
+                        .split(unit, properties.hardMaxTokens())
+                        .stream())
+                .toList();
+
+        List<List<SemanticUnit>> groups = group(boundedUnits);
         List<KnowledgeChunk> chunks = new ArrayList<>();
 
         for (int i = 0; i < groups.size(); i++) {
@@ -127,17 +136,6 @@ public class SemanticChunker {
                 groups.add(List.copyOf(current));
                 current.clear();
                 currentTokens = 0;
-            }
-
-            if (unitTokens > properties.hardMaxTokens()) {
-                if (!current.isEmpty()) {
-                    groups.add(List.copyOf(current));
-                    current.clear();
-                    currentTokens = 0;
-                }
-                groups.add(List.of(unit));
-                currentSection = unit.sectionPath();
-                continue;
             }
 
             current.add(unit);
