@@ -36,7 +36,7 @@ public class ContextBudget {
             }
 
             int hitTokens = tokenEstimator.estimate(hit.text());
-            if (!selected.isEmpty() && tokens + hitTokens > MAX_TOKENS) {
+            if (tokens + hitTokens > MAX_TOKENS) {
                 continue;
             }
 
