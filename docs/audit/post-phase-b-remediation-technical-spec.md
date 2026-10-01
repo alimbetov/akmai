@@ -252,7 +252,7 @@ Introduce or refactor the following types.
 - DocumentGeneration: immutable generation journal record.
 - GenerationStatus.
 - RetentionStatus; replace the current mixed LifecycleStatus semantics.
-- KnowledgeLanguage enum or equivalent canonical value object for kk/ru/en/zh.
+- KnowledgeLanguage enum with exactly KK, RU, EN, ZH plus a query-only UNKNOWN decision state that is never persisted as document language.
 - Provenance record for source, pageFrom, pageTo, language, domain, sectionPath and safe metadata.
 - StructuralRole enum separate from SemanticFactType.
 - SemanticUnit MUST carry structure and semantic classification separately.
@@ -373,9 +373,13 @@ Do not solve D02 by post-filtering a too-small topK after similaritySearch; that
 
 D58 requires production-adapter E2E coverage of this repository and real PgVectorStore add/delete behavior.
 
+Create explicit VectorStoreConfig instead of relying on the auto-configured bean. It MUST construct PgVectorStore with the configured PgVectorStoreProperties and a dedicated vector JdbcTemplate using the main DataSource but a bounded JDBC query timeout. The same layout properties are injected into PublishedVectorSearchRepository and PublishedVectorAdminRepository. This keeps Spring AI's real add/delete adapter while making DB timeout and table/schema/id-type semantics explicit.
+
+PublishedVectorSearchRepository MUST reproduce the configured PgDistanceType operator and Spring AI score/threshold semantics exactly. It MUST cast only AKMAI-owned reserved metadata fields and must never trust arbitrary user metadata as generation/profile authority.
+
 ## 9. Transaction boundaries
 
-Add an explicit GenerationStagingRepository or transaction service using TransactionTemplate / @Transactional for all relational staging writes.
+Add GenerationStagingService using TransactionTemplate over the main DataSource. Repository batch methods remain persistence primitives, but only GenerationStagingService may orchestrate a complete staging write.
 
 One staging transaction MUST include projections, identifiers, reference graph and vector manifests. batchUpdate chunking at 100 rows is allowed only inside that transaction.
 
@@ -496,7 +500,7 @@ Neighbor hits MUST carry full canonical Provenance.
 
 Replace ad-hoc text concatenation with a structured, escaped context envelope serialized by Jackson.
 
-Recommended model-facing structure:
+Mandatory model-facing JSON structure:
 
 - source number
 - documentId
@@ -594,7 +598,7 @@ SemanticChunker MUST enforce final chunk hardMaxTokens unconditionally; min/targ
 
 The limit for embedding MUST be checked against the exact EmbeddingTextBuilder payload, including title/domain/language/sectionPath.
 
-Introduce a tokenizer/profile-aware estimator when supported by the configured embedding model; otherwise use a conservative profile-specific estimator with explicit safety margin.
+Introduce ModelTokenBudgetRegistry keyed by EmbeddingProfile/chat profile. A profile may be READY only when AKMAI has either (a) an exact compatible tokenizer implementation, or (b) a formally verified upper-bound counter for that tokenizer family. Unverified character/3.2 heuristics MUST NOT enforce a hard model limit. The existing TokenEstimator may remain only as a packing heuristic below the hard budget.
 
 ## 17. Identifier subsystem
 
@@ -671,7 +675,15 @@ markDeleting, markDeleted, markFailed and releaseClaim MUST all require:
 - expected state;
 - unexpired lease according to DB time.
 
-SQL deletion of projections/identifiers/reference rows MUST be fence-aware in the same SQL statement or transaction.
+After physical vector deletion returns successfully, call one GenerationCleanupRepository.completeRetentionCleanup(claim) transaction. That transaction:
+1. locks/validates the lifecycle row;
+2. requires matching claim_id, claim_generation, expected deletion state and an unexpired lease using DB time;
+3. deletes reference edges/targets, identifiers, projections and vector manifest for exactly the claimed generation;
+4. changes that generation to CLEANED;
+5. clears lifecycle.published_generation;
+6. changes retention_status to DELETED and clears claim fields.
+
+If the fence is stale, the transaction changes nothing. If SQL fails, it rolls back completely; the already-completed vector delete is idempotently repeated on retry.
 
 For vector deletion:
 - verify current claim immediately before external delete;
@@ -707,7 +719,7 @@ Do not consume a connection from the main application pool for the full external
 
 Implement a dedicated lock DataSource/Hikari pool to the same PostgreSQL instance for session advisory locks. Do not reuse the main JdbcTemplate pool.
 
-Lock acquisition uses pg_try_advisory_lock in a bounded retry loop until akmai.lock.acquire-timeout; pg_advisory_lock without a bound is forbidden. The lock-pool maximum MUST be >= the maximum number of concurrent ingestion + retention critical sections admitted by local executors, or those executors must acquire a lock-pool permit before starting.
+DocumentOperationLock owns a Semaphore whose permit count equals the dedicated lock Hikari maximumPoolSize. A caller MUST acquire a permit within akmai.lock.acquire-timeout before requesting a lock-pool connection. It then uses pg_try_advisory_lock in a bounded retry loop until the same deadline. pg_advisory_lock without a bound is forbidden. Closing LockHandle releases the advisory lock, connection and semaphore permit in finally.
 
 The main SQL pool MUST remain available while document locks are held.
 
@@ -908,7 +920,7 @@ Code: structured JSON context + explicit untrusted-data system rule.
 Tests: malicious chunk instructions cannot alter source framing and are passed as data.
 
 ### D11 — uncited grounded answer accepted
-Code: grounded non-empty factual answer requires >=1 valid citation or deterministic fallback/error.  
+Code: every nonblank model-generated answer produced from nonempty context requires >=1 valid citation; the only citation-free insufficient-information text is generated deterministically by the service.  
 Tests: model answer without citation is rejected/repaired according to policy.
 
 ### D12 — citation sanitizer whitespace mismatch
@@ -976,7 +988,7 @@ Code: StructuralAnchor targets + CrossReference edges persisted by normal ingest
 Tests: ingest real source and target documents; reference retrieval works without manual DB inserts.
 
 ### D28 — advisory lock main-pool starvation
-Code: dedicated lock datasource or equivalent lock service outside main SQL pool.  
+Code: dedicated lock Hikari DataSource + semaphore-bounded pg_try_advisory_lock acquisition outside the main SQL pool.  
 Tests: tiny main pool + concurrent different-document locks completes without starvation.
 
 ### D29 — no final LLM deadline
@@ -1084,8 +1096,8 @@ Code: structural role separated from semantic type; medical classifier still run
 Tests: numbered dosage/contraindication/monitoring lists remain atomic typed facts in KK/RU/EN/ZH.
 
 ### D55 — query intents silently truncated
-Code: QueryDecompositionResult with overflow/catch-all representation; bound work without silent loss.  
-Tests: 9+ intents preserve each intent or explicit catch-all/overflow signal.
+Code: QueryDecompositionResult always keeps the full normalized original question as retrieval unit 0, then adds at most MAX_SEGMENTS-1 unique decomposed units; overflowCount records omitted decomposed units. The full original is the catch-all for every omitted intent.  
+Tests: 9+ intents keep the original catch-all, at most seven decomposed units and a non-zero overflowCount; no overflow is silent.
 
 ### D56 — final chunk exceeds hard max
 Code: unconditional hard check before adding a unit and final invariant assertion.  
@@ -1255,7 +1267,7 @@ akmai.api.max-document-chars
 akmai.api.max-question-chars  
 akmai.api.max-metadata-bytes  
 akmai.security.enabled  
-akmai.security.api-key or equivalent external secret binding  
+akmai.security.api-key — external secret only; consumed as X-AKMAI-API-Key  
 akmai.lock.datasource.* / dedicated lock-pool settings  
 akmai.lock.acquire-timeout  
 akmai.retention.vector-delete-timeout  
