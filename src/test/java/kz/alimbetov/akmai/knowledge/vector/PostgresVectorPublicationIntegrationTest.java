@@ -2,8 +2,12 @@ package kz.alimbetov.akmai.knowledge.vector;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -263,6 +267,123 @@ class PostgresVectorPublicationIntegrationTest {
                 """,
                 Long.class
         )).isNull();
+    }
+
+    @Test
+    void publicationCompletesWithSingleConnectionHikariPool() {
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(POSTGRES.getJdbcUrl());
+        config.setUsername(POSTGRES.getUsername());
+        config.setPassword(POSTGRES.getPassword());
+        config.setMaximumPoolSize(1);
+        config.setMinimumIdle(0);
+        config.setConnectionTimeout(1_000);
+
+        try (HikariDataSource dataSource = new HikariDataSource(config)) {
+            JdbcTemplate singleJdbc = new JdbcTemplate(dataSource);
+            TransactionTemplate singleTx = new TransactionTemplate(
+                    new DataSourceTransactionManager(dataSource)
+            );
+            ObjectMapper mapper = new ObjectMapper();
+            EmbeddingProfileStorageManager singleStorage =
+                    new EmbeddingProfileStorageManager(singleJdbc);
+            DocumentGenerationRepository singleGenerations =
+                    new DocumentGenerationRepository(singleJdbc, singleTx);
+            GenerationPublicationService singlePublication =
+                    new GenerationPublicationService(
+                            singleJdbc,
+                            singleTx,
+                            new PostgresSearchProjectionRepository(
+                                    singleJdbc,
+                                    mapper
+                            ),
+                            new DocumentIdentifierRepository(singleJdbc),
+                            new VectorGenerationRepository(singleJdbc),
+                            new ReferenceGraphRepository(
+                                    singleJdbc,
+                                    new CrossReferenceExtractor()
+                            ),
+                            new PostgresGenerationVectorRepository(
+                                    singleJdbc,
+                                    mapper,
+                                    singleStorage
+                            ),
+                            new IngestionIdempotencyRepository(
+                                    singleJdbc,
+                                    singleTx,
+                                    mapper
+                            ),
+                            new PublicationOutcomeResolver(singleJdbc)
+                    );
+
+            long generation = singleGenerations.allocate(
+                    "doc-pool-one",
+                    RetentionPolicy.PERMANENT,
+                    null,
+                    profile.profileId(),
+                    "fp-pool-one"
+            );
+            SearchProjection projection = new SearchProjection(
+                    "pool-chunk",
+                    "doc-pool-one",
+                    generation,
+                    null,
+                    0,
+                    "canonical text",
+                    "embedding text",
+                    "en",
+                    KnowledgeDomain.GENERAL,
+                    "section",
+                    List.of(),
+                    List.of(),
+                    Map.of("source", "pool-one"),
+                    2
+            );
+            String vectorId = VectorIdentity.physicalId(
+                    "doc-pool-one",
+                    generation,
+                    "pool-chunk"
+            );
+
+            assertTimeoutPreemptively(
+                    Duration.ofSeconds(3),
+                    () -> singlePublication.publish(
+                            "doc-pool-one",
+                            generation,
+                            RetentionPolicy.PERMANENT,
+                            null,
+                            profile,
+                            List.of(projection),
+                            List.of(),
+                            List.of(new VectorGenerationEntry(
+                                    vectorId,
+                                    "pool-chunk"
+                            )),
+                            List.of(new PostgresGenerationVectorRepository.VectorRow(
+                                    vectorId,
+                                    projection.embeddingText(),
+                                    Map.of(
+                                            "akmaiMetadataVersion", 2,
+                                            "akmaiDocumentId", "doc-pool-one",
+                                            "akmaiGeneration", generation,
+                                            "akmaiEmbeddingProfileId",
+                                            profile.profileId(),
+                                            "akmaiChunkId", "pool-chunk"
+                                    ),
+                                    new float[] {1f, 0f, 0f}
+                            ))
+                    )
+            );
+
+            assertThat(singleJdbc.queryForObject(
+                    """
+                    SELECT published_generation
+                    FROM knowledge_document_lifecycle
+                    WHERE document_id = 'doc-pool-one'
+                    """,
+                    Long.class
+            )).isEqualTo(generation);
+        }
     }
 
     @Test
