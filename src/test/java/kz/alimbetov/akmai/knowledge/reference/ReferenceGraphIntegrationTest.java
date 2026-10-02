@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.knowledge.reference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -125,12 +126,13 @@ class ReferenceGraphIntegrationTest {
                 Set.of(8L),
                 10
         )).isEmpty();
-        assertThat(references.resolveSameDocumentTargets(
+        assertThatThrownBy(() -> references.resolveSameDocumentTargets(
                 "law-1",
                 List.of("article-30"),
                 Set.of(),
                 10
-        )).isEmpty();
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("accessLevels");
         assertThat(jdbc.queryForObject(
                 """
                 SELECT count(*)
