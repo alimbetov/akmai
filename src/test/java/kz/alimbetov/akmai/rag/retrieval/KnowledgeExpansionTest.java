@@ -32,8 +32,9 @@ class KnowledgeExpansionTest {
         SearchProjection canonical = projection("chunk-1", 1);
         SearchProjection neighbor = projection("chunk-2", 2);
 
-        when(repository.findByChunkIds(List.of("chunk-1")))
-                .thenReturn(List.of(canonical));
+        when(repository.findByDocumentAndChunkIds(
+                "doc", List.of("chunk-1")
+        )).thenReturn(List.of(canonical));
         when(repository.findAdjacent("doc", 1, 1))
                 .thenReturn(List.of(canonical, neighbor));
 
