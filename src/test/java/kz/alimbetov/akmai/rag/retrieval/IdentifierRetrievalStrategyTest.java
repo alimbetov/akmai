@@ -15,7 +15,7 @@ import kz.alimbetov.akmai.knowledge.identifier.IdentifierType;
 import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
-import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import org.junit.jupiter.api.Test;
 
@@ -24,8 +24,8 @@ class IdentifierRetrievalStrategyTest {
     @Test
     void exactIdentifierResolvesCanonicalChunkInsteadOfIdentifierSnippet() {
         IdentifierSearchIndex index = mock(IdentifierSearchIndex.class);
-        SearchProjectionRepository projections =
-                mock(SearchProjectionRepository.class);
+        PublishedSearchProjectionReader projections =
+                mock(PublishedSearchProjectionReader.class);
         DocumentIdentifier identifier = new DocumentIdentifier(
                 "doc-1",
                 3L,
