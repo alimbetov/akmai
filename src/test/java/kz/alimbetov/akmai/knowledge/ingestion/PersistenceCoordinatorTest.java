@@ -59,7 +59,9 @@ class PersistenceCoordinatorTest {
                 anyList(),
                 anyList(),
                 anyList(),
-                anyList()
+                anyList(),
+                isNull(),
+                isNull()
         )).thenReturn(GenerationPublicationService.PublicationResult.PUBLISHED);
 
         fixture.coordinator.persist(List.of(
@@ -83,7 +85,9 @@ class PersistenceCoordinatorTest {
                 anyList(),
                 anyList(),
                 manifest.capture(),
-                vectors.capture()
+                vectors.capture(),
+                isNull(),
+                isNull()
         );
 
         assertThat(manifest.getValue())
@@ -144,7 +148,9 @@ class PersistenceCoordinatorTest {
                 anyList(),
                 anyList(),
                 anyList(),
-                anyList()
+                anyList(),
+                isNull(),
+                isNull()
         );
     }
 
