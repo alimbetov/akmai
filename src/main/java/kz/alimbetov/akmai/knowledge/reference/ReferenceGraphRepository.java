@@ -97,19 +97,6 @@ public class ReferenceGraphRepository {
     public List<String> resolveSameDocumentTargets(
             String documentId,
             List<String> sourceChunkIds,
-            int limit
-    ) {
-        return resolveSameDocumentTargets(
-                documentId,
-                sourceChunkIds,
-                Set.of(),
-                limit
-        );
-    }
-
-    public List<String> resolveSameDocumentTargets(
-            String documentId,
-            List<String> sourceChunkIds,
             Set<Long> accessLevels,
             int limit
     ) {
