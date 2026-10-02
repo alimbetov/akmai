@@ -59,10 +59,6 @@ public class RagQuestionService {
         this.answerGenerationService = answerGenerationService;
     }
 
-    public RagResponse ask(String question) {
-        return ask(question, Set.of());
-    }
-
     public RagResponse ask(String question, Set<Long> accessLevels) {
         if (accessLevels == null || accessLevels.isEmpty()) {
             return insufficientInformation();
