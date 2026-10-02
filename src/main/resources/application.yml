@@ -80,6 +80,10 @@ akmai:
     embedding-http-timeout: ${AKMAI_RETRIEVAL_EMBEDDING_TIMEOUT:3s}
     context-expansion-max-chunks: ${AKMAI_CONTEXT_EXPANSION_MAX_CHUNKS:3}
     answer-reserved-tokens: ${AKMAI_ANSWER_RESERVED_TOKENS:1024}
+  reembedding:
+    auto-migrate: ${AKMAI_REEMBEDDING_AUTO_MIGRATE:false}
+    drain-timeout: ${AKMAI_REEMBEDDING_DRAIN_TIMEOUT:2m}
+    poll-interval: ${AKMAI_REEMBEDDING_POLL_INTERVAL:250ms}
   reconciliation:
     enabled: ${AKMAI_RECONCILIATION_ENABLED:true}
     batch-size: ${AKMAI_RECONCILIATION_BATCH_SIZE:100}
