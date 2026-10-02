@@ -15,7 +15,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class PostgresSearchProjectionRepository implements SearchProjectionRepository {
+public class PostgresSearchProjectionRepository
+        implements SearchProjectionRepository, PublishedSearchProjectionReader {
 
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
