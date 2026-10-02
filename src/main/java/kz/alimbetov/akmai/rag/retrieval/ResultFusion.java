@@ -28,10 +28,12 @@ public class ResultFusion {
             List<RetrievalHit> hits,
             Set<Long> accessLevels
     ) {
-        if (hits == null
-                || hits.isEmpty()
-                || accessLevels == null
-                || accessLevels.isEmpty()) {
+        if (accessLevels == null || accessLevels.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "accessLevels must not be empty"
+            );
+        }
+        if (hits == null || hits.isEmpty()) {
             return List.of();
         }
 
