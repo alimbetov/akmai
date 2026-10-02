@@ -15,7 +15,8 @@ import org.springframework.context.annotation.Configuration;
     ApiProperties.class,
     IdempotencyProperties.class,
     SecurityProperties.class,
-    ReconciliationProperties.class
+    ReconciliationProperties.class,
+    ModelBudgetProperties.class
 })
 public class AkmaiConfiguration {
 }
