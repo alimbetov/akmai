@@ -42,15 +42,30 @@ public class ParallelRetrievalExecutor {
     }
 
     public List<RetrievalHit> execute(RetrievalPlan plan) {
-        return executeDetailed(plan).hits();
+        return execute(plan, Set.of());
+    }
+
+    public List<RetrievalHit> execute(
+            RetrievalPlan plan,
+            Set<Long> accessLevels
+    ) {
+        return executeDetailed(plan, accessLevels).hits();
     }
 
     public RetrievalExecutionResult executeDetailed(RetrievalPlan plan) {
+        return executeDetailed(plan, Set.of());
+    }
+
+    public RetrievalExecutionResult executeDetailed(
+            RetrievalPlan plan,
+            Set<Long> accessLevels
+    ) {
+        Set<Long> scope = normalizeAccessLevels(accessLevels);
         validateAcyclic(plan);
         Instant deadline = Instant.now().plus(properties.requestTimeout());
         Map<String, CompletableFuture<RetrievalStepOutcome>> futures = new HashMap<>();
         for (RetrievalStep step : plan.steps()) {
-            schedule(step, plan, futures);
+            schedule(step, plan, futures, scope);
         }
 
         LinkedHashMap<String, RetrievalStepOutcome> outcomes = new LinkedHashMap<>();
@@ -91,7 +106,8 @@ public class ParallelRetrievalExecutor {
     private CompletableFuture<RetrievalStepOutcome> schedule(
             RetrievalStep step,
             RetrievalPlan plan,
-            Map<String, CompletableFuture<RetrievalStepOutcome>> futures
+            Map<String, CompletableFuture<RetrievalStepOutcome>> futures,
+            Set<Long> accessLevels
     ) {
         CompletableFuture<RetrievalStepOutcome> existing = futures.get(step.id());
         if (existing != null) {
@@ -101,7 +117,14 @@ public class ParallelRetrievalExecutor {
         List<CompletableFuture<RetrievalStepOutcome>> dependencies =
                 step.dependsOn().stream()
                         .map(id -> findStep(plan, id))
-                        .map(dependency -> schedule(dependency, plan, futures))
+                        .map(dependency ->
+                                schedule(
+                                        dependency,
+                                        plan,
+                                        futures,
+                                        accessLevels
+                                )
+                        )
                         .toList();
 
         CompletableFuture<Void> ready = CompletableFuture.allOf(
@@ -111,7 +134,11 @@ public class ParallelRetrievalExecutor {
         CompletableFuture<RetrievalStepOutcome> future;
         try {
             future = ready.thenApplyAsync(
-                    ignored -> executeStep(step, dependencies),
+                    ignored -> executeStep(
+                            step,
+                            dependencies,
+                            accessLevels
+                    ),
                     retrievalExecutor
             );
         } catch (RejectedExecutionException exception) {
@@ -129,7 +156,8 @@ public class ParallelRetrievalExecutor {
 
     private RetrievalStepOutcome executeStep(
             RetrievalStep step,
-            List<CompletableFuture<RetrievalStepOutcome>> dependencyFutures
+            List<CompletableFuture<RetrievalStepOutcome>> dependencyFutures,
+            Set<Long> accessLevels
     ) {
         List<RetrievalStepOutcome> dependencies = dependencyFutures.stream()
                 .map(CompletableFuture::join)
@@ -153,7 +181,10 @@ public class ParallelRetrievalExecutor {
         try {
             List<RetrievalHit> hits = strategy.retrieve(
                             step.queryChunk(),
-                            new RetrievalContext(List.copyOf(dependencyHits))
+                            new RetrievalContext(
+                                    List.copyOf(dependencyHits),
+                                    accessLevels
+                            )
                     ).stream()
                     .map(hit -> withQueryChunk(hit, step.queryChunk().id()))
                     .toList();
@@ -333,6 +364,23 @@ public class ParallelRetrievalExecutor {
                 hit.evidence(),
                 hit.fusedScore()
         );
+    }
+
+
+    private Set<Long> normalizeAccessLevels(Set<Long> accessLevels) {
+        if (accessLevels == null || accessLevels.isEmpty()) {
+            return Set.of();
+        }
+        java.util.TreeSet<Long> normalized = new java.util.TreeSet<>();
+        for (Long value : accessLevels) {
+            if (value == null || value <= 0) {
+                throw new IllegalArgumentException(
+                        "accessLevels must contain only positive values"
+                );
+            }
+            normalized.add(value);
+        }
+        return Set.copyOf(normalized);
     }
 
     private void validateAcyclic(RetrievalPlan plan) {
