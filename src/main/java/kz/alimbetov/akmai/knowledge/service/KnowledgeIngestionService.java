@@ -9,6 +9,7 @@ import kz.alimbetov.akmai.knowledge.idempotency.CanonicalRequestFingerprint;
 import kz.alimbetov.akmai.knowledge.idempotency.IdempotencyConflictException;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyContext;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyRepository;
+import kz.alimbetov.akmai.knowledge.model.DocumentMetadata;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage;
 import kz.alimbetov.akmai.config.IdempotencyProperties;
 import kz.alimbetov.akmai.knowledge.chunking.SemanticChunker;
@@ -92,6 +93,7 @@ public class KnowledgeIngestionService {
                 request.metadata() == null ? Map.of() : request.metadata()
         );
         metadata.put("source", request.source());
+        metadata.put(DocumentMetadata.ACCESS_LEVEL, request.accessLevel());
 
         KnowledgeDocument document = new KnowledgeDocument(
                 request.documentId(),
