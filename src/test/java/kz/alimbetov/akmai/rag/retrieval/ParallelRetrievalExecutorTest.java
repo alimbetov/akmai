@@ -299,6 +299,120 @@ class ParallelRetrievalExecutorTest {
         }
     }
 
+
+    @Test
+    void overallRequestDeadlineBoundsBackendThatIgnoresInterrupt() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        CountDownLatch release = new CountDownLatch(1);
+        try {
+            RetrievalStrategy vector = new RetrievalStrategy() {
+                @Override
+                public RetrievalType type() {
+                    return RetrievalType.VECTOR;
+                }
+
+                @Override
+                public List<RetrievalHit> retrieve(
+                        QueryChunk queryChunk,
+                        RetrievalContext context
+                ) {
+                    while (release.getCount() > 0) {
+                        try {
+                            Thread.sleep(10);
+                        } catch (InterruptedException ignored) {
+                            // Deliberately ignore cancellation to emulate
+                            // a non-cooperative backend.
+                        }
+                    }
+                    return List.of();
+                }
+            };
+            ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
+                    List.of(vector),
+                    executor,
+                    new RetrievalObserver(new SimpleMeterRegistry()),
+                    properties(Duration.ofMillis(40), Duration.ofSeconds(5))
+            );
+            RetrievalPlan plan = new RetrievalPlan(List.of(
+                    new RetrievalStep(
+                            "v", query(), RetrievalType.VECTOR, List.of()
+                    )
+            ));
+
+            long started = System.nanoTime();
+            RetrievalExecutionResult result = subject.executeDetailed(plan);
+            Duration elapsed = Duration.ofNanos(System.nanoTime() - started);
+
+            assertThat(result.outcomes().get("v").status())
+                    .isEqualTo(RetrievalOutcomeStatus.TIMED_OUT);
+            assertThat(elapsed).isLessThan(Duration.ofMillis(500));
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void saturatedRetrievalExecutorRejectsWithoutCallerExecution() throws Exception {
+        java.util.concurrent.ThreadPoolExecutor executor =
+                new java.util.concurrent.ThreadPoolExecutor(
+                        1,
+                        1,
+                        0L,
+                        TimeUnit.MILLISECONDS,
+                        new java.util.concurrent.ArrayBlockingQueue<>(1),
+                        new java.util.concurrent.ThreadPoolExecutor.AbortPolicy()
+                );
+        CountDownLatch workerStarted = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        AtomicBoolean strategyRan = new AtomicBoolean(false);
+        try {
+            executor.execute(() -> {
+                workerStarted.countDown();
+                try {
+                    release.await();
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+            assertThat(workerStarted.await(1, TimeUnit.SECONDS)).isTrue();
+            executor.execute(() -> {
+                try {
+                    release.await();
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+
+            ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
+                    List.of(markingStrategy(
+                            RetrievalType.VECTOR,
+                            strategyRan
+                    )),
+                    executor,
+                    new RetrievalObserver(new SimpleMeterRegistry()),
+                    RetrievalTestProperties.defaults()
+            );
+            RetrievalPlan plan = new RetrievalPlan(List.of(
+                    new RetrievalStep(
+                            "v", query(), RetrievalType.VECTOR, List.of()
+                    )
+            ));
+
+            long started = System.nanoTime();
+            RetrievalExecutionResult result = subject.executeDetailed(plan);
+
+            assertThat(result.outcomes().get("v").status())
+                    .isEqualTo(RetrievalOutcomeStatus.REJECTED);
+            assertThat(strategyRan).isFalse();
+            assertThat(Duration.ofNanos(System.nanoTime() - started))
+                    .isLessThan(Duration.ofMillis(500));
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
     private ParallelRetrievalExecutor subject(
             List<RetrievalStrategy> strategies,
             ExecutorService executor
