@@ -31,14 +31,8 @@ class AccessLevelArchitectureTest {
 
     @Test
     void publishedProjectionReadsAlwaysRequireAccessScope() {
-        assertThat(methods(
-                PublishedSearchProjectionReader.class,
-                method -> Set.of(
-                        "findByDocumentAndChunkIds",
-                        "findAdjacent",
-                        "searchLexical"
-                ).contains(method.getName())
-        )).isNotEmpty()
+        assertThat(PublishedSearchProjectionReader.class.getDeclaredMethods())
+                .isNotEmpty()
                 .allSatisfy(this::requiresSetParameter);
 
         assertThat(Arrays.stream(PublishedSearchProjectionReader.class.getMethods())
