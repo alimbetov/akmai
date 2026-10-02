@@ -26,10 +26,12 @@ public class PostgresIdentifierSearchIndex implements IdentifierSearchIndex {
     }
 
     @Override
+    @Deprecated(forRemoval = true)
     public List<DocumentIdentifier> search(String query, int limit) {
         validateLimit(limit);
-        String normalized = normalizer.normalize(query);
-        return List.of();
+        throw new UnsupportedOperationException(
+                "Access-scoped identifier search is required"
+        );
     }
 
     @Override
