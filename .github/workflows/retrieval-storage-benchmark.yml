@@ -1,6 +1,10 @@
 name: Retrieval Storage Benchmark
 
 on:
+  pull_request:
+    paths:
+      - "src/test/java/kz/alimbetov/akmai/knowledge/vector/RetrievalStorageLayoutBenchmarkTest.java"
+      - ".github/workflows/retrieval-storage-benchmark.yml"
   workflow_dispatch:
     inputs:
       rows:
@@ -34,12 +38,12 @@ jobs:
     timeout-minutes: 60
     env:
       AKMAI_RUN_RETRIEVAL_BENCHMARK: "true"
-      AKMAI_BENCHMARK_ROWS: ${{ inputs.rows }}
-      AKMAI_BENCHMARK_DIMENSIONS: ${{ inputs.dimensions }}
-      AKMAI_BENCHMARK_ACCESS_LEVELS: ${{ inputs.access_levels }}
-      AKMAI_BENCHMARK_CHUNKS_PER_DOCUMENT: ${{ inputs.chunks_per_document }}
-      AKMAI_BENCHMARK_WARMUPS: ${{ inputs.warmups }}
-      AKMAI_BENCHMARK_ITERATIONS: ${{ inputs.iterations }}
+      AKMAI_BENCHMARK_ROWS: ${{ inputs.rows || '50000' }}
+      AKMAI_BENCHMARK_DIMENSIONS: ${{ inputs.dimensions || '32' }}
+      AKMAI_BENCHMARK_ACCESS_LEVELS: ${{ inputs.access_levels || '4' }}
+      AKMAI_BENCHMARK_CHUNKS_PER_DOCUMENT: ${{ inputs.chunks_per_document || '300' }}
+      AKMAI_BENCHMARK_WARMUPS: ${{ inputs.warmups || '3' }}
+      AKMAI_BENCHMARK_ITERATIONS: ${{ inputs.iterations || '10' }}
 
     steps:
       - uses: actions/checkout@v4
