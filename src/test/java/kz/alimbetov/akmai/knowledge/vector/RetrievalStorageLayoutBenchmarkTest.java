@@ -121,8 +121,10 @@ class RetrievalStorageLayoutBenchmarkTest {
         PlanSummary plan = summarizePlan(planJson);
 
         assertThat(plan.executedRelations()).contains("bench_list_al_1");
-        assertThat(plan.totalRowsVisited())
-                .isLessThanOrEqualTo(config.chunksPerDocument() * 3L);
+        assertThat(
+                plan.executedRelationRows()
+                        .getOrDefault("bench_list_al_1", Long.MAX_VALUE)
+        ).isLessThanOrEqualTo(config.chunksPerDocument());
     }
 
     @Test
@@ -750,6 +752,7 @@ class RetrievalStorageLayoutBenchmarkTest {
             LinkedHashSet<String> executedRelations = new LinkedHashSet<>();
             LinkedHashSet<String> executedIndexRelations = new LinkedHashSet<>();
             LinkedHashSet<String> indexNames = new LinkedHashSet<>();
+            Map<String, Long> executedRelationRows = new LinkedHashMap<>();
             long[] rows = new long[1];
             long[] hits = new long[1];
             long[] reads = new long[1];
@@ -759,6 +762,7 @@ class RetrievalStorageLayoutBenchmarkTest {
                     executedRelations,
                     executedIndexRelations,
                     indexNames,
+                    executedRelationRows,
                     rows,
                     hits,
                     reads
@@ -772,7 +776,8 @@ class RetrievalStorageLayoutBenchmarkTest {
                     rows[0],
                     Set.copyOf(executedRelations),
                     Set.copyOf(executedIndexRelations),
-                    Set.copyOf(indexNames)
+                    Set.copyOf(indexNames),
+                    Map.copyOf(executedRelationRows)
             );
         } catch (IOException exception) {
             throw new IllegalStateException(
@@ -787,6 +792,7 @@ class RetrievalStorageLayoutBenchmarkTest {
             Set<String> executedRelations,
             Set<String> executedIndexRelations,
             Set<String> indexNames,
+            Map<String, Long> executedRelationRows,
             long[] rows,
             long[] hits,
             long[] reads
@@ -802,6 +808,13 @@ class RetrievalStorageLayoutBenchmarkTest {
             String relation = node.path("Relation Name").asText("");
             if (!relation.isBlank()) {
                 executedRelations.add(relation);
+                long relationRows =
+                        node.path("Actual Rows").asLong() * loops;
+                executedRelationRows.merge(
+                        relation,
+                        relationRows,
+                        Math::max
+                );
             }
 
             String nodeType = node.path("Node Type").asText("");
@@ -828,6 +841,7 @@ class RetrievalStorageLayoutBenchmarkTest {
                         executedRelations,
                         executedIndexRelations,
                         indexNames,
+                        executedRelationRows,
                         rows,
                         hits,
                         reads
@@ -942,7 +956,8 @@ class RetrievalStorageLayoutBenchmarkTest {
             long totalRowsVisited,
             Set<String> executedRelations,
             Set<String> executedIndexRelations,
-            Set<String> indexNames
+            Set<String> indexNames,
+            Map<String, Long> executedRelationRows
     ) {
     }
 
