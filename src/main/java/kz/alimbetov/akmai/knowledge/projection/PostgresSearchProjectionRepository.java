@@ -138,10 +138,8 @@ public class PostgresSearchProjectionRepository
             List<String> chunkIds,
             Set<Long> accessLevels
     ) {
-        if (chunkIds == null
-                || chunkIds.isEmpty()
-                || accessLevels == null
-                || accessLevels.isEmpty()) {
+        requireAccessLevels(accessLevels);
+        if (chunkIds == null || chunkIds.isEmpty()) {
             return List.of();
         }
         return jdbcTemplate.query(
@@ -173,11 +171,8 @@ public class PostgresSearchProjectionRepository
             List<String> chunkIds,
             Set<Long> accessLevels
     ) {
-        if (generation <= 0
-                || chunkIds == null
-                || chunkIds.isEmpty()
-                || accessLevels == null
-                || accessLevels.isEmpty()) {
+        requireAccessLevels(accessLevels);
+        if (generation <= 0 || chunkIds == null || chunkIds.isEmpty()) {
             return List.of();
         }
         return jdbcTemplate.query(
@@ -212,9 +207,8 @@ public class PostgresSearchProjectionRepository
             int radius,
             Set<Long> accessLevels
     ) {
-        if (generation <= 0
-                || accessLevels == null
-                || accessLevels.isEmpty()) {
+        requireAccessLevels(accessLevels);
+        if (generation <= 0) {
             return List.of();
         }
         return jdbcTemplate.query(
@@ -250,11 +244,8 @@ public class PostgresSearchProjectionRepository
             Set<Long> accessLevels,
             int limit
     ) {
-        if (query == null
-                || query.isBlank()
-                || limit <= 0
-                || accessLevels == null
-                || accessLevels.isEmpty()) {
+        requireAccessLevels(accessLevels);
+        if (query == null || query.isBlank() || limit <= 0) {
             return List.of();
         }
         LexicalSearchLanguage searchLanguage =
@@ -554,6 +545,14 @@ public class PostgresSearchProjectionRepository
             bindArray(ps, index++, documentIds);
         }
         return index;
+    }
+
+    private void requireAccessLevels(Set<Long> accessLevels) {
+        if (accessLevels == null || accessLevels.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "accessLevels must not be empty"
+            );
+        }
     }
 
     private void bindLongArray(
