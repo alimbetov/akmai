@@ -357,14 +357,23 @@ class PostgresRetrievalIntegrationTest {
                 null,
                 "fp-trgm-explain"
         );
-        projections.saveAll(List.of(
-                projection(
-                        "kk-plan",
-                        generation,
-                        "Жеңілдік мөлшері 5% болады.",
-                        "kk"
-                )
+        java.util.ArrayList<SearchProjection> corpus =
+                new java.util.ArrayList<>();
+        corpus.add(projection(
+                "kk-plan",
+                generation,
+                "Жеңілдік мөлшері 5% болады.",
+                "kk"
         ));
+        for (int index = 0; index < 500; index++) {
+            corpus.add(projection(
+                    "kk-noise-" + index,
+                    generation,
+                    "Құжаттағы қалыпты мәтін " + index,
+                    "kk"
+            ));
+        }
+        projections.saveAll(corpus);
         publish("doc", generation);
 
         String plan = jdbc.execute(
