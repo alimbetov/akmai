@@ -154,6 +154,89 @@ class PersistenceCoordinatorTest {
         );
     }
 
+    @Test
+    void committedPublicationRecoveredAfterAmbiguousException() {
+        Fixture fixture = fixture();
+        when(fixture.generations.allocate(
+                eq("doc-1"),
+                eq(RetentionPolicy.PERMANENT),
+                isNull(),
+                eq(fixture.profile.profileId()),
+                anyString()
+        )).thenReturn(9L);
+        when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
+                .thenReturn(List.of(new float[] {1f, 0f, 0f}));
+        when(fixture.publication.publish(
+                eq("doc-1"),
+                eq(9L),
+                eq(RetentionPolicy.PERMANENT),
+                isNull(),
+                eq(fixture.profile),
+                anyList(),
+                anyList(),
+                anyList(),
+                anyList(),
+                isNull(),
+                isNull()
+        )).thenThrow(new IllegalStateException("connection reset after commit"));
+        when(fixture.outcomeResolver.resolve("doc-1", 9L, null))
+                .thenReturn(PublicationOutcomeResolver.Outcome.COMMITTED);
+
+        fixture.coordinator.persist(List.of(
+                chunk("stable-1", "doc-1", 0)
+        ));
+
+        verify(fixture.generations, never()).fail(
+                eq("doc-1"),
+                eq(9L),
+                anyString(),
+                anyString()
+        );
+    }
+
+    @Test
+    void unresolvedPublicationOutcomeLeavesGenerationForRecovery() {
+        Fixture fixture = fixture();
+        when(fixture.generations.allocate(
+                eq("doc-1"),
+                eq(RetentionPolicy.PERMANENT),
+                isNull(),
+                eq(fixture.profile.profileId()),
+                anyString()
+        )).thenReturn(10L);
+        when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
+                .thenReturn(List.of(new float[] {1f, 0f, 0f}));
+        when(fixture.publication.publish(
+                eq("doc-1"),
+                eq(10L),
+                eq(RetentionPolicy.PERMANENT),
+                isNull(),
+                eq(fixture.profile),
+                anyList(),
+                anyList(),
+                anyList(),
+                anyList(),
+                isNull(),
+                isNull()
+        )).thenThrow(new IllegalStateException("connection reset"));
+        when(fixture.outcomeResolver.resolve("doc-1", 10L, null))
+                .thenThrow(new IllegalStateException("database unavailable"));
+
+        assertThatThrownBy(() -> fixture.coordinator.persist(List.of(
+                chunk("stable-1", "doc-1", 0)
+        )))
+                .isInstanceOf(PublicationOutcomeUnknownException.class)
+                .hasMessageContaining("could not be determined");
+
+        verify(fixture.generations, never()).fail(
+                eq("doc-1"),
+                eq(10L),
+                anyString(),
+                anyString()
+        );
+        verify(fixture.idempotency, never()).fail(any(), anyString());
+    }
+
     private Fixture fixture() {
         DocumentGenerationRepository generations =
                 mock(DocumentGenerationRepository.class);
@@ -212,6 +295,8 @@ class PersistenceCoordinatorTest {
                 generations,
                 embeddings,
                 publication,
+                outcomeResolver,
+                idempotency,
                 profile
         );
     }
@@ -254,6 +339,8 @@ class PersistenceCoordinatorTest {
             DocumentGenerationRepository generations,
             GenerationEmbeddingService embeddings,
             GenerationPublicationService publication,
+            PublicationOutcomeResolver outcomeResolver,
+            IngestionIdempotencyRepository idempotency,
             EmbeddingProfile profile
     ) {
     }
