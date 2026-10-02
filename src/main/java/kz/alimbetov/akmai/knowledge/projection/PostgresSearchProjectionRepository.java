@@ -234,12 +234,101 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
         }
         LexicalSearchLanguage searchLanguage = LexicalSearchLanguage.from(language);
         return switch (searchLanguage) {
-            case RU -> searchFts(query, "ru", documentIds, limit, "search_vector_ru", "russian");
-            case EN -> searchFts(query, "en", documentIds, limit, "search_vector_en", "english");
+            case RU -> searchFtsWithLanguageFallback(
+                    query,
+                    "ru",
+                    documentIds,
+                    limit,
+                    "search_vector_ru",
+                    "russian"
+            );
+            case EN -> searchFtsWithLanguageFallback(
+                    query,
+                    "en",
+                    documentIds,
+                    limit,
+                    "search_vector_en",
+                    "english"
+            );
             case KK -> searchTrigram(query, "kk", documentIds, limit);
             case ZH -> searchTrigram(query, "zh", documentIds, limit);
             case UNKNOWN -> searchSimple(query, documentIds, limit);
         };
+    }
+
+    private List<SearchProjection> searchFtsWithLanguageFallback(
+            String query,
+            String language,
+            List<String> documentIds,
+            int limit,
+            String vectorColumn,
+            String configuration
+    ) {
+        List<SearchProjection> fts = searchFts(
+                query,
+                language,
+                documentIds,
+                limit,
+                vectorColumn,
+                configuration
+        );
+        if (!fts.isEmpty()) {
+            return fts;
+        }
+        return searchLanguageScopedWordSimilarity(
+                query,
+                language,
+                documentIds,
+                limit
+        );
+    }
+
+    private List<SearchProjection> searchLanguageScopedWordSimilarity(
+            String query,
+            String language,
+            List<String> documentIds,
+            int limit
+    ) {
+        String sql = """
+                SELECT p.*,
+                       greatest(
+                           word_similarity(lower(?), lower(p.text_content)),
+                           word_similarity(
+                               lower(?),
+                               lower(coalesce(p.section_path, ''))
+                           )
+                       ) AS lexical_rank
+                FROM knowledge_search_projection p
+                JOIN knowledge_document_lifecycle l
+                  ON l.document_id = p.document_id
+                 AND l.published_generation = p.generation
+                WHERE l.retention_status = 'ACTIVE'
+                  AND p.language = ?
+                  AND greatest(
+                       word_similarity(lower(?), lower(p.text_content)),
+                       word_similarity(
+                           lower(?),
+                           lower(coalesce(p.section_path, ''))
+                       )
+                  ) >= 0.30
+                """ + documentFilter(documentIds) + """
+                ORDER BY lexical_rank DESC, p.document_id, p.chunk_id
+                LIMIT ?
+                """;
+        return jdbcTemplate.query(
+                sql,
+                ps -> {
+                    int i = 1;
+                    ps.setString(i++, query);
+                    ps.setString(i++, query);
+                    ps.setString(i++, language);
+                    ps.setString(i++, query);
+                    ps.setString(i++, query);
+                    i = bindDocumentIds(ps, i, documentIds);
+                    ps.setInt(i, limit);
+                },
+                this::map
+        );
     }
 
     private List<SearchProjection> searchFts(
