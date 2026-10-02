@@ -29,7 +29,6 @@ public class ContextBudget {
         );
     }
 
-    @Autowired
     public ContextBudget(
             TokenEstimator tokenEstimator,
             RetrievalProperties properties,
