@@ -13,7 +13,10 @@ import java.util.Map;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import kz.alimbetov.akmai.knowledge.embedding.GenerationEmbeddingService;
+import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResponse;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
+import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyContext;
+import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.DocumentGenerationRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionProperties;
@@ -31,6 +34,7 @@ public class PersistenceCoordinator {
     private final EmbeddingProfileService profileService;
     private final GenerationEmbeddingService embeddingService;
     private final GenerationPublicationService publicationService;
+    private final IngestionIdempotencyRepository idempotencyRepository;
     private final RetentionProperties retentionProperties;
 
     public PersistenceCoordinator(
@@ -39,6 +43,7 @@ public class PersistenceCoordinator {
             EmbeddingProfileService profileService,
             GenerationEmbeddingService embeddingService,
             GenerationPublicationService publicationService,
+            IngestionIdempotencyRepository idempotencyRepository,
             RetentionProperties retentionProperties
     ) {
         this.projectionFactory = projectionFactory;
@@ -46,10 +51,19 @@ public class PersistenceCoordinator {
         this.profileService = profileService;
         this.embeddingService = embeddingService;
         this.publicationService = publicationService;
+        this.idempotencyRepository = idempotencyRepository;
         this.retentionProperties = retentionProperties;
     }
 
     public void persist(List<EnrichedKnowledgeChunk> chunks) {
+        persist(chunks, null, null);
+    }
+
+    public void persist(
+            List<EnrichedKnowledgeChunk> chunks,
+            IngestionIdempotencyContext idempotency,
+            KnowledgeIngestionResponse response
+    ) {
         if (chunks == null || chunks.isEmpty()) {
             return;
         }
@@ -70,6 +84,7 @@ public class PersistenceCoordinator {
                 profile.profileId(),
                 contentFingerprint
         );
+        idempotencyRepository.attachGeneration(idempotency, generation);
 
         try {
             List<SearchProjection> projections = baseProjections.stream()
@@ -95,7 +110,9 @@ public class PersistenceCoordinator {
                             projections,
                             identifiers,
                             manifest,
-                            vectors
+                            vectors,
+                            idempotency,
+                            response
                     );
             if (result == GenerationPublicationService.PublicationResult.SUPERSEDED) {
                 throw new IllegalStateException(
@@ -109,6 +126,7 @@ public class PersistenceCoordinator {
                     "INGESTION_FAILED",
                     safeMessage(exception)
             );
+            idempotencyRepository.fail(idempotency, safeMessage(exception));
             throw exception;
         }
     }

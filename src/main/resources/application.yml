@@ -27,6 +27,16 @@ spring:
           temperature: 0.1
 
 akmai:
+  api:
+    max-document-chars: ${AKMAI_API_MAX_DOCUMENT_CHARS:1000000}
+    max-question-chars: ${AKMAI_API_MAX_QUESTION_CHARS:20000}
+    max-metadata-bytes: ${AKMAI_API_MAX_METADATA_BYTES:65536}
+    max-metadata-entries: ${AKMAI_API_MAX_METADATA_ENTRIES:256}
+    max-metadata-depth: ${AKMAI_API_MAX_METADATA_DEPTH:8}
+    max-title-chars: ${AKMAI_API_MAX_TITLE_CHARS:1000}
+    max-source-chars: ${AKMAI_API_MAX_SOURCE_CHARS:1000}
+  idempotency:
+    lease-duration: ${AKMAI_IDEMPOTENCY_LEASE_DURATION:10m}
   vector:
     dimensions: ${AKMAI_VECTOR_DIMENSIONS:1024}
     index-type: ${AKMAI_VECTOR_INDEX_TYPE:HNSW}

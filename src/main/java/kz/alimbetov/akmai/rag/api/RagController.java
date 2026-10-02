@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.rag.api;
 
 import jakarta.validation.Valid;
+import kz.alimbetov.akmai.api.ApiRequestValidator;
 import kz.alimbetov.akmai.rag.service.RagQuestionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,9 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class RagController {
 
     private final RagQuestionService questionService;
+    private final ApiRequestValidator requestValidator;
 
     @PostMapping("/ask")
     public RagResponse ask(@Valid @RequestBody QuestionRequest request) {
+        requestValidator.validateQuestion(request.question());
         return questionService.ask(request.question());
     }
 }

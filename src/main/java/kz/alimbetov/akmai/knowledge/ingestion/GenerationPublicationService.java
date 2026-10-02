@@ -3,7 +3,10 @@ package kz.alimbetov.akmai.knowledge.ingestion;
 import java.time.Instant;
 import java.util.List;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
+import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResponse;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
+import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyContext;
+import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyRepository;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
 import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository;
@@ -27,6 +30,7 @@ public class GenerationPublicationService {
     private final VectorGenerationRepository vectorGenerationRepository;
     private final ReferenceGraphRepository referenceGraphRepository;
     private final PostgresGenerationVectorRepository vectorRepository;
+    private final IngestionIdempotencyRepository idempotencyRepository;
 
     public GenerationPublicationService(
             JdbcTemplate jdbcTemplate,
@@ -35,7 +39,8 @@ public class GenerationPublicationService {
             DocumentIdentifierRepository identifierRepository,
             VectorGenerationRepository vectorGenerationRepository,
             ReferenceGraphRepository referenceGraphRepository,
-            PostgresGenerationVectorRepository vectorRepository
+            PostgresGenerationVectorRepository vectorRepository,
+            IngestionIdempotencyRepository idempotencyRepository
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactionTemplate = transactionTemplate;
@@ -44,6 +49,7 @@ public class GenerationPublicationService {
         this.vectorGenerationRepository = vectorGenerationRepository;
         this.referenceGraphRepository = referenceGraphRepository;
         this.vectorRepository = vectorRepository;
+        this.idempotencyRepository = idempotencyRepository;
     }
 
     public PublicationResult publish(
@@ -55,7 +61,37 @@ public class GenerationPublicationService {
             List<SearchProjection> projections,
             List<DocumentIdentifier> identifiers,
             List<VectorGenerationEntry> manifest,
-            List<VectorRow> vectors
+            List<VectorRow> vectors,
+            IngestionIdempotencyContext idempotency,
+            KnowledgeIngestionResponse response
+    ) {
+        return publish(
+                documentId,
+                generation,
+                policy,
+                expiresAt,
+                profile,
+                projections,
+                identifiers,
+                manifest,
+                vectors,
+                null,
+                null
+        );
+    }
+
+    public PublicationResult publish(
+            String documentId,
+            long generation,
+            RetentionPolicy policy,
+            Instant expiresAt,
+            EmbeddingProfile profile,
+            List<SearchProjection> projections,
+            List<DocumentIdentifier> identifiers,
+            List<VectorGenerationEntry> manifest,
+            List<VectorRow> vectors,
+            IngestionIdempotencyContext idempotency,
+            KnowledgeIngestionResponse response
     ) {
         return transactionTemplate.execute(status -> publishInTransaction(
                 documentId,
@@ -66,7 +102,9 @@ public class GenerationPublicationService {
                 projections,
                 identifiers,
                 manifest,
-                vectors
+                vectors,
+                idempotency,
+                response
         ));
     }
 
@@ -228,6 +266,13 @@ public class GenerationPublicationService {
         );
         if (lifecycle != 1) {
             throw new IllegalStateException("Lifecycle publication fence failed");
+        }
+
+        if (idempotency != null) {
+            idempotencyRepository.completeInCurrentTransaction(
+                    idempotency,
+                    response
+            );
         }
 
         return PublicationResult.PUBLISHED;
