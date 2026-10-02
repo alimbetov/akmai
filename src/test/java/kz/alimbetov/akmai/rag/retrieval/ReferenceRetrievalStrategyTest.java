@@ -20,6 +20,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ReferenceRetrievalStrategyTest {
 
+    private static final Set<Long> ACCESS = Set.of(1L);
+    private static final long GENERATION = 7L;
+
     @Mock
     private SearchProjectionRepository projectionRepository;
 
@@ -34,10 +37,17 @@ class ReferenceRetrievalStrategyTest {
         );
 
         when(referenceGraphRepository.resolveSameDocumentTargets(
-                "doc", List.of("seed"), Set.of(1L), 20
+                "doc",
+                GENERATION,
+                List.of("seed"),
+                ACCESS,
+                20
         )).thenReturn(List.of("target"));
-        when(projectionRepository.findByDocumentAndChunkIds(
-                "doc", List.of("target"), Set.of(1L)
+        when(projectionRepository.findByDocumentGenerationAndChunkIds(
+                "doc",
+                GENERATION,
+                List.of("target"),
+                ACCESS
         )).thenReturn(List.of(target));
 
         ReferenceRetrievalStrategy subject = new ReferenceRetrievalStrategy(
@@ -48,13 +58,7 @@ class ReferenceRetrievalStrategyTest {
 
         List<RetrievalHit> hits = subject.retrieve(
                 new QueryChunk("q", 0, "q", "q", "q", "ru", List.of()),
-                new RetrievalContext(List.of(new RetrievalHit(
-                        RetrievalType.LEXICAL,
-                        "doc",
-                        "seed",
-                        "seed text",
-                        Map.of()
-                )), Set.of(1L))
+                new RetrievalContext(List.of(seed("seed")), ACCESS)
         );
 
         assertThat(hits).hasSize(1);
@@ -64,20 +68,28 @@ class ReferenceRetrievalStrategyTest {
         assertThat(hits.getFirst().metadata())
                 .containsEntry("expansion", "reference")
                 .containsEntry("authority", "EXACT_REFERENCE")
-                .containsEntry("authorityTier", 0);
+                .containsEntry("authorityTier", 0)
+                .containsEntry("generation", GENERATION);
     }
 
     @Test
-    void batchesMultipleSeedChunksPerDocumentIntoSingleGraphLookup() {
+    void batchesMultipleSeedChunksPerGenerationIntoSingleGraphLookup() {
         SearchProjection target = projection(
                 "target-batch",
                 "Canonical target."
         );
         when(referenceGraphRepository.resolveSameDocumentTargets(
-                "doc", List.of("seed-1", "seed-2"), Set.of(1L), 20
+                "doc",
+                GENERATION,
+                List.of("seed-1", "seed-2"),
+                ACCESS,
+                20
         )).thenReturn(List.of("target-batch"));
-        when(projectionRepository.findByDocumentAndChunkIds(
-                "doc", List.of("target-batch"), Set.of(1L)
+        when(projectionRepository.findByDocumentGenerationAndChunkIds(
+                "doc",
+                GENERATION,
+                List.of("target-batch"),
+                ACCESS
         )).thenReturn(List.of(target));
 
         ReferenceRetrievalStrategy subject = new ReferenceRetrievalStrategy(
@@ -89,29 +101,24 @@ class ReferenceRetrievalStrategyTest {
         List<RetrievalHit> hits = subject.retrieve(
                 new QueryChunk("q", 0, "q", "q", "q", "ru", List.of()),
                 new RetrievalContext(List.of(
-                        new RetrievalHit(
-                                RetrievalType.LEXICAL,
-                                "doc",
-                                "seed-1",
-                                "seed one",
-                                Map.of()
-                        ),
+                        seed("seed-1"),
                         new RetrievalHit(
                                 RetrievalType.VECTOR,
                                 "doc",
                                 "seed-2",
                                 "seed two",
-                                Map.of()
+                                Map.of("generation", GENERATION)
                         )
-                ), Set.of(1L))
+                ), ACCESS)
         );
 
         assertThat(hits).extracting(RetrievalHit::chunkId)
                 .containsExactly("target-batch");
         verify(referenceGraphRepository).resolveSameDocumentTargets(
                 "doc",
+                GENERATION,
                 List.of("seed-1", "seed-2"),
-                Set.of(1L),
+                ACCESS,
                 20
         );
     }
@@ -120,13 +127,7 @@ class ReferenceRetrievalStrategyTest {
     void manySeedsRemainOneLookupAndRespectReferenceLimit() {
         java.util.List<RetrievalHit> seeds =
                 java.util.stream.IntStream.range(0, 100)
-                        .mapToObj(index -> new RetrievalHit(
-                                RetrievalType.LEXICAL,
-                                "doc",
-                                "seed-" + index,
-                                "seed",
-                                Map.of()
-                        ))
+                        .mapToObj(index -> seed("seed-" + index))
                         .toList();
         java.util.List<String> seedIds = seeds.stream()
                 .map(RetrievalHit::chunkId)
@@ -137,10 +138,17 @@ class ReferenceRetrievalStrategyTest {
                         .toList();
 
         when(referenceGraphRepository.resolveSameDocumentTargets(
-                "doc", seedIds, Set.of(1L), 20
+                "doc",
+                GENERATION,
+                seedIds,
+                ACCESS,
+                20
         )).thenReturn(targetIds);
-        when(projectionRepository.findByDocumentAndChunkIds(
-                "doc", targetIds, Set.of(1L)
+        when(projectionRepository.findByDocumentGenerationAndChunkIds(
+                "doc",
+                GENERATION,
+                targetIds,
+                ACCESS
         )).thenReturn(targetIds.stream()
                 .map(id -> projection(id, "canonical " + id))
                 .toList());
@@ -153,12 +161,48 @@ class ReferenceRetrievalStrategyTest {
 
         List<RetrievalHit> hits = subject.retrieve(
                 new QueryChunk("q", 0, "q", "q", "q", "ru", List.of()),
-                new RetrievalContext(seeds, Set.of(1L))
+                new RetrievalContext(seeds, ACCESS)
         );
 
         assertThat(hits).hasSize(20);
         verify(referenceGraphRepository).resolveSameDocumentTargets(
-                "doc", seedIds, Set.of(1L), 20
+                "doc",
+                GENERATION,
+                seedIds,
+                ACCESS,
+                20
+        );
+    }
+
+    @Test
+    void dependencyWithoutGenerationCannotCrossPublicationBoundary() {
+        ReferenceRetrievalStrategy subject = new ReferenceRetrievalStrategy(
+                projectionRepository,
+                referenceGraphRepository,
+                RetrievalTestProperties.defaults()
+        );
+
+        List<RetrievalHit> hits = subject.retrieve(
+                new QueryChunk("q", 0, "q", "q", "q", "ru", List.of()),
+                new RetrievalContext(List.of(new RetrievalHit(
+                        RetrievalType.LEXICAL,
+                        "doc",
+                        "seed",
+                        "seed",
+                        Map.of()
+                )), ACCESS)
+        );
+
+        assertThat(hits).isEmpty();
+    }
+
+    private RetrievalHit seed(String chunkId) {
+        return new RetrievalHit(
+                RetrievalType.LEXICAL,
+                "doc",
+                chunkId,
+                "seed text",
+                Map.of("generation", GENERATION)
         );
     }
 
@@ -166,7 +210,7 @@ class ReferenceRetrievalStrategyTest {
         return new SearchProjection(
                 chunkId,
                 "doc",
-                7L,
+                GENERATION,
                 null,
                 1,
                 text,
