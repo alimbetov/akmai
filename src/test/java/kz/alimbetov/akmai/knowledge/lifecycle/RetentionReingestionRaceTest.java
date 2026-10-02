@@ -65,7 +65,8 @@ class RetentionReingestionRaceTest {
                 RetentionPolicy.TTL,
                 Instant.now().minusSeconds(60),
                 null,
-                "fingerprint-1"
+                "fingerprint-1",
+                1L
         );
         publish("doc-1", first);
 
@@ -81,7 +82,8 @@ class RetentionReingestionRaceTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 null,
-                "fingerprint-2"
+                "fingerprint-2",
+                1L
         );
 
         assertThat(second).isEqualTo(first + 1);
