@@ -2,7 +2,6 @@ package kz.alimbetov.akmai.rag.retrieval;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
