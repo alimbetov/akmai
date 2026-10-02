@@ -15,6 +15,7 @@ import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchQuery;
 import kz.alimbetov.akmai.knowledge.ingestion.PersistenceCoordinator;
 import kz.alimbetov.akmai.knowledge.lifecycle.DocumentGenerationRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.DocumentLifecycleRepository;
+import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.knowledge.vector.PublishedVectorSearchRepository;
@@ -31,7 +32,7 @@ class AccessLevelArchitectureTest {
     @Test
     void publishedProjectionReadsAlwaysRequireAccessScope() {
         assertThat(methods(
-                SearchProjectionRepository.class,
+                PublishedSearchProjectionReader.class,
                 method -> Set.of(
                         "findByDocumentAndChunkIds",
                         "findAdjacent",
@@ -40,12 +41,28 @@ class AccessLevelArchitectureTest {
         )).isNotEmpty()
                 .allSatisfy(this::requiresSetParameter);
 
-        assertThat(Arrays.stream(SearchProjectionRepository.class.getMethods())
+        assertThat(Arrays.stream(PublishedSearchProjectionReader.class.getMethods())
                 .map(Method::getName))
                 .doesNotContain(
                         "findByChunkIds",
-                        "findChunkIdsByDocumentId"
+                        "findChunkIdsByDocumentId",
+                        "findGeneration",
+                        "findChunkIds"
                 );
+
+        assertThat(Arrays.stream(new Class<?>[] {
+                ResultFusion.class,
+                KnowledgeExpansion.class,
+                kz.alimbetov.akmai.rag.retrieval.LexicalRetrievalStrategy.class,
+                kz.alimbetov.akmai.rag.retrieval.IdentifierRetrievalStrategy.class,
+                kz.alimbetov.akmai.rag.retrieval.ReferenceRetrievalStrategy.class
+        })).allSatisfy(type ->
+                assertThat(Arrays.stream(type.getDeclaredConstructors())
+                        .flatMap(constructor ->
+                                Arrays.stream(constructor.getParameterTypes())))
+                        .as("%s must not depend on maintenance projection repository", type)
+                        .doesNotContain(SearchProjectionRepository.class)
+        );
     }
 
     @Test
