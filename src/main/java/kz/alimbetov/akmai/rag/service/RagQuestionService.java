@@ -72,7 +72,7 @@ public class RagQuestionService {
         List<RetrievalHit> fused = resultFusion.fuse(execution.hits());
         List<RetrievalHit> ranked = reranker.rerank(fused, question);
         List<RetrievalHit> expanded = knowledgeExpansion.expand(ranked);
-        List<RetrievalHit> bounded = contextBudget.apply(expanded);
+        List<RetrievalHit> bounded = contextBudget.apply(expanded, question);
 
         if (bounded.isEmpty()) {
             return insufficientInformation();
