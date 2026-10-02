@@ -162,6 +162,65 @@ public class ReferenceGraphRepository {
         );
     }
 
+    public List<String> resolveSameDocumentTargets(
+            String documentId,
+            long generation,
+            List<String> sourceChunkIds,
+            Set<Long> accessLevels,
+            int limit
+    ) {
+        if (generation <= 0
+                || sourceChunkIds == null
+                || sourceChunkIds.isEmpty()
+                || accessLevels == null
+                || accessLevels.isEmpty()
+                || limit <= 0) {
+            return List.of();
+        }
+        return jdbcTemplate.query(
+                """
+                SELECT DISTINCT t.chunk_id
+                FROM knowledge_reference_edge e
+                JOIN knowledge_document_lifecycle l
+                  ON l.document_id = e.document_id
+                 AND l.published_generation = e.generation
+                JOIN knowledge_reference_target t
+                  ON t.document_id = e.document_id
+                 AND t.generation = e.generation
+                 AND t.reference_type = e.reference_type
+                 AND t.canonical_value = e.canonical_value
+                WHERE e.document_id = ?
+                  AND e.generation = ?
+                  AND e.source_chunk_id = ANY (?)
+                  AND l.access_level = ANY (?)
+                  AND e.target_scope = 'SAME_DOCUMENT'
+                  AND l.retention_status = 'ACTIVE'
+                  AND t.chunk_id <> ALL (?)
+                ORDER BY t.chunk_id
+                LIMIT ?
+                """,
+                ps -> {
+                    ps.setString(1, documentId);
+                    ps.setLong(2, generation);
+                    var sourceArray = ps.getConnection().createArrayOf(
+                            "varchar",
+                            sourceChunkIds.toArray()
+                    );
+                    ps.setArray(3, sourceArray);
+                    ps.setArray(
+                            4,
+                            ps.getConnection().createArrayOf(
+                                    "bigint",
+                                    accessLevels.toArray()
+                            )
+                    );
+                    ps.setArray(5, sourceArray);
+                    ps.setInt(6, limit);
+                },
+                (rs, rowNum) -> rs.getString(1)
+        );
+    }
+
     public void cloneGeneration(
             String documentId,
             long sourceGeneration,
