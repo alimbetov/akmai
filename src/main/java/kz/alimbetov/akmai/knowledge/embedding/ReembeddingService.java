@@ -568,25 +568,45 @@ public class ReembeddingService {
                 );
             }
 
+            Integer documentCount = jdbcTemplate.queryForObject(
+                    """
+                    SELECT count(*)
+                    FROM knowledge_embedding_migration_document
+                    WHERE migration_id = ?
+                    """,
+                    Integer.class,
+                    migrationId
+            );
+
             Integer invalid = jdbcTemplate.queryForObject(
                     """
                     SELECT count(*)
                     FROM knowledge_embedding_migration_document d
-                    JOIN knowledge_document_lifecycle l
+                    LEFT JOIN knowledge_document_lifecycle l
                       ON l.document_id = d.document_id
-                    JOIN knowledge_document_generation candidate
+                    LEFT JOIN knowledge_document_generation source
+                      ON source.document_id = d.document_id
+                     AND source.generation = d.source_generation
+                    LEFT JOIN knowledge_document_generation candidate
                       ON candidate.document_id = d.document_id
                      AND candidate.generation = d.candidate_generation
                     WHERE d.migration_id = ?
                       AND (
                           d.document_status <> 'VERIFIED'
-                          OR l.published_generation <> d.source_generation
+                          OR l.document_id IS NULL
+                          OR l.retention_status <> 'ACTIVE'
+                          OR l.published_generation IS DISTINCT FROM d.source_generation
+                          OR source.document_id IS NULL
+                          OR source.generation_status <> 'PUBLISHED'
+                          OR source.embedding_profile_id IS DISTINCT FROM ?
+                          OR candidate.document_id IS NULL
                           OR candidate.generation_status <> 'STAGING'
-                          OR candidate.embedding_profile_id <> ?
+                          OR candidate.embedding_profile_id IS DISTINCT FROM ?
                       )
                     """,
                     Integer.class,
                     migrationId,
+                    source.profileId(),
                     target.profileId()
             );
             if (invalid != null && invalid > 0) {
@@ -595,7 +615,9 @@ public class ReembeddingService {
                 );
             }
 
-            jdbcTemplate.update(
+            int expected = documentCount == null ? 0 : documentCount;
+
+            int retired = jdbcTemplate.update(
                     """
                     UPDATE knowledge_document_generation source
                     SET generation_status = 'RETIRED',
@@ -608,7 +630,7 @@ public class ReembeddingService {
                     """,
                     migrationId
             );
-            jdbcTemplate.update(
+            int published = jdbcTemplate.update(
                     """
                     UPDATE knowledge_document_generation candidate
                     SET generation_status = 'PUBLISHED',
@@ -621,7 +643,7 @@ public class ReembeddingService {
                     """,
                     migrationId
             );
-            jdbcTemplate.update(
+            int switched = jdbcTemplate.update(
                     """
                     UPDATE knowledge_document_lifecycle l
                     SET published_generation = d.candidate_generation,
@@ -636,6 +658,21 @@ public class ReembeddingService {
                     """,
                     migrationId
             );
+
+            if (retired != expected
+                    || published != expected
+                    || switched != expected) {
+                throw new IllegalStateException(
+                        "Embedding cutover affected unexpected row counts: expected="
+                                + expected
+                                + ", retired="
+                                + retired
+                                + ", published="
+                                + published
+                                + ", switched="
+                                + switched
+                );
+            }
 
             jdbcTemplate.update(
                     """
