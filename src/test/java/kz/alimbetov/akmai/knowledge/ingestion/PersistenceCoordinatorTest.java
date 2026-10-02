@@ -26,6 +26,7 @@ import kz.alimbetov.akmai.knowledge.lifecycle.DocumentGenerationRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionProperties;
 import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository.VectorGenerationEntry;
+import kz.alimbetov.akmai.knowledge.model.DocumentMetadata;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionFactory;
@@ -319,7 +320,7 @@ class PersistenceCoordinatorTest {
                 "en",
                 KnowledgeDomain.GENERAL,
                 List.of(),
-                Map.of()
+                Map.of(DocumentMetadata.ACCESS_LEVEL, 1L)
         );
         DetectedIdentifier identifier = new DetectedIdentifier(
                 IdentifierType.DOCUMENT_NUMBER,
