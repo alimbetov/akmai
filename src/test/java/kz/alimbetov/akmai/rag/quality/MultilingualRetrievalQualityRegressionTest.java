@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -174,7 +175,8 @@ class MultilingualRetrievalQualityRegressionTest {
 
             when(projectionRepository.findByDocumentAndChunkIds(
                     anyString(),
-                    anyList()
+                    anyList(),
+                    anySet()
             )).thenAnswer(invocation -> {
                 List<String> ids = invocation.getArgument(1);
                 return ids.stream()
@@ -187,6 +189,7 @@ class MultilingualRetrievalQualityRegressionTest {
                     anyString(),
                     anyString(),
                     anyList(),
+                    anySet(),
                     anyInt()
             )).thenAnswer(invocation -> {
                 String query = invocation.getArgument(0);
@@ -198,6 +201,7 @@ class MultilingualRetrievalQualityRegressionTest {
             when(vectorRepository.search(
                     anyString(),
                     anyList(),
+                    anySet(),
                     anyInt(),
                     anyDouble()
             )).thenAnswer(invocation -> {
@@ -217,6 +221,7 @@ class MultilingualRetrievalQualityRegressionTest {
             when(referenceRepository.resolveSameDocumentTargets(
                     anyString(),
                     anyList(),
+                    anySet(),
                     anyInt()
             )).thenReturn(List.of());
 
@@ -276,7 +281,8 @@ class MultilingualRetrievalQualityRegressionTest {
                 boolean mutateReranker
         ) {
             var execution = executor.executeDetailed(
-                    planner.plan(chunker.chunk(testCase.question()))
+                    planner.plan(chunker.chunk(testCase.question())),
+                    Set.of(1L)
             );
             assertThat(execution.criticalFailure()).isFalse();
 
