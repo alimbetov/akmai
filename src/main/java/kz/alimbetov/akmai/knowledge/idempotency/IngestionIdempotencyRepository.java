@@ -93,12 +93,60 @@ public class IngestionIdempotencyRepository {
             }
 
             if (row.generation() != null) {
+                String generationStatus = jdbcTemplate.query(
+                        """
+                        SELECT generation_status
+                        FROM knowledge_document_generation
+                        WHERE document_id = ?
+                          AND generation = ?
+                        """,
+                        (rs, rowNum) -> rs.getString(1),
+                        row.documentId(),
+                        row.generation()
+                ).stream().findFirst().orElse(null);
+
+                if ("PUBLISHED".equals(generationStatus)) {
+                    Integer chunkCount = jdbcTemplate.queryForObject(
+                            """
+                            SELECT count(*)
+                            FROM knowledge_search_projection
+                            WHERE document_id = ?
+                              AND generation = ?
+                            """,
+                            Integer.class,
+                            row.documentId(),
+                            row.generation()
+                    );
+                    KnowledgeIngestionResponse recovered =
+                            new KnowledgeIngestionResponse(
+                                    row.documentId(),
+                                    chunkCount == null ? 0 : chunkCount
+                            );
+                    jdbcTemplate.update(
+                            """
+                            UPDATE knowledge_ingestion_request
+                            SET request_status = 'SUCCEEDED',
+                                response_json = ?::jsonb,
+                                lease_until = NULL,
+                                last_error = NULL,
+                                updated_at = clock_timestamp()
+                            WHERE idempotency_key = ?
+                              AND request_fingerprint = ?
+                            """,
+                            writeResponse(recovered),
+                            key,
+                            fingerprint
+                    );
+                    return ClaimResult.replay(recovered);
+                }
+
                 jdbcTemplate.update(
                         """
                         UPDATE knowledge_document_generation
                         SET generation_status = 'FAILED',
                             failure_code = 'IDEMPOTENCY_RECLAIM',
                             last_error = 'Expired idempotency claim reclaimed',
+                            cleanup_required = true,
                             failed_at = clock_timestamp()
                         WHERE document_id = ?
                           AND generation = ?
