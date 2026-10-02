@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -63,6 +64,54 @@ class ReferenceRetrievalStrategyTest {
                 .containsEntry("expansion", "reference")
                 .containsEntry("authority", "EXACT_REFERENCE")
                 .containsEntry("authorityTier", 0);
+    }
+
+    @Test
+    void batchesMultipleSeedChunksPerDocumentIntoSingleGraphLookup() {
+        SearchProjection target = projection(
+                "target-batch",
+                "Canonical target."
+        );
+        when(referenceGraphRepository.resolveSameDocumentTargets(
+                "doc", List.of("seed-1", "seed-2"), 20
+        )).thenReturn(List.of("target-batch"));
+        when(projectionRepository.findByDocumentAndChunkIds(
+                "doc", List.of("target-batch")
+        )).thenReturn(List.of(target));
+
+        ReferenceRetrievalStrategy subject = new ReferenceRetrievalStrategy(
+                projectionRepository,
+                referenceGraphRepository,
+                RetrievalTestProperties.defaults()
+        );
+
+        List<RetrievalHit> hits = subject.retrieve(
+                new QueryChunk("q", 0, "q", "q", "q", "ru", List.of()),
+                new RetrievalContext(List.of(
+                        new RetrievalHit(
+                                RetrievalType.LEXICAL,
+                                "doc",
+                                "seed-1",
+                                "seed one",
+                                Map.of()
+                        ),
+                        new RetrievalHit(
+                                RetrievalType.VECTOR,
+                                "doc",
+                                "seed-2",
+                                "seed two",
+                                Map.of()
+                        )
+                ))
+        );
+
+        assertThat(hits).extracting(RetrievalHit::chunkId)
+                .containsExactly("target-batch");
+        verify(referenceGraphRepository).resolveSameDocumentTargets(
+                "doc",
+                List.of("seed-1", "seed-2"),
+                20
+        );
     }
 
     private SearchProjection projection(String chunkId, String text) {
