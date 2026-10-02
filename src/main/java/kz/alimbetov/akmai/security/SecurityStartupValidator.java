@@ -39,6 +39,13 @@ public class SecurityStartupValidator implements ApplicationRunner {
                     "AKMAI security is enabled but API key is missing"
             );
         }
+        if (properties.accessLevels().isEmpty()
+                || properties.accessLevels().stream()
+                .anyMatch(value -> value == null || value <= 0)) {
+            throw new IllegalStateException(
+                    "AKMAI security access levels must contain positive values"
+            );
+        }
         if (!production
                 && !properties.enabled()
                 && !properties.allowUnauthenticatedLocal()) {
