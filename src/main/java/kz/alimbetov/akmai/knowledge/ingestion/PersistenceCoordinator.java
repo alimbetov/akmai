@@ -36,6 +36,7 @@ public class PersistenceCoordinator {
     private final EmbeddingProfileService profileService;
     private final GenerationEmbeddingService embeddingService;
     private final GenerationPublicationService publicationService;
+    private final PublicationOutcomeResolver publicationOutcomeResolver;
     private final IngestionIdempotencyRepository idempotencyRepository;
     private final RetentionProperties retentionProperties;
     private AkmaiMetrics metrics;
@@ -46,6 +47,7 @@ public class PersistenceCoordinator {
             EmbeddingProfileService profileService,
             GenerationEmbeddingService embeddingService,
             GenerationPublicationService publicationService,
+            PublicationOutcomeResolver publicationOutcomeResolver,
             IngestionIdempotencyRepository idempotencyRepository,
             RetentionProperties retentionProperties
     ) {
@@ -54,6 +56,7 @@ public class PersistenceCoordinator {
         this.profileService = profileService;
         this.embeddingService = embeddingService;
         this.publicationService = publicationService;
+        this.publicationOutcomeResolver = publicationOutcomeResolver;
         this.idempotencyRepository = idempotencyRepository;
         this.retentionProperties = retentionProperties;
     }
@@ -109,20 +112,45 @@ public class PersistenceCoordinator {
                     generation
             );
 
-            GenerationPublicationService.PublicationResult result =
-                    publicationService.publish(
+            GenerationPublicationService.PublicationResult result;
+            try {
+                result = publicationService.publish(
+                        documentId,
+                        generation,
+                        retentionProperties.defaultPolicy(),
+                        expiration(),
+                        profile,
+                        projections,
+                        identifiers,
+                        manifest,
+                        vectors,
+                        idempotency,
+                        response
+                );
+            } catch (RuntimeException publicationFailure) {
+                PublicationOutcomeResolver.Outcome outcome;
+                try {
+                    outcome = publicationOutcomeResolver.resolve(
                             documentId,
                             generation,
-                            retentionProperties.defaultPolicy(),
-                            expiration(),
-                            profile,
-                            projections,
-                            identifiers,
-                            manifest,
-                            vectors,
-                            idempotency,
-                            response
+                            idempotency
                     );
+                } catch (RuntimeException resolutionFailure) {
+                    publicationFailure.addSuppressed(resolutionFailure);
+                    throw new PublicationOutcomeUnknownException(
+                            "Publication outcome could not be determined",
+                            publicationFailure
+                    );
+                }
+                if (outcome == PublicationOutcomeResolver.Outcome.COMMITTED) {
+                    result = GenerationPublicationService.PublicationResult.PUBLISHED;
+                } else if (outcome
+                        == PublicationOutcomeResolver.Outcome.SUPERSEDED) {
+                    result = GenerationPublicationService.PublicationResult.SUPERSEDED;
+                } else {
+                    throw publicationFailure;
+                }
+            }
             if (result == GenerationPublicationService.PublicationResult.SUPERSEDED) {
                 throw new IllegalStateException(
                         "Generation was superseded by a newer publication"
@@ -137,6 +165,17 @@ public class PersistenceCoordinator {
                         chunks.size()
                 );
             }
+        } catch (PublicationOutcomeUnknownException exception) {
+            if (metrics != null) {
+                metrics.ingestion(
+                        "unknown",
+                        java.time.Duration.ofNanos(
+                                System.nanoTime() - startedNanos
+                        ),
+                        chunks.size()
+                );
+            }
+            throw exception;
         } catch (RuntimeException exception) {
             if (metrics != null) {
                 metrics.ingestion(
