@@ -79,21 +79,18 @@ class RequestAccessLevelResolverTest {
     }
 
     @Test
-    void emptyScopeFailsClosed() {
-        RequestAccessLevelResolver resolver = resolver(
-                false,
-                true,
-                Set.of(1L, 2L)
-        );
-
-        assertThat(resolver.resolve(new QuestionRequest(
+    void questionRequestRequiresExplicitNonEmptyScope() {
+        assertThatThrownBy(() -> new QuestionRequest(
                 "question",
                 Set.of()
-        ))).isEmpty();
-        assertThat(resolver.resolve(new QuestionRequest(
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("must not be empty");
+
+        assertThatThrownBy(() -> new QuestionRequest(
                 "question",
                 null
-        ))).isEmpty();
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("must not be empty");
     }
 
     @Test
