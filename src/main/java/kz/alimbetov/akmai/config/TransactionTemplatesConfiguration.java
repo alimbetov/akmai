@@ -2,7 +2,6 @@ package kz.alimbetov.akmai.config;
 
 import java.time.Duration;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionProperties;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
