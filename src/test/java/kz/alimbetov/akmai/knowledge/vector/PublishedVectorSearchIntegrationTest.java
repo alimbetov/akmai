@@ -60,7 +60,7 @@ class PublishedVectorSearchIntegrationTest {
         profile = new EmbeddingProfile(
                 "ep-search", "test", "deterministic", 3,
                 "COSINE_DISTANCE", "test", "search",
-                "akmai_vector", "p_search", "NONE", (short) 1,
+                "akmai_vector", "p_search", "HNSW", (short) 1,
                 Instant.parse("2026-10-02T00:00:00Z")
         );
         storage.ensureStorage(profile);
