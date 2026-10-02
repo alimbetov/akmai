@@ -1,6 +1,8 @@
 package kz.alimbetov.akmai.rag.quality;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -17,18 +19,24 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import kz.alimbetov.akmai.knowledge.chunking.TextNormalizer;
 import kz.alimbetov.akmai.knowledge.identifier.IdentifierExtractor;
+import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
+import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
-import kz.alimbetov.akmai.rag.query.QueryChunk;
+import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
+import kz.alimbetov.akmai.knowledge.vector.PublishedVectorSearchRepository;
+import kz.alimbetov.akmai.knowledge.vector.VectorSearchMatch;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
 import kz.alimbetov.akmai.rag.query.QueryLanguageDetector;
+import kz.alimbetov.akmai.rag.retrieval.LexicalRetrievalStrategy;
 import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
+import kz.alimbetov.akmai.rag.retrieval.ReferenceRetrievalStrategy;
 import kz.alimbetov.akmai.rag.retrieval.Reranker;
 import kz.alimbetov.akmai.rag.retrieval.ResultFusion;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalObserver;
-import kz.alimbetov.akmai.rag.retrieval.RetrievalStrategy;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalProperties;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalTestProperties;
-import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
+import kz.alimbetov.akmai.rag.retrieval.VectorRetrievalStrategy;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlanner;
 import org.junit.jupiter.api.Test;
 
@@ -69,7 +77,7 @@ class MultilingualRetrievalQualityRegressionTest {
             List<RetrievalBenchmarkResult> results = CASES.stream()
                     .map(testCase -> RetrievalBenchmarkEvaluator.evaluate(
                             testCase,
-                            pipeline.rank(testCase)
+                            pipeline.rank(testCase, false)
                     ))
                     .toList();
 
@@ -92,27 +100,25 @@ class MultilingualRetrievalQualityRegressionTest {
     }
 
     @Test
-    void qualityGateRejectsDeliberatelyMutatedPipelineRanking() {
+    void qualityGateRejectsDeliberatelyMutatedProductionReranker() {
         try (PipelineHarness pipeline = new PipelineHarness(CASES)) {
             RetrievalBenchmarkCase testCase = CASES.getFirst();
-            List<String> healthy = pipeline.rankAfterFusion(
-                    testCase,
-                    false
-            );
-            List<String> mutated = pipeline.rankAfterFusion(
-                    testCase,
-                    true
-            );
 
-            RetrievalBenchmarkResult healthyResult =
-                    RetrievalBenchmarkEvaluator.evaluate(testCase, healthy);
-            RetrievalBenchmarkResult mutatedResult =
-                    RetrievalBenchmarkEvaluator.evaluate(testCase, mutated);
+            RetrievalBenchmarkResult healthy =
+                    RetrievalBenchmarkEvaluator.evaluate(
+                            testCase,
+                            pipeline.rank(testCase, false)
+                    );
+            RetrievalBenchmarkResult mutated =
+                    RetrievalBenchmarkEvaluator.evaluate(
+                            testCase,
+                            pipeline.rank(testCase, true)
+                    );
 
-            assertThat(healthyResult.reciprocalRank()).isEqualTo(1.0);
-            assertThat(mutatedResult.reciprocalRank())
-                    .isLessThan(healthyResult.reciprocalRank());
-            assertThat(passesGate(mutatedResult)).isFalse();
+            assertThat(healthy.reciprocalRank()).isEqualTo(1.0);
+            assertThat(mutated.reciprocalRank())
+                    .isLessThan(healthy.reciprocalRank());
+            assertThat(passesGate(mutated)).isFalse();
         }
     }
 
@@ -129,24 +135,90 @@ class MultilingualRetrievalQualityRegressionTest {
         private final ParallelRetrievalExecutor executor;
         private final ResultFusion fusion;
         private final Reranker reranker;
+        private final Reranker mutantReranker;
         private final ExecutorService retrievalExecutor;
         private final ExecutorService rerankerExecutor;
-        private final Map<String, Set<String>> relevantByQuestion;
+        private final Map<String, Set<String>> relevantByQuestion = new HashMap<>();
+        private final Map<String, SearchProjection> projectionsByChunk = new HashMap<>();
 
         private PipelineHarness(List<RetrievalBenchmarkCase> cases) {
-            relevantByQuestion = new HashMap<>();
-            cases.forEach(testCase ->
-                    relevantByQuestion.put(
-                            testCase.question(),
-                            testCase.relevantChunkIds()
-                    )
-            );
+            RetrievalProperties properties = RetrievalTestProperties.defaults();
+            cases.forEach(testCase -> {
+                relevantByQuestion.put(
+                        testCase.question(),
+                        testCase.relevantChunkIds()
+                );
+                String relevant = testCase.relevantChunkIds().iterator().next();
+                projectionsByChunk.put(
+                        relevant,
+                        projection(relevant, testCase.language())
+                );
+                projectionsByChunk.put(
+                        "noise-" + testCase.caseId(),
+                        projection("noise-" + testCase.caseId(), testCase.language())
+                );
+            });
 
             chunker = new QueryChunker(
                     new TextNormalizer(),
                     new IdentifierExtractor(List.of()),
                     new QueryLanguageDetector()
             );
+
+            SearchProjectionRepository projectionRepository =
+                    mock(SearchProjectionRepository.class);
+            PublishedVectorSearchRepository vectorRepository =
+                    mock(PublishedVectorSearchRepository.class);
+            ReferenceGraphRepository referenceRepository =
+                    mock(ReferenceGraphRepository.class);
+
+            when(projectionRepository.findByDocumentAndChunkIds(
+                    anyString(),
+                    anyList()
+            )).thenAnswer(invocation -> {
+                List<String> ids = invocation.getArgument(1);
+                return ids.stream()
+                        .map(projectionsByChunk::get)
+                        .filter(java.util.Objects::nonNull)
+                        .toList();
+            });
+
+            when(projectionRepository.searchLexical(
+                    anyString(),
+                    anyString(),
+                    anyList(),
+                    anyInt()
+            )).thenAnswer(invocation -> {
+                String query = invocation.getArgument(0);
+                String relevant = relevantId(query);
+                SearchProjection projection = projectionsByChunk.get(relevant);
+                return projection == null ? List.of() : List.of(projection);
+            });
+
+            when(vectorRepository.search(
+                    anyString(),
+                    anyList(),
+                    anyInt(),
+                    anyDouble()
+            )).thenAnswer(invocation -> {
+                String query = invocation.getArgument(0);
+                String relevant = relevantId(query);
+                String caseId = caseIdForQuestion(query);
+                return List.of(
+                        vectorMatch(
+                                "noise-" + caseId,
+                                caseLanguage(caseId),
+                                0.95
+                        ),
+                        vectorMatch(relevant, caseLanguage(caseId), 0.80)
+                );
+            });
+
+            when(referenceRepository.resolveSameDocumentTargets(
+                    anyString(),
+                    anyList(),
+                    anyInt()
+            )).thenReturn(List.of());
 
             retrievalExecutor = Executors.newFixedThreadPool(4);
             rerankerExecutor = Executors.newSingleThreadExecutor();
@@ -155,46 +227,61 @@ class MultilingualRetrievalQualityRegressionTest {
 
             executor = new ParallelRetrievalExecutor(
                     List.of(
-                            strategy(RetrievalType.VECTOR),
-                            strategy(RetrievalType.LEXICAL),
-                            strategy(RetrievalType.REFERENCE)
+                            new VectorRetrievalStrategy(
+                                    vectorRepository,
+                                    properties
+                            ),
+                            new LexicalRetrievalStrategy(
+                                    projectionRepository,
+                                    properties
+                            ),
+                            new ReferenceRetrievalStrategy(
+                                    projectionRepository,
+                                    referenceRepository,
+                                    properties
+                            )
                     ),
                     retrievalExecutor,
                     observer,
-                    RetrievalTestProperties.defaults()
+                    properties
             );
 
-            SearchProjectionRepository projections =
-                    mock(SearchProjectionRepository.class);
-            when(projections.findByDocumentAndChunkIds(anyString(), anyList()))
-                    .thenReturn(List.of());
-            fusion = new ResultFusion(
-                    RetrievalTestProperties.defaults(),
-                    projections
-            );
+            fusion = new ResultFusion(properties, projectionRepository);
 
-            reranker = new Reranker(
+            var scorer = (kz.alimbetov.akmai.rag.retrieval.SemanticRerankScorer)
                     (question, hits) -> hits.stream()
                             .map(hit -> relevantByQuestion
                                     .getOrDefault(question, Set.of())
                                     .contains(hit.chunkId())
                                     ? 0.99
                                     : 0.05)
-                            .toList(),
-                    RetrievalTestProperties.defaults(),
+                            .toList();
+
+            reranker = new Reranker(
+                    scorer,
+                    properties,
+                    observer,
+                    rerankerExecutor
+            );
+            mutantReranker = new MutantReranker(
+                    scorer,
+                    properties,
                     observer,
                     rerankerExecutor
             );
         }
 
-        private List<String> rank(RetrievalBenchmarkCase testCase) {
-            List<QueryChunk> chunks = chunker.chunk(testCase.question());
-            var plan = planner.plan(chunks);
-            var execution = executor.executeDetailed(plan);
-
+        private List<String> rank(
+                RetrievalBenchmarkCase testCase,
+                boolean mutateReranker
+        ) {
+            var execution = executor.executeDetailed(
+                    planner.plan(chunker.chunk(testCase.question()))
+            );
             assertThat(execution.criticalFailure()).isFalse();
 
-            return reranker.rerank(
+            Reranker ranking = mutateReranker ? mutantReranker : reranker;
+            return ranking.rerank(
                             fusion.fuse(execution.hits()),
                             testCase.question()
                     ).stream()
@@ -203,76 +290,79 @@ class MultilingualRetrievalQualityRegressionTest {
                     .toList();
         }
 
-        private List<String> rankAfterFusion(
-                RetrievalBenchmarkCase testCase,
-                boolean mutateFusionOutput
-        ) {
-            List<QueryChunk> chunks = chunker.chunk(testCase.question());
-            var execution = executor.executeDetailed(planner.plan(chunks));
-            assertThat(execution.criticalFailure()).isFalse();
-
-            List<RetrievalHit> fused =
-                    new ArrayList<>(fusion.fuse(execution.hits()));
-            if (mutateFusionOutput) {
-                Collections.reverse(fused);
-            }
-            return fused.stream()
-                    .map(RetrievalHit::chunkId)
-                    .distinct()
-                    .toList();
-        }
-
-        private RetrievalStrategy strategy(RetrievalType type) {
-            return new RetrievalStrategy() {
-                @Override
-                public RetrievalType type() {
-                    return type;
-                }
-
-                @Override
-                public List<RetrievalHit> retrieve(
-                        QueryChunk queryChunk,
-                        kz.alimbetov.akmai.rag.retrieval.RetrievalContext context
-                ) {
-                    Set<String> relevant = relevantByQuestion.getOrDefault(
-                            queryChunk.rawText(),
-                            relevantByQuestion.getOrDefault(
-                                    queryChunk.semanticText(),
-                                    Set.of()
-                            )
-                    );
-                    String relevantId = relevant.stream()
+        private String relevantId(String query) {
+            return relevantByQuestion.getOrDefault(query, Set.of())
+                    .stream()
+                    .findFirst()
+                    .orElseGet(() -> relevantByQuestion.entrySet().stream()
+                            .filter(entry -> query.contains(entry.getKey())
+                                    || entry.getKey().contains(query))
+                            .flatMap(entry -> entry.getValue().stream())
                             .findFirst()
-                            .orElse("missing");
-
-                    return switch (type) {
-                        case VECTOR -> List.of(
-                                hit(type, queryChunk, "noise-" + queryChunk.id()),
-                                hit(type, queryChunk, relevantId)
-                        );
-                        case LEXICAL -> List.of(
-                                hit(type, queryChunk, relevantId)
-                        );
-                        case REFERENCE, IDENTIFIER -> List.of();
-                    };
-                }
-            };
+                            .orElse("missing"));
         }
 
-        private RetrievalHit hit(
-                RetrievalType type,
-                QueryChunk queryChunk,
-                String chunkId
+        private String caseIdForQuestion(String query) {
+            return CASES.stream()
+                    .filter(testCase -> testCase.question().equals(query)
+                            || testCase.question().contains(query)
+                            || query.contains(testCase.question()))
+                    .map(RetrievalBenchmarkCase::caseId)
+                    .findFirst()
+                    .orElse("unknown");
+        }
+
+        private String caseLanguage(String caseId) {
+            return CASES.stream()
+                    .filter(testCase -> testCase.caseId().equals(caseId))
+                    .map(RetrievalBenchmarkCase::language)
+                    .findFirst()
+                    .orElse("en");
+        }
+
+        private VectorSearchMatch vectorMatch(
+                String chunkId,
+                String language,
+                double score
         ) {
-            return new RetrievalHit(
-                    type,
+            return new VectorSearchMatch(
+                    java.util.UUID.nameUUIDFromBytes(
+                            chunkId.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+                    ).toString(),
                     "quality-doc",
+                    1L,
                     chunkId,
                     chunkId,
                     Map.of(
-                            "language", queryChunk.language(),
+                            "language", language,
                             "source", CORPUS_VERSION
-                    )
+                    ),
+                    score
+            );
+        }
+
+        private SearchProjection projection(
+                String chunkId,
+                String language
+        ) {
+            return new SearchProjection(
+                    chunkId,
+                    "quality-doc",
+                    1L,
+                    null,
+                    Math.floorMod(chunkId.hashCode(), 1000),
+                    chunkId,
+                    chunkId,
+                    language,
+                    KnowledgeDomain.GENERAL,
+                    "quality",
+                    List.of(),
+                    List.of(),
+                    Map.of(
+                            "language", language,
+                            "source", CORPUS_VERSION
+                    ),
+                    2
             );
         }
 
@@ -280,6 +370,30 @@ class MultilingualRetrievalQualityRegressionTest {
         public void close() {
             retrievalExecutor.shutdownNow();
             rerankerExecutor.shutdownNow();
+        }
+    }
+
+    private static final class MutantReranker extends Reranker {
+
+        private MutantReranker(
+                kz.alimbetov.akmai.rag.retrieval.SemanticRerankScorer scorer,
+                RetrievalProperties properties,
+                RetrievalObserver observer,
+                ExecutorService executor
+        ) {
+            super(scorer, properties, observer, executor);
+        }
+
+        @Override
+        public List<RetrievalHit> rerank(
+                List<RetrievalHit> hits,
+                String question
+        ) {
+            List<RetrievalHit> ranked = new ArrayList<>(
+                    super.rerank(hits, question)
+            );
+            Collections.reverse(ranked);
+            return List.copyOf(ranked);
         }
     }
 }
