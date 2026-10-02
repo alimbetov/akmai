@@ -331,6 +331,96 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
         );
     }
 
+    private List<SearchProjection> searchFtsWithLanguageFallback(
+            String query,
+            String language,
+            List<String> documentIds,
+            int limit,
+            String vectorColumn,
+            String configuration
+    ) {
+        List<SearchProjection> fts = searchFts(
+                query,
+                language,
+                documentIds,
+                limit,
+                vectorColumn,
+                configuration
+        );
+        if (!fts.isEmpty()) {
+            return fts;
+        }
+        return searchLanguageTrigramFallback(
+                query,
+                language,
+                documentIds,
+                limit
+        );
+    }
+
+    private List<SearchProjection> searchLanguageTrigramFallback(
+            String query,
+            String language,
+            List<String> documentIds,
+            int limit
+    ) {
+        List<String> terms = java.util.Arrays.stream(
+                        query.toLowerCase(java.util.Locale.ROOT).split("\\s+")
+                )
+                .map(String::trim)
+                .filter(term -> term.length() >= 3)
+                .distinct()
+                .limit(8)
+                .toList();
+        if (terms.isEmpty()) {
+            return List.of();
+        }
+
+        String escapedLongest = escapeLikeLiteral(
+                terms.stream()
+                        .max(java.util.Comparator.comparingInt(String::length))
+                        .orElse(query)
+        );
+
+        String sql = """
+                SELECT p.*,
+                       greatest(
+                           similarity(lower(p.text_content), lower(?)),
+                           similarity(lower(coalesce(p.section_path, '')), lower(?))
+                       ) AS lexical_rank
+                FROM knowledge_search_projection p
+                JOIN knowledge_document_lifecycle l
+                  ON l.document_id = p.document_id
+                 AND l.published_generation = p.generation
+                WHERE l.retention_status = 'ACTIVE'
+                  AND p.language = ?
+                  AND (
+                      lower(p.text_content) % lower(?)
+                      OR lower(coalesce(p.section_path, '')) % lower(?)
+                      OR lower(p.text_content) LIKE ('%' || lower(?) || '%') ESCAPE '\\'
+                  )
+                """ + documentFilter(documentIds) + """
+                ORDER BY lexical_rank DESC, p.document_id, p.chunk_id
+                LIMIT ?
+                """;
+
+        return jdbcTemplate.query(
+                sql,
+                ps -> {
+                    int i = 1;
+                    ps.setString(i++, query);
+                    ps.setString(i++, query);
+                    ps.setString(i++, language);
+                    ps.setString(i++, query);
+                    ps.setString(i++, query);
+                    ps.setString(i++, escapedLongest);
+                    i = bindDocumentIds(ps, i, documentIds);
+                    ps.setInt(i, limit);
+                },
+                this::map
+        );
+    }
+
     private List<SearchProjection> searchFts(
             String query,
             String language,
