@@ -7,7 +7,12 @@ import java.util.Optional;
 
 public interface DocumentLifecycleRepository {
 
-    long beginIngestion(String documentId, RetentionPolicy policy, Instant expiresAt);
+    long beginIngestion(
+            String documentId,
+            RetentionPolicy policy,
+            Instant expiresAt,
+            long accessLevel
+    );
 
     boolean publishIngestion(String documentId, long generation, Instant now);
 
