@@ -9,6 +9,7 @@ import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository;
 import kz.alimbetov.akmai.observability.AkmaiMetrics;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -28,6 +29,7 @@ public class ChunkRetentionService {
 
     public ChunkRetentionService(
             JdbcTemplate jdbcTemplate,
+            @Qualifier("cleanupTransactionTemplate")
             TransactionTemplate transactionTemplate,
             RetentionClaimRepository claimRepository,
             SearchProjectionRepository projectionRepository,
