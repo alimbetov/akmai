@@ -24,6 +24,7 @@ public class SemanticChunker {
     private final ChunkingProperties properties;
     private final OversizedUnitSplitter oversizedUnitSplitter;
     private final ChunkIdentity chunkIdentity;
+    private EmbeddingTokenBudgetService embeddingTokenBudgetService;
 
     public SemanticChunker(
             TextNormalizer normalizer,
@@ -47,6 +48,13 @@ public class SemanticChunker {
         this.properties = properties;
         this.oversizedUnitSplitter = oversizedUnitSplitter;
         this.chunkIdentity = chunkIdentity;
+    }
+
+    @Autowired(required = false)
+    void setEmbeddingTokenBudgetService(
+            EmbeddingTokenBudgetService embeddingTokenBudgetService
+    ) {
+        this.embeddingTokenBudgetService = embeddingTokenBudgetService;
     }
 
     public List<KnowledgeChunk> chunk(KnowledgeDocument document) {
@@ -106,10 +114,14 @@ public class SemanticChunker {
                     sectionPath,
                     rawText
             );
-            if (tokenEstimator.estimate(embeddingText) > properties.hardMaxTokens()) {
+            if (tokenEstimator.estimate(embeddingText)
+                    > properties.hardMaxTokens()) {
                 throw new IllegalStateException(
                         "Final embedding payload exceeds hard token limit"
                 );
+            }
+            if (embeddingTokenBudgetService != null) {
+                embeddingTokenBudgetService.assertFits(embeddingText);
             }
 
             Map<String, Object> metadata = new LinkedHashMap<>(
