@@ -21,6 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -76,7 +78,12 @@ class PublishedVectorSearchIntegrationTest {
         EmbeddingProfileService profiles = mock(EmbeddingProfileService.class);
         when(profiles.activeProfile()).thenReturn(profile);
         search = new PublishedVectorSearchRepository(
-                jdbc, mapper, model, profiles, storage
+                jdbc,
+                mapper,
+                model,
+                profiles,
+                storage,
+                new TransactionTemplate(new DataSourceTransactionManager(ds))
         );
     }
 
@@ -166,6 +173,92 @@ class PublishedVectorSearchIntegrationTest {
                 10,
                 0.8
         )).isEmpty();
+    }
+
+    @Test
+    void hnswIterativeScanFillsTopKUnderSelectiveAccessFilter() {
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_lifecycle (
+                    document_id, lifecycle_policy, lifecycle_status,
+                    generation, attempt_count, row_version,
+                    created_at, updated_at, retention_status,
+                    published_generation, next_generation, access_level
+                )
+                SELECT
+                    'hnsw-doc-' || value,
+                    'PERMANENT',
+                    'READY',
+                    1,
+                    0,
+                    0,
+                    clock_timestamp(),
+                    clock_timestamp(),
+                    'ACTIVE',
+                    1,
+                    2,
+                    CASE WHEN value <= 50 THEN 1 ELSE 2 END
+                FROM generate_series(1, 1000) AS value
+                """
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_generation (
+                    document_id, generation, generation_status, generation_kind,
+                    embedding_profile_id, content_fingerprint,
+                    physical_id_version, cleanup_required, started_at,
+                    published_at, access_level
+                )
+                SELECT
+                    'hnsw-doc-' || value,
+                    1,
+                    'PUBLISHED',
+                    'INGESTION',
+                    ?,
+                    'fp-' || value,
+                    2,
+                    false,
+                    clock_timestamp(),
+                    clock_timestamp(),
+                    CASE WHEN value <= 50 THEN 1 ELSE 2 END
+                FROM generate_series(1, 1000) AS value
+                """,
+                profile.profileId()
+        );
+
+        vectors.insertAll(
+                profile,
+                java.util.stream.IntStream.rangeClosed(1, 1000)
+                        .mapToObj(value -> row(
+                                "hnsw-doc-" + value,
+                                1L,
+                                "chunk-" + value,
+                                new float[] {1f, 0f, 0f}
+                        ))
+                        .toList()
+        );
+        jdbc.execute("ANALYZE akmai_vector.p_search");
+
+        List<VectorSearchMatch> result = search.search(
+                "query",
+                List.of(),
+                Set.of(1L),
+                10,
+                0.8
+        );
+
+        assertThat(result).hasSize(10);
+        assertThat(result)
+                .allSatisfy(match -> assertThat(match.documentId())
+                        .startsWith("hnsw-doc-"));
+        assertThat(result)
+                .extracting(VectorSearchMatch::documentId)
+                .allSatisfy(documentId -> {
+                    int id = Integer.parseInt(
+                            documentId.substring("hnsw-doc-".length())
+                    );
+                    assertThat(id).isBetween(1, 50);
+                });
     }
 
     private void lifecycle(
