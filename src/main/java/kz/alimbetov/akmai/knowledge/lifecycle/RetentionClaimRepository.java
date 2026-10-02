@@ -111,6 +111,38 @@ public class RetentionClaimRepository {
         });
     }
 
+    public long countEligibleBacklog(int retryLimit) {
+        if (retryLimit <= 0) {
+            throw new IllegalArgumentException("retryLimit must be positive");
+        }
+        Long count = jdbcTemplate.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_document_lifecycle l
+                WHERE l.lifecycle_policy = 'TTL'
+                  AND l.expires_at <= clock_timestamp()
+                  AND l.published_generation IS NOT NULL
+                  AND l.attempt_count < ?
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM knowledge_document_generation g
+                      WHERE g.document_id = l.document_id
+                        AND g.generation_status = 'STAGING'
+                  )
+                  AND (
+                      l.retention_status IN ('ACTIVE', 'DELETE_FAILED')
+                      OR (
+                          l.retention_status IN ('DELETE_PENDING', 'DELETING')
+                          AND l.lease_until < clock_timestamp()
+                      )
+                  )
+                """,
+                Long.class,
+                retryLimit
+        );
+        return count == null ? 0L : count;
+    }
+
     public boolean release(RetentionClaim claim) {
         return jdbcTemplate.update(
                 """
