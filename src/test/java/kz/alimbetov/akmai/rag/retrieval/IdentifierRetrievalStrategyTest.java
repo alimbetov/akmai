@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import kz.alimbetov.akmai.knowledge.identifier.DetectedIdentifier;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
 import kz.alimbetov.akmai.knowledge.identifier.IdentifierType;
@@ -54,9 +55,11 @@ class IdentifierRetrievalStrategyTest {
         );
         when(index.search(any(kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchQuery.class)))
                 .thenReturn(List.of(identifier));
+        Set<Long> scope = Set.of(3L);
         when(projections.findByDocumentAndChunkIds(
                 "doc-1",
-                List.of("chunk-1")
+                List.of("chunk-1"),
+                scope
         )).thenReturn(List.of(projection));
 
         IdentifierRetrievalStrategy strategy =
@@ -82,7 +85,7 @@ class IdentifierRetrievalStrategyTest {
 
         List<RetrievalHit> hits = strategy.retrieve(
                 query,
-                new RetrievalContext(List.of())
+                new RetrievalContext(List.of(), scope)
         );
 
         assertThat(hits).singleElement().satisfies(hit -> {
