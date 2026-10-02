@@ -66,10 +66,15 @@ class PersistenceCoordinatorTest {
                 isNull()
         )).thenReturn(GenerationPublicationService.PublicationResult.PUBLISHED);
 
-        fixture.coordinator.persist(List.of(
-                chunk("stable-1", "doc-1", 0),
-                chunk("stable-2", "doc-1", 1)
-        ));
+        fixture.coordinator.persist(
+                List.of(
+                        chunk("stable-1", "doc-1", 0),
+                        chunk("stable-2", "doc-1", 1)
+                ),
+                null,
+                null,
+                1L
+        );
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<VectorGenerationEntry>> manifest =
@@ -134,9 +139,12 @@ class PersistenceCoordinatorTest {
                 .thenThrow(new IllegalStateException("embedding unavailable"));
 
         assertThatThrownBy(() ->
-                fixture.coordinator.persist(List.of(
-                        chunk("stable-1", "doc-1", 0)
-                )))
+                fixture.coordinator.persist(
+                        List.of(chunk("stable-1", "doc-1", 0)),
+                        null,
+                        null,
+                        1L
+                ))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("embedding unavailable");
 
@@ -190,9 +198,12 @@ class PersistenceCoordinatorTest {
         when(fixture.outcomeResolver.resolve("doc-1", 9L, null))
                 .thenReturn(PublicationOutcomeResolver.Outcome.COMMITTED);
 
-        fixture.coordinator.persist(List.of(
-                chunk("stable-1", "doc-1", 0)
-        ));
+        fixture.coordinator.persist(
+                List.of(chunk("stable-1", "doc-1", 0)),
+                null,
+                null,
+                1L
+        );
 
         verify(fixture.generations, never()).fail(
                 eq("doc-1"),
@@ -231,9 +242,12 @@ class PersistenceCoordinatorTest {
         when(fixture.outcomeResolver.resolve("doc-1", 10L, null))
                 .thenThrow(new IllegalStateException("database unavailable"));
 
-        assertThatThrownBy(() -> fixture.coordinator.persist(List.of(
-                chunk("stable-1", "doc-1", 0)
-        )))
+        assertThatThrownBy(() -> fixture.coordinator.persist(
+                List.of(chunk("stable-1", "doc-1", 0)),
+                null,
+                null,
+                1L
+        ))
                 .isInstanceOf(PublicationOutcomeUnknownException.class)
                 .hasMessageContaining("could not be determined");
 
