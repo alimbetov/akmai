@@ -170,6 +170,66 @@ class RerankerTest {
         }
     }
 
+    @Test
+    void exactAuthorityCannotBeDemotedBySemanticScore() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            RetrievalHit exact = new RetrievalHit(
+                    RetrievalType.IDENTIFIER,
+                    "doc",
+                    "exact",
+                    "exact",
+                    Map.of("authorityTier", 0),
+                    List.of(new RetrievalEvidence(RetrievalType.IDENTIFIER, 1, 1.0)),
+                    0.4
+            );
+            RetrievalHit semantic = new RetrievalHit(
+                    RetrievalType.VECTOR,
+                    "doc",
+                    "semantic",
+                    "semantic",
+                    Map.of("authorityTier", 2),
+                    List.of(new RetrievalEvidence(RetrievalType.VECTOR, 1, 1.0)),
+                    0.9
+            );
+            Reranker reranker = reranker(
+                    (question, hits) -> hits.stream()
+                            .map(hit -> hit.chunkId().equals("semantic") ? 0.99 : 0.01)
+                            .toList(),
+                    executor,
+                    Duration.ofSeconds(1)
+            );
+
+            assertThat(reranker.rerank(
+                    List.of(exact, semantic),
+                    "question"
+            )).extracting(RetrievalHit::chunkId)
+                    .containsExactly("exact", "semantic");
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void nonFiniteScorerOutputFallsBackToOriginalOrder() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            List<RetrievalHit> original = List.of(
+                    hit("first", 0.9, "e1"),
+                    hit("second", 0.8, "e2")
+            );
+            Reranker reranker = reranker(
+                    (question, hits) -> List.of(Double.NaN, 0.5),
+                    executor,
+                    Duration.ofSeconds(1)
+            );
+
+            assertThat(reranker.rerank(original, "question")).isEqualTo(original);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
     private void await(CountDownLatch latch) {
         try {
             latch.await();
