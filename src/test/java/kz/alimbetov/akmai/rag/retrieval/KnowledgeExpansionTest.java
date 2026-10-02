@@ -77,6 +77,51 @@ class KnowledgeExpansionTest {
                 .contains("neighbor");
     }
 
+    @Test
+    void expandedNeighborPreservesCanonicalSourcePageAndSectionProvenance() {
+        KnowledgeExpansion expansion =
+                new KnowledgeExpansion(repository, RetrievalTestProperties.defaults());
+        RetrievalHit seed = new RetrievalHit(
+                RetrievalType.VECTOR,
+                "doc",
+                "seed",
+                "seed",
+                Map.of("chunkIndex", 1)
+        );
+        SearchProjection canonicalSeed = projection("seed", 1);
+        SearchProjection neighbor = new SearchProjection(
+                "neighbor-provenance",
+                "doc",
+                1L,
+                null,
+                2,
+                "neighbor text",
+                "neighbor embedding",
+                "ru",
+                KnowledgeDomain.LEGAL,
+                "Статья 25",
+                List.of(),
+                List.of(),
+                Map.of(
+                        "source", "law.md",
+                        "pageFrom", 7,
+                        "pageTo", 8
+                ),
+                2
+        );
+        when(repository.findAdjacent("doc", 1, 1))
+                .thenReturn(List.of(canonicalSeed, neighbor));
+
+        RetrievalHit expanded = expansion.expand(List.of(seed)).get(1);
+
+        assertThat(expanded.metadata())
+                .containsEntry("source", "law.md")
+                .containsEntry("pageFrom", 7)
+                .containsEntry("pageTo", 8)
+                .containsEntry("sectionPath", "Статья 25")
+                .containsEntry("language", "ru");
+    }
+
     private SearchProjection projection(String chunkId, int index) {
         return new SearchProjection(
                 chunkId,
