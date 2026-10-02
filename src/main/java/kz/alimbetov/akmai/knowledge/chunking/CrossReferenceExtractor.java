@@ -1,6 +1,5 @@
 package kz.alimbetov.akmai.knowledge.chunking;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
