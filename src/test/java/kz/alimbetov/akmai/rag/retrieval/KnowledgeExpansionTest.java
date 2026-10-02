@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
@@ -16,40 +17,59 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class KnowledgeExpansionTest {
 
+    private static final Set<Long> ACCESS = Set.of(1L);
+
     @Mock
     private SearchProjectionRepository repository;
 
     @Test
     void resolvesSeedCoordinatesFromCanonicalProjection() {
-        KnowledgeExpansion expansion = new KnowledgeExpansion(repository, RetrievalTestProperties.defaults());
+        KnowledgeExpansion expansion =
+                new KnowledgeExpansion(
+                        repository,
+                        RetrievalTestProperties.defaults()
+                );
         RetrievalHit seed = new RetrievalHit(
                 RetrievalType.VECTOR,
                 "doc",
                 "chunk-1",
                 "seed",
-                Map.of()
+                Map.of("generation", 1L)
         );
         SearchProjection canonical = projection("chunk-1", 1);
         SearchProjection neighbor = projection("chunk-2", 2);
 
-        when(repository.findByDocumentAndChunkIds(
-                "doc", List.of("chunk-1")
+        when(repository.findByDocumentGenerationAndChunkIds(
+                "doc",
+                1L,
+                List.of("chunk-1"),
+                ACCESS
         )).thenReturn(List.of(canonical));
-        when(repository.findAdjacent("doc", 1, 1))
-                .thenReturn(List.of(canonical, neighbor));
+        when(repository.findAdjacent(
+                "doc",
+                1L,
+                1,
+                1,
+                ACCESS
+        )).thenReturn(List.of(canonical, neighbor));
 
-        List<RetrievalHit> result = expansion.expand(List.of(seed));
+        List<RetrievalHit> result =
+                expansion.expand(List.of(seed), ACCESS);
 
         assertThat(result).extracting(RetrievalHit::chunkId)
                 .containsExactly("chunk-1", "chunk-2");
         assertThat(result.get(1).metadata())
-                .containsEntry("expansion", "neighbor");
+                .containsEntry("expansion", "neighbor")
+                .containsEntry("generation", 1L);
     }
 
     @Test
     void expandedNeighborIsInterleavedBeforeContextCanFillWithOriginals() {
         KnowledgeExpansion expansion =
-                new KnowledgeExpansion(repository, RetrievalTestProperties.defaults());
+                new KnowledgeExpansion(
+                        repository,
+                        RetrievalTestProperties.defaults()
+                );
         java.util.List<RetrievalHit> ranked =
                 java.util.stream.IntStream.range(0, 12)
                         .mapToObj(index -> new RetrievalHit(
@@ -57,18 +77,24 @@ class KnowledgeExpansionTest {
                                 "doc",
                                 "chunk-" + index,
                                 "seed-" + index,
-                                index == 0
-                                        ? Map.of("chunkIndex", 0)
-                                        : Map.of("chunkIndex", index)
+                                Map.of(
+                                        "chunkIndex", index,
+                                        "generation", 1L
+                                )
                         ))
                         .toList();
         SearchProjection seed = projection("chunk-0", 0);
         SearchProjection neighbor = projection("neighbor", 1);
 
-        when(repository.findAdjacent("doc", 0, 1))
-                .thenReturn(List.of(seed, neighbor));
+        when(repository.findAdjacent(
+                "doc",
+                1L,
+                0,
+                1,
+                ACCESS
+        )).thenReturn(List.of(seed, neighbor));
 
-        List<RetrievalHit> result = expansion.expand(ranked);
+        List<RetrievalHit> result = expansion.expand(ranked, ACCESS);
 
         assertThat(result.get(0).chunkId()).isEqualTo("chunk-0");
         assertThat(result.get(1).chunkId()).isEqualTo("neighbor");
@@ -80,13 +106,19 @@ class KnowledgeExpansionTest {
     @Test
     void expandedNeighborPreservesCanonicalSourcePageAndSectionProvenance() {
         KnowledgeExpansion expansion =
-                new KnowledgeExpansion(repository, RetrievalTestProperties.defaults());
+                new KnowledgeExpansion(
+                        repository,
+                        RetrievalTestProperties.defaults()
+                );
         RetrievalHit seed = new RetrievalHit(
                 RetrievalType.VECTOR,
                 "doc",
                 "seed",
                 "seed",
-                Map.of("chunkIndex", 1)
+                Map.of(
+                        "chunkIndex", 1,
+                        "generation", 1L
+                )
         );
         SearchProjection canonicalSeed = projection("seed", 1);
         SearchProjection neighbor = new SearchProjection(
@@ -109,10 +141,16 @@ class KnowledgeExpansionTest {
                 ),
                 2
         );
-        when(repository.findAdjacent("doc", 1, 1))
-                .thenReturn(List.of(canonicalSeed, neighbor));
+        when(repository.findAdjacent(
+                "doc",
+                1L,
+                1,
+                1,
+                ACCESS
+        )).thenReturn(List.of(canonicalSeed, neighbor));
 
-        RetrievalHit expanded = expansion.expand(List.of(seed)).get(1);
+        RetrievalHit expanded =
+                expansion.expand(List.of(seed), ACCESS).get(1);
 
         assertThat(expanded.metadata())
                 .containsEntry("source", "law.md")
@@ -122,10 +160,29 @@ class KnowledgeExpansionTest {
                 .containsEntry("language", "ru");
     }
 
+    @Test
+    void emptyAccessScopeFailsClosed() {
+        KnowledgeExpansion expansion =
+                new KnowledgeExpansion(
+                        repository,
+                        RetrievalTestProperties.defaults()
+                );
+        RetrievalHit seed = new RetrievalHit(
+                RetrievalType.VECTOR,
+                "doc",
+                "seed",
+                "seed",
+                Map.of("generation", 1L)
+        );
+
+        assertThat(expansion.expand(List.of(seed), Set.of())).isEmpty();
+    }
+
     private SearchProjection projection(String chunkId, int index) {
         return new SearchProjection(
                 chunkId,
                 "doc",
+                1L,
                 null,
                 index,
                 "text-" + index,
