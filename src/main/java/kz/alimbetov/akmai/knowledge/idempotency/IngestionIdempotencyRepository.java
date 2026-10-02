@@ -89,7 +89,11 @@ public class IngestionIdempotencyRepository {
             if ("IN_PROGRESS".equals(row.status())
                     && row.leaseUntil() != null
                     && row.leaseUntil().isAfter(databaseNow)) {
-                return ClaimResult.inProgress();
+                long retryAfterSeconds = Math.max(
+                        1L,
+                        Duration.between(databaseNow, row.leaseUntil()).toSeconds()
+                );
+                return ClaimResult.inProgress(retryAfterSeconds);
             }
 
             if (row.generation() != null) {
@@ -358,22 +362,28 @@ public class IngestionIdempotencyRepository {
     public record ClaimResult(
             Status status,
             IngestionIdempotencyContext context,
-            KnowledgeIngestionResponse response
+            KnowledgeIngestionResponse response,
+            Long retryAfterSeconds
     ) {
         public static ClaimResult claimed(
                 IngestionIdempotencyContext context
         ) {
-            return new ClaimResult(Status.CLAIMED, context, null);
+            return new ClaimResult(Status.CLAIMED, context, null, null);
         }
 
         public static ClaimResult replay(
                 KnowledgeIngestionResponse response
         ) {
-            return new ClaimResult(Status.REPLAY, null, response);
+            return new ClaimResult(Status.REPLAY, null, response, null);
         }
 
-        public static ClaimResult inProgress() {
-            return new ClaimResult(Status.IN_PROGRESS, null, null);
+        public static ClaimResult inProgress(long retryAfterSeconds) {
+            return new ClaimResult(
+                    Status.IN_PROGRESS,
+                    null,
+                    null,
+                    Math.max(1L, retryAfterSeconds)
+            );
         }
 
         public enum Status {
