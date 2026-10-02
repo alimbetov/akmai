@@ -416,6 +416,7 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
                   ON l.document_id = p.document_id
                  AND l.published_generation = p.generation
                 WHERE l.retention_status = 'ACTIVE'
+                  AND l.access_level = ANY (?)
                   AND p.language = ?
                   AND (%s)
                 """.formatted(score, terms.size(), predicate)
@@ -463,6 +464,7 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
                   ON l.document_id = p.document_id
                  AND l.published_generation = p.generation
                 WHERE l.retention_status = 'ACTIVE'
+                  AND l.access_level = ANY (?)
                   AND p.language = ?
                   AND p.%s @@ websearch_to_tsquery('%s', ?)
                 """.formatted(vectorColumn, configuration, vectorColumn, configuration)
@@ -505,6 +507,7 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
                   ON l.document_id = p.document_id
                  AND l.published_generation = p.generation
                 WHERE l.retention_status = 'ACTIVE'
+                  AND l.access_level = ANY (?)
                   AND p.language = ?
                   AND (
                       lower(p.text_content) % lower(?)
