@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
 import kz.alimbetov.akmai.rag.retrieval.ContextAssembler;
@@ -52,13 +53,15 @@ class RagQuestionServiceTest {
                 Map.of(
                         "source", "source.md",
                         "language", "en",
-                        "sectionPath", "section"
+                        "sectionPath", "section",
+                        "generation", 1L
                 )
         );
 
         when(chunker.chunk("question")).thenReturn(List.of(query));
         when(planner.plan(List.of(query))).thenReturn(plan);
-        when(executor.executeDetailed(plan)).thenReturn(
+        Set<Long> scope = Set.of(1L);
+        when(executor.executeDetailed(plan, scope)).thenReturn(
                 new RetrievalExecutionResult(
                         List.of(hit),
                         Map.of(),
@@ -66,10 +69,10 @@ class RagQuestionServiceTest {
                         false
                 )
         );
-        when(fusion.fuse(List.of(hit))).thenReturn(List.of(hit));
+        when(fusion.fuse(List.of(hit), scope)).thenReturn(List.of(hit));
         when(reranker.rerank(List.of(hit), "question"))
                 .thenReturn(List.of(hit));
-        when(expansion.expand(List.of(hit))).thenReturn(List.of(hit));
+        when(expansion.expand(List.of(hit), scope)).thenReturn(List.of(hit));
         when(budget.apply(List.of(hit), "question")).thenReturn(List.of(hit));
         when(assembler.assemble(anyList())).thenReturn("{\"sources\":[]}");
         when(generation.generate(eq("question"), eq("{\"sources\":[]}")))
@@ -88,7 +91,7 @@ class RagQuestionServiceTest {
                 generation
         );
 
-        var response = service.ask("question");
+        var response = service.ask("question", scope);
 
         assertThat(response.answer())
                 .isEqualTo("В базе знаний недостаточно информации.");
