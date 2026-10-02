@@ -27,6 +27,9 @@ spring:
           temperature: 0.1
 
 akmai:
+  model-budget:
+    chat-context-window: ${AKMAI_CHAT_CONTEXT_WINDOW:32768}
+    embedding-context-window: ${AKMAI_EMBEDDING_CONTEXT_WINDOW:8192}
   api:
     max-document-chars: ${AKMAI_API_MAX_DOCUMENT_CHARS:1000000}
     max-question-chars: ${AKMAI_API_MAX_QUESTION_CHARS:20000}
