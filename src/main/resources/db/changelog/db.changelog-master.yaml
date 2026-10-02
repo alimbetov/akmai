@@ -20,3 +20,5 @@ databaseChangeLog:
       file: db/changelog/changes/008-published-lexical-indexes.sql
   - include:
       file: db/changelog/changes/009-restore-legacy-identifiers.sql
+  - include:
+      file: db/changelog/changes/010-embedding-migration-journal.sql
