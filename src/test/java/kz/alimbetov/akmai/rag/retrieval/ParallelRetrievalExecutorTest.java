@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -11,6 +12,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalStep;
@@ -140,6 +142,163 @@ class ParallelRetrievalExecutorTest {
         }
     }
 
+    @Test
+    void emptyIdentifierScopeFailsClosedWithoutGlobalSemanticFallback() {
+        ExecutorService executor = Executors.newFixedThreadPool(3);
+        AtomicBoolean semanticRan = new AtomicBoolean(false);
+        try {
+            RetrievalStrategy identifier = new RetrievalStrategy() {
+                @Override
+                public RetrievalType type() {
+                    return RetrievalType.IDENTIFIER;
+                }
+
+                @Override
+                public List<RetrievalHit> retrieve(
+                        QueryChunk queryChunk,
+                        RetrievalContext context
+                ) {
+                    return List.of();
+                }
+            };
+            RetrievalStrategy vector = markingStrategy(
+                    RetrievalType.VECTOR,
+                    semanticRan
+            );
+            RetrievalStrategy lexical = markingStrategy(
+                    RetrievalType.LEXICAL,
+                    semanticRan
+            );
+            ParallelRetrievalExecutor subject = subject(
+                    List.of(identifier, vector, lexical),
+                    executor
+            );
+            QueryChunk query = query();
+            RetrievalPlan scoped = new RetrievalPlan(List.of(
+                    new RetrievalStep(
+                            "id", query, RetrievalType.IDENTIFIER, List.of()
+                    ),
+                    new RetrievalStep(
+                            "v", query, RetrievalType.VECTOR, List.of("id")
+                    ),
+                    new RetrievalStep(
+                            "l", query, RetrievalType.LEXICAL, List.of("id")
+                    )
+            ));
+
+            RetrievalExecutionResult result = subject.executeDetailed(scoped);
+
+            assertThat(result.hits()).isEmpty();
+            assertThat(semanticRan).isFalse();
+            assertThat(result.outcomes().get("id").status())
+                    .isEqualTo(RetrievalOutcomeStatus.EMPTY);
+            assertThat(result.outcomes().get("v").status())
+                    .isEqualTo(RetrievalOutcomeStatus.SKIPPED_DEPENDENCY);
+            assertThat(result.outcomes().get("l").status())
+                    .isEqualTo(RetrievalOutcomeStatus.SKIPPED_DEPENDENCY);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void identifierBackendFailureIsCriticalAndCannotBecomeZeroHitScope() {
+        ExecutorService executor = Executors.newFixedThreadPool(3);
+        AtomicBoolean semanticRan = new AtomicBoolean(false);
+        try {
+            RetrievalStrategy identifier = new RetrievalStrategy() {
+                @Override
+                public RetrievalType type() {
+                    return RetrievalType.IDENTIFIER;
+                }
+
+                @Override
+                public List<RetrievalHit> retrieve(
+                        QueryChunk queryChunk,
+                        RetrievalContext context
+                ) {
+                    throw new IllegalStateException("identifier unavailable");
+                }
+            };
+            ParallelRetrievalExecutor subject = subject(
+                    List.of(
+                            identifier,
+                            markingStrategy(RetrievalType.VECTOR, semanticRan),
+                            markingStrategy(RetrievalType.LEXICAL, semanticRan)
+                    ),
+                    executor
+            );
+            QueryChunk query = query();
+            RetrievalPlan scoped = new RetrievalPlan(List.of(
+                    new RetrievalStep(
+                            "id", query, RetrievalType.IDENTIFIER, List.of()
+                    ),
+                    new RetrievalStep(
+                            "v", query, RetrievalType.VECTOR, List.of("id")
+                    ),
+                    new RetrievalStep(
+                            "l", query, RetrievalType.LEXICAL, List.of("id")
+                    )
+            ));
+
+            RetrievalExecutionResult result = subject.executeDetailed(scoped);
+
+            assertThat(result.criticalFailure()).isTrue();
+            assertThat(semanticRan).isFalse();
+            assertThat(result.outcomes().get("id").status())
+                    .isEqualTo(RetrievalOutcomeStatus.FAILED);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void perStrategyDeadlineProducesTypedTimeoutPromptly() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            RetrievalStrategy vector = new RetrievalStrategy() {
+                @Override
+                public RetrievalType type() {
+                    return RetrievalType.VECTOR;
+                }
+
+                @Override
+                public List<RetrievalHit> retrieve(
+                        QueryChunk queryChunk,
+                        RetrievalContext context
+                ) {
+                    try {
+                        Thread.sleep(5_000);
+                    } catch (InterruptedException exception) {
+                        Thread.currentThread().interrupt();
+                    }
+                    return List.of();
+                }
+            };
+            ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
+                    List.of(vector),
+                    executor,
+                    new RetrievalObserver(new SimpleMeterRegistry()),
+                    properties(Duration.ofMillis(200), Duration.ofMillis(25))
+            );
+            RetrievalPlan plan = new RetrievalPlan(List.of(
+                    new RetrievalStep(
+                            "v", query(), RetrievalType.VECTOR, List.of()
+                    )
+            ));
+
+            long started = System.nanoTime();
+            RetrievalExecutionResult result = subject.executeDetailed(plan);
+            Duration elapsed = Duration.ofNanos(System.nanoTime() - started);
+
+            assertThat(result.outcomes().get("v").status())
+                    .isEqualTo(RetrievalOutcomeStatus.TIMED_OUT);
+            assertThat(elapsed).isLessThan(Duration.ofSeconds(1));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
     private ParallelRetrievalExecutor subject(
             List<RetrievalStrategy> strategies,
             ExecutorService executor
@@ -149,6 +308,60 @@ class ParallelRetrievalExecutorTest {
                 executor,
                 new RetrievalObserver(new SimpleMeterRegistry()),
                 RetrievalTestProperties.defaults()
+        );
+    }
+
+    private RetrievalStrategy markingStrategy(
+            RetrievalType type,
+            AtomicBoolean ran
+    ) {
+        return new RetrievalStrategy() {
+            @Override
+            public RetrievalType type() {
+                return type;
+            }
+
+            @Override
+            public List<RetrievalHit> retrieve(
+                    QueryChunk queryChunk,
+                    RetrievalContext context
+            ) {
+                ran.set(true);
+                return List.of(hit(type, "unexpected"));
+            }
+        };
+    }
+
+    private RetrievalProperties properties(
+            Duration requestTimeout,
+            Duration strategyTimeout
+    ) {
+        RetrievalProperties defaults = RetrievalTestProperties.defaults();
+        return new RetrievalProperties(
+                defaults.parallelism(),
+                defaults.queueCapacity(),
+                defaults.vectorTopK(),
+                defaults.vectorSimilarityThreshold(),
+                defaults.lexicalLimit(),
+                defaults.identifierLimit(),
+                defaults.referenceLimit(),
+                defaults.rrfK(),
+                defaults.expansionSeeds(),
+                defaults.expansionRadius(),
+                defaults.expansionMax(),
+                defaults.contextMaxTokens(),
+                defaults.contextMaxChunks(),
+                defaults.contextMaxChunksPerDocument(),
+                defaults.rerankerEnabled(),
+                defaults.rerankerCandidates(),
+                defaults.rerankerTimeout(),
+                defaults.rerankerFusedWeight(),
+                requestTimeout,
+                strategyTimeout,
+                defaults.answerTimeout(),
+                defaults.embeddingHttpTimeout(),
+                defaults.contextExpansionMaxChunks(),
+                defaults.answerReservedTokens()
         );
     }
 
