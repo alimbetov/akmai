@@ -88,6 +88,26 @@ public class DocumentIdentifierRepository {
         );
     }
 
+    public List<DocumentIdentifier> findGeneration(
+            String documentId,
+            long generation
+    ) {
+        return jdbcTemplate.query(
+                """
+                SELECT document_id, generation, chunk_id, page_number,
+                       identifier_type, raw_value, normalized_value,
+                       context_text, created_at
+                FROM document_identifier
+                WHERE document_id = ?
+                  AND generation = ?
+                ORDER BY id
+                """,
+                this::map,
+                documentId,
+                generation
+        );
+    }
+
     public void deleteGeneration(String documentId, long generation) {
         jdbcTemplate.update(
                 """
