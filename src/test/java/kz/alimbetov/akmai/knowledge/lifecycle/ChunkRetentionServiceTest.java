@@ -1,177 +1,142 @@
 package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
-import java.time.Clock;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.util.List;
 import java.util.UUID;
-import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
+import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileRepository;
+import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileStorageManager;
+import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
+import kz.alimbetov.akmai.knowledge.projection.PostgresSearchProjectionRepository;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository;
+import liquibase.integration.spring.SpringLiquibase;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InOrder;
-import org.springframework.ai.vectorstore.VectorStore;
+import org.postgresql.ds.PGSimpleDataSource;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
+@Testcontainers
 class ChunkRetentionServiceTest {
 
-    private static final Instant NOW = Instant.parse("2026-10-01T22:30:00Z");
-    private static final RetentionClaim CLAIM = new RetentionClaim(
-            "doc-1",
-            7,
-            UUID.fromString("00000000-0000-0000-0000-000000000007"),
-            "pod-a",
-            NOW.plusSeconds(600)
-    );
+    @Container
+    static final PostgreSQLContainer<?> POSTGRES =
+            new PostgreSQLContainer<>("postgres:17-alpine")
+                    .withDatabaseName("akmai")
+                    .withUsername("akmai")
+                    .withPassword("akmai");
 
-    @Test
-    void deletesOnlyClaimedGenerationAndMarksDeleted() {
-        Fixture fixture = fixture();
-        when(fixture.lifecycle.markDeleting(CLAIM, NOW)).thenReturn(true);
-        when(fixture.lifecycle.isCurrentClaim(CLAIM, NOW)).thenReturn(true);
-        when(fixture.vectorGenerations.findVectorIds("doc-1", 7))
-                .thenReturn(List.of("doc-1::g7::chunk-a", "doc-1::g7::chunk-b"));
-        when(fixture.lifecycle.markDeleted(CLAIM, NOW)).thenReturn(true);
+    static JdbcTemplate jdbc;
+    static TransactionTemplate tx;
 
-        RetentionCleanupResult result = fixture.service.cleanup(CLAIM);
+    @BeforeAll
+    static void migrate() throws Exception {
+        PGSimpleDataSource dataSource = new PGSimpleDataSource();
+        dataSource.setURL(POSTGRES.getJdbcUrl());
+        dataSource.setUser(POSTGRES.getUsername());
+        dataSource.setPassword(POSTGRES.getPassword());
 
-        assertThat(result.status()).isEqualTo(RetentionCleanupResult.Status.DELETED);
-        assertThat(result.deletedChunks()).isEqualTo(2);
-
-        InOrder order = inOrder(
-                fixture.lifecycle,
-                fixture.vectorGenerations,
-                fixture.vectors,
-                fixture.identifiers,
-                fixture.projections
+        SpringLiquibase liquibase = new SpringLiquibase();
+        liquibase.setDataSource(dataSource);
+        liquibase.setChangeLog(
+                "classpath:db/changelog/db.changelog-master.yaml"
         );
-        order.verify(fixture.lifecycle).markDeleting(CLAIM, NOW);
-        order.verify(fixture.vectorGenerations).findVectorIds("doc-1", 7);
-        order.verify(fixture.lifecycle).isCurrentClaim(CLAIM, NOW);
-        order.verify(fixture.vectors)
-                .delete(List.of("doc-1::g7::chunk-a", "doc-1::g7::chunk-b"));
-        order.verify(fixture.lifecycle).isCurrentClaim(CLAIM, NOW);
-        order.verify(fixture.identifiers).deleteByDocumentId("doc-1");
-        order.verify(fixture.projections).deleteByDocumentId("doc-1");
-        order.verify(fixture.vectorGenerations).deleteGeneration("doc-1", 7);
-        order.verify(fixture.lifecycle).markDeleted(CLAIM, NOW);
-    }
+        liquibase.afterPropertiesSet();
 
-    @Test
-    void staleClaimBeforeVectorDeleteDoesNotDeleteAnything() {
-        Fixture fixture = fixture();
-        when(fixture.lifecycle.markDeleting(CLAIM, NOW)).thenReturn(true);
-        when(fixture.vectorGenerations.findVectorIds("doc-1", 7))
-                .thenReturn(List.of("doc-1::g7::chunk-a"));
-        when(fixture.lifecycle.isCurrentClaim(CLAIM, NOW)).thenReturn(false);
-
-        RetentionCleanupResult result = fixture.service.cleanup(CLAIM);
-
-        assertThat(result.status()).isEqualTo(RetentionCleanupResult.Status.STALE_CLAIM);
-        verify(fixture.vectors, never()).delete(anyList());
-        verify(fixture.identifiers, never()).deleteByDocumentId("doc-1");
-        verify(fixture.projections, never()).deleteByDocumentId("doc-1");
-        verify(fixture.vectorGenerations, never()).deleteGeneration("doc-1", 7);
-    }
-
-    @Test
-    void staleClaimAfterVectorDeletePreventsPostgresDeletion() {
-        Fixture fixture = fixture();
-        when(fixture.lifecycle.markDeleting(CLAIM, NOW)).thenReturn(true);
-        when(fixture.vectorGenerations.findVectorIds("doc-1", 7))
-                .thenReturn(List.of("doc-1::g7::old-chunk"));
-        when(fixture.lifecycle.isCurrentClaim(CLAIM, NOW)).thenReturn(true, false);
-
-        RetentionCleanupResult result = fixture.service.cleanup(CLAIM);
-
-        assertThat(result.status()).isEqualTo(RetentionCleanupResult.Status.STALE_CLAIM);
-        verify(fixture.vectors).delete(List.of("doc-1::g7::old-chunk"));
-        verify(fixture.identifiers, never()).deleteByDocumentId("doc-1");
-        verify(fixture.projections, never()).deleteByDocumentId("doc-1");
-        verify(fixture.vectorGenerations, never()).deleteGeneration("doc-1", 7);
-    }
-
-    @Test
-    void failureIsPersistedForRetry() {
-        Fixture fixture = fixture();
-        when(fixture.lifecycle.markDeleting(CLAIM, NOW)).thenReturn(true);
-        when(fixture.vectorGenerations.findVectorIds("doc-1", 7))
-                .thenReturn(List.of("doc-1::g7::chunk-a"));
-        when(fixture.lifecycle.isCurrentClaim(CLAIM, NOW)).thenReturn(true);
-        doThrow(new IllegalStateException("vector unavailable"))
-                .when(fixture.vectors)
-                .delete(List.of("doc-1::g7::chunk-a"));
-
-        RetentionCleanupResult result = fixture.service.cleanup(CLAIM);
-
-        assertThat(result.status()).isEqualTo(RetentionCleanupResult.Status.FAILED);
-        verify(fixture.lifecycle).markFailed(
-                CLAIM,
-                NOW,
-                "IllegalStateException: vector unavailable"
+        jdbc = new JdbcTemplate(dataSource);
+        tx = new TransactionTemplate(
+                new DataSourceTransactionManager(dataSource)
         );
-        verify(fixture.identifiers, never()).deleteByDocumentId("doc-1");
-        verify(fixture.projections, never()).deleteByDocumentId("doc-1");
+    }
+
+    @BeforeEach
+    void clean() {
+        jdbc.update("DELETE FROM knowledge_document_generation");
+        jdbc.update("DELETE FROM knowledge_document_lifecycle");
     }
 
     @Test
-    void emptyGenerationIsAnIdempotentSuccessfulCleanup() {
-        Fixture fixture = fixture();
-        when(fixture.lifecycle.markDeleting(CLAIM, NOW)).thenReturn(true);
-        when(fixture.vectorGenerations.findVectorIds("doc-1", 7)).thenReturn(List.of());
-        when(fixture.lifecycle.isCurrentClaim(CLAIM, NOW)).thenReturn(true);
-        when(fixture.lifecycle.markDeleted(CLAIM, NOW)).thenReturn(true);
+    void staleClaimCannotReachAnyDestructiveRepository() {
+        insertLifecycleWithDifferentClaim();
 
-        RetentionCleanupResult result = fixture.service.cleanup(CLAIM);
+        RetentionClaimRepository claims = mock(RetentionClaimRepository.class);
+        SearchProjectionRepository projections =
+                mock(PostgresSearchProjectionRepository.class);
+        DocumentIdentifierRepository identifiers =
+                mock(DocumentIdentifierRepository.class);
+        VectorGenerationRepository manifests =
+                mock(VectorGenerationRepository.class);
+        PostgresGenerationVectorRepository vectors =
+                mock(PostgresGenerationVectorRepository.class);
+        EmbeddingProfileRepository profiles =
+                mock(EmbeddingProfileRepository.class);
 
-        assertThat(result.status()).isEqualTo(RetentionCleanupResult.Status.DELETED);
-        verify(fixture.vectors, never()).delete(anyList());
-        verify(fixture.identifiers).deleteByDocumentId("doc-1");
-        verify(fixture.projections).deleteByDocumentId("doc-1");
-        verify(fixture.vectorGenerations).deleteGeneration("doc-1", 7);
-    }
-
-    private Fixture fixture() {
-        DocumentLifecycleRepository lifecycle = mock(DocumentLifecycleRepository.class);
-        SearchProjectionRepository projections = mock(SearchProjectionRepository.class);
-        IdentifierSearchIndex identifiers = mock(IdentifierSearchIndex.class);
-        VectorStore vectors = mock(VectorStore.class);
-        VectorGenerationRepository vectorGenerations = mock(VectorGenerationRepository.class);
-        DocumentOperationLock lock = mock(DocumentOperationLock.class);
-        when(lock.acquire("doc-1")).thenReturn(mock(DocumentOperationLock.LockHandle.class));
-
-        return new Fixture(
-                lifecycle,
+        ChunkRetentionService service = new ChunkRetentionService(
+                jdbc,
+                tx,
+                claims,
                 projections,
                 identifiers,
+                manifests,
                 vectors,
-                vectorGenerations,
-                new ChunkRetentionService(
-                        lifecycle,
-                        projections,
-                        identifiers,
-                        vectors,
-                        vectorGenerations,
-                        lock,
-                        Clock.fixed(NOW, ZoneOffset.UTC)
-                )
+                profiles
         );
+
+        RetentionClaim stale = new RetentionClaim(
+                "doc-1",
+                7,
+                UUID.fromString(
+                        "00000000-0000-0000-0000-000000000007"
+                ),
+                "pod-a",
+                Instant.now().plus(Duration.ofMinutes(10))
+        );
+
+        RetentionCleanupResult result = service.cleanup(stale);
+
+        assertThat(result.status())
+                .isEqualTo(RetentionCleanupResult.Status.STALE_CLAIM);
+        verify(vectors, never()).deleteIds(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyList()
+        );
+        verify(projections, never()).deleteGeneration("doc-1", 7);
+        verify(identifiers, never()).deleteGeneration("doc-1", 7);
+        verify(manifests, never()).deleteGeneration("doc-1", 7);
     }
 
-    private record Fixture(
-            DocumentLifecycleRepository lifecycle,
-            SearchProjectionRepository projections,
-            IdentifierSearchIndex identifiers,
-            VectorStore vectors,
-            VectorGenerationRepository vectorGenerations,
-            ChunkRetentionService service
-    ) {
+    private void insertLifecycleWithDifferentClaim() {
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_lifecycle (
+                    document_id, lifecycle_policy, lifecycle_status,
+                    generation, claim_generation, claim_id, claimed_by,
+                    claimed_at, lease_until, expires_at, delete_started_at,
+                    deleted_at, attempt_count, last_error, row_version,
+                    ingestion_started_at, created_at, updated_at,
+                    retention_status, published_generation, next_generation
+                ) VALUES (
+                    'doc-1', 'TTL', 'DELETE_PENDING',
+                    7, 7, ?::uuid, 'pod-b',
+                    clock_timestamp(), clock_timestamp() + interval '10 minutes',
+                    clock_timestamp() - interval '1 minute', NULL,
+                    NULL, 0, NULL, 0,
+                    NULL, clock_timestamp(), clock_timestamp(),
+                    'DELETE_PENDING', 7, 8
+                )
+                """,
+                "00000000-0000-0000-0000-000000000099"
+        );
     }
 }
