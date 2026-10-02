@@ -150,7 +150,7 @@ public class GenerationPublicationService {
     ) {
         GenerationLock generationState = jdbcTemplate.query(
                 """
-                SELECT generation_status, embedding_profile_id
+                SELECT generation_status, embedding_profile_id, access_level
                 FROM knowledge_document_generation
                 WHERE document_id = ?
                   AND generation = ?
@@ -158,7 +158,8 @@ public class GenerationPublicationService {
                 """,
                 (rs, rowNum) -> new GenerationLock(
                         rs.getString("generation_status"),
-                        rs.getString("embedding_profile_id")
+                        rs.getString("embedding_profile_id"),
+                        rs.getLong("access_level")
                 ),
                 documentId,
                 generation
@@ -279,6 +280,7 @@ public class GenerationPublicationService {
                     retention_status = 'ACTIVE',
                     lifecycle_policy = ?,
                     expires_at = ?,
+                    access_level = ?,
                     ingestion_started_at = NULL,
                     attempt_count = 0,
                     last_error = NULL,
@@ -295,6 +297,7 @@ public class GenerationPublicationService {
                 generation,
                 policy.name(),
                 timestamp(expiresAt),
+                generationState.accessLevel(),
                 documentId
         );
         if (lifecycle != 1) {
@@ -324,7 +327,8 @@ public class GenerationPublicationService {
 
     private record GenerationLock(
             String status,
-            String embeddingProfileId
+            String embeddingProfileId,
+            long accessLevel
     ) {
     }
 
