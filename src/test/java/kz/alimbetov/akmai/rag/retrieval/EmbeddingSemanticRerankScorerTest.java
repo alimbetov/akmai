@@ -54,6 +54,46 @@ class EmbeddingSemanticRerankScorerTest {
                 .hasMessageContaining("unexpected vector count");
     }
 
+    @Test
+    void rejectsNonFiniteEmbeddingComponents() {
+        EmbeddingModel embeddingModel = mock(EmbeddingModel.class);
+        List<String> inputs = List.of("question", "first");
+        when(embeddingModel.embed(inputs)).thenReturn(List.of(
+                new float[]{1.0f, 0.0f},
+                new float[]{Float.NaN, 1.0f}
+        ));
+
+        EmbeddingSemanticRerankScorer scorer =
+                new EmbeddingSemanticRerankScorer(embeddingModel);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> scorer.score(
+                        "question",
+                        List.of(hit("first"))
+                ))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("non-finite");
+    }
+
+    @Test
+    void rejectsInconsistentEmbeddingDimensions() {
+        EmbeddingModel embeddingModel = mock(EmbeddingModel.class);
+        List<String> inputs = List.of("question", "first");
+        when(embeddingModel.embed(inputs)).thenReturn(List.of(
+                new float[]{1.0f, 0.0f},
+                new float[]{1.0f, 0.0f, 0.0f}
+        ));
+
+        EmbeddingSemanticRerankScorer scorer =
+                new EmbeddingSemanticRerankScorer(embeddingModel);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> scorer.score(
+                        "question",
+                        List.of(hit("first"))
+                ))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("dimensions");
+    }
+
     private RetrievalHit hit(String id) {
         return new RetrievalHit(
                 RetrievalType.VECTOR,
