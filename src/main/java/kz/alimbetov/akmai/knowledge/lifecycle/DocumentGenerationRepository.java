@@ -31,6 +31,27 @@ public class DocumentGenerationRepository {
             String embeddingProfileId,
             String contentFingerprint
     ) {
+        return allocate(
+                documentId,
+                requestedPolicy,
+                requestedExpiresAt,
+                embeddingProfileId,
+                contentFingerprint,
+                0L
+        );
+    }
+
+    public long allocate(
+            String documentId,
+            RetentionPolicy requestedPolicy,
+            Instant requestedExpiresAt,
+            String embeddingProfileId,
+            String contentFingerprint,
+            long accessLevel
+    ) {
+        if (accessLevel < 0) {
+            throw new IllegalArgumentException("accessLevel must be >= 0");
+        }
         return transactionTemplate.execute(status -> {
             String migrationStatus = jdbcTemplate.queryForObject(
                     """
@@ -55,20 +76,22 @@ public class DocumentGenerationRepository {
                         claimed_at, lease_until, expires_at, delete_started_at,
                         deleted_at, attempt_count, last_error, row_version,
                         ingestion_started_at, created_at, updated_at,
-                        retention_status, published_generation, next_generation
+                        retention_status, published_generation, next_generation,
+                        access_level
                     ) VALUES (
                         ?, ?, 'INGESTING',
                         1, NULL, NULL, NULL,
                         NULL, NULL, ?, NULL,
                         NULL, 0, NULL, 0,
                         clock_timestamp(), clock_timestamp(), clock_timestamp(),
-                        'ACTIVE', NULL, 1
+                        'ACTIVE', NULL, 1, ?
                     )
                     ON CONFLICT (document_id) DO NOTHING
                     """,
                     documentId,
                     requestedPolicy.name(),
-                    timestamp(requestedExpiresAt)
+                    timestamp(requestedExpiresAt),
+                    accessLevel
             );
 
             AllocationState current = jdbcTemplate.queryForObject(
@@ -124,14 +147,15 @@ public class DocumentGenerationRepository {
                         document_id, generation, generation_status,
                         generation_kind, migration_id, embedding_profile_id,
                         content_fingerprint, physical_id_version,
-                        cleanup_required, started_at
+                        cleanup_required, started_at, access_level
                     ) VALUES (?, ?, 'STAGING', 'INGESTION', NULL, ?, ?, 2, false,
-                              clock_timestamp())
+                              clock_timestamp(), ?)
                     """,
                     documentId,
                     generation,
                     embeddingProfileId,
-                    contentFingerprint
+                    contentFingerprint,
+                    accessLevel
             );
             return generation;
         });
