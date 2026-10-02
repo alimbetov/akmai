@@ -8,6 +8,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
+import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
+import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -100,6 +102,50 @@ class ResultFusionTest {
         );
 
         assertThat(fusion.fuse(List.of(first, second))).hasSize(2);
+    }
+
+    @Test
+    void canonicalProjectionPayloadReplacesIdentifierSnippetRepresentative() {
+        SearchProjectionRepository repository =
+                mock(SearchProjectionRepository.class);
+        SearchProjection canonical = new SearchProjection(
+                "chunk-1",
+                "doc",
+                2L,
+                null,
+                4,
+                "FULL CANONICAL TEXT",
+                "embedding",
+                "en",
+                KnowledgeDomain.LEGAL,
+                "Article 4",
+                List.of(),
+                List.of(),
+                Map.of("source", "law.md"),
+                2
+        );
+        when(repository.findByDocumentAndChunkIds(
+                "doc",
+                List.of("chunk-1")
+        )).thenReturn(List.of(canonical));
+        ResultFusion local = new ResultFusion(
+                RetrievalTestProperties.defaults(),
+                repository
+        );
+        RetrievalHit snippet = new RetrievalHit(
+                RetrievalType.IDENTIFIER,
+                "doc",
+                "chunk-1",
+                "short identifier snippet",
+                Map.of("queryChunkId", "q1", "authorityTier", 0)
+        );
+
+        RetrievalHit fused = local.fuse(List.of(snippet)).getFirst();
+
+        assertThat(fused.text()).isEqualTo("FULL CANONICAL TEXT");
+        assertThat(fused.metadata())
+                .containsEntry("source", "law.md")
+                .containsEntry("generation", 2L);
     }
 
     private RetrievalHit hit(RetrievalType type, String chunkId) {
