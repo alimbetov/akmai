@@ -27,11 +27,11 @@ SELECT snapshot.row_data->>'document_id',
 FROM legacy_document_identifier_snapshot snapshot
 JOIN knowledge_document_lifecycle l
   ON l.document_id = snapshot.row_data->>'document_id'
-WHERE snapshot.row_data ? 'document_id'
-  AND snapshot.row_data ? 'chunk_id'
-  AND snapshot.row_data ? 'identifier_type'
-  AND snapshot.row_data ? 'raw_value'
-  AND snapshot.row_data ? 'normalized_value'
+WHERE jsonb_exists(snapshot.row_data, 'document_id')
+  AND jsonb_exists(snapshot.row_data, 'chunk_id')
+  AND jsonb_exists(snapshot.row_data, 'identifier_type')
+  AND jsonb_exists(snapshot.row_data, 'raw_value')
+  AND jsonb_exists(snapshot.row_data, 'normalized_value')
 ON CONFLICT (
     document_id, generation, chunk_id, identifier_type, normalized_value
 ) DO NOTHING;
