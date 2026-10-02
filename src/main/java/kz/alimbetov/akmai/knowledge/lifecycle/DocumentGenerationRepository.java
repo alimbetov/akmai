@@ -32,6 +32,21 @@ public class DocumentGenerationRepository {
             String contentFingerprint
     ) {
         return transactionTemplate.execute(status -> {
+            String migrationStatus = jdbcTemplate.queryForObject(
+                    """
+                    SELECT migration_status
+                    FROM knowledge_embedding_runtime
+                    WHERE singleton_id = 1
+                    FOR SHARE
+                    """,
+                    String.class
+            );
+            if (!"IDLE".equals(migrationStatus)) {
+                throw new IllegalStateException(
+                        "Embedding migration blocks ordinary ingestion"
+                );
+            }
+
             jdbcTemplate.update(
                     """
                     INSERT INTO knowledge_document_lifecycle (
