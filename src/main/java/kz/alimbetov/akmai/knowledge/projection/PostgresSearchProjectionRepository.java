@@ -367,7 +367,10 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
         List<String> terms = java.util.Arrays.stream(
                         query.toLowerCase(java.util.Locale.ROOT).split("\\s+")
                 )
-                .map(String::trim)
+                .map(term -> term.replaceAll(
+                        "(?U)^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$",
+                        ""
+                ))
                 .filter(term -> term.length() >= 3)
                 .distinct()
                 .limit(8)
@@ -376,30 +379,43 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
             return List.of();
         }
 
-        String escapedLongest = escapeLikeLiteral(
-                terms.stream()
-                        .max(java.util.Comparator.comparingInt(String::length))
-                        .orElse(query)
-        );
+        String score = terms.stream()
+                .map(ignored -> """
+                        greatest(
+                            word_similarity(lower(?), lower(p.text_content)),
+                            word_similarity(
+                                lower(?),
+                                lower(coalesce(p.section_path, ''))
+                            )
+                        )
+                        """.strip())
+                .collect(java.util.stream.Collectors.joining(" + "));
+
+        String predicate = terms.stream()
+                .map(ignored -> """
+                        greatest(
+                            word_similarity(lower(?), lower(p.text_content)),
+                            word_similarity(
+                                lower(?),
+                                lower(coalesce(p.section_path, ''))
+                            )
+                        ) >= 0.45
+                        """.strip())
+                .collect(java.util.stream.Collectors.joining(" AND "));
 
         String sql = """
                 SELECT p.*,
-                       greatest(
-                           similarity(lower(p.text_content), lower(?)),
-                           similarity(lower(coalesce(p.section_path, '')), lower(?))
-                       ) AS lexical_rank
+                       (%s) / %d AS lexical_rank
                 FROM knowledge_search_projection p
                 JOIN knowledge_document_lifecycle l
                   ON l.document_id = p.document_id
                  AND l.published_generation = p.generation
                 WHERE l.retention_status = 'ACTIVE'
                   AND p.language = ?
-                  AND (
-                      lower(p.text_content) % lower(?)
-                      OR lower(coalesce(p.section_path, '')) % lower(?)
-                      OR lower(p.text_content) LIKE ('%' || lower(?) || '%') ESCAPE '\\'
-                  )
-                """ + documentFilter(documentIds) + """
+                  AND (%s)
+                """.formatted(score, terms.size(), predicate)
+                + documentFilter(documentIds)
+                + """
                 ORDER BY lexical_rank DESC, p.document_id, p.chunk_id
                 LIMIT ?
                 """;
@@ -408,12 +424,15 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
                 sql,
                 ps -> {
                     int i = 1;
-                    ps.setString(i++, query);
-                    ps.setString(i++, query);
+                    for (String term : terms) {
+                        ps.setString(i++, term);
+                        ps.setString(i++, term);
+                    }
                     ps.setString(i++, language);
-                    ps.setString(i++, query);
-                    ps.setString(i++, query);
-                    ps.setString(i++, escapedLongest);
+                    for (String term : terms) {
+                        ps.setString(i++, term);
+                        ps.setString(i++, term);
+                    }
                     i = bindDocumentIds(ps, i, documentIds);
                     ps.setInt(i, limit);
                 },
