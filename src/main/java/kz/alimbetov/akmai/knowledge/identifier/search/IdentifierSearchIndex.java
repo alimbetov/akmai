@@ -7,8 +7,6 @@ public interface IdentifierSearchIndex {
 
     void index(List<DocumentIdentifier> identifiers);
 
-    List<DocumentIdentifier> search(String query, int limit);
-
     List<DocumentIdentifier> search(IdentifierSearchQuery query);
 
     void deleteByDocumentId(String documentId);
