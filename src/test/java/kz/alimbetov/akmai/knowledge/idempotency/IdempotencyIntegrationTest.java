@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
+import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResponse;
 import kz.alimbetov.akmai.knowledge.lifecycle.DocumentGenerationRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
 import liquibase.integration.spring.SpringLiquibase;
@@ -64,6 +65,52 @@ class IdempotencyIntegrationTest {
         jdbc.update("DELETE FROM knowledge_ingestion_request");
         jdbc.update("DELETE FROM knowledge_document_generation");
         jdbc.update("DELETE FROM knowledge_document_lifecycle");
+    }
+
+    @Test
+    void successfulRequestReplaysOriginalResponseWithoutNewClaim() {
+        var first = repository.claim(
+                "key-success",
+                "doc-success",
+                "fingerprint-success",
+                Duration.ofMinutes(10)
+        );
+        KnowledgeIngestionResponse response =
+                new KnowledgeIngestionResponse("doc-success", 7);
+        repository.completeInCurrentTransaction(first.context(), response);
+
+        var replay = repository.claim(
+                "key-success",
+                "doc-success",
+                "fingerprint-success",
+                Duration.ofMinutes(10)
+        );
+
+        assertThat(replay.status())
+                .isEqualTo(IngestionIdempotencyRepository.ClaimResult.Status.REPLAY);
+        assertThat(replay.response()).isEqualTo(response);
+        assertThat(replay.context()).isNull();
+    }
+
+    @Test
+    void reusingKeyForDifferentFingerprintFailsClosed() {
+        repository.claim(
+                "key-conflict",
+                "doc-conflict",
+                "fingerprint-a",
+                Duration.ofMinutes(10)
+        );
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                repository.claim(
+                        "key-conflict",
+                        "doc-conflict",
+                        "fingerprint-b",
+                        Duration.ofMinutes(10)
+                )
+        )
+                .isInstanceOf(IdempotencyConflictException.class)
+                .hasMessageContaining("another request");
     }
 
     @Test
