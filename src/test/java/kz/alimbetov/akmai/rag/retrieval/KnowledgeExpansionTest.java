@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
-import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -21,7 +21,7 @@ class KnowledgeExpansionTest {
     private static final Set<Long> ACCESS = Set.of(1L);
 
     @Mock
-    private SearchProjectionRepository repository;
+    private PublishedSearchProjectionReader repository;
 
     @Test
     void resolvesSeedCoordinatesFromCanonicalProjection() {
