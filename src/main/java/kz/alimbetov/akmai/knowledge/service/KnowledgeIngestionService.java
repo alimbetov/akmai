@@ -69,7 +69,8 @@ public class KnowledgeIngestionService {
                     == IngestionIdempotencyRepository.ClaimResult.Status.IN_PROGRESS) {
                 throw new IdempotencyConflictException(
                         "INGESTION_IN_PROGRESS",
-                        "An ingestion with this Idempotency-Key is still in progress"
+                        "An ingestion with this Idempotency-Key is still in progress",
+                        claim.retryAfterSeconds()
                 );
             }
             idempotency = claim.context();
