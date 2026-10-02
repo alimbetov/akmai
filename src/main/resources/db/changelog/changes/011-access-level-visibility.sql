@@ -5,16 +5,16 @@ ALTER TABLE knowledge_document_lifecycle
     ADD COLUMN IF NOT EXISTS access_level BIGINT;
 
 UPDATE knowledge_document_lifecycle
-SET access_level = 0
+SET access_level = 1
 WHERE access_level IS NULL;
 
 ALTER TABLE knowledge_document_lifecycle
     ALTER COLUMN access_level SET NOT NULL,
-    ALTER COLUMN access_level SET DEFAULT 0;
+    ALTER COLUMN access_level SET DEFAULT 1;
 
 ALTER TABLE knowledge_document_lifecycle
     ADD CONSTRAINT ck_knowledge_lifecycle_access_level
-        CHECK (access_level >= 0);
+        CHECK (access_level > 0);
 
 ALTER TABLE knowledge_document_generation
     ADD COLUMN IF NOT EXISTS access_level BIGINT;
@@ -26,16 +26,16 @@ WHERE l.document_id = g.document_id
   AND g.access_level IS NULL;
 
 UPDATE knowledge_document_generation
-SET access_level = 0
+SET access_level = 1
 WHERE access_level IS NULL;
 
 ALTER TABLE knowledge_document_generation
     ALTER COLUMN access_level SET NOT NULL,
-    ALTER COLUMN access_level SET DEFAULT 0;
+    ALTER COLUMN access_level SET DEFAULT 1;
 
 ALTER TABLE knowledge_document_generation
     ADD CONSTRAINT ck_document_generation_access_level
-        CHECK (access_level >= 0);
+        CHECK (access_level > 0);
 
 CREATE INDEX IF NOT EXISTS idx_knowledge_lifecycle_access_visibility
     ON knowledge_document_lifecycle (
