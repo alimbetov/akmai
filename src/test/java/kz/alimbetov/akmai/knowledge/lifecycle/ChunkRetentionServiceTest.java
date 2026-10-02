@@ -5,12 +5,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileRepository;
-import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileStorageManager;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
 import kz.alimbetov.akmai.knowledge.projection.PostgresSearchProjectionRepository;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
