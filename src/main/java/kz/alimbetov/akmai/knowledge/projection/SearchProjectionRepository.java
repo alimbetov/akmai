@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.knowledge.projection;
 
 import java.util.List;
+import java.util.Set;
 
 public interface SearchProjectionRepository {
 
@@ -23,12 +24,26 @@ public interface SearchProjectionRepository {
             List<String> chunkIds
     );
 
+    List<SearchProjection> findByDocumentAndChunkIds(
+            String documentId,
+            List<String> chunkIds,
+            Set<Long> accessLevels
+    );
+
     List<SearchProjection> findAdjacent(String documentId, int chunkIndex, int radius);
 
     List<SearchProjection> searchLexical(
             String query,
             String language,
             List<String> documentIds,
+            int limit
+    );
+
+    List<SearchProjection> searchLexical(
+            String query,
+            String language,
+            List<String> documentIds,
+            Set<Long> accessLevels,
             int limit
     );
 }
