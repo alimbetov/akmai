@@ -24,19 +24,6 @@ public class DocumentGenerationRepository {
         this.transactionTemplate = transactionTemplate;
     }
 
-    @Deprecated(forRemoval = true)
-    public long allocate(
-            String documentId,
-            RetentionPolicy requestedPolicy,
-            Instant requestedExpiresAt,
-            String embeddingProfileId,
-            String contentFingerprint
-    ) {
-        throw new UnsupportedOperationException(
-                "accessLevel is required"
-        );
-    }
-
     public long allocate(
             String documentId,
             RetentionPolicy requestedPolicy,
