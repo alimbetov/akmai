@@ -111,6 +111,7 @@ class ApiRequestValidatorTest {
                 "source",
                 "en",
                 KnowledgeDomain.GENERAL,
+                1L,
                 metadata
         );
     }
