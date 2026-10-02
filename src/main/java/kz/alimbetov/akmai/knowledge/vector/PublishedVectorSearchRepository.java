@@ -8,6 +8,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileStorageManager;
@@ -46,7 +47,27 @@ public class PublishedVectorSearchRepository {
             int topK,
             double similarityThreshold
     ) {
-        if (query == null || query.isBlank() || topK <= 0) {
+        return search(
+                query,
+                documentIds,
+                Set.of(),
+                topK,
+                similarityThreshold
+        );
+    }
+
+    public List<VectorSearchMatch> search(
+            String query,
+            List<String> documentIds,
+            Set<Long> accessLevels,
+            int topK,
+            double similarityThreshold
+    ) {
+        if (query == null
+                || query.isBlank()
+                || topK <= 0
+                || accessLevels == null
+                || accessLevels.isEmpty()) {
             return List.of();
         }
         profileService.assertConfiguredProfileIsActive();
@@ -74,6 +95,7 @@ public class PublishedVectorSearchRepository {
                  AND l.published_generation =
                         (v.metadata->>'akmaiGeneration')::bigint
                 WHERE l.retention_status = 'ACTIVE'
+                  AND l.access_level = ANY (?)
                   AND v.metadata->>'akmaiEmbeddingProfileId' = ?
                   AND (v.embedding <=> ?) <= ?
                 """.formatted(storageManager.qualified(profile))
@@ -91,6 +113,7 @@ public class PublishedVectorSearchRepository {
                         profile.profileId(),
                         maxDistance,
                         documentIds,
+                        accessLevels,
                         topK
                 ),
                 (rs, rowNum) -> new VectorSearchMatch(
@@ -111,10 +134,18 @@ public class PublishedVectorSearchRepository {
             String profileId,
             double maxDistance,
             List<String> documentIds,
+            Set<Long> accessLevels,
             int topK
     ) throws SQLException {
         int index = 1;
         ps.setObject(index++, vector);
+        ps.setArray(
+                index++,
+                ps.getConnection().createArrayOf(
+                        "bigint",
+                        accessLevels.toArray()
+                )
+        );
         ps.setString(index++, profileId);
         ps.setObject(index++, vector);
         ps.setDouble(index++, maxDistance);
