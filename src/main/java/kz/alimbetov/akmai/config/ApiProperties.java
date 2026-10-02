@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.config;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.validation.annotation.Validated;
 
 @Validated
@@ -17,6 +18,10 @@ public record ApiProperties(
         @Min(1) @Max(10_000) int maxTitleChars,
         @Min(1) @Max(10_000) int maxSourceChars
 ) {
+    @ConstructorBinding
+    public ApiProperties {
+    }
+
     public ApiProperties(
             int maxDocumentChars,
             int maxQuestionChars,
