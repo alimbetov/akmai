@@ -112,7 +112,12 @@ public class KnowledgeIngestionService {
                 document.documentId(),
                 chunks.size()
         );
-        persistenceCoordinator.persist(enriched, idempotency, response);
+        persistenceCoordinator.persist(
+                enriched,
+                idempotency,
+                response,
+                request.accessLevel()
+        );
         return response;
     }
 }
