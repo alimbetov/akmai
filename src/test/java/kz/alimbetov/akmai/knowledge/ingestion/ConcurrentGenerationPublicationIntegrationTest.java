@@ -201,4 +201,131 @@ class ConcurrentGenerationPublicationIntegrationTest {
                 first
         )).isEqualTo("SUPERSEDED");
     }
+
+    @Test
+    void accessLevelChangesOnlyWhenReplacementGenerationPublishes() {
+        long first = generations.allocate(
+                "doc-access-cutover",
+                RetentionPolicy.PERMANENT,
+                null,
+                profile.profileId(),
+                "fp-access-1",
+                1L
+        );
+        publication.publish(
+                "doc-access-cutover",
+                first,
+                RetentionPolicy.PERMANENT,
+                null,
+                profile,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of()
+        );
+
+        assertThat(accessLevel("doc-access-cutover")).isEqualTo(1L);
+
+        long second = generations.allocate(
+                "doc-access-cutover",
+                RetentionPolicy.PERMANENT,
+                null,
+                profile.profileId(),
+                "fp-access-2",
+                2L
+        );
+
+        assertThat(accessLevel("doc-access-cutover"))
+                .as("staging access must not affect published visibility")
+                .isEqualTo(1L);
+
+        publication.publish(
+                "doc-access-cutover",
+                second,
+                RetentionPolicy.PERMANENT,
+                null,
+                profile,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of()
+        );
+
+        assertThat(accessLevel("doc-access-cutover")).isEqualTo(2L);
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT access_level
+                FROM knowledge_document_generation
+                WHERE document_id = 'doc-access-cutover'
+                  AND generation = ?
+                """,
+                Long.class,
+                second
+        )).isEqualTo(2L);
+    }
+
+    @Test
+    void failedReplacementDoesNotChangePublishedAccessLevel() {
+        long first = generations.allocate(
+                "doc-access-failure",
+                RetentionPolicy.PERMANENT,
+                null,
+                profile.profileId(),
+                "fp-access-old",
+                4L
+        );
+        publication.publish(
+                "doc-access-failure",
+                first,
+                RetentionPolicy.PERMANENT,
+                null,
+                profile,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of()
+        );
+
+        long failed = generations.allocate(
+                "doc-access-failure",
+                RetentionPolicy.PERMANENT,
+                null,
+                profile.profileId(),
+                "fp-access-new",
+                9L
+        );
+        generations.fail(
+                "doc-access-failure",
+                failed,
+                "TEST_FAILURE",
+                "replacement failed"
+        );
+
+        assertThat(accessLevel("doc-access-failure")).isEqualTo(4L);
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT published_generation
+                FROM knowledge_document_lifecycle
+                WHERE document_id = 'doc-access-failure'
+                """,
+                Long.class
+        )).isEqualTo(first);
+    }
+
+    private long accessLevel(String documentId) {
+        Long value = jdbc.queryForObject(
+                """
+                SELECT access_level
+                FROM knowledge_document_lifecycle
+                WHERE document_id = ?
+                """,
+                Long.class,
+                documentId
+        );
+        if (value == null) {
+            throw new AssertionError("missing lifecycle row");
+        }
+        return value;
+    }
+
 }
