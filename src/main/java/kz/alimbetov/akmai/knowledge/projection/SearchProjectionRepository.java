@@ -7,8 +7,6 @@ public interface SearchProjectionRepository {
 
     void saveAll(List<SearchProjection> projections);
 
-    List<String> findChunkIdsByDocumentId(String documentId);
-
     List<String> findChunkIds(String documentId, long generation);
 
     List<SearchProjection> findGeneration(String documentId, long generation);
@@ -16,13 +14,6 @@ public interface SearchProjectionRepository {
     void deleteByDocumentId(String documentId);
 
     void deleteGeneration(String documentId, long generation);
-
-    List<SearchProjection> findByChunkIds(List<String> chunkIds);
-
-    List<SearchProjection> findByDocumentAndChunkIds(
-            String documentId,
-            List<String> chunkIds
-    );
 
     List<SearchProjection> findByDocumentAndChunkIds(
             String documentId,
@@ -37,21 +28,12 @@ public interface SearchProjectionRepository {
             Set<Long> accessLevels
     );
 
-    List<SearchProjection> findAdjacent(String documentId, int chunkIndex, int radius);
-
     List<SearchProjection> findAdjacent(
             String documentId,
             long generation,
             int chunkIndex,
             int radius,
             Set<Long> accessLevels
-    );
-
-    List<SearchProjection> searchLexical(
-            String query,
-            String language,
-            List<String> documentIds,
-            int limit
     );
 
     List<SearchProjection> searchLexical(
