@@ -55,6 +55,45 @@ class RetentionWorkerPoolTest {
         }
     }
 
+    @Test
+    void shutdownDrainsRunningCleanupAndRejectsNewClaims() throws Exception {
+        RetentionClaimRepository claims = mock(RetentionClaimRepository.class);
+        ChunkRetentionService cleanup = mock(ChunkRetentionService.class);
+        RetentionProperties properties = properties(1, 1);
+        RetentionClaim claim = claim("doc-shutdown", 1);
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+
+        when(claims.claimExpired(
+                eq(1), eq(5), eq("pod-a"), eq(Duration.ofMinutes(10))
+        )).thenReturn(List.of(claim));
+        when(cleanup.cleanup(claim)).thenAnswer(invocation -> {
+            started.countDown();
+            release.await(5, TimeUnit.SECONDS);
+            return deleted(claim);
+        });
+
+        RetentionWorkerPool pool = new RetentionWorkerPool(
+                claims,
+                cleanup,
+                properties
+        );
+        assertThat(pool.claimAndSubmit("pod-a")).isEqualTo(1);
+        assertThat(started.await(1, TimeUnit.SECONDS)).isTrue();
+
+        Thread shutdown = new Thread(pool::shutdown);
+        shutdown.start();
+        Thread.sleep(50);
+        assertThat(shutdown.isAlive()).isTrue();
+
+        release.countDown();
+        shutdown.join(2_000);
+
+        assertThat(shutdown.isAlive()).isFalse();
+        assertThat(pool.availableCapacity()).isZero();
+        assertThat(pool.claimAndSubmit("pod-a")).isZero();
+    }
+
     private static RetentionProperties properties(
             int parallelism,
             int batch
