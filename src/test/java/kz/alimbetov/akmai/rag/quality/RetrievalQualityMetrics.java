@@ -42,9 +42,11 @@ public final class RetrievalQualityMetrics {
             int k
     ) {
         double dcg = 0.0;
+        Set<String> credited = new HashSet<>();
         int limit = Math.min(k, rankedChunkIds.size());
         for (int i = 0; i < limit; i++) {
-            if (relevantChunkIds.contains(rankedChunkIds.get(i))) {
+            String chunkId = rankedChunkIds.get(i);
+            if (relevantChunkIds.contains(chunkId) && credited.add(chunkId)) {
                 dcg += 1.0 / log2(i + 2);
             }
         }

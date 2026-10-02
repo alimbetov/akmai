@@ -26,14 +26,6 @@ spring:
           model: ${AKMAI_CHAT_MODEL:qwen3:8b}
           temperature: 0.1
 
-    vectorstore:
-      pgvector:
-        initialize-schema: true
-        index-type: ${AKMAI_VECTOR_INDEX_TYPE:HNSW}
-        distance-type: ${AKMAI_VECTOR_DISTANCE_TYPE:COSINE_DISTANCE}
-        dimensions: ${AKMAI_VECTOR_DIMENSIONS:1024}
-        max-document-batch-size: ${AKMAI_VECTOR_BATCH_SIZE:64}
-
 akmai:
   vector:
     dimensions: ${AKMAI_VECTOR_DIMENSIONS:1024}
