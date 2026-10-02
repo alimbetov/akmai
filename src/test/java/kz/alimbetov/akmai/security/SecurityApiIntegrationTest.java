@@ -40,7 +40,7 @@ class SecurityApiIntegrationTest {
 
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(response.getContentAsString())
-                .contains(""code":"UNAUTHORIZED"")
+                .contains("\"code\":\"UNAUTHORIZED\"")
                 .contains("X-AKMAI-API-Key");
     }
 
