@@ -143,14 +143,16 @@ class ConcurrentGenerationPublicationIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 profile.profileId(),
-                "fp-1"
+                "fp-1",
+                1L
         );
         long second = generations.allocate(
                 "doc-race",
                 RetentionPolicy.PERMANENT,
                 null,
                 profile.profileId(),
-                "fp-2"
+                "fp-2",
+                1L
         );
 
         var secondResult = publication.publish(
