@@ -87,7 +87,14 @@ class RetrievalStorageLayoutBenchmarkTest {
 
     @Test
     void listLayoutGenericPreparedPlanExecutesOnlyRequestedAclPartition() {
-        String planJson = genericListPlan(1L, queryVector, TOP_K);
+        String planJson = genericPlan(
+                "akmai_list_generic",
+                "bench_list",
+                1L,
+                queryVector,
+                TOP_K,
+                true
+        );
         PlanSummary plan = summarizePlan(planJson);
 
         Set<String> unrelatedPartitions = new LinkedHashSet<>();
@@ -241,6 +248,31 @@ class RetrievalStorageLayoutBenchmarkTest {
         report.put("chunksPerDocument", config.chunksPerDocument());
         report.put("topK", TOP_K);
         report.put("results", results);
+
+        Map<String, PlanSummary> genericPreparedPlans = new LinkedHashMap<>();
+        genericPreparedPlans.put(
+                "TYPED_PARTIAL_HNSW",
+                summarizePlan(genericPlan(
+                        "akmai_partial_generic",
+                        "bench_partial",
+                        1L,
+                        queryVector,
+                        TOP_K,
+                        false
+                ))
+        );
+        genericPreparedPlans.put(
+                "LIST_LOCAL_HNSW",
+                summarizePlan(genericPlan(
+                        "akmai_list_report_generic",
+                        "bench_list",
+                        1L,
+                        queryVector,
+                        TOP_K,
+                        false
+                ))
+        );
+        report.put("genericPreparedPlans", genericPreparedPlans);
 
         MAPPER.writerWithDefaultPrettyPrinter().writeValue(output.toFile(), report);
 
@@ -738,30 +770,46 @@ class RetrievalStorageLayoutBenchmarkTest {
         }
     }
 
-    private static String genericListPlan(
+    private static String genericPlan(
+            String preparedName,
+            String table,
             long accessLevel,
             float[] vector,
-            int limit
+            int limit,
+            boolean forceIndex
     ) {
+        if (!Set.of("bench_list", "bench_partial").contains(table)) {
+            throw new IllegalArgumentException(
+                    "Unsupported benchmark table: " + table
+            );
+        }
+        if (!preparedName.matches("[a-z_][a-z0-9_]*")) {
+            throw new IllegalArgumentException(
+                    "Invalid prepared statement name"
+            );
+        }
+
         try {
             Connection connection = benchmarkConnection;
             try (Statement statement = connection.createStatement()) {
                 statement.execute("SET hnsw.iterative_scan = strict_order");
                 statement.execute("SET plan_cache_mode = force_generic_plan");
-                statement.execute("SET enable_seqscan = off");
+                if (forceIndex) {
+                    statement.execute("SET enable_seqscan = off");
+                }
                 statement.execute(
                         """
-                        PREPARE akmai_list_generic (
+                        PREPARE %s (
                             bigint,
                             vector,
                             integer
                         ) AS
                         SELECT id
-                        FROM bench_list
+                        FROM %s
                         WHERE access_level = $1
                         ORDER BY embedding <=> $2
                         LIMIT $3
-                        """
+                        """.formatted(preparedName, table)
                 );
 
                 String execute = """
@@ -772,12 +820,13 @@ class RetrievalStorageLayoutBenchmarkTest {
                             SUMMARY,
                             FORMAT JSON
                         )
-                        EXECUTE akmai_list_generic(
+                        EXECUTE %s(
                             %d,
                             '%s'::vector,
                             %d
                         )
                         """.formatted(
+                                preparedName,
                                 accessLevel,
                                 vectorLiteral(vector),
                                 limit
@@ -787,7 +836,7 @@ class RetrievalStorageLayoutBenchmarkTest {
                     rs.next();
                     return rs.getString(1);
                 } finally {
-                    statement.execute("DEALLOCATE akmai_list_generic");
+                    statement.execute("DEALLOCATE " + preparedName);
                     statement.execute("RESET enable_seqscan");
                     statement.execute("RESET plan_cache_mode");
                     statement.execute("RESET hnsw.iterative_scan");
@@ -795,7 +844,7 @@ class RetrievalStorageLayoutBenchmarkTest {
             }
         } catch (java.sql.SQLException exception) {
             throw new IllegalStateException(
-                    "Generic LIST plan failed",
+                    "Generic benchmark plan failed",
                     exception
             );
         }
