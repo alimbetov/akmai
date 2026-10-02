@@ -8,7 +8,7 @@ import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
 import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchQuery;
 import kz.alimbetov.akmai.knowledge.identifier.search.MatchMode;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
-import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import org.springframework.stereotype.Component;
 
@@ -16,12 +16,12 @@ import org.springframework.stereotype.Component;
 public class IdentifierRetrievalStrategy implements RetrievalStrategy {
 
     private final IdentifierSearchIndex searchIndex;
-    private final SearchProjectionRepository projectionRepository;
+    private final PublishedSearchProjectionReader projectionRepository;
     private final RetrievalProperties properties;
 
     public IdentifierRetrievalStrategy(
             IdentifierSearchIndex searchIndex,
-            SearchProjectionRepository projectionRepository,
+            PublishedSearchProjectionReader projectionRepository,
             RetrievalProperties properties
     ) {
         this.searchIndex = searchIndex;
