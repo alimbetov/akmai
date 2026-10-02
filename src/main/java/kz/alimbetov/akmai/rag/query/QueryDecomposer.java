@@ -18,7 +18,7 @@ public class QueryDecomposer {
             Pattern.compile("(?<=[!?;])\\s+|(?<=[。！？；])|(?<=\\.)\\s+");
 
     private static final Pattern ABBREVIATION = Pattern.compile(
-            "(?iu)\\b(ст|п|art|no)\\.\\s*(?=\\d)"
+            "(?iu)(?<![\\p{L}\\p{N}])(ст|п|art|no)\\.\\s*(?=\\d)"
     );
 
     private static final Pattern COORDINATING_BOUNDARY = Pattern.compile(
