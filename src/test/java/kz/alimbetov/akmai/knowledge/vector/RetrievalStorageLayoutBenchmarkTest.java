@@ -81,13 +81,16 @@ class RetrievalStorageLayoutBenchmarkTest {
         String planJson = genericListPlan(1L, queryVector, TOP_K);
         PlanSummary plan = summarizePlan(planJson);
 
+        Set<String> unrelatedPartitions = new LinkedHashSet<>();
+        for (int accessLevel = 2;
+                accessLevel <= config.accessLevels();
+                accessLevel++) {
+            unrelatedPartitions.add("bench_list_al_" + accessLevel);
+        }
+
         assertThat(plan.executedRelations())
                 .contains("bench_list_al_1")
-                .doesNotContain(
-                        "bench_list_al_2",
-                        "bench_list_al_3",
-                        "bench_list_al_4"
-                );
+                .doesNotContainAnyElementsOf(unrelatedPartitions);
         assertThat(plan.executedIndexRelations()).contains("bench_list_al_1");
     }
 
@@ -608,30 +611,78 @@ class RetrievalStorageLayoutBenchmarkTest {
             String sql,
             Object... parameters
     ) {
-        return jdbc.query(
-                sql,
-                (rs, rowNum) -> rs.getLong(1),
-                parameters
+        List<Long> result = jdbc.execute(
+                (ConnectionCallback<List<Long>>) connection -> {
+                    setRetrievalSession(connection);
+                    try (PreparedStatement ps =
+                            connection.prepareStatement(sql)) {
+                        bind(ps, parameters);
+                        try (ResultSet rs = ps.executeQuery()) {
+                            List<Long> ids = new ArrayList<>();
+                            while (rs.next()) {
+                                ids.add(rs.getLong(1));
+                            }
+                            return List.copyOf(ids);
+                        }
+                    } finally {
+                        resetRetrievalSession(connection);
+                    }
+                }
         );
+        return result == null ? List.of() : result;
     }
 
     private static String explain(
             String sql,
             Object... parameters
     ) {
-        return jdbc.queryForObject(
-                """
-                EXPLAIN (
-                    ANALYZE,
-                    BUFFERS,
-                    SETTINGS,
-                    SUMMARY,
-                    FORMAT JSON
-                )
-                """ + sql,
-                String.class,
-                parameters
-        );
+        return jdbc.execute((ConnectionCallback<String>) connection -> {
+            setRetrievalSession(connection);
+            try (PreparedStatement ps = connection.prepareStatement(
+                    """
+                    EXPLAIN (
+                        ANALYZE,
+                        BUFFERS,
+                        SETTINGS,
+                        SUMMARY,
+                        FORMAT JSON
+                    )
+                    """ + sql
+            )) {
+                bind(ps, parameters);
+                try (ResultSet rs = ps.executeQuery()) {
+                    rs.next();
+                    return rs.getString(1);
+                }
+            } finally {
+                resetRetrievalSession(connection);
+            }
+        });
+    }
+
+    private static void bind(
+            PreparedStatement ps,
+            Object... parameters
+    ) throws java.sql.SQLException {
+        for (int index = 0; index < parameters.length; index++) {
+            ps.setObject(index + 1, parameters[index]);
+        }
+    }
+
+    private static void setRetrievalSession(
+            Connection connection
+    ) throws java.sql.SQLException {
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("SET hnsw.iterative_scan = strict_order");
+        }
+    }
+
+    private static void resetRetrievalSession(
+            Connection connection
+    ) throws java.sql.SQLException {
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("RESET hnsw.iterative_scan");
+        }
     }
 
     private static String genericListPlan(
@@ -641,6 +692,7 @@ class RetrievalStorageLayoutBenchmarkTest {
     ) {
         return jdbc.execute((ConnectionCallback<String>) connection -> {
             try (Statement statement = connection.createStatement()) {
+                statement.execute("SET hnsw.iterative_scan = strict_order");
                 statement.execute("SET plan_cache_mode = force_generic_plan");
                 statement.execute("SET enable_seqscan = off");
                 statement.execute(
@@ -684,6 +736,7 @@ class RetrievalStorageLayoutBenchmarkTest {
                     statement.execute("DEALLOCATE akmai_list_generic");
                     statement.execute("RESET enable_seqscan");
                     statement.execute("RESET plan_cache_mode");
+                    statement.execute("RESET hnsw.iterative_scan");
                 }
             }
         });
