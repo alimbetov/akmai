@@ -301,7 +301,7 @@ class PostgresRetrievalIntegrationTest {
                 "doc",
                 generation,
                 null,
-                (int) generation,
+                Math.floorMod(chunkId.hashCode(), 1_000_000),
                 text,
                 text,
                 language,
