@@ -12,6 +12,9 @@ import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
 import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
 import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchQuery;
+import kz.alimbetov.akmai.knowledge.ingestion.PersistenceCoordinator;
+import kz.alimbetov.akmai.knowledge.lifecycle.DocumentGenerationRepository;
+import kz.alimbetov.akmai.knowledge.lifecycle.DocumentLifecycleRepository;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.knowledge.vector.PublishedVectorSearchRepository;
@@ -116,6 +119,26 @@ class AccessLevelArchitectureTest {
 
     @Test
     void ingestionAndQuestionContractsRequireExplicitAccessLevel() {
+        assertThat(methods(
+                PersistenceCoordinator.class,
+                method -> method.getName().equals("persist")
+                        && Modifier.isPublic(method.getModifiers())
+        )).isNotEmpty()
+                .allSatisfy(this::requiresPrimitiveLongParameter);
+
+        assertThat(methods(
+                DocumentGenerationRepository.class,
+                method -> method.getName().equals("allocate")
+                        && Modifier.isPublic(method.getModifiers())
+        )).isNotEmpty()
+                .allSatisfy(this::requiresPrimitiveLongParameter);
+
+        assertThat(methods(
+                DocumentLifecycleRepository.class,
+                method -> method.getName().equals("beginIngestion")
+        )).isNotEmpty()
+                .allSatisfy(this::requiresPrimitiveLongParameter);
+
         assertThat(Arrays.stream(AddKnowledgeRequest.class.getDeclaredConstructors()))
                 .allSatisfy(constructor -> {
                     assertThat(constructor.getParameterCount()).isEqualTo(8);
@@ -150,6 +173,12 @@ class AccessLevelArchitectureTest {
         assertThat(Arrays.asList(method.getParameterTypes()))
                 .as("%s must require an access scope", method)
                 .contains(Set.class);
+    }
+
+    private void requiresPrimitiveLongParameter(Method method) {
+        assertThat(Arrays.asList(method.getParameterTypes()))
+                .as("%s must require accessLevel", method)
+                .contains(long.class);
     }
 
     private void assertConstructorRequiresSet(
