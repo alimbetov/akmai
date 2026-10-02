@@ -66,11 +66,11 @@ class RetentionBacklogIntegrationTest {
                 INSERT INTO knowledge_document_generation (
                     document_id, generation, generation_status,
                     generation_kind, physical_id_version,
-                    cleanup_required, started_at
+                    cleanup_required, started_at, access_level
                 ) VALUES (
                     'staging', 2, 'STAGING',
                     'INGESTION', 2,
-                    false, clock_timestamp()
+                    false, clock_timestamp(), 1
                 )
                 """
         );
