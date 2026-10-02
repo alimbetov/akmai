@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
-import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ class ReferenceRetrievalStrategyTest {
     private static final long GENERATION = 7L;
 
     @Mock
-    private SearchProjectionRepository projectionRepository;
+    private PublishedSearchProjectionReader projectionRepository;
 
     @Mock
     private ReferenceGraphRepository referenceGraphRepository;
