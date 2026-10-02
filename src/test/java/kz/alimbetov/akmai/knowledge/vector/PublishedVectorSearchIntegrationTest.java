@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileRepository;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
@@ -88,8 +89,8 @@ class PublishedVectorSearchIntegrationTest {
 
     @Test
     void filtersStaleScopeAndLowSimilarityBeforeLimit() {
-        lifecycle("doc-1", 2L);
-        lifecycle("doc-2", 1L);
+        lifecycle("doc-1", 2L, 1L);
+        lifecycle("doc-2", 1L, 2L);
         generation("doc-1", 1L, "RETIRED");
         generation("doc-1", 2L, "PUBLISHED");
         generation("doc-2", 1L, "PUBLISHED");
@@ -102,7 +103,13 @@ class PublishedVectorSearchIntegrationTest {
         ));
 
         List<VectorSearchMatch> result =
-                search.search("query", List.of("doc-1"), 1, 0.8);
+                search.search(
+                        "query",
+                        List.of("doc-1"),
+                        Set.of(1L),
+                        1,
+                        0.8
+                );
 
         assertThat(result)
                 .extracting(VectorSearchMatch::chunkId)
@@ -111,18 +118,72 @@ class PublishedVectorSearchIntegrationTest {
         assertThat(result.getFirst().score()).isGreaterThanOrEqualTo(0.99);
     }
 
-    private void lifecycle(String documentId, long published) {
+    @Test
+    void vectorSearchReturnsOnlyAuthorizedAccessLevels() {
+        lifecycle("access-1", 1L, 1L);
+        lifecycle("access-2", 1L, 2L);
+        lifecycle("access-3", 1L, 3L);
+        generation("access-1", 1L, "PUBLISHED");
+        generation("access-2", 1L, "PUBLISHED");
+        generation("access-3", 1L, "PUBLISHED");
+
+        vectors.insertAll(profile, List.of(
+                row("access-1", 1L, "chunk-1", new float[] {1f, 0f, 0f}),
+                row("access-2", 1L, "chunk-2", new float[] {1f, 0f, 0f}),
+                row("access-3", 1L, "chunk-3", new float[] {1f, 0f, 0f})
+        ));
+
+        assertThat(search.search(
+                "query",
+                List.of(),
+                Set.of(1L, 2L),
+                10,
+                0.8
+        )).extracting(VectorSearchMatch::documentId)
+                .containsExactlyInAnyOrder("access-1", "access-2");
+
+        assertThat(search.search(
+                "query",
+                List.of(),
+                Set.of(3L),
+                10,
+                0.8
+        )).extracting(VectorSearchMatch::documentId)
+                .containsExactly("access-3");
+
+        assertThat(search.search(
+                "query",
+                List.of(),
+                Set.of(),
+                10,
+                0.8
+        )).isEmpty();
+
+        assertThat(search.search(
+                "query",
+                List.of(),
+                Set.of(99L),
+                10,
+                0.8
+        )).isEmpty();
+    }
+
+    private void lifecycle(
+            String documentId,
+            long published,
+            long accessLevel
+    ) {
         jdbc.update(
                 """
                 INSERT INTO knowledge_document_lifecycle (
                     document_id, lifecycle_policy, lifecycle_status,
                     generation, attempt_count, row_version,
                     created_at, updated_at, retention_status,
-                    published_generation, next_generation
+                    published_generation, next_generation, access_level
                 ) VALUES (?, 'PERMANENT', 'READY', ?, 0, 0,
-                          clock_timestamp(), clock_timestamp(), 'ACTIVE', ?, ?)
+                          clock_timestamp(), clock_timestamp(), 'ACTIVE', ?, ?, ?)
                 """,
-                documentId, published, published, published + 1
+                documentId, published, published, published + 1, accessLevel
         );
     }
 
