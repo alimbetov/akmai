@@ -130,12 +130,13 @@ class RetentionBacklogIntegrationTest {
                     document_id, lifecycle_policy, lifecycle_status,
                     generation, attempt_count, row_version,
                     created_at, updated_at, retention_status,
-                    published_generation, next_generation, expires_at
+                    published_generation, next_generation, expires_at,
+                    access_level
                 ) VALUES (
                     ?, 'TTL', 'READY',
                     1, 0, 0,
                     clock_timestamp(), clock_timestamp(), 'ACTIVE',
-                    1, 2, %s
+                    1, 2, %s, 1
                 )
                 """.formatted(expiresExpression),
                 documentId
@@ -145,12 +146,12 @@ class RetentionBacklogIntegrationTest {
                 INSERT INTO knowledge_document_generation (
                     document_id, generation, generation_status,
                     generation_kind, physical_id_version,
-                    cleanup_required, started_at, published_at
+                    cleanup_required, started_at, published_at, access_level
                 ) VALUES (
                     ?, 1, 'PUBLISHED',
                     'INGESTION', 2,
                     false, clock_timestamp() - interval '1 day',
-                    clock_timestamp() - interval '12 hours'
+                    clock_timestamp() - interval '12 hours', 1
                 )
                 """,
                 documentId
