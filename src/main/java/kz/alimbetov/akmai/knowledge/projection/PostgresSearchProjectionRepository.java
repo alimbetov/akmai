@@ -233,6 +233,44 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
     }
 
     @Override
+    public List<SearchProjection> findByDocumentGenerationAndChunkIds(
+            String documentId,
+            long generation,
+            List<String> chunkIds,
+            Set<Long> accessLevels
+    ) {
+        if (generation <= 0
+                || chunkIds == null
+                || chunkIds.isEmpty()
+                || accessLevels == null
+                || accessLevels.isEmpty()) {
+            return List.of();
+        }
+        return jdbcTemplate.query(
+                """
+                SELECT p.*
+                FROM knowledge_search_projection p
+                JOIN knowledge_document_lifecycle l
+                  ON l.document_id = p.document_id
+                 AND l.published_generation = p.generation
+                WHERE p.document_id = ?
+                  AND p.generation = ?
+                  AND p.chunk_id = ANY (?)
+                  AND l.retention_status = 'ACTIVE'
+                  AND l.access_level = ANY (?)
+                ORDER BY p.chunk_index
+                """,
+                ps -> {
+                    ps.setString(1, documentId);
+                    ps.setLong(2, generation);
+                    bindArray(ps, 3, chunkIds);
+                    bindLongArray(ps, 4, accessLevels);
+                },
+                this::map
+        );
+    }
+
+    @Override
     public List<SearchProjection> findAdjacent(
             String documentId,
             int chunkIndex,
@@ -254,6 +292,44 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
                 documentId,
                 Math.max(0, chunkIndex - radius),
                 chunkIndex + radius
+        );
+    }
+
+    @Override
+    public List<SearchProjection> findAdjacent(
+            String documentId,
+            long generation,
+            int chunkIndex,
+            int radius,
+            Set<Long> accessLevels
+    ) {
+        if (generation <= 0
+                || accessLevels == null
+                || accessLevels.isEmpty()) {
+            return List.of();
+        }
+        return jdbcTemplate.query(
+                """
+                SELECT p.*
+                FROM knowledge_search_projection p
+                JOIN knowledge_document_lifecycle l
+                  ON l.document_id = p.document_id
+                 AND l.published_generation = p.generation
+                WHERE p.document_id = ?
+                  AND p.generation = ?
+                  AND l.retention_status = 'ACTIVE'
+                  AND l.access_level = ANY (?)
+                  AND p.chunk_index BETWEEN ? AND ?
+                ORDER BY p.chunk_index
+                """,
+                ps -> {
+                    ps.setString(1, documentId);
+                    ps.setLong(2, generation);
+                    bindLongArray(ps, 3, accessLevels);
+                    ps.setInt(4, Math.max(0, chunkIndex - radius));
+                    ps.setInt(5, chunkIndex + radius);
+                },
+                this::map
         );
     }
 
