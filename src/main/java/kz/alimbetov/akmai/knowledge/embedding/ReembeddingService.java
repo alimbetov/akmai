@@ -13,6 +13,7 @@ import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -35,6 +36,7 @@ public class ReembeddingService {
 
     public ReembeddingService(
             JdbcTemplate jdbcTemplate,
+            @Qualifier("reembeddingTransactionTemplate")
             TransactionTemplate transactionTemplate,
             EmbeddingProfileService profileService,
             EmbeddingProfileRepository profileRepository,
