@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
@@ -53,7 +54,7 @@ class ReferenceRetrievalStrategyTest {
                         "seed",
                         "seed text",
                         Map.of()
-                )))
+                )), Set.of(1L))
         );
 
         assertThat(hits).hasSize(1);
@@ -102,7 +103,7 @@ class ReferenceRetrievalStrategyTest {
                                 "seed two",
                                 Map.of()
                         )
-                ))
+                ), Set.of(1L))
         );
 
         assertThat(hits).extracting(RetrievalHit::chunkId)
@@ -135,10 +136,10 @@ class ReferenceRetrievalStrategyTest {
                         .toList();
 
         when(referenceGraphRepository.resolveSameDocumentTargets(
-                "doc", seedIds, 20
+                "doc", seedIds, Set.of(1L), 20
         )).thenReturn(targetIds);
         when(projectionRepository.findByDocumentAndChunkIds(
-                "doc", targetIds
+                "doc", targetIds, Set.of(1L)
         )).thenReturn(targetIds.stream()
                 .map(id -> projection(id, "canonical " + id))
                 .toList());
@@ -151,12 +152,12 @@ class ReferenceRetrievalStrategyTest {
 
         List<RetrievalHit> hits = subject.retrieve(
                 new QueryChunk("q", 0, "q", "q", "q", "ru", List.of()),
-                new RetrievalContext(seeds)
+                new RetrievalContext(seeds, Set.of(1L))
         );
 
         assertThat(hits).hasSize(20);
         verify(referenceGraphRepository).resolveSameDocumentTargets(
-                "doc", seedIds, 20
+                "doc", seedIds, Set.of(1L), 20
         );
     }
 
