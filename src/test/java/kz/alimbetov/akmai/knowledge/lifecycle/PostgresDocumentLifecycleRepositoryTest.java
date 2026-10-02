@@ -110,14 +110,20 @@ class PostgresDocumentLifecycleRepositoryTest {
     void reingestionInvalidatesOldRetentionClaim() {
         Instant now = Instant.parse("2026-10-01T10:00:00Z");
         long firstGeneration = repository.beginIngestion(
-                "reingested", RetentionPolicy.TTL, now.minusSeconds(60)
+                "reingested",
+                RetentionPolicy.TTL,
+                now.minusSeconds(60),
+                1L
         );
         assertThat(repository.publishIngestion("reingested", firstGeneration, now.minusSeconds(30)))
                 .isTrue();
         RetentionClaim stale = repository.claimExpired(now, 1, 5, "pod-a", Duration.ofMinutes(10)).getFirst();
 
         long secondGeneration = repository.beginIngestion(
-                "reingested", RetentionPolicy.PERMANENT, null
+                "reingested",
+                RetentionPolicy.PERMANENT,
+                null,
+                1L
         );
         assertThat(repository.publishIngestion("reingested", secondGeneration, now))
                 .isTrue();
@@ -256,7 +262,12 @@ class PostgresDocumentLifecycleRepositoryTest {
             RetentionPolicy policy,
             Instant expiresAt
     ) {
-        long generation = repository.beginIngestion(documentId, policy, expiresAt);
+        long generation = repository.beginIngestion(
+                documentId,
+                policy,
+                expiresAt,
+                1L
+        );
         assertThat(repository.publishIngestion(
                 documentId, generation, Instant.parse("2026-10-01T09:59:00Z")
         )).isTrue();
