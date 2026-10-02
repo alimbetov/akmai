@@ -12,6 +12,7 @@ import org.springframework.validation.annotation.Validated;
 public record ReconciliationProperties(
         boolean enabled,
         @Min(1) @Max(1000) int batchSize,
+        @Min(1) @Max(100) int maxBatchesPerRun,
         @NotNull Duration gracePeriod,
         @NotNull Duration fixedDelay
 ) {
