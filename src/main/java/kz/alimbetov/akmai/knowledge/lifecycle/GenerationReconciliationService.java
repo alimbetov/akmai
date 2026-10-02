@@ -1,6 +1,5 @@
 package kz.alimbetov.akmai.knowledge.lifecycle;
 
-import java.time.Duration;
 import java.util.List;
 import kz.alimbetov.akmai.config.ReconciliationProperties;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
