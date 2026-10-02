@@ -8,6 +8,7 @@ import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -27,6 +28,7 @@ public class GenerationReconciliationService {
 
     public GenerationReconciliationService(
             JdbcTemplate jdbcTemplate,
+            @Qualifier("cleanupTransactionTemplate")
             TransactionTemplate transactionTemplate,
             VectorGenerationRepository manifests,
             PostgresGenerationVectorRepository vectors,
