@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.knowledge.projection;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -504,13 +505,14 @@ class PostgresRetrievalIntegrationTest {
         )).extracting(SearchProjection::documentId)
                 .containsExactly("access-doc-2");
 
-        assertThat(projections.searchLexical(
+        assertThatThrownBy(() -> projections.searchLexical(
                 "shared access policy",
                 "en",
                 List.of("access-doc-1", "access-doc-2"),
                 Set.of(),
                 10
-        )).isEmpty();
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("accessLevels");
 
         assertThat(identifiers.findExact(
                 IdentifierType.DOCUMENT_NUMBER,
@@ -528,12 +530,13 @@ class PostgresRetrievalIntegrationTest {
         )).extracting(DocumentIdentifier::documentId)
                 .containsExactly("access-doc-2");
 
-        assertThat(identifiers.findExact(
+        assertThatThrownBy(() -> identifiers.findExact(
                 IdentifierType.DOCUMENT_NUMBER,
                 "ACCESS-42",
                 Set.of(),
                 10
-        )).isEmpty();
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("accessLevels");
     }
 
 
