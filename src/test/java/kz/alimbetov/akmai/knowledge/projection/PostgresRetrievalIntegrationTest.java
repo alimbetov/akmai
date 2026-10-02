@@ -146,6 +146,113 @@ class PostgresRetrievalIntegrationTest {
                 .containsExactly("new");
     }
 
+    @Test
+    void lexicalFtsUsesLanguageSpecificRussianAndEnglishVectors() {
+        long generation = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-fts"
+        );
+        projections.saveAll(List.of(
+                projection(
+                        "ru-law",
+                        generation,
+                        "Банк расторгает договор при существенном нарушении.",
+                        "ru"
+                ),
+                projection(
+                        "en-law",
+                        generation,
+                        "Agreement termination rules apply after material breach.",
+                        "en"
+                )
+        ));
+        publish("doc", generation);
+
+        assertThat(projections.searchLexical(
+                "расторгнуть договор",
+                "ru",
+                List.of("doc"),
+                10
+        )).extracting(SearchProjection::chunkId)
+                .contains("ru-law")
+                .doesNotContain("en-law");
+
+        assertThat(projections.searchLexical(
+                "termination agreement",
+                "en",
+                List.of("doc"),
+                10
+        )).extracting(SearchProjection::chunkId)
+                .contains("en-law")
+                .doesNotContain("ru-law");
+    }
+
+    @Test
+    void kkAndZhTrigramSearchTreatsLikeMetacharactersLiterally() {
+        long generation = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-like"
+        );
+        projections.saveAll(List.of(
+                projection(
+                        "kk-percent",
+                        generation,
+                        "Жеңілдік мөлшері 5% болады.",
+                        "kk"
+                ),
+                projection(
+                        "kk-plain",
+                        generation,
+                        "Жеңілдік мөлшері бес пайыз болады.",
+                        "kk"
+                ),
+                projection(
+                        "zh-underscore",
+                        generation,
+                        "技术代码 A_B 已登记。",
+                        "zh"
+                ),
+                projection(
+                        "zh-plain",
+                        generation,
+                        "技术代码 AXB 已登记。",
+                        "zh"
+                )
+        ));
+        publish("doc", generation);
+
+        assertThat(projections.searchLexical(
+                "%",
+                "kk",
+                List.of("doc"),
+                10
+        )).extracting(SearchProjection::chunkId)
+                .containsExactly("kk-percent");
+
+        assertThat(projections.searchLexical(
+                "_",
+                "zh",
+                List.of("doc"),
+                10
+        )).extracting(SearchProjection::chunkId)
+                .containsExactly("zh-underscore");
+
+        assertThat(projections.searchLexical(
+                "5%",
+                "kk",
+                List.of("doc"),
+                10
+        )).extracting(SearchProjection::chunkId)
+                .contains("kk-percent")
+                .doesNotContain("kk-plain");
+    }
+
     private void publish(String documentId, long generation) {
         jdbc.update(
                 """
