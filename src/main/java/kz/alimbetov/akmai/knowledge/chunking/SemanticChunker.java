@@ -4,11 +4,13 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import kz.alimbetov.akmai.knowledge.embedding.EmbeddingTokenBudgetService;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDocument;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.model.SemanticUnit;
 import kz.alimbetov.akmai.knowledge.model.SemanticUnitType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
