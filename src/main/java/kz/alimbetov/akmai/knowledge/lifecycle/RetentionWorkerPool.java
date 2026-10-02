@@ -8,11 +8,15 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import kz.alimbetov.akmai.observability.AkmaiMetrics;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class RetentionWorkerPool {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(RetentionWorkerPool.class);
 
     private final RetentionClaimRepository claimRepository;
     private final ChunkRetentionService cleanupService;
@@ -50,6 +54,10 @@ public class RetentionWorkerPool {
         return accepting.get() ? permits.availablePermits() : 0;
     }
 
+    public long backlogCount() {
+        return claimRepository.countEligibleBacklog(properties.retryLimit());
+    }
+
     public int claimAndSubmit(String workerId) {
         if (!accepting.get()) {
             return 0;
@@ -80,6 +88,11 @@ public class RetentionWorkerPool {
         if (metrics != null) {
             metrics.retentionClaimed(claims.size());
         }
+        LOGGER.info(
+                "retention_claim event=claimed count={} capacity={}",
+                claims.size(),
+                acquired
+        );
 
         int unused = acquired - claims.size();
         if (unused > 0) {
@@ -92,7 +105,12 @@ public class RetentionWorkerPool {
                 workers.execute(() -> runClaim(claim));
                 submitted++;
             } catch (RuntimeException exception) {
-                claimRepository.release(claim);
+                boolean released = claimRepository.release(claim);
+                LOGGER.warn(
+                        "retention_claim event=submission_rejected generation={} released={}",
+                        claim.generation(),
+                        released
+                );
                 permits.release();
             }
         }
@@ -109,7 +127,13 @@ public class RetentionWorkerPool {
 
     private void runClaim(RetentionClaim claim) {
         try {
-            cleanupService.cleanup(claim);
+            RetentionCleanupResult result = cleanupService.cleanup(claim);
+            LOGGER.info(
+                    "retention_cleanup event=completed status={} generation={} deletedChunks={}",
+                    result.status(),
+                    result.generation(),
+                    result.deletedChunks()
+            );
         } finally {
             permits.release();
         }
