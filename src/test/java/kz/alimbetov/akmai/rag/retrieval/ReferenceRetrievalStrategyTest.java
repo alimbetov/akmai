@@ -114,6 +114,52 @@ class ReferenceRetrievalStrategyTest {
         );
     }
 
+    @Test
+    void manySeedsRemainOneLookupAndRespectReferenceLimit() {
+        java.util.List<RetrievalHit> seeds =
+                java.util.stream.IntStream.range(0, 100)
+                        .mapToObj(index -> new RetrievalHit(
+                                RetrievalType.LEXICAL,
+                                "doc",
+                                "seed-" + index,
+                                "seed",
+                                Map.of()
+                        ))
+                        .toList();
+        java.util.List<String> seedIds = seeds.stream()
+                .map(RetrievalHit::chunkId)
+                .toList();
+        java.util.List<String> targetIds =
+                java.util.stream.IntStream.range(0, 20)
+                        .mapToObj(index -> "target-" + index)
+                        .toList();
+
+        when(referenceGraphRepository.resolveSameDocumentTargets(
+                "doc", seedIds, 20
+        )).thenReturn(targetIds);
+        when(projectionRepository.findByDocumentAndChunkIds(
+                "doc", targetIds
+        )).thenReturn(targetIds.stream()
+                .map(id -> projection(id, "canonical " + id))
+                .toList());
+
+        ReferenceRetrievalStrategy subject = new ReferenceRetrievalStrategy(
+                projectionRepository,
+                referenceGraphRepository,
+                RetrievalTestProperties.defaults()
+        );
+
+        List<RetrievalHit> hits = subject.retrieve(
+                new QueryChunk("q", 0, "q", "q", "q", "ru", List.of()),
+                new RetrievalContext(seeds)
+        );
+
+        assertThat(hits).hasSize(20);
+        verify(referenceGraphRepository).resolveSameDocumentTargets(
+                "doc", seedIds, 20
+        );
+    }
+
     private SearchProjection projection(String chunkId, String text) {
         return new SearchProjection(
                 chunkId,
