@@ -9,6 +9,9 @@ class ChunkingPropertiesTest {
 
     @Test
     void rejectsInvalidOrderingAtConstructionBoundary() {
+        assertThatThrownBy(() -> new ChunkingProperties(0, 0, 0, 0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("positive");
         assertThatThrownBy(() -> new ChunkingProperties(10, 20, 30, 11))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new ChunkingProperties(20, 10, 30, 1))
