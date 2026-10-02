@@ -100,10 +100,9 @@ public class ReferenceGraphRepository {
             Set<Long> accessLevels,
             int limit
     ) {
+        requireAccessLevels(accessLevels);
         if (sourceChunkIds == null
                 || sourceChunkIds.isEmpty()
-                || accessLevels == null
-                || accessLevels.isEmpty()
                 || limit <= 0) {
             return List.of();
         }
@@ -156,11 +155,10 @@ public class ReferenceGraphRepository {
             Set<Long> accessLevels,
             int limit
     ) {
+        requireAccessLevels(accessLevels);
         if (generation <= 0
                 || sourceChunkIds == null
                 || sourceChunkIds.isEmpty()
-                || accessLevels == null
-                || accessLevels.isEmpty()
                 || limit <= 0) {
             return List.of();
         }
@@ -206,6 +204,14 @@ public class ReferenceGraphRepository {
                 },
                 (rs, rowNum) -> rs.getString(1)
         );
+    }
+
+    private void requireAccessLevels(Set<Long> accessLevels) {
+        if (accessLevels == null || accessLevels.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "accessLevels must not be empty"
+            );
+        }
     }
 
     public void cloneGeneration(
