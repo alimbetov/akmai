@@ -162,6 +162,8 @@ class PersistenceCoordinatorTest {
                 mock(GenerationEmbeddingService.class);
         GenerationPublicationService publication =
                 mock(GenerationPublicationService.class);
+        PublicationOutcomeResolver outcomeResolver =
+                mock(PublicationOutcomeResolver.class);
         IngestionIdempotencyRepository idempotency =
                 mock(IngestionIdempotencyRepository.class);
 
@@ -201,6 +203,7 @@ class PersistenceCoordinatorTest {
                 profiles,
                 embeddings,
                 publication,
+                outcomeResolver,
                 idempotency,
                 properties
         );
