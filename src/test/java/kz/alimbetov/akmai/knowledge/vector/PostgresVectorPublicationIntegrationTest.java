@@ -164,7 +164,8 @@ class PostgresVectorPublicationIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 profile.profileId(),
-                "fp"
+                "fp",
+                1L
         );
         SearchProjection projection = projection(generation, "chunk-1");
         String vectorId = VectorIdentity.physicalId(
@@ -214,7 +215,8 @@ class PostgresVectorPublicationIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 profile.profileId(),
-                "fp"
+                "fp",
+                1L
         );
         SearchProjection projection = projection(generation, "chunk-2");
         String vectorId = VectorIdentity.physicalId(
@@ -321,7 +323,8 @@ class PostgresVectorPublicationIntegrationTest {
                     RetentionPolicy.PERMANENT,
                     null,
                     profile.profileId(),
-                    "fp-pool-one"
+                    "fp-pool-one",
+                    1L
             );
             SearchProjection projection = new SearchProjection(
                     "pool-chunk",
@@ -488,7 +491,8 @@ class PostgresVectorPublicationIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 profile.profileId(),
-                "fp-" + documentId
+                "fp-" + documentId,
+                1L
         );
         SearchProjection projection = new SearchProjection(
                 chunkId,
@@ -542,7 +546,8 @@ class PostgresVectorPublicationIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 profile.profileId(),
-                "fp-batch"
+                "fp-batch",
+                1L
         );
         java.util.ArrayList<SearchProjection> projectionRows =
                 new java.util.ArrayList<>();
