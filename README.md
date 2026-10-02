@@ -207,7 +207,7 @@ A future persistence layer should store canonical documents, chunks, relations a
 
 Akmai extracts exact business identifiers independently from semantic embeddings.
 
-Supported initial types include:
+Runtime-supported identifier types are derived from the registered `IdentifierParser` beans. The current supported set is:
 
 - CONTRACT_NUMBER
 - DOCUMENT_NUMBER
@@ -215,11 +215,8 @@ Supported initial types include:
 - INVOICE_NUMBER
 - APPLICATION_NUMBER
 - CASE_NUMBER
-- CLAIM_NUMBER
-- PAYMENT_NUMBER
-- PROTOCOL_NUMBER
-- LETTER_NUMBER
-- DOCUMENT_ID
+
+Other `IdentifierType` enum values are reserved for future parsers and are not advertised as runtime capabilities until a parser is registered.
 
 The canonical model is:
 
