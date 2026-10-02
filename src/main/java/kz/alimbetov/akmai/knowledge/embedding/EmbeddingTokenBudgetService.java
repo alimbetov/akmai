@@ -12,9 +12,21 @@ public class EmbeddingTokenBudgetService {
         this.registry = registry;
     }
 
+    public boolean fits(String embeddingText) {
+        return upperBound(embeddingText) <= contextWindow();
+    }
+
+    public int upperBound(String embeddingText) {
+        return registry.counter().upperBound(embeddingText);
+    }
+
+    public int contextWindow() {
+        return registry.embeddingContextWindow();
+    }
+
     public void assertFits(String embeddingText) {
-        int upperBound = registry.counter().upperBound(embeddingText);
-        if (upperBound > registry.embeddingContextWindow()) {
+        int upperBound = upperBound(embeddingText);
+        if (upperBound > contextWindow()) {
             throw new IllegalArgumentException(
                     "Embedding payload exceeds configured model context window"
             );
