@@ -8,11 +8,15 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import kz.alimbetov.akmai.observability.AkmaiMetrics;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
+@ExtendWith(OutputCaptureExtension.class)
 class RetentionSchedulerObservabilityTest {
 
     @Test
-    void schedulerPublishesBacklogAndRunDurationMetrics() {
+    void schedulerPublishesBacklogAndRunDurationMetrics(CapturedOutput output) {
         RetentionWorkerPool workers = mock(RetentionWorkerPool.class);
         DocumentGenerationRepository generations =
                 mock(DocumentGenerationRepository.class);
@@ -55,5 +59,10 @@ class RetentionSchedulerObservabilityTest {
                 .tag("outcome", "SUCCESS")
                 .timer()
                 .count()).isEqualTo(1);
+        assertThat(output.getOut())
+                .contains("retention_run event=completed")
+                .contains("outcome=SUCCESS")
+                .contains("backlog=5")
+                .doesNotContain("document text");
     }
 }
