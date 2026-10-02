@@ -79,9 +79,9 @@ public class RagQuestionService {
             );
         }
 
-        List<RetrievalHit> fused = resultFusion.fuse(execution.hits());
+        List<RetrievalHit> fused = resultFusion.fuse(execution.hits(), accessLevels);
         List<RetrievalHit> ranked = reranker.rerank(fused, question);
-        List<RetrievalHit> expanded = knowledgeExpansion.expand(ranked);
+        List<RetrievalHit> expanded = knowledgeExpansion.expand(ranked, accessLevels);
         List<RetrievalHit> bounded = contextBudget.apply(expanded, question);
 
         if (bounded.isEmpty()) {
