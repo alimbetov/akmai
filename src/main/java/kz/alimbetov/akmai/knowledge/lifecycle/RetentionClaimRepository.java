@@ -40,7 +40,20 @@ public class RetentionClaimRepository {
         }
 
         UUID claimId = UUID.randomUUID();
-        return transactionTemplate.execute(status -> jdbcTemplate.query(
+        return transactionTemplate.execute(status -> {
+            String migrationStatus = jdbcTemplate.queryForObject(
+                    """
+                    SELECT migration_status
+                    FROM knowledge_embedding_runtime
+                    WHERE singleton_id = 1
+                    FOR SHARE
+                    """,
+                    String.class
+            );
+            if (!"IDLE".equals(migrationStatus)) {
+                return List.of();
+            }
+            return jdbcTemplate.query(
                 """
                 WITH candidates AS (
                     SELECT l.document_id
@@ -94,7 +107,8 @@ public class RetentionClaimRepository {
                 claimId,
                 workerId,
                 leaseDuration.toMillis()
-        ));
+            );
+        });
     }
 
     public boolean release(RetentionClaim claim) {
