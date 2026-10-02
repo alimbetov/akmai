@@ -24,6 +24,7 @@ public class DocumentGenerationRepository {
         this.transactionTemplate = transactionTemplate;
     }
 
+    @Deprecated(forRemoval = true)
     public long allocate(
             String documentId,
             RetentionPolicy requestedPolicy,
@@ -37,7 +38,7 @@ public class DocumentGenerationRepository {
                 requestedExpiresAt,
                 embeddingProfileId,
                 contentFingerprint,
-                0L
+                1L
         );
     }
 
@@ -49,8 +50,8 @@ public class DocumentGenerationRepository {
             String contentFingerprint,
             long accessLevel
     ) {
-        if (accessLevel < 0) {
-            throw new IllegalArgumentException("accessLevel must be >= 0");
+        if (accessLevel <= 0) {
+            throw new IllegalArgumentException("accessLevel must be positive");
         }
         return transactionTemplate.execute(status -> {
             String migrationStatus = jdbcTemplate.queryForObject(
