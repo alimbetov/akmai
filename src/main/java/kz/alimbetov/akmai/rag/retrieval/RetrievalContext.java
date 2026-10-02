@@ -15,27 +15,21 @@ public record RetrievalContext(
                 dependencyHits == null ? List.of() : dependencyHits
         );
         if (accessLevels == null || accessLevels.isEmpty()) {
-            accessLevels = Set.of();
-        } else {
-            TreeSet<Long> normalized = new TreeSet<>();
-            for (Long value : accessLevels) {
-                if (value == null || value <= 0) {
-                    throw new IllegalArgumentException(
-                            "accessLevels must contain only positive values"
-                    );
-                }
-                normalized.add(value);
-            }
-            accessLevels = Set.copyOf(normalized);
+            throw new IllegalArgumentException(
+                    "accessLevels must not be empty"
+            );
         }
-    }
 
-    public RetrievalContext(List<RetrievalHit> dependencyHits) {
-        this(dependencyHits, Set.of());
-    }
-
-    public static RetrievalContext empty() {
-        return new RetrievalContext(List.of(), Set.of());
+        TreeSet<Long> normalized = new TreeSet<>();
+        for (Long value : accessLevels) {
+            if (value == null || value <= 0) {
+                throw new IllegalArgumentException(
+                        "accessLevels must contain only positive values"
+                );
+            }
+            normalized.add(value);
+        }
+        accessLevels = Set.copyOf(normalized);
     }
 
     public Set<String> documentIds() {
