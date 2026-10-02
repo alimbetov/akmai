@@ -6,11 +6,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import kz.alimbetov.akmai.rag.retrieval.RetrievalObserver;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalProperties;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalTestProperties;
 import org.junit.jupiter.api.Test;
