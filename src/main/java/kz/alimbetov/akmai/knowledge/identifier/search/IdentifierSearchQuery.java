@@ -12,17 +12,16 @@ public record IdentifierSearchQuery(
 ) {
 
     public IdentifierSearchQuery {
-        accessLevels = accessLevels == null
-                ? Set.of()
-                : Set.copyOf(accessLevels);
-    }
-
-    public IdentifierSearchQuery(
-            IdentifierType type,
-            String normalizedValue,
-            MatchMode matchMode,
-            int limit
-    ) {
-        this(type, normalizedValue, matchMode, limit, Set.of());
+        if (accessLevels == null || accessLevels.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "accessLevels must not be empty"
+            );
+        }
+        if (accessLevels.stream().anyMatch(value -> value == null || value <= 0)) {
+            throw new IllegalArgumentException(
+                    "accessLevels must contain only positive values"
+            );
+        }
+        accessLevels = Set.copyOf(accessLevels);
     }
 }
