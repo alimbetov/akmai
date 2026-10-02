@@ -4,7 +4,8 @@ Status: strategic architecture review
 Branch: `feature/retrieval-partitioning-architecture`  
 Base: `7ecc91124bfc2716d46a5e66e6a225b1687189fc`  
 Target database: PostgreSQL 17 + pgvector  
-Scope: retrieval storage, query planning, indexing, migration/cutover, performance gates
+Deployment state: greenfield; no database has applied the current Liquibase history  
+Scope: retrieval storage, query planning, indexing, clean-schema bootstrap, performance gates
 
 ## 1. Executive decision
 
@@ -22,10 +23,12 @@ The strategic direction is:
 4. preserve lifecycle + generation tables as an unpartitioned control plane;
 5. add a mandatory exact vector path for highly selective document-scoped retrieval;
 6. stop using array-valued `= ANY (?)` as the partition-routing predicate;
-7. preserve generation publication fencing and use
-   `knowledge_document_generation.access_level` as the immutable ACL source of truth for
-   backfill and migration;
-8. make the final choice benchmark-driven, with plan-shape and retrieval-quality gates.
+7. preserve generation publication fencing and make
+   `knowledge_document_generation.access_level` the immutable ACL source of truth for all
+   physical retrieval rows;
+8. replace the accumulated compatibility-oriented migration history with a clean baseline schema
+   before the first real deployment;
+9. make the final choice benchmark-driven, with plan-shape and retrieval-quality gates.
 
 The important refinement compared with the first design is that LIST partitioning is the
 leading candidate, not a dogma. With a genuinely small and stable ACL cardinality, partial
@@ -688,68 +691,56 @@ For a new empty shadow relation, the cheaper path is:
 Benchmark whether building HNSW after bulk load is substantially cheaper than maintaining HNSW
 through the initial backfill.
 
-## 20. Backfill rules
+## 20. Greenfield schema rule
 
-Backfill joins every retrieval row to the immutable generation ACL:
+No database has applied the current Liquibase history.
 
-```sql
-JOIN knowledge_document_generation g
-  ON g.document_id = source.document_id
- AND g.generation = source.generation
-```
+Therefore this feature MUST NOT preserve compatibility migrations solely for hypothetical existing
+installations. The schema should be designed directly in its final form.
 
-and writes:
+Consequences:
+
+- no shadow v2 tables;
+- no backfill;
+- no dual-write;
+- no dual-read cutover;
+- no compatibility defaults such as temporary `access_level = 1`;
+- no `ALTER TABLE` chains used only to evolve an unreleased schema;
+- no legacy JSON routing representation in the final physical vector table.
+
+The bootstrap schema should create every table with its final columns, keys, constraints,
+partitioning and indexes from the beginning.
+
+`knowledge_document_generation.access_level` remains the immutable ACL source of truth for all
+retrieval writes, but it is used during normal ingestion/publication rather than historical
+backfill.
+
+## 21. Clean Liquibase baseline
+
+Before the first real deployment, replace the accumulated schema-evolution sequence with a clean,
+reviewable baseline.
+
+Recommended logical split:
 
 ```text
-g.access_level
+001-extensions-and-control-plane.sql
+002-retrieval-storage.sql
+003-retrieval-indexes.sql
+004-operational-journals.sql
+005-seed-runtime.sql
 ```
 
-Never derive retired generation ACL from `knowledge_document_lifecycle.access_level`.
+The exact file split is less important than these rules:
 
-For vectors, extract document/generation/chunk identity from legacy metadata only to locate the
-generation row. The ACL itself comes from the generation journal.
+1. each table is created once in final form;
+2. constraints are declared with `CREATE TABLE` where practical;
+3. partitioned parents are created partitioned from day one;
+4. ACL child partitions are provisioned explicitly;
+5. local indexes are created on children in the bootstrap path;
+6. vector profile storage is created directly with typed routing columns;
+7. no migration depends on historical intermediate schemas that never existed outside tests.
 
-Rows with no matching generation are migration-reconciliation errors and must not be silently
-assigned ACL 1.
-
-## 21. Dual-write / shadow-read cutover
-
-Recommended states:
-
-```text
-V1_ONLY
-DUAL_WRITE_SHADOW_READ
-V2_ONLY
-```
-
-### V1_ONLY
-
-Current production behavior.
-
-### DUAL_WRITE_SHADOW_READ
-
-- ingestion writes v1 and v2;
-- v1 remains authoritative;
-- a configurable sample of reads executes v2 in shadow;
-- responses are served from v1;
-- v1/v2 results and latency are compared asynchronously inside the request execution budget or
-  in a dedicated benchmark environment.
-
-Compare:
-
-- Recall@K against exact/golden truth;
-- topK overlap;
-- MRR/nDCG;
-- unauthorized-result count (must be zero);
-- p50/p95/p99;
-- planning time;
-- buffer reads/hits.
-
-### V2_ONLY
-
-Only after correctness + performance acceptance.
-
-Keep rollback capability until a soak period completes.
+Repository tests should validate the clean bootstrap from an empty PostgreSQL instance.
 
 ## 22. Maintenance paths must become partition-aware
 
@@ -927,16 +918,9 @@ Deliver:
 
 No storage migration before this baseline exists.
 
-### Phase 1 — typed routing columns
+### Phase 1 — choose the final physical layout
 
-Add typed `document_id`, `generation`, `chunk_id`, `access_level` to the shadow/vector v2
-model and make repositories capable of reading them.
-
-This phase isolates the benefit of removing JSON hot-key extraction.
-
-### Phase 2 — physical-layout A/B
-
-Benchmark:
+Benchmark directly on disposable clean schemas:
 
 - one typed heap + partial HNSW per ACL;
 - LIST ACL partitions + local HNSW.
@@ -946,17 +930,26 @@ Make the vector decision from measured results.
 For projection/identifier/reference, benchmark LIST against typed single-table indexes with the
 same data.
 
+### Phase 2 — clean baseline DDL
+
+Rewrite the unreleased Liquibase history into a compact baseline that creates the selected final
+schema directly.
+
+No compatibility `ALTER TABLE` sequence is required.
+
 ### Phase 3 — exact document vector mode
 
 Implement the selective exact path and benchmark the switching threshold.
 
-### Phase 4 — dual-write + shadow read
+### Phase 4 — repository/query rewrite
 
-Backfill v2, enable dual write, compare sampled reads.
+Make all retrieval and maintenance SQL use the final typed routing columns, scalar ACL routing and
+partition-aware cleanup contracts.
 
-### Phase 5 — cutover
+### Phase 5 — full bootstrap + performance gate
 
-Switch to v2 only after gates pass.
+Validate empty-database bootstrap, correctness, planner behavior and performance on the exact
+schema that will be deployed.
 
 ### Phase 6 — operational time partitioning
 
@@ -1014,9 +1007,12 @@ The biggest expected wins are not from partitioning in isolation. They come from
 - generation-level integrity;
 - benchmark-driven HNSW tuning.
 
-The architecture review therefore recommends **benchmark-first shadow storage v2**, with LIST
-partitioning as the leading corpus layout and partial HNSW as the mandatory control experiment
-for the low-cardinality vector case.
+The architecture review therefore recommends **benchmark-first greenfield storage design**, with
+LIST partitioning as the leading corpus layout and partial HNSW as the mandatory control
+experiment for the low-cardinality vector case.
+
+Because no database has been deployed yet, the final selected design should then become the
+initial schema directly rather than being introduced through compatibility migrations.
 
 ## 29. External technical references
 
