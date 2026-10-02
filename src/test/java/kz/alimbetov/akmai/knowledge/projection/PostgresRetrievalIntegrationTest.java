@@ -190,6 +190,64 @@ class PostgresRetrievalIntegrationTest {
                 .doesNotContain("ru-law");
     }
 
+
+    @Test
+    void languageSpecificFtsQueriesUseTheirGeneratedGinIndexes() {
+        long generation = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-explain"
+        );
+        projections.saveAll(List.of(
+                projection(
+                        "ru-explain",
+                        generation,
+                        "Договор расторгается банком.",
+                        "ru"
+                ),
+                projection(
+                        "en-explain",
+                        generation,
+                        "Agreement termination is permitted.",
+                        "en"
+                )
+        ));
+        publish("doc", generation);
+
+        jdbc.execute("SET enable_seqscan = off");
+        try {
+            String ruPlan = String.join("\n", jdbc.queryForList(
+                    """
+                    EXPLAIN (COSTS OFF)
+                    SELECT chunk_id
+                    FROM knowledge_search_projection
+                    WHERE search_vector_ru
+                          @@ websearch_to_tsquery('russian', ?)
+                    """,
+                    String.class,
+                    "договор"
+            ));
+            String enPlan = String.join("\n", jdbc.queryForList(
+                    """
+                    EXPLAIN (COSTS OFF)
+                    SELECT chunk_id
+                    FROM knowledge_search_projection
+                    WHERE search_vector_en
+                          @@ websearch_to_tsquery('english', ?)
+                    """,
+                    String.class,
+                    "agreement"
+            ));
+
+            assertThat(ruPlan).contains("idx_knowledge_search_fts_ru");
+            assertThat(enPlan).contains("idx_knowledge_search_fts_en");
+        } finally {
+            jdbc.execute("RESET enable_seqscan");
+        }
+    }
+
     @Test
     void kkAndZhTrigramSearchTreatsLikeMetacharactersLiterally() {
         long generation = generations.allocate(
