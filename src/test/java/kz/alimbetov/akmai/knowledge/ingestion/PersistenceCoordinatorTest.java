@@ -107,7 +107,11 @@ class PersistenceCoordinatorTest {
                                     "akmaiEmbeddingProfileId",
                                     fixture.profile.profileId()
                             )
-                            .containsEntry("akmaiMetadataVersion", 2);
+                            .containsEntry("akmaiMetadataVersion", 2)
+                            .containsEntry(
+                                    DocumentMetadata.ACCESS_LEVEL,
+                                    1L
+                            );
                     assertThat(row.vectorId()).matches(
                             "[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
                     );
