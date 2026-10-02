@@ -191,6 +191,60 @@ class PostgresRetrievalIntegrationTest {
     }
 
 
+
+    @Test
+    void sameChunkIdCannotOverwriteAnotherDocumentOwner() {
+        long first = generations.allocate(
+                "doc-owner-a",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-owner-a"
+        );
+        long second = generations.allocate(
+                "doc-owner-b",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-owner-b"
+        );
+
+        projections.saveAll(List.of(
+                projectionForDocument(
+                        "doc-owner-a",
+                        "same-chunk",
+                        first,
+                        "first owner"
+                ),
+                projectionForDocument(
+                        "doc-owner-b",
+                        "same-chunk",
+                        second,
+                        "second owner"
+                )
+        ));
+
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_search_projection
+                WHERE chunk_id = 'same-chunk'
+                  AND document_id IN ('doc-owner-a', 'doc-owner-b')
+                """,
+                Integer.class
+        )).isEqualTo(2);
+
+        assertThat(jdbc.queryForList(
+                """
+                SELECT document_id
+                FROM knowledge_search_projection
+                WHERE chunk_id = 'same-chunk'
+                ORDER BY document_id
+                """,
+                String.class
+        )).containsExactly("doc-owner-a", "doc-owner-b");
+    }
+
     @Test
     void languageSpecificFtsQueriesUseTheirGeneratedGinIndexes() {
         long generation = generations.allocate(
@@ -372,6 +426,31 @@ class PostgresRetrievalIntegrationTest {
                 generation,
                 generation,
                 documentId
+        );
+    }
+
+
+    private SearchProjection projectionForDocument(
+            String documentId,
+            String chunkId,
+            long generation,
+            String text
+    ) {
+        return new SearchProjection(
+                chunkId,
+                documentId,
+                generation,
+                null,
+                0,
+                text,
+                text,
+                "en",
+                KnowledgeDomain.GENERAL,
+                "integration",
+                List.of(),
+                List.of(),
+                Map.of("source", documentId),
+                2
         );
     }
 
