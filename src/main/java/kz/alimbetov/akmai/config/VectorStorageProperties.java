@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.validation.annotation.Validated;
 
 @Validated
@@ -36,6 +37,7 @@ public record VectorStorageProperties(
         );
     }
 
+    @ConstructorBinding
     public VectorStorageProperties {
         if (embeddingHttpTimeout == null
                 || embeddingHttpTimeout.isZero()
