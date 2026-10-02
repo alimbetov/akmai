@@ -27,6 +27,10 @@ public abstract class RegexIdentifierParser implements IdentifierParser {
             if (value == null) {
                 continue;
             }
+            value = value.replaceFirst("[,;:!?]+$", "");
+            if (value.endsWith(".") && value.indexOf('.') == value.length() - 1) {
+                value = value.substring(0, value.length() - 1);
+            }
             String normalized = normalizer.normalize(type(), value);
             if (normalized.isBlank()) {
                 continue;
