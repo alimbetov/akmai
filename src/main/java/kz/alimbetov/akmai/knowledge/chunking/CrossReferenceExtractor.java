@@ -19,7 +19,8 @@ public class CrossReferenceExtractor {
             "(?iu)(?<![\\p{L}\\p{N}])(стат(?:ья|ьи|ье|ью|ьёй|ьей)|ст\\.|пункт(?:а|е|у)?|п\\.|article|art\\.|section|clause|бап|тармақ|тармақша)\\s*([0-9]+(?:\\.[0-9]+)*)"
     );
     private static final Pattern KAZAKH_NUMBER_BEFORE = Pattern.compile(
-            "(?iu)\\b([0-9]+(?:\\.[0-9]+)*)[-‑–—]?(бап|тармақ|тармақша)\\b"
+            "(?iu)(?<![\\p{L}\\p{N}])([0-9]+(?:\\.[0-9]+)*)[-‑–—]?"
+                    + "(бап|тармақша|тармақ)(?![\\p{L}\\p{N}])"
     );
     private static final Pattern CHINESE = Pattern.compile(
             "第([一二三四五六七八九十百千万零〇两0-9]+)(条|款|项)"
