@@ -85,6 +85,28 @@ public class PostgresGenerationVectorRepository {
         return deleted;
     }
 
+    public List<String> findIdsByGenerationMetadata(
+            EmbeddingProfile profile,
+            String documentId,
+            long generation
+    ) {
+        String table = storageManager.qualified(profile);
+        return jdbcTemplate.query(
+                """
+                SELECT id::text
+                FROM %s
+                WHERE metadata->>'akmaiDocumentId' = ?
+                  AND (metadata->>'akmaiGeneration')::bigint = ?
+                  AND metadata->>'akmaiEmbeddingProfileId' = ?
+                ORDER BY id
+                """.formatted(table),
+                (rs, rowNum) -> rs.getString(1),
+                documentId,
+                generation,
+                profile.profileId()
+        );
+    }
+
     public int countExisting(EmbeddingProfile profile, List<String> ids) {
         if (ids == null || ids.isEmpty()) {
             return 0;
