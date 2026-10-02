@@ -1,6 +1,8 @@
 package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import java.lang.management.ManagementFactory;
+import kz.alimbetov.akmai.observability.AkmaiMetrics;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +13,7 @@ public class RetentionScheduler {
     private final RetentionProperties properties;
     private final DocumentGenerationRepository generationRepository;
     private final String workerId;
+    private AkmaiMetrics metrics;
 
     public RetentionScheduler(
             RetentionWorkerPool workerPool,
@@ -21,6 +24,11 @@ public class RetentionScheduler {
         this.properties = properties;
         this.generationRepository = generationRepository;
         this.workerId = ManagementFactory.getRuntimeMXBean().getName();
+    }
+
+    @Autowired(required = false)
+    void setMetrics(AkmaiMetrics metrics) {
+        this.metrics = metrics;
     }
 
     @Scheduled(
@@ -50,6 +58,9 @@ public class RetentionScheduler {
                     properties.leaseDuration(),
                     properties.batchSize()
             );
+            if (metrics != null) {
+                metrics.staleIngestionsRecovered(recovered);
+            }
             if (recovered < properties.batchSize()) {
                 return;
             }
