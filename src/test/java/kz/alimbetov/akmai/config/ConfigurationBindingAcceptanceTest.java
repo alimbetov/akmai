@@ -103,9 +103,62 @@ class ConfigurationBindingAcceptanceTest {
                         .isNotNull());
     }
 
+
+    @Test
+    void apiPropertiesWithRequestCeilingBindAtStartup() {
+        new ApplicationContextRunner()
+                .withUserConfiguration(ApiConfig.class)
+                .withPropertyValues(
+                        "akmai.api.max-request-bytes=2097152",
+                        "akmai.api.max-document-chars=1000000",
+                        "akmai.api.max-question-chars=20000",
+                        "akmai.api.max-metadata-bytes=65536",
+                        "akmai.api.max-metadata-entries=256",
+                        "akmai.api.max-metadata-depth=8",
+                        "akmai.api.max-title-chars=1000",
+                        "akmai.api.max-source-chars=1000"
+                )
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(ApiProperties.class)
+                            .maxRequestBytes()).isEqualTo(2_097_152);
+                });
+    }
+
+    @Test
+    void vectorPropertiesWithOperationalTimeoutsBindAtStartup() {
+        new ApplicationContextRunner()
+                .withUserConfiguration(VectorConfig.class)
+                .withPropertyValues(
+                        "akmai.vector.dimensions=1024",
+                        "akmai.vector.index-type=HNSW",
+                        "akmai.vector.distance-type=COSINE_DISTANCE",
+                        "akmai.vector.max-document-batch-size=64",
+                        "akmai.vector.embedding-http-timeout=30s",
+                        "akmai.vector.db-transaction-timeout=30s",
+                        "akmai.vector.tokenizer-profile=conservative-v1"
+                )
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(VectorStorageProperties.class)
+                            .dimensions()).isEqualTo(1024);
+                });
+    }
+
     @Configuration(proxyBeanMethods = false)
     @EnableConfigurationProperties(ChunkingProperties.class)
     static class ChunkingConfig {
+    }
+
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(ApiProperties.class)
+    static class ApiConfig {
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(VectorStorageProperties.class)
+    static class VectorConfig {
     }
 
     @Configuration(proxyBeanMethods = false)
