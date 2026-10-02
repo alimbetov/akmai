@@ -86,7 +86,7 @@ class MultilingualRetrievalQualityRegressionTest {
                         "QUALITY corpus=%s language=%s case=%s recall5=%.3f recall10=%.3f mrr=%.3f ndcg10=%.3f%n",
                         CORPUS_VERSION,
                         result.language(),
-                        result.caseId(),
+                        result.id(),
                         result.recallAt5(),
                         result.recallAt10(),
                         result.reciprocalRank(),
@@ -154,8 +154,8 @@ class MultilingualRetrievalQualityRegressionTest {
                         projection(relevant, testCase.language())
                 );
                 projectionsByChunk.put(
-                        "noise-" + testCase.caseId(),
-                        projection("noise-" + testCase.caseId(), testCase.language())
+                        "noise-" + testCase.id(),
+                        projection("noise-" + testCase.id(), testCase.language())
                 );
             });
 
@@ -314,7 +314,7 @@ class MultilingualRetrievalQualityRegressionTest {
 
         private String caseLanguage(String caseId) {
             return CASES.stream()
-                    .filter(testCase -> testCase.caseId().equals(caseId))
+                    .filter(testCase -> testCase.id().equals(caseId))
                     .map(RetrievalBenchmarkCase::language)
                     .findFirst()
                     .orElse("en");
