@@ -26,15 +26,33 @@ spring:
           model: ${AKMAI_CHAT_MODEL:qwen3:8b}
           temperature: 0.1
 
-    vectorstore:
-      pgvector:
-        initialize-schema: true
-        index-type: ${AKMAI_VECTOR_INDEX_TYPE:HNSW}
-        distance-type: ${AKMAI_VECTOR_DISTANCE_TYPE:COSINE_DISTANCE}
-        dimensions: ${AKMAI_VECTOR_DIMENSIONS:1024}
-        max-document-batch-size: ${AKMAI_VECTOR_BATCH_SIZE:64}
-
 akmai:
+  model-budget:
+    chat-context-window: ${AKMAI_CHAT_CONTEXT_WINDOW:32768}
+    embedding-context-window: ${AKMAI_EMBEDDING_CONTEXT_WINDOW:8192}
+  api:
+    max-request-bytes: ${AKMAI_API_MAX_REQUEST_BYTES:2097152}
+    max-document-chars: ${AKMAI_API_MAX_DOCUMENT_CHARS:1000000}
+    max-question-chars: ${AKMAI_API_MAX_QUESTION_CHARS:20000}
+    max-metadata-bytes: ${AKMAI_API_MAX_METADATA_BYTES:65536}
+    max-metadata-entries: ${AKMAI_API_MAX_METADATA_ENTRIES:256}
+    max-metadata-depth: ${AKMAI_API_MAX_METADATA_DEPTH:8}
+    max-title-chars: ${AKMAI_API_MAX_TITLE_CHARS:1000}
+    max-source-chars: ${AKMAI_API_MAX_SOURCE_CHARS:1000}
+  idempotency:
+    lease-duration: ${AKMAI_IDEMPOTENCY_LEASE_DURATION:10m}
+  security:
+    enabled: ${AKMAI_SECURITY_ENABLED:false}
+    api-key: ${AKMAI_SECURITY_API_KEY:}
+    allow-unauthenticated-local: ${AKMAI_ALLOW_UNAUTH_LOCAL:true}
+  vector:
+    dimensions: ${AKMAI_VECTOR_DIMENSIONS:1024}
+    index-type: ${AKMAI_VECTOR_INDEX_TYPE:HNSW}
+    distance-type: ${AKMAI_VECTOR_DISTANCE_TYPE:COSINE_DISTANCE}
+    max-document-batch-size: ${AKMAI_VECTOR_BATCH_SIZE:64}
+    embedding-http-timeout: ${AKMAI_VECTOR_EMBEDDING_TIMEOUT:30s}
+    db-transaction-timeout: ${AKMAI_VECTOR_DB_TIMEOUT:30s}
+    tokenizer-profile: ${AKMAI_VECTOR_TOKENIZER_PROFILE:conservative-v1}
   ingestion:
     parallelism: ${AKMAI_INGESTION_PARALLELISM:8}
     queue-capacity: ${AKMAI_INGESTION_QUEUE_CAPACITY:128}
@@ -57,6 +75,22 @@ akmai:
     reranker-candidates: ${AKMAI_RERANKER_CANDIDATES:20}
     reranker-timeout: ${AKMAI_RERANKER_TIMEOUT:2s}
     reranker-fused-weight: ${AKMAI_RERANKER_FUSED_WEIGHT:0.15}
+    request-timeout: ${AKMAI_RETRIEVAL_REQUEST_TIMEOUT:8s}
+    strategy-timeout: ${AKMAI_RETRIEVAL_STRATEGY_TIMEOUT:3s}
+    answer-timeout: ${AKMAI_RETRIEVAL_ANSWER_TIMEOUT:20s}
+    embedding-http-timeout: ${AKMAI_RETRIEVAL_EMBEDDING_TIMEOUT:3s}
+    context-expansion-max-chunks: ${AKMAI_CONTEXT_EXPANSION_MAX_CHUNKS:3}
+    answer-reserved-tokens: ${AKMAI_ANSWER_RESERVED_TOKENS:1024}
+  reembedding:
+    auto-migrate: ${AKMAI_REEMBEDDING_AUTO_MIGRATE:false}
+    drain-timeout: ${AKMAI_REEMBEDDING_DRAIN_TIMEOUT:2m}
+    poll-interval: ${AKMAI_REEMBEDDING_POLL_INTERVAL:250ms}
+  reconciliation:
+    enabled: ${AKMAI_RECONCILIATION_ENABLED:true}
+    batch-size: ${AKMAI_RECONCILIATION_BATCH_SIZE:100}
+    max-batches-per-run: ${AKMAI_RECONCILIATION_MAX_BATCHES:10}
+    grace-period: ${AKMAI_RECONCILIATION_GRACE_PERIOD:5m}
+    fixed-delay: ${AKMAI_RECONCILIATION_FIXED_DELAY:5m}
   retention:
     enabled: ${AKMAI_RETENTION_ENABLED:true}
     cron: "${AKMAI_RETENTION_CRON:0 30 3 * * *}"
@@ -67,6 +101,7 @@ akmai:
     worker-parallelism: ${AKMAI_RETENTION_WORKER_PARALLELISM:2}
     queue-capacity: ${AKMAI_RETENTION_QUEUE_CAPACITY:8}
     lease-duration: ${AKMAI_RETENTION_LEASE_DURATION:10m}
+    cleanup-transaction-timeout: ${AKMAI_RETENTION_CLEANUP_TIMEOUT:2m}
     default-policy: ${AKMAI_RETENTION_DEFAULT_POLICY:PERMANENT}
     default-ttl: ${AKMAI_RETENTION_DEFAULT_TTL:90d}
   chunking:
@@ -77,3 +112,22 @@ akmai:
 
 server:
   port: ${SERVER_PORT:8080}
+  max-http-request-header-size: ${AKMAI_MAX_REQUEST_HEADER_SIZE:32KB}
+  tomcat:
+    max-http-form-post-size: ${AKMAI_MAX_REQUEST_BODY_SIZE:2MB}
+    max-swallow-size: ${AKMAI_MAX_REQUEST_BODY_SIZE:2MB}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState,ping
+        readiness:
+          include: readinessState,db,embeddingProfile,pgvector,ollama

@@ -1,42 +1,68 @@
 package kz.alimbetov.akmai.knowledge.ingestion;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
+import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
+import kz.alimbetov.akmai.knowledge.embedding.GenerationEmbeddingService;
 import kz.alimbetov.akmai.knowledge.identifier.DetectedIdentifier;
 import kz.alimbetov.akmai.knowledge.identifier.IdentifierType;
-import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
-import kz.alimbetov.akmai.knowledge.lifecycle.DocumentLifecycleRepository;
-import kz.alimbetov.akmai.knowledge.lifecycle.DocumentOperationLock;
+import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyRepository;
+import kz.alimbetov.akmai.knowledge.lifecycle.DocumentGenerationRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionProperties;
-import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository;
+import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository.VectorGenerationEntry;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionFactory;
-import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository.VectorRow;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.ai.document.Document;
-import org.springframework.ai.vectorstore.VectorStore;
 
 class PersistenceCoordinatorTest {
 
     @Test
-    void vectorDocumentsUseGenerationScopedIdsAndCanonicalChunkMetadata() {
+    void buildsGenerationScopedManifestAndReservedVectorMetadata() {
         Fixture fixture = fixture();
-        when(fixture.lifecycle.findByDocumentId("doc-1")).thenReturn(java.util.Optional.empty());
-        when(fixture.lifecycle.beginIngestion("doc-1", RetentionPolicy.PERMANENT, null))
-                .thenReturn(1L);
-        when(fixture.lifecycle.publishIngestion(org.mockito.ArgumentMatchers.eq("doc-1"), org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
-                .thenReturn(true);
-        when(fixture.projections.findChunkIdsByDocumentId("doc-1"))
-                .thenReturn(List.of());
+        when(fixture.generations.allocate(
+                eq("doc-1"),
+                eq(RetentionPolicy.PERMANENT),
+                isNull(),
+                eq(fixture.profile.profileId()),
+                anyString()
+        )).thenReturn(7L);
+        when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
+                .thenReturn(List.of(
+                        new float[] {1f, 0f, 0f},
+                        new float[] {0f, 1f, 0f}
+                ));
+        when(fixture.publication.publish(
+                eq("doc-1"),
+                eq(7L),
+                eq(RetentionPolicy.PERMANENT),
+                isNull(),
+                eq(fixture.profile),
+                anyList(),
+                anyList(),
+                anyList(),
+                anyList(),
+                isNull(),
+                isNull()
+        )).thenReturn(GenerationPublicationService.PublicationResult.PUBLISHED);
 
         fixture.coordinator.persist(List.of(
                 chunk("stable-1", "doc-1", 0),
@@ -44,69 +70,234 @@ class PersistenceCoordinatorTest {
         ));
 
         @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<Document>> captor = ArgumentCaptor.forClass(List.class);
-        verify(fixture.vectorStore).add(captor.capture());
+        ArgumentCaptor<List<VectorGenerationEntry>> manifest =
+                ArgumentCaptor.forClass(List.class);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<VectorRow>> vectors =
+                ArgumentCaptor.forClass(List.class);
 
-        assertThat(captor.getValue())
-                .extracting(Document::getId)
-                .doesNotContain("stable-1", "stable-2")
+        verify(fixture.publication).publish(
+                eq("doc-1"),
+                eq(7L),
+                eq(RetentionPolicy.PERMANENT),
+                isNull(),
+                eq(fixture.profile),
+                anyList(),
+                anyList(),
+                manifest.capture(),
+                vectors.capture(),
+                isNull(),
+                isNull()
+        );
+
+        assertThat(manifest.getValue())
+                .extracting(VectorGenerationEntry::vectorId)
+                .containsExactly(
+                        VectorIdentity.physicalId("doc-1", 7L, "stable-1"),
+                        VectorIdentity.physicalId("doc-1", 7L, "stable-2")
+                )
                 .doesNotHaveDuplicates();
-        assertThat(captor.getValue())
-                .extracting(document -> document.getMetadata().get("chunkId"))
-                .containsExactly("stable-1", "stable-2");
-        assertThat(captor.getValue())
-                .extracting(document -> document.getMetadata().get("generation"))
-                .containsOnly(1L);
+
+        assertThat(vectors.getValue())
+                .allSatisfy(row -> {
+                    assertThat(row.metadata())
+                            .containsEntry("akmaiGeneration", 7L)
+                            .containsEntry(
+                                    "akmaiEmbeddingProfileId",
+                                    fixture.profile.profileId()
+                            )
+                            .containsEntry("akmaiMetadataVersion", 2);
+                    assertThat(row.vectorId()).matches(
+                            "[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
+                    );
+                });
     }
 
     @Test
-    void reingestionDeletesOnlyPreviousGenerationVectors() {
+    void embeddingFailureMarksOnlyNewGenerationFailedAndNeverPublishes() {
         Fixture fixture = fixture();
-        var previous = mock(kz.alimbetov.akmai.knowledge.lifecycle.DocumentLifecycle.class);
-        when(previous.generation()).thenReturn(4L);
-        when(fixture.lifecycle.findByDocumentId("doc-1"))
-                .thenReturn(java.util.Optional.of(previous));
-        when(fixture.lifecycle.beginIngestion("doc-1", RetentionPolicy.PERMANENT, null))
-                .thenReturn(5L);
-        when(fixture.lifecycle.publishIngestion(org.mockito.ArgumentMatchers.eq("doc-1"), org.mockito.ArgumentMatchers.eq(5L), org.mockito.ArgumentMatchers.any()))
-                .thenReturn(true);
-        when(fixture.vectorGenerations.findVectorIds("doc-1", 4L))
-                .thenReturn(List.of("v4-a", "v4-b"));
+        when(fixture.generations.allocate(
+                eq("doc-1"),
+                eq(RetentionPolicy.PERMANENT),
+                isNull(),
+                eq(fixture.profile.profileId()),
+                anyString()
+        )).thenReturn(8L);
+        when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
+                .thenThrow(new IllegalStateException("embedding unavailable"));
 
-        fixture.coordinator.persist(List.of(chunk("stable-1", "doc-1", 0)));
+        assertThatThrownBy(() ->
+                fixture.coordinator.persist(List.of(
+                        chunk("stable-1", "doc-1", 0)
+                )))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("embedding unavailable");
 
-        verify(fixture.vectorStore).delete(List.of("v4-a", "v4-b"));
-        verify(fixture.vectorGenerations).deleteGeneration("doc-1", 4L);
-        verify(fixture.lifecycle).beginIngestion("doc-1", RetentionPolicy.PERMANENT, null);
+        verify(fixture.generations).fail(
+                "doc-1",
+                8L,
+                "INGESTION_FAILED",
+                "IllegalStateException: embedding unavailable"
+        );
+        verify(fixture.publication, never()).publish(
+                anyString(),
+                any(Long.class),
+                any(),
+                any(),
+                any(),
+                anyList(),
+                anyList(),
+                anyList(),
+                anyList(),
+                isNull(),
+                isNull()
+        );
+    }
+
+    @Test
+    void committedPublicationRecoveredAfterAmbiguousException() {
+        Fixture fixture = fixture();
+        when(fixture.generations.allocate(
+                eq("doc-1"),
+                eq(RetentionPolicy.PERMANENT),
+                isNull(),
+                eq(fixture.profile.profileId()),
+                anyString()
+        )).thenReturn(9L);
+        when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
+                .thenReturn(List.of(new float[] {1f, 0f, 0f}));
+        when(fixture.publication.publish(
+                eq("doc-1"),
+                eq(9L),
+                eq(RetentionPolicy.PERMANENT),
+                isNull(),
+                eq(fixture.profile),
+                anyList(),
+                anyList(),
+                anyList(),
+                anyList(),
+                isNull(),
+                isNull()
+        )).thenThrow(new IllegalStateException("connection reset after commit"));
+        when(fixture.outcomeResolver.resolve("doc-1", 9L, null))
+                .thenReturn(PublicationOutcomeResolver.Outcome.COMMITTED);
+
+        fixture.coordinator.persist(List.of(
+                chunk("stable-1", "doc-1", 0)
+        ));
+
+        verify(fixture.generations, never()).fail(
+                eq("doc-1"),
+                eq(9L),
+                anyString(),
+                anyString()
+        );
+    }
+
+    @Test
+    void unresolvedPublicationOutcomeLeavesGenerationForRecovery() {
+        Fixture fixture = fixture();
+        when(fixture.generations.allocate(
+                eq("doc-1"),
+                eq(RetentionPolicy.PERMANENT),
+                isNull(),
+                eq(fixture.profile.profileId()),
+                anyString()
+        )).thenReturn(10L);
+        when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
+                .thenReturn(List.of(new float[] {1f, 0f, 0f}));
+        when(fixture.publication.publish(
+                eq("doc-1"),
+                eq(10L),
+                eq(RetentionPolicy.PERMANENT),
+                isNull(),
+                eq(fixture.profile),
+                anyList(),
+                anyList(),
+                anyList(),
+                anyList(),
+                isNull(),
+                isNull()
+        )).thenThrow(new IllegalStateException("connection reset"));
+        when(fixture.outcomeResolver.resolve("doc-1", 10L, null))
+                .thenThrow(new IllegalStateException("database unavailable"));
+
+        assertThatThrownBy(() -> fixture.coordinator.persist(List.of(
+                chunk("stable-1", "doc-1", 0)
+        )))
+                .isInstanceOf(PublicationOutcomeUnknownException.class)
+                .hasMessageContaining("could not be determined");
+
+        verify(fixture.generations, never()).fail(
+                eq("doc-1"),
+                eq(10L),
+                anyString(),
+                anyString()
+        );
+        verify(fixture.idempotency, never()).fail(any(), anyString());
     }
 
     private Fixture fixture() {
-        VectorStore vectorStore = mock(VectorStore.class);
-        IdentifierSearchIndex identifiers = mock(IdentifierSearchIndex.class);
-        SearchProjectionRepository projections = mock(SearchProjectionRepository.class);
-        DocumentLifecycleRepository lifecycle = mock(DocumentLifecycleRepository.class);
-        VectorGenerationRepository vectorGenerations = mock(VectorGenerationRepository.class);
-        DocumentOperationLock lock = mock(DocumentOperationLock.class);
-        DocumentOperationLock.LockHandle handle = mock(DocumentOperationLock.LockHandle.class);
-        when(lock.acquire("doc-1")).thenReturn(handle);
+        DocumentGenerationRepository generations =
+                mock(DocumentGenerationRepository.class);
+        EmbeddingProfileService profiles = mock(EmbeddingProfileService.class);
+        GenerationEmbeddingService embeddings =
+                mock(GenerationEmbeddingService.class);
+        GenerationPublicationService publication =
+                mock(GenerationPublicationService.class);
+        PublicationOutcomeResolver outcomeResolver =
+                mock(PublicationOutcomeResolver.class);
+        IngestionIdempotencyRepository idempotency =
+                mock(IngestionIdempotencyRepository.class);
+
+        EmbeddingProfile profile = new EmbeddingProfile(
+                "ep-test",
+                "test",
+                "deterministic",
+                3,
+                "COSINE_DISTANCE",
+                "test-tokenizer",
+                "fingerprint",
+                "akmai_vector",
+                "p_test",
+                "NONE",
+                (short) 1,
+                Instant.parse("2026-10-02T00:00:00Z")
+        );
+        when(profiles.activeProfile()).thenReturn(profile);
 
         RetentionProperties properties = new RetentionProperties(
-                true, "0 30 3 * * *", "UTC", 100, 20, 5, 4, 16,
-                Duration.ofMinutes(10), RetentionPolicy.PERMANENT, Duration.ofDays(90)
+                true,
+                "0 30 3 * * *",
+                "UTC",
+                100,
+                20,
+                5,
+                4,
+                16,
+                Duration.ofMinutes(10),
+                RetentionPolicy.PERMANENT,
+                Duration.ofDays(90)
         );
 
         PersistenceCoordinator coordinator = new PersistenceCoordinator(
-                vectorStore,
-                identifiers,
                 new SearchProjectionFactory(),
-                projections,
-                lifecycle,
-                vectorGenerations,
-                lock,
+                generations,
+                profiles,
+                embeddings,
+                publication,
+                outcomeResolver,
+                idempotency,
                 properties
         );
         return new Fixture(
-                coordinator, vectorStore, projections, lifecycle, vectorGenerations
+                coordinator,
+                generations,
+                embeddings,
+                publication,
+                outcomeResolver,
+                idempotency,
+                profile
         );
     }
 
@@ -136,15 +327,21 @@ class PersistenceCoordinatorTest {
                 "DOC-" + index,
                 "context"
         );
-        return new EnrichedKnowledgeChunk(chunk, List.of(identifier), List.of());
+        return new EnrichedKnowledgeChunk(
+                chunk,
+                List.of(identifier),
+                List.of()
+        );
     }
 
     private record Fixture(
             PersistenceCoordinator coordinator,
-            VectorStore vectorStore,
-            SearchProjectionRepository projections,
-            DocumentLifecycleRepository lifecycle,
-            VectorGenerationRepository vectorGenerations
+            DocumentGenerationRepository generations,
+            GenerationEmbeddingService embeddings,
+            GenerationPublicationService publication,
+            PublicationOutcomeResolver outcomeResolver,
+            IngestionIdempotencyRepository idempotency,
+            EmbeddingProfile profile
     ) {
     }
 }

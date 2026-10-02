@@ -12,14 +12,33 @@ public record SourceRef(
         String page
 ) {
     public static SourceRef from(int number, RetrievalHit hit) {
+        Object page = hit.metadata().get("pageFrom");
+        if (page == null) {
+            page = hit.metadata().get("pageNumber");
+        }
+        if (page == null) {
+            page = hit.metadata().get("page");
+        }
+        Object pageTo = hit.metadata().get("pageTo");
+        String pageValue = page == null
+                ? "unknown"
+                : pageTo != null && !Objects.equals(page, pageTo)
+                        ? page + "-" + pageTo
+                        : Objects.toString(page);
+
         return new SourceRef(
                 number,
-                hit.documentId(),
-                hit.chunkId(),
-                Objects.toString(hit.metadata().get("source"), hit.documentId()),
-                Objects.toString(hit.metadata().get("language"), "unknown"),
-                Objects.toString(hit.metadata().get("sectionPath"), "unknown"),
-                Objects.toString(hit.metadata().get("page"), "unknown")
+                safe(hit.documentId(), "unknown"),
+                safe(hit.chunkId(), "unknown"),
+                safe(hit.metadata().get("source"), hit.documentId()),
+                safe(hit.metadata().get("language"), "unknown"),
+                safe(hit.metadata().get("sectionPath"), "unknown"),
+                pageValue
         );
+    }
+
+    private static String safe(Object value, Object fallback) {
+        String result = Objects.toString(value, Objects.toString(fallback, "unknown"));
+        return result.isBlank() ? "unknown" : result;
     }
 }

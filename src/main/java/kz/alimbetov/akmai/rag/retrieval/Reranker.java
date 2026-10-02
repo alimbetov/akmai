@@ -55,8 +55,8 @@ public class Reranker {
 
         try {
             List<RetrievalHit> reranked = future.get(
-                    properties.rerankerTimeout().toMillis(),
-                    TimeUnit.MILLISECONDS
+                    properties.rerankerTimeout().toNanos(),
+                    TimeUnit.NANOSECONDS
             );
             observer.rerankSuccess(
                     Duration.between(started, Instant.now()),
@@ -75,10 +75,7 @@ public class Reranker {
             Thread.currentThread().interrupt();
             observer.rerankFailure(Duration.between(started, Instant.now()), exception);
             return hits;
-        } catch (ExecutionException exception) {
-            observer.rerankFailure(Duration.between(started, Instant.now()), exception);
-            return hits;
-        } catch (RuntimeException exception) {
+        } catch (ExecutionException | RuntimeException exception) {
             future.cancel(true);
             observer.rerankFailure(Duration.between(started, Instant.now()), exception);
             return hits;
@@ -88,22 +85,36 @@ public class Reranker {
     private List<RetrievalHit> score(List<RetrievalHit> candidates, String question) {
         double maxFused = candidates.stream()
                 .mapToDouble(RetrievalHit::fusedScore)
+                .filter(Double::isFinite)
                 .max()
                 .orElse(0.0);
         List<Double> semanticScores = scorer.score(question, candidates);
         if (semanticScores.size() != candidates.size()) {
-            throw new IllegalStateException("Rerank scorer returned unexpected score count");
+            throw new IllegalStateException(
+                    "Rerank scorer returned unexpected score count"
+            );
         }
         List<RetrievalHit> scored = new ArrayList<>(candidates.size());
         for (int i = 0; i < candidates.size(); i++) {
+            double semantic = semanticScores.get(i);
+            if (!Double.isFinite(semantic)) {
+                throw new IllegalStateException("Rerank scorer returned non-finite score");
+            }
             scored.add(withRerankScore(
                     candidates.get(i),
-                    semanticScores.get(i),
+                    semantic,
                     maxFused
             ));
         }
         return scored.stream()
-                .sorted(Comparator.comparingDouble(this::rerankScore).reversed())
+                .sorted(
+                        Comparator.comparingInt(this::authorityTier)
+                                .thenComparing(
+                                        Comparator.comparingDouble(
+                                                this::rerankScore
+                                        ).reversed()
+                                )
+                )
                 .toList();
     }
 
@@ -112,9 +123,15 @@ public class Reranker {
             double semanticScore,
             double maxFused
     ) {
-        double normalizedFused = maxFused <= 0.0 ? 0.0 : hit.fusedScore() / maxFused;
+        double normalizedFused = maxFused <= 0.0
+                ? 0.0
+                : hit.fusedScore() / maxFused;
         double weight = properties.rerankerFusedWeight();
-        double combined = semanticScore * (1.0 - weight) + normalizedFused * weight;
+        double combined = semanticScore * (1.0 - weight)
+                + normalizedFused * weight;
+        if (!Double.isFinite(combined)) {
+            throw new IllegalStateException("Combined rerank score is not finite");
+        }
         Map<String, Object> metadata = new HashMap<>(hit.metadata());
         metadata.put("rerankSemanticScore", semanticScore);
         metadata.put("rerankScore", combined);
@@ -129,8 +146,18 @@ public class Reranker {
         );
     }
 
+    private int authorityTier(RetrievalHit hit) {
+        Object tier = hit.metadata().get("authorityTier");
+        return tier instanceof Number number
+                ? Math.max(0, number.intValue())
+                : 2;
+    }
+
     private double rerankScore(RetrievalHit hit) {
         Object score = hit.metadata().get("rerankScore");
-        return score instanceof Number number ? number.doubleValue() : 0.0;
+        if (score instanceof Number number && Double.isFinite(number.doubleValue())) {
+            return number.doubleValue();
+        }
+        return 0.0;
     }
 }

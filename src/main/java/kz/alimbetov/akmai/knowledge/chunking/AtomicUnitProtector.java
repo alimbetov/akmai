@@ -21,7 +21,8 @@ public class AtomicUnitProtector {
                         current.text(),
                         current.sectionPath(),
                         current.type(),
-                        true
+                        true,
+                        current.structuralRole()
                 ));
                 continue;
             }
@@ -35,7 +36,8 @@ public class AtomicUnitProtector {
                             current.text() + "\n" + next.text(),
                             current.sectionPath(),
                             current.type(),
-                            true
+                            true,
+                            current.structuralRole()
                     ));
                     i++;
                     continue;

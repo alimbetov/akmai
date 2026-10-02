@@ -38,4 +38,23 @@ class ContextBudgetTest {
 
         assertThat(budget.apply(List.of(hit))).isEmpty();
     }
+    @Test
+    void budgetsSerializedEnvelopeIncludingLongProvenanceMetadata() {
+        RetrievalHit hit = new RetrievalHit(
+                RetrievalType.LEXICAL,
+                "doc-a",
+                "chunk-a",
+                "short text",
+                Map.of(
+                        "source", "very-long-source-".repeat(2_000),
+                        "language", "en",
+                        "sectionPath", "deep-section-".repeat(2_000),
+                        "pageFrom", 7,
+                        "pageTo", 8
+                )
+        );
+
+        assertThat(budget.apply(List.of(hit))).isEmpty();
+    }
+
 }

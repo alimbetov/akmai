@@ -52,6 +52,7 @@ class QueryDecomposerTest {
         assertThat(decomposer.decompose(
                 "剂量是多少？需要监测什么？"
         )).containsExactly(
+                "剂量是多少？需要监测什么？",
                 "剂量是多少？",
                 "需要监测什么？"
         );
@@ -85,4 +86,34 @@ class QueryDecomposerTest {
                 .hasSize(QueryDecomposer.MAX_SEGMENTS)
                 .doesNotHaveDuplicates();
     }
+    @Test
+    void overflowKeepsOriginalCatchAllAndReportsDroppedSubqueries() {
+        String question = String.join(" ", java.util.stream.IntStream.rangeClosed(1, 12)
+                .mapToObj(index -> "What is item " + index + "?")
+                .toList());
+
+        QueryDecompositionResult result = decomposer.decomposeDetailed(question);
+
+        assertThat(result.units()).hasSize(QueryDecomposer.MAX_SEGMENTS);
+        assertThat(result.units().getFirst()).isEqualTo(question);
+        assertThat(result.overflowCount()).isGreaterThan(0);
+    }
+
+    @Test
+    void legalAbbreviationsStayAttachedToTheirNumbers() {
+        QueryDecompositionResult result = decomposer.decomposeDetailed(
+                "Ст. 25 применяется. П. 3 содержит исключение. Art. 42 applies. No. 7 is referenced."
+        );
+
+        assertThat(result.units())
+                .anyMatch(unit -> unit.contains("Ст. 25 применяется."))
+                .anyMatch(unit -> unit.contains("П. 3 содержит исключение."))
+                .anyMatch(unit -> unit.contains("Art. 42 applies."))
+                .anyMatch(unit -> unit.contains("No. 7 is referenced."));
+        assertThat(result.units()).noneMatch(unit -> unit.equals("Ст.")
+                || unit.equals("П.")
+                || unit.equals("Art.")
+                || unit.equals("No."));
+    }
+
 }

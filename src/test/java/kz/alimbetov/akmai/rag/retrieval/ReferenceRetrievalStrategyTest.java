@@ -1,17 +1,15 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
-import kz.alimbetov.akmai.knowledge.identifier.IdentifierType;
-import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,44 +20,28 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ReferenceRetrievalStrategyTest {
 
     @Mock
-    private SearchProjectionRepository repository;
+    private SearchProjectionRepository projectionRepository;
 
     @Mock
-    private IdentifierSearchIndex identifierSearchIndex;
+    private ReferenceGraphRepository referenceGraphRepository;
 
     @Test
-    void resolvesTextualReferenceToCanonicalTargetChunkInStableOrder() {
-        SearchProjection seed = projection(
-                "seed",
-                "seed text",
-                List.of("статье 48")
-        );
+    void resolvesPublishedSameDocumentReferenceToCanonicalTarget() {
         SearchProjection target = projection(
                 "target",
-                "Полный канонический текст статьи 48.",
-                List.of()
-        );
-        DocumentIdentifier identifier = new DocumentIdentifier(
-                "doc",
-                "target",
-                48,
-                IdentifierType.DOCUMENT_NUMBER,
-                "Статья 48",
-                "СТАТЬЯ48",
-                "короткий identifier context",
-                Instant.parse("2026-01-01T00:00:00Z")
+                "Полный канонический текст статьи 48."
         );
 
-        when(repository.findByChunkIds(List.of("seed")))
-                .thenReturn(List.of(seed));
-        when(identifierSearchIndex.search("статье 48", 10))
-                .thenReturn(List.of(identifier));
-        when(repository.findByChunkIds(List.of("target")))
-                .thenReturn(List.of(target));
+        when(referenceGraphRepository.resolveSameDocumentTargets(
+                "doc", List.of("seed"), 20
+        )).thenReturn(List.of("target"));
+        when(projectionRepository.findByDocumentAndChunkIds(
+                "doc", List.of("target")
+        )).thenReturn(List.of(target));
 
         ReferenceRetrievalStrategy subject = new ReferenceRetrievalStrategy(
-                repository,
-                identifierSearchIndex,
+                projectionRepository,
+                referenceGraphRepository,
                 RetrievalTestProperties.defaults()
         );
 
@@ -80,28 +62,120 @@ class ReferenceRetrievalStrategyTest {
                 .isEqualTo("Полный канонический текст статьи 48.");
         assertThat(hits.getFirst().metadata())
                 .containsEntry("expansion", "reference")
-                .containsEntry("identifier", "Статья 48");
+                .containsEntry("authority", "EXACT_REFERENCE")
+                .containsEntry("authorityTier", 0);
     }
 
-    private SearchProjection projection(
-            String chunkId,
-            String text,
-            List<String> references
-    ) {
+    @Test
+    void batchesMultipleSeedChunksPerDocumentIntoSingleGraphLookup() {
+        SearchProjection target = projection(
+                "target-batch",
+                "Canonical target."
+        );
+        when(referenceGraphRepository.resolveSameDocumentTargets(
+                "doc", List.of("seed-1", "seed-2"), 20
+        )).thenReturn(List.of("target-batch"));
+        when(projectionRepository.findByDocumentAndChunkIds(
+                "doc", List.of("target-batch")
+        )).thenReturn(List.of(target));
+
+        ReferenceRetrievalStrategy subject = new ReferenceRetrievalStrategy(
+                projectionRepository,
+                referenceGraphRepository,
+                RetrievalTestProperties.defaults()
+        );
+
+        List<RetrievalHit> hits = subject.retrieve(
+                new QueryChunk("q", 0, "q", "q", "q", "ru", List.of()),
+                new RetrievalContext(List.of(
+                        new RetrievalHit(
+                                RetrievalType.LEXICAL,
+                                "doc",
+                                "seed-1",
+                                "seed one",
+                                Map.of()
+                        ),
+                        new RetrievalHit(
+                                RetrievalType.VECTOR,
+                                "doc",
+                                "seed-2",
+                                "seed two",
+                                Map.of()
+                        )
+                ))
+        );
+
+        assertThat(hits).extracting(RetrievalHit::chunkId)
+                .containsExactly("target-batch");
+        verify(referenceGraphRepository).resolveSameDocumentTargets(
+                "doc",
+                List.of("seed-1", "seed-2"),
+                20
+        );
+    }
+
+    @Test
+    void manySeedsRemainOneLookupAndRespectReferenceLimit() {
+        java.util.List<RetrievalHit> seeds =
+                java.util.stream.IntStream.range(0, 100)
+                        .mapToObj(index -> new RetrievalHit(
+                                RetrievalType.LEXICAL,
+                                "doc",
+                                "seed-" + index,
+                                "seed",
+                                Map.of()
+                        ))
+                        .toList();
+        java.util.List<String> seedIds = seeds.stream()
+                .map(RetrievalHit::chunkId)
+                .toList();
+        java.util.List<String> targetIds =
+                java.util.stream.IntStream.range(0, 20)
+                        .mapToObj(index -> "target-" + index)
+                        .toList();
+
+        when(referenceGraphRepository.resolveSameDocumentTargets(
+                "doc", seedIds, 20
+        )).thenReturn(targetIds);
+        when(projectionRepository.findByDocumentAndChunkIds(
+                "doc", targetIds
+        )).thenReturn(targetIds.stream()
+                .map(id -> projection(id, "canonical " + id))
+                .toList());
+
+        ReferenceRetrievalStrategy subject = new ReferenceRetrievalStrategy(
+                projectionRepository,
+                referenceGraphRepository,
+                RetrievalTestProperties.defaults()
+        );
+
+        List<RetrievalHit> hits = subject.retrieve(
+                new QueryChunk("q", 0, "q", "q", "q", "ru", List.of()),
+                new RetrievalContext(seeds)
+        );
+
+        assertThat(hits).hasSize(20);
+        verify(referenceGraphRepository).resolveSameDocumentTargets(
+                "doc", seedIds, 20
+        );
+    }
+
+    private SearchProjection projection(String chunkId, String text) {
         return new SearchProjection(
                 chunkId,
                 "doc",
+                7L,
                 null,
-                "seed".equals(chunkId) ? 0 : 1,
+                1,
                 text,
                 text,
                 "ru",
                 KnowledgeDomain.LEGAL,
                 "Статья 48",
                 List.of(),
-                references,
+                List.of(),
                 Map.of("source", "law.md"),
-                1
+                2
         );
     }
 }

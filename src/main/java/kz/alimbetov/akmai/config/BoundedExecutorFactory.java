@@ -19,7 +19,7 @@ public final class BoundedExecutorFactory {
                 0L,
                 TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<>(capacity),
-                new ThreadPoolExecutor.CallerRunsPolicy()
+                new ThreadPoolExecutor.AbortPolicy()
         );
     }
 }

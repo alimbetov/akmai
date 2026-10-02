@@ -1,8 +1,14 @@
 package kz.alimbetov.akmai.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
 class BoundedExecutorFactoryTest {
@@ -17,6 +23,49 @@ class BoundedExecutorFactoryTest {
             assertThat(pool.getQueue().remainingCapacity()).isEqualTo(7);
         } finally {
             executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void saturationRejectsInsteadOfRunningWorkOnCallerThread() throws Exception {
+        ThreadPoolExecutor executor =
+                (ThreadPoolExecutor) BoundedExecutorFactory.create(1, 1);
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        AtomicBoolean callerRan = new AtomicBoolean(false);
+        try {
+            executor.execute(() -> {
+                started.countDown();
+                await(release);
+            });
+            assertThat(started.await(1, TimeUnit.SECONDS)).isTrue();
+            executor.execute(() -> await(release));
+
+            assertThatThrownBy(() ->
+                    executor.execute(() -> callerRan.set(true))
+            ).isInstanceOf(RejectedExecutionException.class);
+            assertThat(callerRan).isFalse();
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void asyncSubmissionAfterShutdownFailsPromptly() {
+        var executor = BoundedExecutorFactory.create(1, 1);
+        executor.shutdownNow();
+
+        assertThatThrownBy(() ->
+                CompletableFuture.supplyAsync(() -> "never", executor)
+        ).isInstanceOf(RejectedExecutionException.class);
+    }
+
+    private void await(CountDownLatch latch) {
+        try {
+            latch.await();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
         }
     }
 }

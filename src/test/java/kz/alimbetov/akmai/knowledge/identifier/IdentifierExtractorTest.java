@@ -35,6 +35,6 @@ class IdentifierExtractorTest {
                 .filteredOn(value -> value.type() == IdentifierType.CONTRACT_NUMBER)
                 .singleElement()
                 .extracting(DetectedIdentifier::normalizedValue)
-                .isEqualTo("KZ2026001847");
+                .isEqualTo("KZ-2026-001847");
     }
 }

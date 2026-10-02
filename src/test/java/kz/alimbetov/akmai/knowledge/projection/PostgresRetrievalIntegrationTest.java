@@ -3,42 +3,23 @@ package kz.alimbetov.akmai.knowledge.projection;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
-import kz.alimbetov.akmai.knowledge.identifier.IdentifierNormalizer;
 import kz.alimbetov.akmai.knowledge.identifier.IdentifierType;
-import kz.alimbetov.akmai.knowledge.identifier.search.PostgresIdentifierSearchIndex;
-import kz.alimbetov.akmai.knowledge.ingestion.EnrichedKnowledgeChunk;
-import kz.alimbetov.akmai.knowledge.ingestion.PersistenceCoordinator;
-import kz.alimbetov.akmai.knowledge.lifecycle.DocumentOperationLock;
-import kz.alimbetov.akmai.knowledge.lifecycle.PostgresDocumentLifecycleRepository;
+import kz.alimbetov.akmai.knowledge.lifecycle.DocumentGenerationRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
-import kz.alimbetov.akmai.knowledge.lifecycle.RetentionProperties;
-import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository;
-import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
-import kz.alimbetov.akmai.rag.query.QueryChunk;
-import kz.alimbetov.akmai.rag.quality.RetrievalQualityMetrics;
-import kz.alimbetov.akmai.rag.retrieval.KnowledgeExpansion;
-import kz.alimbetov.akmai.rag.retrieval.ReferenceRetrievalStrategy;
-import kz.alimbetov.akmai.rag.retrieval.RetrievalContext;
-import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
-import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
-import kz.alimbetov.akmai.rag.retrieval.RetrievalTestProperties;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import static org.mockito.Mockito.mock;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -53,14 +34,10 @@ class PostgresRetrievalIntegrationTest {
                     .withUsername("akmai")
                     .withPassword("akmai");
 
-    static JdbcTemplate jdbcTemplate;
-    static PostgresSearchProjectionRepository repository;
-
-    @BeforeEach
-    void cleanupDatabase() {
-        jdbcTemplate.update("TRUNCATE TABLE document_identifier RESTART IDENTITY CASCADE");
-        jdbcTemplate.update("TRUNCATE TABLE knowledge_search_projection CASCADE");
-    }
+    static JdbcTemplate jdbc;
+    static PostgresSearchProjectionRepository projections;
+    static DocumentIdentifierRepository identifiers;
+    static DocumentGenerationRepository generations;
 
     @BeforeAll
     static void migrate() throws Exception {
@@ -71,440 +48,489 @@ class PostgresRetrievalIntegrationTest {
 
         SpringLiquibase liquibase = new SpringLiquibase();
         liquibase.setDataSource(dataSource);
-        liquibase.setChangeLog("classpath:db/changelog/db.changelog-master.yaml");
+        liquibase.setChangeLog(
+                "classpath:db/changelog/db.changelog-master.yaml"
+        );
         liquibase.afterPropertiesSet();
 
-        jdbcTemplate = new JdbcTemplate(dataSource);
-        repository = new PostgresSearchProjectionRepository(
-                jdbcTemplate,
-                new ObjectMapper().findAndRegisterModules()
+        jdbc = new JdbcTemplate(dataSource);
+        projections = new PostgresSearchProjectionRepository(
+                jdbc,
+                new ObjectMapper()
         );
-    }
-
-    @Test
-    void liquibaseCreatesCanonicalRetrievalSchema() {
-        assertThat(tableExists("knowledge_search_projection")).isTrue();
-        assertThat(tableExists("document_identifier")).isTrue();
-        assertThat(indexExists("idx_knowledge_search_text_trgm")).isTrue();
-        assertThat(indexExists("idx_knowledge_search_section_trgm")).isTrue();
-    }
-
-    @Test
-    void replacementRemovesStaleLexicalProjection() {
-        repository.saveAll(List.of(projection(
-                "old-chunk",
-                "doc-1",
-                0,
-                "legacy obsolete marker"
-        )));
-
-        assertThat(repository.searchLexical("obsolete", "en", List.of("doc-1"), 10))
-                .extracting(SearchProjection::chunkId)
-                .containsExactly("old-chunk");
-
-        repository.deleteByDocumentId("doc-1");
-        repository.saveAll(List.of(projection(
-                "new-chunk",
-                "doc-1",
-                0,
-                "current replacement marker"
-        )));
-
-        assertThat(repository.findChunkIdsByDocumentId("doc-1"))
-                .containsExactly("new-chunk");
-        assertThat(repository.searchLexical("obsolete", "en", List.of("doc-1"), 10))
-                .isEmpty();
-        assertThat(repository.searchLexical("replacement", "en", List.of("doc-1"), 10))
-                .extracting(SearchProjection::chunkId)
-                .containsExactly("new-chunk");
-    }
-
-    @Test
-    void identifierReplacementLeavesNoStaleIdentifierState() {
-        DocumentIdentifierRepository identifiers =
-                new DocumentIdentifierRepository(jdbcTemplate);
-        identifiers.saveAll(List.of(new DocumentIdentifier(
-                "doc-ident",
-                "old-ident-chunk",
-                0,
-                IdentifierType.DOCUMENT_NUMBER,
-                "OLD-42",
-                "OLD-42",
-                "old context",
-                Instant.now()
-        )));
-
-        assertThat(identifiers.findExact("OLD-42", 10)).hasSize(1);
-
-        jdbcTemplate.update(
-                "DELETE FROM document_identifier WHERE document_id = ?",
-                "doc-ident"
-        );
-        identifiers.saveAll(List.of(new DocumentIdentifier(
-                "doc-ident",
-                "new-ident-chunk",
-                0,
-                IdentifierType.DOCUMENT_NUMBER,
-                "NEW-43",
-                "NEW-43",
-                "new context",
-                Instant.now()
-        )));
-
-        assertThat(identifiers.findExact("OLD-42", 10)).isEmpty();
-        assertThat(identifiers.findExact("NEW-43", 10))
-                .extracting(DocumentIdentifier::chunkId)
-                .containsExactly("new-ident-chunk");
-    }
-
-    @Test
-    void coordinatorReingestionReplacesCanonicalAndIdentifierStateTogether() {
-        DocumentIdentifierRepository identifierRepository =
-                new DocumentIdentifierRepository(jdbcTemplate);
-        PostgresIdentifierSearchIndex identifierIndex =
-                new PostgresIdentifierSearchIndex(
-                        identifierRepository,
-                        new IdentifierNormalizer(),
-                        jdbcTemplate
-                );
-        VectorStore vectorStore = mock(VectorStore.class);
-        PersistenceCoordinator coordinator = new PersistenceCoordinator(
-                vectorStore,
-                identifierIndex,
-                new SearchProjectionFactory(),
-                repository,
-                new PostgresDocumentLifecycleRepository(
-                        jdbcTemplate,
-                        new TransactionTemplate(new DataSourceTransactionManager(jdbcTemplate.getDataSource()))
-                ),
-                new VectorGenerationRepository(jdbcTemplate),
-                new DocumentOperationLock(jdbcTemplate.getDataSource()),
-                new RetentionProperties(
-                        true, "0 30 3 * * *", "UTC", 100, 20, 5,
-                        4, 16, Duration.ofMinutes(10),
-                        RetentionPolicy.PERMANENT, Duration.ofDays(90)
+        identifiers = new DocumentIdentifierRepository(jdbc);
+        generations = new DocumentGenerationRepository(
+                jdbc,
+                new TransactionTemplate(
+                        new DataSourceTransactionManager(dataSource)
                 )
         );
+    }
 
-        coordinator.persist(List.of(enriched(
-                "old-coordinator",
-                "doc-coordinator",
-                "legacy obsolete coordinator",
-                "OLD-COORD"
-        )));
-        coordinator.persist(List.of(enriched(
-                "new-coordinator",
-                "doc-coordinator",
-                "current coordinator replacement",
-                "NEW-COORD"
-        )));
+    @BeforeEach
+    void clean() {
+        jdbc.update("DELETE FROM document_identifier");
+        jdbc.update("DELETE FROM knowledge_search_projection");
+        jdbc.update("DELETE FROM knowledge_document_generation");
+        jdbc.update("DELETE FROM knowledge_document_lifecycle");
+    }
 
-        assertThat(repository.findChunkIdsByDocumentId("doc-coordinator"))
-                .containsExactly("new-coordinator");
-        assertThat(repository.searchLexical(
-                "obsolete",
+    @Test
+    void lexicalReadReturnsOnlyPublishedGeneration() {
+        long first = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-1"
+        );
+        publish("doc", first);
+        projections.saveAll(List.of(
+                projection("old", first, "obsolete phrase", "en")
+        ));
+
+        long second = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-2"
+        );
+        projections.saveAll(List.of(
+                projection("new", second, "canonical policy phrase", "en")
+        ));
+        publish("doc", second);
+
+        assertThat(projections.searchLexical(
+                "canonical policy phrase",
                 "en",
-                List.of("doc-coordinator"),
+                List.of("doc"),
                 10
-        )).isEmpty();
-        assertThat(identifierRepository.findExact("OLD-COORD", 10)).isEmpty();
-        assertThat(identifierRepository.findExact("NEW-COORD", 10))
-                .extracting(DocumentIdentifier::chunkId)
-                .containsExactly("new-coordinator");
+        ))
+                .extracting(SearchProjection::chunkId)
+                .containsExactly("new");
+
+        assertThat(projections.findByChunkIds(List.of("old", "new")))
+                .extracting(SearchProjection::chunkId)
+                .containsExactly("new");
     }
 
     @Test
-    void referenceResolutionUsesPostgresProjectionAndCanonicalTargetText() {
-        DocumentIdentifierRepository identifierRepository =
-                new DocumentIdentifierRepository(jdbcTemplate);
-        PostgresIdentifierSearchIndex identifierIndex =
-                new PostgresIdentifierSearchIndex(
-                        identifierRepository,
-                        new IdentifierNormalizer(),
-                        jdbcTemplate
-                );
-        SearchProjection seed = projection(
-                "ref-seed",
-                "doc-ref",
-                0,
-                "См. документ REF-48."
+    void identifierReadReturnsOnlyPublishedGeneration() {
+        long first = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-1"
         );
-        seed = new SearchProjection(
-                seed.chunkId(),
-                seed.documentId(),
-                seed.parentChunkId(),
-                seed.chunkIndex(),
-                seed.text(),
-                seed.embeddingText(),
-                "ru",
-                seed.domain(),
-                seed.sectionPath(),
-                seed.identifiers(),
-                List.of("REF-48"),
-                seed.metadata(),
-                seed.projectionVersion()
+        identifiers.saveAll(List.of(identifier(first, "old")));
+        publish("doc", first);
+
+        long second = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-2"
         );
-        SearchProjection target = projection(
-                "ref-target",
-                "doc-ref-target",
-                0,
-                "Канонический текст целевого документа."
-        );
-        repository.saveAll(List.of(seed, target));
-        identifierRepository.saveAll(List.of(new DocumentIdentifier(
-                "doc-ref-target",
-                "ref-target",
-                0,
+        identifiers.saveAll(List.of(identifier(second, "new")));
+        publish("doc", second);
+
+        assertThat(identifiers.findExact(
                 IdentifierType.DOCUMENT_NUMBER,
-                "REF-48",
-                new IdentifierNormalizer().normalize("REF-48"),
-                "short context",
-                Instant.now()
-        )));
-
-        ReferenceRetrievalStrategy strategy =
-                new ReferenceRetrievalStrategy(repository, identifierIndex, RetrievalTestProperties.defaults());
-        List<RetrievalHit> hits = strategy.retrieve(
-                new QueryChunk("q-ref", 0, "REF-48", "REF-48", "REF-48", "ru", List.of()),
-                new RetrievalContext(List.of(new RetrievalHit(
-                        RetrievalType.LEXICAL,
-                        "doc-ref",
-                        "ref-seed",
-                        seed.text(),
-                        Map.of()
-                )))
-        );
-
-        assertThat(hits).hasSize(1);
-        assertThat(hits.getFirst().chunkId()).isEqualTo("ref-target");
-        assertThat(hits.getFirst().text())
-                .isEqualTo("Канонический текст целевого документа.");
+                "DOC-42",
+                10
+        ))
+                .extracting(DocumentIdentifier::chunkId)
+                .containsExactly("new");
     }
 
     @Test
-    void neighborExpansionUsesPostgresCanonicalCoordinatesAndOrdering() {
-        repository.saveAll(List.of(
-                projection("neighbor-0", "doc-neighbor", 0, "before"),
-                projection("neighbor-1", "doc-neighbor", 1, "seed"),
-                projection("neighbor-2", "doc-neighbor", 2, "after")
-        ));
-
-        KnowledgeExpansion expansion = new KnowledgeExpansion(repository, RetrievalTestProperties.defaults());
-        List<RetrievalHit> expanded = expansion.expand(List.of(
-                new RetrievalHit(
-                        RetrievalType.VECTOR,
-                        "doc-neighbor",
-                        "neighbor-1",
-                        "seed",
-                        Map.of()
+    void lexicalFtsUsesLanguageSpecificRussianAndEnglishVectors() {
+        long generation = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-fts"
+        );
+        projections.saveAll(List.of(
+                projection(
+                        "ru-law",
+                        generation,
+                        "Банк расторгает договор при существенном нарушении.",
+                        "ru"
+                ),
+                projection(
+                        "en-law",
+                        generation,
+                        "Agreement termination rules apply after material breach.",
+                        "en"
                 )
         ));
+        publish("doc", generation);
 
-        assertThat(expanded)
-                .extracting(RetrievalHit::chunkId)
-                .containsExactly("neighbor-1", "neighbor-0", "neighbor-2");
-        assertThat(expanded.subList(1, expanded.size()))
-                .allSatisfy(hit -> assertThat(hit.metadata())
-                        .containsEntry("expansion", "neighbor"));
-    }
-
-    @Test
-    void lexicalIndexSupportsExactTokensAcrossTargetLanguages() {
-        repository.saveAll(List.of(
-                projection("kk", "doc-kk", 0, "келісімшарт төлем мерзімі", "kk"),
-                projection("ru", "doc-ru", 0, "договор срок оплаты", "ru"),
-                projection("en", "doc-en", 0, "contract payment deadline", "en"),
-                projection("zh", "doc-zh", 0, "合同付款期限", "zh")
-        ));
-
-        assertThat(repository.searchLexical("келісімшарт", "kk", List.of(), 10))
-                .extracting(SearchProjection::chunkId).containsExactly("kk");
-        assertThat(repository.searchLexical("договоры", "ru", List.of(), 10))
-                .extracting(SearchProjection::chunkId).containsExactly("ru");
-        assertThat(repository.searchLexical("contracts", "en", List.of(), 10))
-                .extracting(SearchProjection::chunkId).containsExactly("en");
-        assertThat(repository.searchLexical("付款期限", "zh", List.of(), 10))
-                .extracting(SearchProjection::chunkId).containsExactly("zh");
-    }
-
-
-    @Test
-    void corpusBackedLexicalQualityGateCoversAllTargetLanguages() {
-        assertLexicalQuality(
-                "kk",
-                "шартты бұзу",
-                "quality-kk-target",
-                "Шартты бұзу талаптары және хабарлау тәртібі.",
-                List.of(
-                        projection("quality-kk-noise-1", "quality-kk-doc-1", 0, "Төлем мерзімі туралы жалпы ереже.", "kk"),
-                        projection("quality-kk-target", "quality-kk-doc-2", 0, "Шартты бұзу талаптары және хабарлау тәртібі.", "kk"),
-                        projection("quality-kk-noise-2", "quality-kk-doc-3", 0, "Құжаттарды сақтау мерзімі.", "kk")
-                )
-        );
-
-        assertLexicalQuality(
+        assertThat(projections.searchLexical(
+                "расторгнуть договор",
                 "ru",
-                "условия расторжения",
-                "quality-ru-target",
-                "Условия расторжения договора и порядок уведомления.",
-                List.of(
-                        projection("quality-ru-noise-1", "quality-ru-doc-1", 0, "Срок оплаты по договору.", "ru"),
-                        projection("quality-ru-target", "quality-ru-doc-2", 0, "Условия расторжения договора и порядок уведомления.", "ru"),
-                        projection("quality-ru-noise-2", "quality-ru-doc-3", 0, "Порядок хранения документов.", "ru")
-                )
-        );
+                List.of("doc"),
+                10
+        )).extracting(SearchProjection::chunkId)
+                .contains("ru-law")
+                .doesNotContain("en-law");
 
-        assertLexicalQuality(
+        assertThat(projections.searchLexical(
+                "termination agreement",
                 "en",
-                "contract termination",
-                "quality-en-target",
-                "Contract termination conditions and notice procedure.",
-                List.of(
-                        projection("quality-en-noise-1", "quality-en-doc-1", 0, "Payment deadline under the agreement.", "en"),
-                        projection("quality-en-target", "quality-en-doc-2", 0, "Contract termination conditions and notice procedure.", "en"),
-                        projection("quality-en-noise-2", "quality-en-doc-3", 0, "Document retention requirements.", "en")
-                )
+                List.of("doc"),
+                10
+        )).extracting(SearchProjection::chunkId)
+                .contains("en-law")
+                .doesNotContain("ru-law");
+    }
+
+
+
+    @Test
+    void sameChunkIdCannotOverwriteAnotherDocumentOwner() {
+        long first = generations.allocate(
+                "doc-owner-a",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-owner-a"
+        );
+        long second = generations.allocate(
+                "doc-owner-b",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-owner-b"
         );
 
-        assertLexicalQuality(
-                "zh",
-                "合同终止",
-                "quality-zh-target",
-                "合同终止条件和通知程序。",
-                List.of(
-                        projection("quality-zh-noise-1", "quality-zh-doc-1", 0, "合同付款期限。", "zh"),
-                        projection("quality-zh-target", "quality-zh-doc-2", 0, "合同终止条件和通知程序。", "zh"),
-                        projection("quality-zh-noise-2", "quality-zh-doc-3", 0, "文件保存要求。", "zh")
+        projections.saveAll(List.of(
+                projectionForDocument(
+                        "doc-owner-a",
+                        "same-chunk",
+                        first,
+                        "first owner"
+                ),
+                projectionForDocument(
+                        "doc-owner-b",
+                        "same-chunk",
+                        second,
+                        "second owner"
                 )
+        ));
+
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_search_projection
+                WHERE chunk_id = 'same-chunk'
+                  AND document_id IN ('doc-owner-a', 'doc-owner-b')
+                """,
+                Integer.class
+        )).isEqualTo(2);
+
+        assertThat(jdbc.queryForList(
+                """
+                SELECT document_id
+                FROM knowledge_search_projection
+                WHERE chunk_id = 'same-chunk'
+                ORDER BY document_id
+                """,
+                String.class
+        )).containsExactly("doc-owner-a", "doc-owner-b");
+    }
+
+    @Test
+    void languageSpecificFtsQueriesUseTheirGeneratedGinIndexes() {
+        long generation = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-explain"
+        );
+        projections.saveAll(List.of(
+                projection(
+                        "ru-explain",
+                        generation,
+                        "Договор расторгается банком.",
+                        "ru"
+                ),
+                projection(
+                        "en-explain",
+                        generation,
+                        "Agreement termination is permitted.",
+                        "en"
+                )
+        ));
+        publish("doc", generation);
+
+        String ruPlan = explainWithSequentialScanDisabled(
+                "search_vector_ru",
+                "russian",
+                "договор"
+        );
+        String enPlan = explainWithSequentialScanDisabled(
+                "search_vector_en",
+                "english",
+                "agreement"
+        );
+
+        assertThat(ruPlan).contains("idx_knowledge_search_fts_ru");
+        assertThat(enPlan).contains("idx_knowledge_search_fts_en");
+    }
+
+    @Test
+    void kkAndZhTrigramSearchTreatsLikeMetacharactersLiterally() {
+        long generation = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-like"
+        );
+        projections.saveAll(List.of(
+                projection(
+                        "kk-percent",
+                        generation,
+                        "Жеңілдік мөлшері 5% болады.",
+                        "kk"
+                ),
+                projection(
+                        "kk-plain",
+                        generation,
+                        "Жеңілдік мөлшері бес пайыз болады.",
+                        "kk"
+                ),
+                projection(
+                        "zh-underscore",
+                        generation,
+                        "技术代码 A_B 已登记。",
+                        "zh"
+                ),
+                projection(
+                        "zh-plain",
+                        generation,
+                        "技术代码 AXB 已登记。",
+                        "zh"
+                )
+        ));
+        publish("doc", generation);
+
+        assertThat(projections.searchLexical(
+                "%",
+                "kk",
+                List.of("doc"),
+                10
+        )).extracting(SearchProjection::chunkId)
+                .containsExactly("kk-percent");
+
+        assertThat(projections.searchLexical(
+                "_",
+                "zh",
+                List.of("doc"),
+                10
+        )).extracting(SearchProjection::chunkId)
+                .containsExactly("zh-underscore");
+
+        assertThat(projections.searchLexical(
+                "5%",
+                "kk",
+                List.of("doc"),
+                10
+        )).extracting(SearchProjection::chunkId)
+                .contains("kk-percent")
+                .doesNotContain("kk-plain");
+    }
+
+    @Test
+    void escapedWildcardLikeQueryCanUseTrigramIndex() {
+        long generation = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-trgm-explain"
+        );
+        java.util.ArrayList<SearchProjection> corpus =
+                new java.util.ArrayList<>();
+        corpus.add(projection(
+                "kk-plan",
+                generation,
+                "Жеңілдік мөлшері 5% болады.",
+                "kk"
+        ));
+        for (int index = 0; index < 500; index++) {
+            corpus.add(projection(
+                    "kk-noise-" + index,
+                    generation,
+                    "Құжаттағы қалыпты мәтін " + index,
+                    "kk"
+            ));
+        }
+        projections.saveAll(corpus);
+        publish("doc", generation);
+
+        String plan = jdbc.execute(
+                (org.springframework.jdbc.core.ConnectionCallback<String>)
+                        connection -> {
+                            try (var setting = connection.createStatement()) {
+                                setting.execute("SET enable_seqscan = off");
+                            }
+                            try (var statement = connection.prepareStatement(
+                                    """
+                                    EXPLAIN (COSTS OFF)
+                                    SELECT chunk_id
+                                    FROM knowledge_search_projection
+                                    WHERE lower(text_content)
+                                          LIKE ('%' || lower(?) || '%') ESCAPE '\\'
+                                    """
+                            )) {
+                                statement.setString(1, "5\\%");
+                                try (var resultSet = statement.executeQuery()) {
+                                    StringBuilder explain = new StringBuilder();
+                                    while (resultSet.next()) {
+                                        if (!explain.isEmpty()) {
+                                            explain.append('\n');
+                                        }
+                                        explain.append(resultSet.getString(1));
+                                    }
+                                    return explain.toString();
+                                }
+                            } finally {
+                                try (var reset = connection.createStatement()) {
+                                    reset.execute("RESET enable_seqscan");
+                                }
+                            }
+                        }
+        );
+
+        assertThat(plan).contains("idx_knowledge_search_text_trgm");
+    }
+
+
+    private String explainWithSequentialScanDisabled(
+            String vectorColumn,
+            String configuration,
+            String query
+    ) {
+        return jdbc.execute(
+                (org.springframework.jdbc.core.ConnectionCallback<String>)
+                        connection -> {
+                            try (var setting = connection.createStatement()) {
+                                setting.execute("SET enable_seqscan = off");
+                            }
+                            try (var statement = connection.prepareStatement(
+                                    """
+                                    EXPLAIN (COSTS OFF)
+                                    SELECT chunk_id
+                                    FROM knowledge_search_projection
+                                    WHERE %s
+                                          @@ websearch_to_tsquery('%s', ?)
+                                    """.formatted(
+                                            vectorColumn,
+                                            configuration
+                                    )
+                            )) {
+                                statement.setString(1, query);
+                                try (var resultSet = statement.executeQuery()) {
+                                    StringBuilder plan = new StringBuilder();
+                                    while (resultSet.next()) {
+                                        if (!plan.isEmpty()) {
+                                            plan.append('\n');
+                                        }
+                                        plan.append(resultSet.getString(1));
+                                    }
+                                    return plan.toString();
+                                }
+                            } finally {
+                                try (var reset = connection.createStatement()) {
+                                    reset.execute("RESET enable_seqscan");
+                                }
+                            }
+                        }
         );
     }
 
-    private static EnrichedKnowledgeChunk enriched(
-            String chunkId,
+    private void publish(String documentId, long generation) {
+        jdbc.update(
+                """
+                UPDATE knowledge_document_generation
+                SET generation_status = 'RETIRED',
+                    retired_at = clock_timestamp()
+                WHERE document_id = ?
+                  AND generation_status = 'PUBLISHED'
+                """,
+                documentId
+        );
+        jdbc.update(
+                """
+                UPDATE knowledge_document_generation
+                SET generation_status = 'PUBLISHED',
+                    published_at = clock_timestamp()
+                WHERE document_id = ?
+                  AND generation = ?
+                """,
+                documentId,
+                generation
+        );
+        jdbc.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET published_generation = ?,
+                    generation = ?,
+                    lifecycle_status = 'READY',
+                    retention_status = 'ACTIVE'
+                WHERE document_id = ?
+                """,
+                generation,
+                generation,
+                documentId
+        );
+    }
+
+
+    private SearchProjection projectionForDocument(
             String documentId,
-            String text,
-            String identifierValue
+            String chunkId,
+            long generation,
+            String text
     ) {
-        KnowledgeChunk chunk = new KnowledgeChunk(
+        return new SearchProjection(
                 chunkId,
                 documentId,
+                generation,
                 null,
                 0,
                 text,
                 text,
-                text,
-                "integration",
-                "integration",
                 "en",
                 KnowledgeDomain.GENERAL,
+                "integration",
                 List.of(),
-                Map.of("source", "integration")
-        );
-        return new EnrichedKnowledgeChunk(
-                chunk,
-                List.of(new kz.alimbetov.akmai.knowledge.identifier.DetectedIdentifier(
-                        IdentifierType.DOCUMENT_NUMBER,
-                        identifierValue,
-                        identifierValue,
-                        text
-                )),
-                List.of()
+                List.of(),
+                Map.of("source", documentId),
+                2
         );
     }
 
-
-    private static boolean indexExists(String index) {
-        Integer count = jdbcTemplate.queryForObject(
-                """
-                SELECT count(*)
-                  FROM pg_indexes
-                 WHERE schemaname = 'public'
-                   AND indexname = ?
-                """,
-                Integer.class,
-                index
-        );
-        return count != null && count == 1;
-    }
-
-    private static boolean tableExists(String table) {
-        Integer count = jdbcTemplate.queryForObject(
-                """
-                SELECT count(*)
-                  FROM information_schema.tables
-                 WHERE table_schema = 'public'
-                   AND table_name = ?
-                """,
-                Integer.class,
-                table
-        );
-        return count != null && count == 1;
-    }
-
-
-    private void assertLexicalQuality(
-            String language,
-            String query,
-            String relevantChunkId,
-            String relevantText,
-            List<SearchProjection> corpus
-    ) {
-        repository.saveAll(corpus);
-        List<String> documentIds = corpus.stream()
-                .map(SearchProjection::documentId)
-                .toList();
-        List<String> ranked = repository.searchLexical(
-                        query,
-                        language,
-                        documentIds,
-                        5
-                ).stream()
-                .map(SearchProjection::chunkId)
-                .toList();
-
-        assertThat(ranked).contains(relevantChunkId);
-        assertThat(RetrievalQualityMetrics.recallAtK(
-                ranked,
-                java.util.Set.of(relevantChunkId),
-                5
-        )).isEqualTo(1.0);
-        assertThat(RetrievalQualityMetrics.reciprocalRank(
-                ranked,
-                java.util.Set.of(relevantChunkId)
-        )).isEqualTo(1.0);
-        assertThat(RetrievalQualityMetrics.ndcgAtK(
-                ranked,
-                java.util.Set.of(relevantChunkId),
-                5
-        )).isEqualTo(1.0);
-        assertThat(corpus.stream()
-                .filter(item -> item.chunkId().equals(relevantChunkId))
-                .findFirst()
-                .orElseThrow()
-                .text()).isEqualTo(relevantText);
-    }
-
-    private static SearchProjection projection(
+    private SearchProjection projection(
             String chunkId,
-            String documentId,
-            int chunkIndex,
-            String text
-    ) {
-        return projection(chunkId, documentId, chunkIndex, text, "en");
-    }
-
-    private static SearchProjection projection(
-            String chunkId,
-            String documentId,
-            int chunkIndex,
+            long generation,
             String text,
             String language
     ) {
         return new SearchProjection(
                 chunkId,
-                documentId,
+                "doc",
+                generation,
                 null,
-                chunkIndex,
+                Math.floorMod(chunkId.hashCode(), 1_000_000),
                 text,
                 text,
                 language,
@@ -512,8 +538,25 @@ class PostgresRetrievalIntegrationTest {
                 "integration",
                 List.of(),
                 List.of(),
-                Map.of(),
-                1
+                Map.of("source", "integration"),
+                2
+        );
+    }
+
+    private DocumentIdentifier identifier(
+            long generation,
+            String chunkId
+    ) {
+        return new DocumentIdentifier(
+                "doc",
+                generation,
+                chunkId,
+                1,
+                IdentifierType.DOCUMENT_NUMBER,
+                "DOC-42",
+                "DOC-42",
+                "context",
+                Instant.parse("2026-10-02T00:00:00Z")
         );
     }
 }

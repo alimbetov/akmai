@@ -1,5 +1,6 @@
 package kz.alimbetov.akmai.knowledge.chunking;
 
+import java.text.Normalizer;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -10,7 +11,7 @@ public class TextNormalizer {
             return "";
         }
 
-        return text
+        return Normalizer.normalize(text, Normalizer.Form.NFC)
                 .replace("\r\n", "\n")
                 .replace('\r', '\n')
                 .replaceAll("[ \\t]+", " ")

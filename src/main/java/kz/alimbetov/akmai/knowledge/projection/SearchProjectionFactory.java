@@ -21,7 +21,11 @@ public class SearchProjectionFactory {
                 enriched.identifiers(),
                 enriched.references(),
                 chunk.metadata(),
-                1
+                2
         );
+    }
+
+    public SearchProjection create(EnrichedKnowledgeChunk enriched, long generation) {
+        return create(enriched).withGeneration(generation);
     }
 }

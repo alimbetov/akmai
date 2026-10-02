@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/001-canonical-retrieval-schema.sql
+  - include:
+      file: db/changelog/changes/002-document-lifecycle.sql
+  - include:
+      file: db/changelog/changes/003-lifecycle-vector-generation.sql
+  - include:
+      file: db/changelog/changes/004-lifecycle-ingesting-status.sql
+  - include:
+      file: db/changelog/changes/005-ingestion-recovery.sql
+  - include:
+      file: db/changelog/changes/006-multilingual-lexical-trigram-indexes.sql

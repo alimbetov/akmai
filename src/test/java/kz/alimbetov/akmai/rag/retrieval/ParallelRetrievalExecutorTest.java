@@ -3,6 +3,8 @@ package kz.alimbetov.akmai.rag.retrieval;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -10,10 +12,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalStep;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
 class ParallelRetrievalExecutorTest {
@@ -27,16 +29,10 @@ class ParallelRetrievalExecutorTest {
             CountDownLatch release = new CountDownLatch(1);
 
             RetrievalStrategy vector = blocking(
-                    RetrievalType.VECTOR,
-                    "vector",
-                    started,
-                    release
+                    RetrievalType.VECTOR, "vector", started, release
             );
             RetrievalStrategy lexical = blocking(
-                    RetrievalType.LEXICAL,
-                    "lexical",
-                    started,
-                    release
+                    RetrievalType.LEXICAL, "lexical", started, release
             );
             RetrievalStrategy reference = new RetrievalStrategy() {
                 @Override
@@ -56,10 +52,9 @@ class ParallelRetrievalExecutorTest {
                 }
             };
 
-            ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
+            ParallelRetrievalExecutor subject = subject(
                     List.of(vector, lexical, reference),
-                    executor,
-                    new RetrievalObserver(new SimpleMeterRegistry())
+                    executor
             );
 
             var future = CompletableFuture.supplyAsync(
@@ -78,7 +73,7 @@ class ParallelRetrievalExecutorTest {
     }
 
     @Test
-    void failedRootDoesNotSuppressHealthyHybridBranchOrDownstreamStep() {
+    void failedPrimaryBranchIsPreservedAsTypedOutcome() {
         ExecutorService executor = Executors.newFixedThreadPool(3);
         try {
             RetrievalStrategy vector = new RetrievalStrategy() {
@@ -96,36 +91,26 @@ class ParallelRetrievalExecutorTest {
                 }
             };
             RetrievalStrategy lexical = immediate(
-                    RetrievalType.LEXICAL,
-                    "lexical"
+                    RetrievalType.LEXICAL, "lexical"
             );
-            RetrievalStrategy reference = new RetrievalStrategy() {
-                @Override
-                public RetrievalType type() {
-                    return RetrievalType.REFERENCE;
-                }
+            RetrievalStrategy reference = immediate(
+                    RetrievalType.REFERENCE, "reference"
+            );
 
-                @Override
-                public List<RetrievalHit> retrieve(
-                        QueryChunk queryChunk,
-                        RetrievalContext context
-                ) {
-                    assertThat(context.dependencyHits())
-                            .extracting(RetrievalHit::chunkId)
-                            .containsExactly("lexical");
-                    return List.of(hit(RetrievalType.REFERENCE, "reference"));
-                }
-            };
-
-            ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
+            ParallelRetrievalExecutor subject = subject(
                     List.of(vector, lexical, reference),
-                    executor,
-                    new RetrievalObserver(new SimpleMeterRegistry())
+                    executor
             );
 
-            assertThat(subject.execute(plan()))
+            RetrievalExecutionResult result = subject.executeDetailed(plan());
+
+            assertThat(result.criticalFailure()).isFalse();
+            assertThat(result.degraded()).isTrue();
+            assertThat(result.hits())
                     .extracting(RetrievalHit::chunkId)
-                    .containsExactly("lexical", "reference");
+                    .contains("lexical");
+            assertThat(result.outcomes().get("v").status())
+                    .isEqualTo(RetrievalOutcomeStatus.FAILED);
         } finally {
             executor.shutdownNow();
         }
@@ -135,24 +120,17 @@ class ParallelRetrievalExecutorTest {
     void rejectsCyclicDependencyGraphInsteadOfRecursingForever() {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
-            ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
-                    List.of(),
-                    executor,
-                    new RetrievalObserver(new SimpleMeterRegistry())
+            ParallelRetrievalExecutor subject = subject(
+                    List.<RetrievalStrategy>of(),
+                    executor
             );
             QueryChunk query = query();
             RetrievalPlan cycle = new RetrievalPlan(List.of(
                     new RetrievalStep(
-                            "a",
-                            query,
-                            RetrievalType.VECTOR,
-                            List.of("b")
+                            "a", query, RetrievalType.VECTOR, List.of("b")
                     ),
                     new RetrievalStep(
-                            "b",
-                            query,
-                            RetrievalType.LEXICAL,
-                            List.of("a")
+                            "b", query, RetrievalType.LEXICAL, List.of("a")
                     )
             ));
 
@@ -164,16 +142,350 @@ class ParallelRetrievalExecutorTest {
         }
     }
 
+    @Test
+    void emptyIdentifierScopeFailsClosedWithoutGlobalSemanticFallback() {
+        ExecutorService executor = Executors.newFixedThreadPool(3);
+        AtomicBoolean semanticRan = new AtomicBoolean(false);
+        try {
+            RetrievalStrategy identifier = new RetrievalStrategy() {
+                @Override
+                public RetrievalType type() {
+                    return RetrievalType.IDENTIFIER;
+                }
+
+                @Override
+                public List<RetrievalHit> retrieve(
+                        QueryChunk queryChunk,
+                        RetrievalContext context
+                ) {
+                    return List.of();
+                }
+            };
+            RetrievalStrategy vector = markingStrategy(
+                    RetrievalType.VECTOR,
+                    semanticRan
+            );
+            RetrievalStrategy lexical = markingStrategy(
+                    RetrievalType.LEXICAL,
+                    semanticRan
+            );
+            ParallelRetrievalExecutor subject = subject(
+                    List.of(identifier, vector, lexical),
+                    executor
+            );
+            QueryChunk query = query();
+            RetrievalPlan scoped = new RetrievalPlan(List.of(
+                    new RetrievalStep(
+                            "id", query, RetrievalType.IDENTIFIER, List.of()
+                    ),
+                    new RetrievalStep(
+                            "v", query, RetrievalType.VECTOR, List.of("id")
+                    ),
+                    new RetrievalStep(
+                            "l", query, RetrievalType.LEXICAL, List.of("id")
+                    )
+            ));
+
+            RetrievalExecutionResult result = subject.executeDetailed(scoped);
+
+            assertThat(result.hits()).isEmpty();
+            assertThat(semanticRan).isFalse();
+            assertThat(result.outcomes().get("id").status())
+                    .isEqualTo(RetrievalOutcomeStatus.EMPTY);
+            assertThat(result.outcomes().get("v").status())
+                    .isEqualTo(RetrievalOutcomeStatus.SKIPPED_DEPENDENCY);
+            assertThat(result.outcomes().get("l").status())
+                    .isEqualTo(RetrievalOutcomeStatus.SKIPPED_DEPENDENCY);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void identifierBackendFailureIsCriticalAndCannotBecomeZeroHitScope() {
+        ExecutorService executor = Executors.newFixedThreadPool(3);
+        AtomicBoolean semanticRan = new AtomicBoolean(false);
+        try {
+            RetrievalStrategy identifier = new RetrievalStrategy() {
+                @Override
+                public RetrievalType type() {
+                    return RetrievalType.IDENTIFIER;
+                }
+
+                @Override
+                public List<RetrievalHit> retrieve(
+                        QueryChunk queryChunk,
+                        RetrievalContext context
+                ) {
+                    throw new IllegalStateException("identifier unavailable");
+                }
+            };
+            ParallelRetrievalExecutor subject = subject(
+                    List.of(
+                            identifier,
+                            markingStrategy(RetrievalType.VECTOR, semanticRan),
+                            markingStrategy(RetrievalType.LEXICAL, semanticRan)
+                    ),
+                    executor
+            );
+            QueryChunk query = query();
+            RetrievalPlan scoped = new RetrievalPlan(List.of(
+                    new RetrievalStep(
+                            "id", query, RetrievalType.IDENTIFIER, List.of()
+                    ),
+                    new RetrievalStep(
+                            "v", query, RetrievalType.VECTOR, List.of("id")
+                    ),
+                    new RetrievalStep(
+                            "l", query, RetrievalType.LEXICAL, List.of("id")
+                    )
+            ));
+
+            RetrievalExecutionResult result = subject.executeDetailed(scoped);
+
+            assertThat(result.criticalFailure()).isTrue();
+            assertThat(semanticRan).isFalse();
+            assertThat(result.outcomes().get("id").status())
+                    .isEqualTo(RetrievalOutcomeStatus.FAILED);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void perStrategyDeadlineProducesTypedTimeoutPromptly() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            RetrievalStrategy vector = new RetrievalStrategy() {
+                @Override
+                public RetrievalType type() {
+                    return RetrievalType.VECTOR;
+                }
+
+                @Override
+                public List<RetrievalHit> retrieve(
+                        QueryChunk queryChunk,
+                        RetrievalContext context
+                ) {
+                    try {
+                        Thread.sleep(5_000);
+                    } catch (InterruptedException exception) {
+                        Thread.currentThread().interrupt();
+                    }
+                    return List.of();
+                }
+            };
+            ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
+                    List.of(vector),
+                    executor,
+                    new RetrievalObserver(new SimpleMeterRegistry()),
+                    properties(Duration.ofMillis(200), Duration.ofMillis(25))
+            );
+            RetrievalPlan plan = new RetrievalPlan(List.of(
+                    new RetrievalStep(
+                            "v", query(), RetrievalType.VECTOR, List.of()
+                    )
+            ));
+
+            long started = System.nanoTime();
+            RetrievalExecutionResult result = subject.executeDetailed(plan);
+            Duration elapsed = Duration.ofNanos(System.nanoTime() - started);
+
+            assertThat(result.outcomes().get("v").status())
+                    .isEqualTo(RetrievalOutcomeStatus.TIMED_OUT);
+            assertThat(elapsed).isLessThan(Duration.ofSeconds(1));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+
+    @Test
+    void overallRequestDeadlineBoundsBackendThatIgnoresInterrupt() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        CountDownLatch release = new CountDownLatch(1);
+        try {
+            RetrievalStrategy vector = new RetrievalStrategy() {
+                @Override
+                public RetrievalType type() {
+                    return RetrievalType.VECTOR;
+                }
+
+                @Override
+                public List<RetrievalHit> retrieve(
+                        QueryChunk queryChunk,
+                        RetrievalContext context
+                ) {
+                    while (release.getCount() > 0) {
+                        try {
+                            Thread.sleep(10);
+                        } catch (InterruptedException ignored) {
+                            // Deliberately ignore cancellation to emulate
+                            // a non-cooperative backend.
+                        }
+                    }
+                    return List.of();
+                }
+            };
+            ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
+                    List.of(vector),
+                    executor,
+                    new RetrievalObserver(new SimpleMeterRegistry()),
+                    properties(Duration.ofMillis(40), Duration.ofSeconds(5))
+            );
+            RetrievalPlan plan = new RetrievalPlan(List.of(
+                    new RetrievalStep(
+                            "v", query(), RetrievalType.VECTOR, List.of()
+                    )
+            ));
+
+            long started = System.nanoTime();
+            RetrievalExecutionResult result = subject.executeDetailed(plan);
+            Duration elapsed = Duration.ofNanos(System.nanoTime() - started);
+
+            assertThat(result.outcomes().get("v").status())
+                    .isEqualTo(RetrievalOutcomeStatus.TIMED_OUT);
+            assertThat(elapsed).isLessThan(Duration.ofMillis(500));
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void saturatedRetrievalExecutorRejectsWithoutCallerExecution() throws Exception {
+        java.util.concurrent.ThreadPoolExecutor executor =
+                new java.util.concurrent.ThreadPoolExecutor(
+                        1,
+                        1,
+                        0L,
+                        TimeUnit.MILLISECONDS,
+                        new java.util.concurrent.ArrayBlockingQueue<>(1),
+                        new java.util.concurrent.ThreadPoolExecutor.AbortPolicy()
+                );
+        CountDownLatch workerStarted = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        AtomicBoolean strategyRan = new AtomicBoolean(false);
+        try {
+            executor.execute(() -> {
+                workerStarted.countDown();
+                try {
+                    release.await();
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+            assertThat(workerStarted.await(1, TimeUnit.SECONDS)).isTrue();
+            executor.execute(() -> {
+                try {
+                    release.await();
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+
+            ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
+                    List.of(markingStrategy(
+                            RetrievalType.VECTOR,
+                            strategyRan
+                    )),
+                    executor,
+                    new RetrievalObserver(new SimpleMeterRegistry()),
+                    RetrievalTestProperties.defaults()
+            );
+            RetrievalPlan plan = new RetrievalPlan(List.of(
+                    new RetrievalStep(
+                            "v", query(), RetrievalType.VECTOR, List.of()
+                    )
+            ));
+
+            long started = System.nanoTime();
+            RetrievalExecutionResult result = subject.executeDetailed(plan);
+
+            assertThat(result.outcomes().get("v").status())
+                    .isEqualTo(RetrievalOutcomeStatus.REJECTED);
+            assertThat(strategyRan).isFalse();
+            assertThat(Duration.ofNanos(System.nanoTime() - started))
+                    .isLessThan(Duration.ofMillis(500));
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    private ParallelRetrievalExecutor subject(
+            List<RetrievalStrategy> strategies,
+            ExecutorService executor
+    ) {
+        return new ParallelRetrievalExecutor(
+                strategies,
+                executor,
+                new RetrievalObserver(new SimpleMeterRegistry()),
+                RetrievalTestProperties.defaults()
+        );
+    }
+
+    private RetrievalStrategy markingStrategy(
+            RetrievalType type,
+            AtomicBoolean ran
+    ) {
+        return new RetrievalStrategy() {
+            @Override
+            public RetrievalType type() {
+                return type;
+            }
+
+            @Override
+            public List<RetrievalHit> retrieve(
+                    QueryChunk queryChunk,
+                    RetrievalContext context
+            ) {
+                ran.set(true);
+                return List.of(hit(type, "unexpected"));
+            }
+        };
+    }
+
+    private RetrievalProperties properties(
+            Duration requestTimeout,
+            Duration strategyTimeout
+    ) {
+        RetrievalProperties defaults = RetrievalTestProperties.defaults();
+        return new RetrievalProperties(
+                defaults.parallelism(),
+                defaults.queueCapacity(),
+                defaults.vectorTopK(),
+                defaults.vectorSimilarityThreshold(),
+                defaults.lexicalLimit(),
+                defaults.identifierLimit(),
+                defaults.referenceLimit(),
+                defaults.rrfK(),
+                defaults.expansionSeeds(),
+                defaults.expansionRadius(),
+                defaults.expansionMax(),
+                defaults.contextMaxTokens(),
+                defaults.contextMaxChunks(),
+                defaults.contextMaxChunksPerDocument(),
+                defaults.rerankerEnabled(),
+                defaults.rerankerCandidates(),
+                defaults.rerankerTimeout(),
+                defaults.rerankerFusedWeight(),
+                requestTimeout,
+                strategyTimeout,
+                defaults.answerTimeout(),
+                defaults.embeddingHttpTimeout(),
+                defaults.contextExpansionMaxChunks(),
+                defaults.answerReservedTokens()
+        );
+    }
+
     private RetrievalPlan plan() {
         QueryChunk query = query();
         return new RetrievalPlan(List.of(
                 new RetrievalStep("v", query, RetrievalType.VECTOR, List.of()),
                 new RetrievalStep("l", query, RetrievalType.LEXICAL, List.of()),
                 new RetrievalStep(
-                        "r",
-                        query,
-                        RetrievalType.REFERENCE,
-                        List.of("v", "l")
+                        "r", query, RetrievalType.REFERENCE, List.of("v", "l")
                 )
         ));
     }
@@ -231,23 +543,13 @@ class ParallelRetrievalExecutorTest {
 
     private QueryChunk query() {
         return new QueryChunk(
-                "q1",
-                0,
-                "query",
-                "query",
-                "query",
-                "en",
-                List.of()
+                "q1", 0, "query", "query", "query", "en", List.of()
         );
     }
 
     private RetrievalHit hit(RetrievalType type, String chunkId) {
         return new RetrievalHit(
-                type,
-                "doc",
-                chunkId,
-                chunkId,
-                Map.of()
+                type, "doc", chunkId, chunkId, Map.of()
         );
     }
 }

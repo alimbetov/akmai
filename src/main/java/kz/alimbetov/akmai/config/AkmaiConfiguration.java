@@ -9,7 +9,14 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties({
     VectorStorageProperties.class,
     RetentionProperties.class,
-    RetrievalProperties.class
+    RetrievalProperties.class,
+    ApiProperties.class,
+    IdempotencyProperties.class,
+    SecurityProperties.class,
+    ReconciliationProperties.class,
+    ModelBudgetProperties.class,
+    ReembeddingProperties.class,
+    RetentionCleanupProperties.class
 })
 public class AkmaiConfiguration {
 }

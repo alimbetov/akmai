@@ -1,5 +1,6 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -13,7 +14,7 @@ public record RetrievalHit(
         double fusedScore
 ) {
     public RetrievalHit {
-        metadata = metadata == null ? Map.of() : Map.copyOf(metadata);
+        metadata = canonicalMetadata(metadata);
         evidence = evidence == null ? List.of() : List.copyOf(evidence);
     }
 
@@ -25,5 +26,18 @@ public record RetrievalHit(
             Map<String, Object> metadata
     ) {
         this(type, documentId, chunkId, text, metadata, List.of(), 0.0);
+    }
+
+    private static Map<String, Object> canonicalMetadata(Map<String, Object> input) {
+        if (input == null || input.isEmpty()) {
+            return Map.of();
+        }
+        LinkedHashMap<String, Object> clean = new LinkedHashMap<>();
+        input.forEach((key, value) -> {
+            if (key != null && !key.isBlank() && value != null) {
+                clean.put(key, value);
+            }
+        });
+        return Map.copyOf(clean);
     }
 }

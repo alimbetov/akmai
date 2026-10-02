@@ -29,6 +29,27 @@ class CitationValidatorTest {
         assertThat(result.invalidSourceNumbers()).containsExactly(99);
     }
 
+    @Test
+    void removesFlexibleWhitespaceAndOversizedInvalidMarkersWithoutThrowing() {
+        List<RetrievalHit> context = List.of(
+                hit("doc-1", "chunk-1", "law.md")
+        );
+        String huge = "9".repeat(200);
+
+        CitationValidator.CitationValidation result = validator.validate(
+                "Valid [SOURCE   1]. Invalid [SOURCE   99]. Huge [SOURCE " + huge + "].",
+                context
+        );
+
+        assertThat(result.answer())
+                .contains("[SOURCE   1]")
+                .doesNotContain("[SOURCE   99]")
+                .doesNotContain(huge);
+        assertThat(result.citedSources()).singleElement()
+                .extracting(SourceRef::number)
+                .isEqualTo(1);
+    }
+
     private RetrievalHit hit(String documentId, String chunkId, String source) {
         return new RetrievalHit(
                 RetrievalType.LEXICAL,

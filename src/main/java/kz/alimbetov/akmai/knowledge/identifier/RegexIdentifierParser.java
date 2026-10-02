@@ -17,18 +17,39 @@ public abstract class RegexIdentifierParser implements IdentifierParser {
 
     @Override
     public List<DetectedIdentifier> extract(String text) {
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
         List<DetectedIdentifier> result = new ArrayList<>();
         Matcher matcher = pattern.matcher(text);
         while (matcher.find()) {
-            String value = matcher.group(1);
+            String value = firstCapturedValue(matcher);
+            if (value == null) {
+                continue;
+            }
+            value = value.replaceFirst("[.,;:!?]+$", "");
+            String normalized = normalizer.normalize(type(), value);
+            if (normalized.isBlank()) {
+                continue;
+            }
             result.add(new DetectedIdentifier(
                     type(),
                     value,
-                    normalizer.normalize(value),
+                    normalized,
                     context(text, matcher.start(), matcher.end())
             ));
         }
         return result;
+    }
+
+    private String firstCapturedValue(Matcher matcher) {
+        for (int group = 1; group <= matcher.groupCount(); group++) {
+            String candidate = matcher.group(group);
+            if (candidate != null && !candidate.isBlank()) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     private String context(String text, int start, int end) {

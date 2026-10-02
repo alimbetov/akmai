@@ -1,5 +1,6 @@
 package kz.alimbetov.akmai.rag.query;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -45,34 +46,22 @@ public class QueryChunker {
 
     public List<QueryChunk> chunk(String question) {
         String normalized = normalizer.normalize(question);
-        List<String> segments = decomposer.decompose(normalized);
+        QueryDecompositionResult decomposition =
+                decomposer.decomposeDetailed(normalized);
         List<QueryChunk> result = new ArrayList<>();
 
-        for (String segment : segments) {
+        for (String segment : decomposition.units()) {
             if (segment.isBlank() || result.size() >= QueryDecomposer.MAX_SEGMENTS) {
                 continue;
             }
-
             List<DetectedIdentifier> identifiers = identifierExtractor.extract(segment);
             String semantic = semanticText(segment, identifiers);
-
-            if (identifiers.size() <= 1) {
-                result.add(newChunk(result.size(), segment, semantic, identifiers));
-                continue;
-            }
-
-            // Multiple independent identifiers in one clause become separate retrieval units.
-            for (DetectedIdentifier identifier : identifiers) {
-                if (result.size() >= QueryDecomposer.MAX_SEGMENTS) {
-                    break;
-                }
-                result.add(newChunk(
-                        result.size(),
-                        segment,
-                        semantic,
-                        List.of(identifier)
-                ));
-            }
+            result.add(newChunk(
+                    result.size(),
+                    segment,
+                    semantic,
+                    identifiers
+            ));
         }
 
         return result.isEmpty()
@@ -86,11 +75,15 @@ public class QueryChunker {
             String semantic,
             List<DetectedIdentifier> identifiers
     ) {
+        String normalized = normalizer.normalize(text);
+        String idSource = index + "|" + normalized + "|" + semantic;
         return new QueryChunk(
-                UUID.randomUUID().toString(),
+                UUID.nameUUIDFromBytes(
+                        idSource.getBytes(StandardCharsets.UTF_8)
+                ).toString(),
                 index,
                 text,
-                normalizer.normalize(text),
+                normalized,
                 semantic.isBlank() ? text : semantic,
                 languageDetector.detect(text),
                 identifiers
