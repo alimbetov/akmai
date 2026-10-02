@@ -55,43 +55,6 @@ public class DocumentIdentifierRepository {
     public List<DocumentIdentifier> findExact(
             IdentifierType type,
             String normalizedValue,
-            int limit
-    ) {
-        return queryPublished(
-                " AND i.identifier_type = ? AND i.normalized_value = ? ",
-                limit,
-                type.name(),
-                normalizedValue
-        );
-    }
-
-    public List<DocumentIdentifier> findPrefix(
-            IdentifierType type,
-            String normalizedPrefix,
-            int limit
-    ) {
-        return findLike(type, escapeLike(normalizedPrefix) + "%", limit);
-    }
-
-    public List<DocumentIdentifier> findPartial(
-            IdentifierType type,
-            String normalizedPart,
-            int limit
-    ) {
-        return findLike(type, "%" + escapeLike(normalizedPart) + "%", limit);
-    }
-
-    public List<DocumentIdentifier> findExact(String normalizedValue, int limit) {
-        return queryPublished(
-                " AND i.normalized_value = ? ",
-                limit,
-                normalizedValue
-        );
-    }
-
-    public List<DocumentIdentifier> findExact(
-            IdentifierType type,
-            String normalizedValue,
             Set<Long> accessLevels,
             int limit
     ) {
@@ -181,61 +144,6 @@ public class DocumentIdentifierRepository {
         jdbcTemplate.update(
                 "DELETE FROM document_identifier WHERE document_id = ?",
                 documentId
-        );
-    }
-
-    private List<DocumentIdentifier> findLike(
-            IdentifierType type,
-            String pattern,
-            int limit
-    ) {
-        return jdbcTemplate.query(
-                """
-                SELECT i.document_id, i.generation, i.chunk_id, i.page_number,
-                       i.identifier_type, i.raw_value, i.normalized_value,
-                       i.context_text, i.created_at
-                FROM document_identifier i
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = i.document_id
-                 AND l.published_generation = i.generation
-                WHERE l.retention_status = 'ACTIVE'
-                  AND i.identifier_type = ?
-                  AND i.normalized_value LIKE ? ESCAPE '\\'
-                ORDER BY i.created_at DESC
-                LIMIT ?
-                """,
-                this::map,
-                type.name(),
-                pattern,
-                limit
-        );
-    }
-
-    private List<DocumentIdentifier> queryPublished(
-            String predicate,
-            int limit,
-            Object... arguments
-    ) {
-        Object[] bound = new Object[arguments.length + 1];
-        System.arraycopy(arguments, 0, bound, 0, arguments.length);
-        bound[arguments.length] = limit;
-
-        return jdbcTemplate.query(
-                """
-                SELECT i.document_id, i.generation, i.chunk_id, i.page_number,
-                       i.identifier_type, i.raw_value, i.normalized_value,
-                       i.context_text, i.created_at
-                FROM document_identifier i
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = i.document_id
-                 AND l.published_generation = i.generation
-                WHERE l.retention_status = 'ACTIVE'
-                """ + predicate + """
-                ORDER BY i.created_at DESC
-                LIMIT ?
-                """,
-                this::map,
-                bound
         );
     }
 
