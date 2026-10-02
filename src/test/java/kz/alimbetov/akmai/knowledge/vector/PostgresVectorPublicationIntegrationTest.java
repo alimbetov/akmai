@@ -387,6 +387,155 @@ class PostgresVectorPublicationIntegrationTest {
     }
 
     @Test
+    void concurrentDifferentDocumentsCompleteWithSingleConnectionPool() {
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(POSTGRES.getJdbcUrl());
+        config.setUsername(POSTGRES.getUsername());
+        config.setPassword(POSTGRES.getPassword());
+        config.setMaximumPoolSize(1);
+        config.setMinimumIdle(0);
+        config.setConnectionTimeout(1_000);
+
+        try (HikariDataSource dataSource = new HikariDataSource(config)) {
+            JdbcTemplate singleJdbc = new JdbcTemplate(dataSource);
+            TransactionTemplate singleTx = new TransactionTemplate(
+                    new DataSourceTransactionManager(dataSource)
+            );
+            ObjectMapper mapper = new ObjectMapper();
+            EmbeddingProfileStorageManager singleStorage =
+                    new EmbeddingProfileStorageManager(singleJdbc);
+            DocumentGenerationRepository singleGenerations =
+                    new DocumentGenerationRepository(singleJdbc, singleTx);
+            GenerationPublicationService singlePublication =
+                    new GenerationPublicationService(
+                            singleJdbc,
+                            singleTx,
+                            new PostgresSearchProjectionRepository(
+                                    singleJdbc,
+                                    mapper
+                            ),
+                            new DocumentIdentifierRepository(singleJdbc),
+                            new VectorGenerationRepository(singleJdbc),
+                            new ReferenceGraphRepository(
+                                    singleJdbc,
+                                    new CrossReferenceExtractor()
+                            ),
+                            new PostgresGenerationVectorRepository(
+                                    singleJdbc,
+                                    mapper,
+                                    singleStorage
+                            ),
+                            new IngestionIdempotencyRepository(
+                                    singleJdbc,
+                                    singleTx,
+                                    mapper
+                            ),
+                            new PublicationOutcomeResolver(singleJdbc)
+                    );
+
+            java.util.concurrent.ExecutorService executor =
+                    java.util.concurrent.Executors.newFixedThreadPool(2);
+            try {
+                var first = java.util.concurrent.CompletableFuture.runAsync(
+                        () -> publishWithSinglePool(
+                                singleGenerations,
+                                singlePublication,
+                                "doc-concurrent-a",
+                                "chunk-a"
+                        ),
+                        executor
+                );
+                var second = java.util.concurrent.CompletableFuture.runAsync(
+                        () -> publishWithSinglePool(
+                                singleGenerations,
+                                singlePublication,
+                                "doc-concurrent-b",
+                                "chunk-b"
+                        ),
+                        executor
+                );
+
+                org.junit.jupiter.api.Assertions.assertTimeoutPreemptively(
+                        Duration.ofSeconds(6),
+                        () -> java.util.concurrent.CompletableFuture
+                                .allOf(first, second)
+                                .join()
+                );
+            } finally {
+                executor.shutdownNow();
+            }
+
+            assertThat(singleJdbc.queryForObject(
+                    """
+                    SELECT count(*)
+                    FROM knowledge_document_lifecycle
+                    WHERE document_id IN ('doc-concurrent-a', 'doc-concurrent-b')
+                      AND published_generation IS NOT NULL
+                    """,
+                    Integer.class
+            )).isEqualTo(2);
+        }
+    }
+
+    private void publishWithSinglePool(
+            DocumentGenerationRepository repository,
+            GenerationPublicationService service,
+            String documentId,
+            String chunkId
+    ) {
+        long generation = repository.allocate(
+                documentId,
+                RetentionPolicy.PERMANENT,
+                null,
+                profile.profileId(),
+                "fp-" + documentId
+        );
+        SearchProjection projection = new SearchProjection(
+                chunkId,
+                documentId,
+                generation,
+                null,
+                0,
+                "canonical " + documentId,
+                "embedding " + documentId,
+                "en",
+                KnowledgeDomain.GENERAL,
+                "section",
+                List.of(),
+                List.of(),
+                Map.of("source", "pool-concurrency"),
+                2
+        );
+        String vectorId = VectorIdentity.physicalId(
+                documentId,
+                generation,
+                chunkId
+        );
+        service.publish(
+                documentId,
+                generation,
+                RetentionPolicy.PERMANENT,
+                null,
+                profile,
+                List.of(projection),
+                List.of(),
+                List.of(new VectorGenerationEntry(vectorId, chunkId)),
+                List.of(new PostgresGenerationVectorRepository.VectorRow(
+                        vectorId,
+                        projection.embeddingText(),
+                        Map.of(
+                                "akmaiMetadataVersion", 2,
+                                "akmaiDocumentId", documentId,
+                                "akmaiGeneration", generation,
+                                "akmaiEmbeddingProfileId", profile.profileId(),
+                                "akmaiChunkId", chunkId
+                        ),
+                        new float[] {1f, 0f, 0f}
+                ))
+        );
+    }
+
+    @Test
     void failureAfterSecondRelationalBatchRollsBackEveryStagedRow() {
         long generation = generations.allocate(
                 "doc-batch",
