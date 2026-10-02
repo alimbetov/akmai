@@ -5,7 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
-import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import org.springframework.stereotype.Component;
@@ -13,12 +13,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class ReferenceRetrievalStrategy implements RetrievalStrategy {
 
-    private final SearchProjectionRepository projectionRepository;
+    private final PublishedSearchProjectionReader projectionRepository;
     private final ReferenceGraphRepository referenceGraphRepository;
     private final RetrievalProperties properties;
 
     public ReferenceRetrievalStrategy(
-            SearchProjectionRepository projectionRepository,
+            PublishedSearchProjectionReader projectionRepository,
             ReferenceGraphRepository referenceGraphRepository,
             RetrievalProperties properties
     ) {
