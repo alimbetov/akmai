@@ -125,4 +125,4 @@ management:
         liveness:
           include: livenessState,ping
         readiness:
-          include: readinessState,db,embeddingProfile,ollama
+          include: readinessState,db,embeddingProfile,pgvector,ollama
