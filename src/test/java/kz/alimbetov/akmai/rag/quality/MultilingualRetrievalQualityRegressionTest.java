@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -21,7 +23,7 @@ import kz.alimbetov.akmai.knowledge.chunking.TextNormalizer;
 import kz.alimbetov.akmai.knowledge.identifier.IdentifierExtractor;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
-import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.knowledge.vector.PublishedVectorSearchRepository;
 import kz.alimbetov.akmai.knowledge.vector.VectorSearchMatch;
@@ -165,18 +167,20 @@ class MultilingualRetrievalQualityRegressionTest {
                     new QueryLanguageDetector()
             );
 
-            SearchProjectionRepository projectionRepository =
-                    mock(SearchProjectionRepository.class);
+            PublishedSearchProjectionReader projectionRepository =
+                    mock(PublishedSearchProjectionReader.class);
             PublishedVectorSearchRepository vectorRepository =
                     mock(PublishedVectorSearchRepository.class);
             ReferenceGraphRepository referenceRepository =
                     mock(ReferenceGraphRepository.class);
 
-            when(projectionRepository.findByDocumentAndChunkIds(
+            when(projectionRepository.findByDocumentGenerationAndChunkIds(
                     anyString(),
-                    anyList()
+                    anyLong(),
+                    anyList(),
+                    anySet()
             )).thenAnswer(invocation -> {
-                List<String> ids = invocation.getArgument(1);
+                List<String> ids = invocation.getArgument(2);
                 return ids.stream()
                         .map(projectionsByChunk::get)
                         .filter(java.util.Objects::nonNull)
@@ -187,6 +191,7 @@ class MultilingualRetrievalQualityRegressionTest {
                     anyString(),
                     anyString(),
                     anyList(),
+                    anySet(),
                     anyInt()
             )).thenAnswer(invocation -> {
                 String query = invocation.getArgument(0);
@@ -198,6 +203,7 @@ class MultilingualRetrievalQualityRegressionTest {
             when(vectorRepository.search(
                     anyString(),
                     anyList(),
+                    anySet(),
                     anyInt(),
                     anyDouble()
             )).thenAnswer(invocation -> {
@@ -216,7 +222,9 @@ class MultilingualRetrievalQualityRegressionTest {
 
             when(referenceRepository.resolveSameDocumentTargets(
                     anyString(),
+                    anyLong(),
                     anyList(),
+                    anySet(),
                     anyInt()
             )).thenReturn(List.of());
 
@@ -276,13 +284,14 @@ class MultilingualRetrievalQualityRegressionTest {
                 boolean mutateReranker
         ) {
             var execution = executor.executeDetailed(
-                    planner.plan(chunker.chunk(testCase.question()))
+                    planner.plan(chunker.chunk(testCase.question())),
+                    Set.of(1L)
             );
             assertThat(execution.criticalFailure()).isFalse();
 
             Reranker ranking = mutateReranker ? mutantReranker : reranker;
             return ranking.rerank(
-                            fusion.fuse(execution.hits()),
+                            fusion.fuse(execution.hits(), Set.of(1L)),
                             testCase.question()
                     ).stream()
                     .map(RetrievalHit::chunkId)

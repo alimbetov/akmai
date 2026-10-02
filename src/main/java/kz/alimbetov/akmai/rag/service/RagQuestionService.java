@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.rag.service;
 
 import java.util.List;
+import java.util.Set;
 import kz.alimbetov.akmai.rag.api.RagResponse;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
@@ -58,10 +59,15 @@ public class RagQuestionService {
         this.answerGenerationService = answerGenerationService;
     }
 
-    public RagResponse ask(String question) {
+    public RagResponse ask(String question, Set<Long> accessLevels) {
+        if (accessLevels == null || accessLevels.isEmpty()) {
+            return insufficientInformation();
+        }
+
         List<QueryChunk> queryChunks = queryChunker.chunk(question);
         RetrievalPlan plan = retrievalPlanner.plan(queryChunks);
-        RetrievalExecutionResult execution = retrievalExecutor.executeDetailed(plan);
+        RetrievalExecutionResult execution =
+                retrievalExecutor.executeDetailed(plan, accessLevels);
 
         if (execution.criticalFailure()) {
             throw new RetrievalUnavailableException(
@@ -69,9 +75,9 @@ public class RagQuestionService {
             );
         }
 
-        List<RetrievalHit> fused = resultFusion.fuse(execution.hits());
+        List<RetrievalHit> fused = resultFusion.fuse(execution.hits(), accessLevels);
         List<RetrievalHit> ranked = reranker.rerank(fused, question);
-        List<RetrievalHit> expanded = knowledgeExpansion.expand(ranked);
+        List<RetrievalHit> expanded = knowledgeExpansion.expand(ranked, accessLevels);
         List<RetrievalHit> bounded = contextBudget.apply(expanded, question);
 
         if (bounded.isEmpty()) {

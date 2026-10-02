@@ -57,7 +57,10 @@ class RetentionGenerationFencingIntegrationTest {
     void generationNClaimCannotMutateGenerationNPlusOne() {
         Instant now = Instant.parse("2026-10-01T10:00:00Z");
         long generationN = lifecycle.beginIngestion(
-                "doc-race", RetentionPolicy.TTL, now.minusSeconds(60)
+                "doc-race",
+                RetentionPolicy.TTL,
+                now.minusSeconds(60),
+                1L
         );
         assertThat(lifecycle.publishIngestion("doc-race", generationN, now.minusSeconds(30)))
                 .isTrue();
@@ -67,7 +70,10 @@ class RetentionGenerationFencingIntegrationTest {
         ).getFirst();
 
         long generationNPlusOne = lifecycle.beginIngestion(
-                "doc-race", RetentionPolicy.PERMANENT, null
+                "doc-race",
+                RetentionPolicy.PERMANENT,
+                null,
+                1L
         );
         assertThat(lifecycle.publishIngestion("doc-race", generationNPlusOne, now.plusSeconds(1)))
                 .isTrue();
@@ -89,7 +95,10 @@ class RetentionGenerationFencingIntegrationTest {
     void staleIngestionIsRecoverableAndNextAttemptAdvancesGeneration() {
         Instant started = Instant.parse("2026-10-01T09:00:00Z");
         long abandoned = lifecycle.beginIngestion(
-                "doc-crash", RetentionPolicy.PERMANENT, null
+                "doc-crash",
+                RetentionPolicy.PERMANENT,
+                null,
+                1L
         );
         jdbc.update(
                 "UPDATE knowledge_document_lifecycle SET ingestion_started_at = ? WHERE document_id = ?",
@@ -111,7 +120,10 @@ class RetentionGenerationFencingIntegrationTest {
                 .isEqualTo(LifecycleStatus.INGEST_FAILED);
 
         long retry = lifecycle.beginIngestion(
-                "doc-crash", RetentionPolicy.PERMANENT, null
+                "doc-crash",
+                RetentionPolicy.PERMANENT,
+                null,
+                1L
         );
         assertThat(retry).isEqualTo(abandoned + 1);
         assertThat(lifecycle.publishIngestion("doc-crash", retry, recovery.plusSeconds(1)))

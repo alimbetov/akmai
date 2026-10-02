@@ -2,6 +2,7 @@ package kz.alimbetov.akmai.knowledge.reference;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import kz.alimbetov.akmai.knowledge.chunking.CrossReferenceExtractor;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -96,9 +97,13 @@ public class ReferenceGraphRepository {
     public List<String> resolveSameDocumentTargets(
             String documentId,
             List<String> sourceChunkIds,
+            Set<Long> accessLevels,
             int limit
     ) {
-        if (sourceChunkIds == null || sourceChunkIds.isEmpty() || limit <= 0) {
+        requireAccessLevels(accessLevels);
+        if (sourceChunkIds == null
+                || sourceChunkIds.isEmpty()
+                || limit <= 0) {
             return List.of();
         }
         return jdbcTemplate.query(
@@ -115,6 +120,7 @@ public class ReferenceGraphRepository {
                  AND t.canonical_value = e.canonical_value
                 WHERE e.document_id = ?
                   AND e.source_chunk_id = ANY (?)
+                  AND l.access_level = ANY (?)
                   AND e.target_scope = 'SAME_DOCUMENT'
                   AND l.retention_status = 'ACTIVE'
                   AND t.chunk_id <> ALL (?)
@@ -123,16 +129,89 @@ public class ReferenceGraphRepository {
                 """,
                 ps -> {
                     ps.setString(1, documentId);
-                    var array = ps.getConnection().createArrayOf(
+                    var sourceArray = ps.getConnection().createArrayOf(
                             "varchar",
                             sourceChunkIds.toArray()
                     );
-                    ps.setArray(2, array);
-                    ps.setArray(3, array);
-                    ps.setInt(4, limit);
+                    ps.setArray(2, sourceArray);
+                    ps.setArray(
+                            3,
+                            ps.getConnection().createArrayOf(
+                                    "bigint",
+                                    accessLevels.toArray()
+                            )
+                    );
+                    ps.setArray(4, sourceArray);
+                    ps.setInt(5, limit);
                 },
                 (rs, rowNum) -> rs.getString(1)
         );
+    }
+
+    public List<String> resolveSameDocumentTargets(
+            String documentId,
+            long generation,
+            List<String> sourceChunkIds,
+            Set<Long> accessLevels,
+            int limit
+    ) {
+        requireAccessLevels(accessLevels);
+        if (generation <= 0
+                || sourceChunkIds == null
+                || sourceChunkIds.isEmpty()
+                || limit <= 0) {
+            return List.of();
+        }
+        return jdbcTemplate.query(
+                """
+                SELECT DISTINCT t.chunk_id
+                FROM knowledge_reference_edge e
+                JOIN knowledge_document_lifecycle l
+                  ON l.document_id = e.document_id
+                 AND l.published_generation = e.generation
+                JOIN knowledge_reference_target t
+                  ON t.document_id = e.document_id
+                 AND t.generation = e.generation
+                 AND t.reference_type = e.reference_type
+                 AND t.canonical_value = e.canonical_value
+                WHERE e.document_id = ?
+                  AND e.generation = ?
+                  AND e.source_chunk_id = ANY (?)
+                  AND l.access_level = ANY (?)
+                  AND e.target_scope = 'SAME_DOCUMENT'
+                  AND l.retention_status = 'ACTIVE'
+                  AND t.chunk_id <> ALL (?)
+                ORDER BY t.chunk_id
+                LIMIT ?
+                """,
+                ps -> {
+                    ps.setString(1, documentId);
+                    ps.setLong(2, generation);
+                    var sourceArray = ps.getConnection().createArrayOf(
+                            "varchar",
+                            sourceChunkIds.toArray()
+                    );
+                    ps.setArray(3, sourceArray);
+                    ps.setArray(
+                            4,
+                            ps.getConnection().createArrayOf(
+                                    "bigint",
+                                    accessLevels.toArray()
+                            )
+                    );
+                    ps.setArray(5, sourceArray);
+                    ps.setInt(6, limit);
+                },
+                (rs, rowNum) -> rs.getString(1)
+        );
+    }
+
+    private void requireAccessLevels(Set<Long> accessLevels) {
+        if (accessLevels == null || accessLevels.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "accessLevels must not be empty"
+            );
+        }
     }
 
     public void cloneGeneration(

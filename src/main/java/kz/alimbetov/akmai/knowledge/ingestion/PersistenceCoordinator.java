@@ -66,15 +66,15 @@ public class PersistenceCoordinator {
         this.metrics = metrics;
     }
 
-    public void persist(List<EnrichedKnowledgeChunk> chunks) {
-        persist(chunks, null, null);
-    }
-
     public void persist(
             List<EnrichedKnowledgeChunk> chunks,
             IngestionIdempotencyContext idempotency,
-            KnowledgeIngestionResponse response
+            KnowledgeIngestionResponse response,
+            long accessLevel
     ) {
+        if (accessLevel <= 0) {
+            throw new IllegalArgumentException("accessLevel must be positive");
+        }
         if (chunks == null || chunks.isEmpty()) {
             return;
         }
@@ -93,7 +93,8 @@ public class PersistenceCoordinator {
                 retentionProperties.defaultPolicy(),
                 expiration(),
                 profile.profileId(),
-                contentFingerprint
+                contentFingerprint,
+                accessLevel
         );
         idempotencyRepository.attachGeneration(idempotency, generation);
 

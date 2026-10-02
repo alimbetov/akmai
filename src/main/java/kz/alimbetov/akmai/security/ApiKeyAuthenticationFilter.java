@@ -55,7 +55,10 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(
-                        "akmai-api-key",
+                        new ApiKeyPrincipal(
+                                "akmai-api-key",
+                                properties.accessLevels()
+                        ),
                         null,
                         List.of(new SimpleGrantedAuthority("ROLE_API"))
                 )

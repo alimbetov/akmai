@@ -26,6 +26,7 @@ import kz.alimbetov.akmai.knowledge.lifecycle.DocumentGenerationRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionProperties;
 import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository.VectorGenerationEntry;
+import kz.alimbetov.akmai.knowledge.model.DocumentMetadata;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionFactory;
@@ -43,7 +44,8 @@ class PersistenceCoordinatorTest {
                 eq(RetentionPolicy.PERMANENT),
                 isNull(),
                 eq(fixture.profile.profileId()),
-                anyString()
+                anyString(),
+                eq(1L)
         )).thenReturn(7L);
         when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
                 .thenReturn(List.of(
@@ -64,10 +66,15 @@ class PersistenceCoordinatorTest {
                 isNull()
         )).thenReturn(GenerationPublicationService.PublicationResult.PUBLISHED);
 
-        fixture.coordinator.persist(List.of(
-                chunk("stable-1", "doc-1", 0),
-                chunk("stable-2", "doc-1", 1)
-        ));
+        fixture.coordinator.persist(
+                List.of(
+                        chunk("stable-1", "doc-1", 0),
+                        chunk("stable-2", "doc-1", 1)
+                ),
+                null,
+                null,
+                1L
+        );
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<VectorGenerationEntry>> manifest =
@@ -106,7 +113,11 @@ class PersistenceCoordinatorTest {
                                     "akmaiEmbeddingProfileId",
                                     fixture.profile.profileId()
                             )
-                            .containsEntry("akmaiMetadataVersion", 2);
+                            .containsEntry("akmaiMetadataVersion", 2)
+                            .containsEntry(
+                                    DocumentMetadata.ACCESS_LEVEL,
+                                    1L
+                            );
                     assertThat(row.vectorId()).matches(
                             "[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
                     );
@@ -121,15 +132,19 @@ class PersistenceCoordinatorTest {
                 eq(RetentionPolicy.PERMANENT),
                 isNull(),
                 eq(fixture.profile.profileId()),
-                anyString()
+                anyString(),
+                eq(1L)
         )).thenReturn(8L);
         when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
                 .thenThrow(new IllegalStateException("embedding unavailable"));
 
         assertThatThrownBy(() ->
-                fixture.coordinator.persist(List.of(
-                        chunk("stable-1", "doc-1", 0)
-                )))
+                fixture.coordinator.persist(
+                        List.of(chunk("stable-1", "doc-1", 0)),
+                        null,
+                        null,
+                        1L
+                ))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("embedding unavailable");
 
@@ -162,7 +177,8 @@ class PersistenceCoordinatorTest {
                 eq(RetentionPolicy.PERMANENT),
                 isNull(),
                 eq(fixture.profile.profileId()),
-                anyString()
+                anyString(),
+                eq(1L)
         )).thenReturn(9L);
         when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
                 .thenReturn(List.of(new float[] {1f, 0f, 0f}));
@@ -182,9 +198,12 @@ class PersistenceCoordinatorTest {
         when(fixture.outcomeResolver.resolve("doc-1", 9L, null))
                 .thenReturn(PublicationOutcomeResolver.Outcome.COMMITTED);
 
-        fixture.coordinator.persist(List.of(
-                chunk("stable-1", "doc-1", 0)
-        ));
+        fixture.coordinator.persist(
+                List.of(chunk("stable-1", "doc-1", 0)),
+                null,
+                null,
+                1L
+        );
 
         verify(fixture.generations, never()).fail(
                 eq("doc-1"),
@@ -202,7 +221,8 @@ class PersistenceCoordinatorTest {
                 eq(RetentionPolicy.PERMANENT),
                 isNull(),
                 eq(fixture.profile.profileId()),
-                anyString()
+                anyString(),
+                eq(1L)
         )).thenReturn(10L);
         when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
                 .thenReturn(List.of(new float[] {1f, 0f, 0f}));
@@ -222,9 +242,12 @@ class PersistenceCoordinatorTest {
         when(fixture.outcomeResolver.resolve("doc-1", 10L, null))
                 .thenThrow(new IllegalStateException("database unavailable"));
 
-        assertThatThrownBy(() -> fixture.coordinator.persist(List.of(
-                chunk("stable-1", "doc-1", 0)
-        )))
+        assertThatThrownBy(() -> fixture.coordinator.persist(
+                List.of(chunk("stable-1", "doc-1", 0)),
+                null,
+                null,
+                1L
+        ))
                 .isInstanceOf(PublicationOutcomeUnknownException.class)
                 .hasMessageContaining("could not be determined");
 
@@ -319,7 +342,7 @@ class PersistenceCoordinatorTest {
                 "en",
                 KnowledgeDomain.GENERAL,
                 List.of(),
-                Map.of()
+                Map.of(DocumentMetadata.ACCESS_LEVEL, 1L)
         );
         DetectedIdentifier identifier = new DetectedIdentifier(
                 IdentifierType.DOCUMENT_NUMBER,

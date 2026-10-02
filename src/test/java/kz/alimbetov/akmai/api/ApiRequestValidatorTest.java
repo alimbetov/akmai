@@ -66,6 +66,37 @@ class ApiRequestValidatorTest {
                 .hasMessageContaining("nesting depth");
     }
 
+
+    @Test
+    void rejectsInvalidOrMetadataDefinedAccessLevel() {
+        assertThatThrownBy(() -> new AddKnowledgeRequest(
+                "doc",
+                "title",
+                "text",
+                "source",
+                "en",
+                KnowledgeDomain.GENERAL,
+                0L,
+                Map.of()
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("accessLevel");
+
+        assertThatThrownBy(() -> validator.validateKnowledge(
+                new AddKnowledgeRequest(
+                        "doc",
+                        "title",
+                        "text",
+                        "source",
+                        "en",
+                        KnowledgeDomain.GENERAL,
+                        1L,
+                        Map.of("access_level", 99)
+                )
+        )).isInstanceOf(ApiValidationException.class)
+                .hasMessageContaining("access_level")
+                .hasMessageContaining("reserved");
+    }
+
     private AddKnowledgeRequest request(
             String documentId,
             String text,
@@ -78,6 +109,7 @@ class ApiRequestValidatorTest {
                 "source",
                 "en",
                 KnowledgeDomain.GENERAL,
+                1L,
                 metadata
         );
     }

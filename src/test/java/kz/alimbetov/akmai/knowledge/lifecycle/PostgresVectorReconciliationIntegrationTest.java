@@ -150,12 +150,12 @@ class PostgresVectorReconciliationIntegrationTest {
                     document_id, lifecycle_policy, lifecycle_status,
                     generation, attempt_count, row_version,
                     created_at, updated_at, retention_status,
-                    published_generation, next_generation
+                    published_generation, next_generation, access_level
                 ) VALUES (
                     'doc-1', 'PERMANENT', 'READY',
                     2, 0, 0,
                     clock_timestamp(), clock_timestamp(), 'ACTIVE',
-                    2, 3
+                    2, 3, 1
                 )
                 """
         );
@@ -165,12 +165,12 @@ class PostgresVectorReconciliationIntegrationTest {
                     document_id, generation, generation_status,
                     generation_kind, embedding_profile_id,
                     content_fingerprint, physical_id_version,
-                    cleanup_required, started_at, retired_at
+                    cleanup_required, started_at, retired_at, access_level
                 ) VALUES (
                     'doc-1', 1, 'RETIRED',
                     'INGESTION', ?, 'fp-1', 2,
                     true, clock_timestamp() - interval '1 hour',
-                    clock_timestamp() - interval '30 minutes'
+                    clock_timestamp() - interval '30 minutes', 1
                 )
                 """,
                 profile.profileId()
@@ -181,12 +181,12 @@ class PostgresVectorReconciliationIntegrationTest {
                     document_id, generation, generation_status,
                     generation_kind, embedding_profile_id,
                     content_fingerprint, physical_id_version,
-                    cleanup_required, started_at, published_at
+                    cleanup_required, started_at, published_at, access_level
                 ) VALUES (
                     'doc-1', 2, 'PUBLISHED',
                     'INGESTION', ?, 'fp-2', 2,
                     false, clock_timestamp() - interval '20 minutes',
-                    clock_timestamp() - interval '10 minutes'
+                    clock_timestamp() - interval '10 minutes', 1
                 )
                 """,
                 profile.profileId()
@@ -274,12 +274,12 @@ class PostgresVectorReconciliationIntegrationTest {
                     document_id, lifecycle_policy, lifecycle_status,
                     generation, attempt_count, row_version,
                     created_at, updated_at, retention_status,
-                    published_generation, next_generation
+                    published_generation, next_generation, access_level
                 ) VALUES (
                     'doc-missing', 'PERMANENT', 'READY',
                     2, 0, 0,
                     clock_timestamp(), clock_timestamp(), 'ACTIVE',
-                    2, 3
+                    2, 3, 1
                 )
                 """
         );
@@ -289,12 +289,12 @@ class PostgresVectorReconciliationIntegrationTest {
                     document_id, generation, generation_status,
                     generation_kind, embedding_profile_id,
                     content_fingerprint, physical_id_version,
-                    cleanup_required, started_at, retired_at
+                    cleanup_required, started_at, retired_at, access_level
                 ) VALUES (
                     'doc-missing', 1, 'RETIRED',
                     'INGESTION', ?, 'fp-old', 2,
                     true, clock_timestamp() - interval '1 hour',
-                    clock_timestamp() - interval '30 minutes'
+                    clock_timestamp() - interval '30 minutes', 1
                 )
                 """,
                 profile.profileId()
@@ -305,12 +305,12 @@ class PostgresVectorReconciliationIntegrationTest {
                     document_id, generation, generation_status,
                     generation_kind, embedding_profile_id,
                     content_fingerprint, physical_id_version,
-                    cleanup_required, started_at, published_at
+                    cleanup_required, started_at, published_at, access_level
                 ) VALUES (
                     'doc-missing', 2, 'PUBLISHED',
                     'INGESTION', ?, 'fp-new', 2,
                     false, clock_timestamp() - interval '20 minutes',
-                    clock_timestamp() - interval '10 minutes'
+                    clock_timestamp() - interval '10 minutes', 1
                 )
                 """,
                 profile.profileId()

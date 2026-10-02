@@ -64,6 +64,46 @@ class LegacySchemaUpgradeTest {
 
         assertThat(jdbc.queryForObject(
                 """
+                SELECT access_level
+                FROM knowledge_document_lifecycle
+                WHERE document_id = 'legacy-doc'
+                """,
+                Long.class
+        )).isEqualTo(1L);
+
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT min(access_level)
+                FROM knowledge_document_generation
+                WHERE document_id = 'legacy-doc'
+                """,
+                Long.class
+        )).isEqualTo(1L);
+
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT column_default
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'knowledge_document_lifecycle'
+                  AND column_name = 'access_level'
+                """,
+                String.class
+        )).isNull();
+
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT column_default
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'knowledge_document_generation'
+                  AND column_name = 'access_level'
+                """,
+                String.class
+        )).isNull();
+
+        assertThat(jdbc.queryForObject(
+                """
                 SELECT count(*)
                 FROM legacy_document_identifier_snapshot
                 WHERE row_data->>'document_id' = 'legacy-doc'

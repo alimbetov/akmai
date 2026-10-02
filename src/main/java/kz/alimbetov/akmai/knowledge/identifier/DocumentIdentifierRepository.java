@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -54,10 +55,12 @@ public class DocumentIdentifierRepository {
     public List<DocumentIdentifier> findExact(
             IdentifierType type,
             String normalizedValue,
+            Set<Long> accessLevels,
             int limit
     ) {
-        return queryPublished(
+        return queryPublishedScoped(
                 " AND i.identifier_type = ? AND i.normalized_value = ? ",
+                accessLevels,
                 limit,
                 type.name(),
                 normalizedValue
@@ -67,22 +70,39 @@ public class DocumentIdentifierRepository {
     public List<DocumentIdentifier> findPrefix(
             IdentifierType type,
             String normalizedPrefix,
+            Set<Long> accessLevels,
             int limit
     ) {
-        return findLike(type, escapeLike(normalizedPrefix) + "%", limit);
+        return findLikeScoped(
+                type,
+                escapeLike(normalizedPrefix) + "%",
+                accessLevels,
+                limit
+        );
     }
 
     public List<DocumentIdentifier> findPartial(
             IdentifierType type,
             String normalizedPart,
+            Set<Long> accessLevels,
             int limit
     ) {
-        return findLike(type, "%" + escapeLike(normalizedPart) + "%", limit);
+        return findLikeScoped(
+                type,
+                "%" + escapeLike(normalizedPart) + "%",
+                accessLevels,
+                limit
+        );
     }
 
-    public List<DocumentIdentifier> findExact(String normalizedValue, int limit) {
-        return queryPublished(
+    public List<DocumentIdentifier> findExact(
+            String normalizedValue,
+            Set<Long> accessLevels,
+            int limit
+    ) {
+        return queryPublishedScoped(
                 " AND i.normalized_value = ? ",
+                accessLevels,
                 limit,
                 normalizedValue
         );
@@ -127,11 +147,13 @@ public class DocumentIdentifierRepository {
         );
     }
 
-    private List<DocumentIdentifier> findLike(
+    private List<DocumentIdentifier> findLikeScoped(
             IdentifierType type,
             String pattern,
+            Set<Long> accessLevels,
             int limit
     ) {
+        requireAccessLevels(accessLevels);
         return jdbcTemplate.query(
                 """
                 SELECT i.document_id, i.generation, i.chunk_id, i.page_number,
@@ -142,27 +164,35 @@ public class DocumentIdentifierRepository {
                   ON l.document_id = i.document_id
                  AND l.published_generation = i.generation
                 WHERE l.retention_status = 'ACTIVE'
+                  AND l.access_level = ANY (?)
                   AND i.identifier_type = ?
                   AND i.normalized_value LIKE ? ESCAPE '\\'
                 ORDER BY i.created_at DESC
                 LIMIT ?
                 """,
-                this::map,
-                type.name(),
-                pattern,
-                limit
+                ps -> {
+                    ps.setArray(
+                            1,
+                            ps.getConnection().createArrayOf(
+                                    "bigint",
+                                    accessLevels.toArray()
+                            )
+                    );
+                    ps.setString(2, type.name());
+                    ps.setString(3, pattern);
+                    ps.setInt(4, limit);
+                },
+                this::map
         );
     }
 
-    private List<DocumentIdentifier> queryPublished(
+    private List<DocumentIdentifier> queryPublishedScoped(
             String predicate,
+            Set<Long> accessLevels,
             int limit,
-            Object... arguments
+            String... arguments
     ) {
-        Object[] bound = new Object[arguments.length + 1];
-        System.arraycopy(arguments, 0, bound, 0, arguments.length);
-        bound[arguments.length] = limit;
-
+        requireAccessLevels(accessLevels);
         return jdbcTemplate.query(
                 """
                 SELECT i.document_id, i.generation, i.chunk_id, i.page_number,
@@ -173,13 +203,35 @@ public class DocumentIdentifierRepository {
                   ON l.document_id = i.document_id
                  AND l.published_generation = i.generation
                 WHERE l.retention_status = 'ACTIVE'
+                  AND l.access_level = ANY (?)
                 """ + predicate + """
                 ORDER BY i.created_at DESC
                 LIMIT ?
                 """,
-                this::map,
-                bound
+                ps -> {
+                    int index = 1;
+                    ps.setArray(
+                            index++,
+                            ps.getConnection().createArrayOf(
+                                    "bigint",
+                                    accessLevels.toArray()
+                            )
+                    );
+                    for (String argument : arguments) {
+                        ps.setString(index++, argument);
+                    }
+                    ps.setInt(index, limit);
+                },
+                this::map
         );
+    }
+
+    private void requireAccessLevels(Set<Long> accessLevels) {
+        if (accessLevels == null || accessLevels.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "accessLevels must not be empty"
+            );
+        }
     }
 
     private DocumentIdentifier map(ResultSet rs, int rowNum) throws SQLException {

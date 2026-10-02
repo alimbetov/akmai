@@ -129,7 +129,8 @@ class IdempotencyIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 null,
-                "content-fingerprint"
+                "content-fingerprint",
+                1L
         );
         repository.attachGeneration(first.context(), generation);
 

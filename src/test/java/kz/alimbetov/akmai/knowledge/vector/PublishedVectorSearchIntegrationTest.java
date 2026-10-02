@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.knowledge.vector;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -8,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileRepository;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
@@ -20,6 +22,8 @@ import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -59,7 +63,7 @@ class PublishedVectorSearchIntegrationTest {
         profile = new EmbeddingProfile(
                 "ep-search", "test", "deterministic", 3,
                 "COSINE_DISTANCE", "test", "search",
-                "akmai_vector", "p_search", "NONE", (short) 1,
+                "akmai_vector", "p_search", "HNSW", (short) 1,
                 Instant.parse("2026-10-02T00:00:00Z")
         );
         storage.ensureStorage(profile);
@@ -75,7 +79,12 @@ class PublishedVectorSearchIntegrationTest {
         EmbeddingProfileService profiles = mock(EmbeddingProfileService.class);
         when(profiles.activeProfile()).thenReturn(profile);
         search = new PublishedVectorSearchRepository(
-                jdbc, mapper, model, profiles, storage
+                jdbc,
+                mapper,
+                model,
+                profiles,
+                storage,
+                new TransactionTemplate(new DataSourceTransactionManager(ds))
         );
     }
 
@@ -88,8 +97,8 @@ class PublishedVectorSearchIntegrationTest {
 
     @Test
     void filtersStaleScopeAndLowSimilarityBeforeLimit() {
-        lifecycle("doc-1", 2L);
-        lifecycle("doc-2", 1L);
+        lifecycle("doc-1", 2L, 1L);
+        lifecycle("doc-2", 1L, 2L);
         generation("doc-1", 1L, "RETIRED");
         generation("doc-1", 2L, "PUBLISHED");
         generation("doc-2", 1L, "PUBLISHED");
@@ -102,7 +111,13 @@ class PublishedVectorSearchIntegrationTest {
         ));
 
         List<VectorSearchMatch> result =
-                search.search("query", List.of("doc-1"), 1, 0.8);
+                search.search(
+                        "query",
+                        List.of("doc-1"),
+                        Set.of(1L),
+                        1,
+                        0.8
+                );
 
         assertThat(result)
                 .extracting(VectorSearchMatch::chunkId)
@@ -111,18 +126,159 @@ class PublishedVectorSearchIntegrationTest {
         assertThat(result.getFirst().score()).isGreaterThanOrEqualTo(0.99);
     }
 
-    private void lifecycle(String documentId, long published) {
+    @Test
+    void vectorSearchReturnsOnlyAuthorizedAccessLevels() {
+        lifecycle("access-1", 1L, 1L);
+        lifecycle("access-2", 1L, 2L);
+        lifecycle("access-3", 1L, 3L);
+        generation("access-1", 1L, "PUBLISHED");
+        generation("access-2", 1L, "PUBLISHED");
+        generation("access-3", 1L, "PUBLISHED");
+
+        vectors.insertAll(profile, List.of(
+                row("access-1", 1L, "chunk-1", new float[] {1f, 0f, 0f}),
+                row("access-2", 1L, "chunk-2", new float[] {1f, 0f, 0f}),
+                row("access-3", 1L, "chunk-3", new float[] {1f, 0f, 0f})
+        ));
+
+        assertThat(search.search(
+                "query",
+                List.of(),
+                Set.of(1L, 2L),
+                10,
+                0.8
+        )).extracting(VectorSearchMatch::documentId)
+                .containsExactlyInAnyOrder("access-1", "access-2");
+
+        assertThat(search.search(
+                "query",
+                List.of(),
+                Set.of(3L),
+                10,
+                0.8
+        )).extracting(VectorSearchMatch::documentId)
+                .containsExactly("access-3");
+
+        assertThatThrownBy(() -> search.search(
+                "query",
+                List.of(),
+                Set.of(),
+                10,
+                0.8
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("accessLevels");
+
+        assertThat(search.search(
+                "query",
+                List.of(),
+                Set.of(99L),
+                10,
+                0.8
+        )).isEmpty();
+    }
+
+    @Test
+    void hnswIterativeScanFillsTopKUnderSelectiveAccessFilter() {
         jdbc.update(
                 """
                 INSERT INTO knowledge_document_lifecycle (
                     document_id, lifecycle_policy, lifecycle_status,
                     generation, attempt_count, row_version,
                     created_at, updated_at, retention_status,
-                    published_generation, next_generation
-                ) VALUES (?, 'PERMANENT', 'READY', ?, 0, 0,
-                          clock_timestamp(), clock_timestamp(), 'ACTIVE', ?, ?)
+                    published_generation, next_generation, access_level
+                )
+                SELECT
+                    'hnsw-doc-' || value,
+                    'PERMANENT',
+                    'READY',
+                    1,
+                    0,
+                    0,
+                    clock_timestamp(),
+                    clock_timestamp(),
+                    'ACTIVE',
+                    1,
+                    2,
+                    CASE WHEN value <= 50 THEN 1 ELSE 2 END
+                FROM generate_series(1, 1000) AS value
+                """
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_generation (
+                    document_id, generation, generation_status, generation_kind,
+                    embedding_profile_id, content_fingerprint,
+                    physical_id_version, cleanup_required, started_at,
+                    published_at, access_level
+                )
+                SELECT
+                    'hnsw-doc-' || value,
+                    1,
+                    'PUBLISHED',
+                    'INGESTION',
+                    ?,
+                    'fp-' || value,
+                    2,
+                    false,
+                    clock_timestamp(),
+                    clock_timestamp(),
+                    CASE WHEN value <= 50 THEN 1 ELSE 2 END
+                FROM generate_series(1, 1000) AS value
                 """,
-                documentId, published, published, published + 1
+                profile.profileId()
+        );
+
+        vectors.insertAll(
+                profile,
+                java.util.stream.IntStream.rangeClosed(1, 1000)
+                        .mapToObj(value -> row(
+                                "hnsw-doc-" + value,
+                                1L,
+                                "chunk-" + value,
+                                new float[] {1f, 0f, 0f}
+                        ))
+                        .toList()
+        );
+        jdbc.execute("ANALYZE akmai_vector.p_search");
+
+        List<VectorSearchMatch> result = search.search(
+                "query",
+                List.of(),
+                Set.of(1L),
+                10,
+                0.8
+        );
+
+        assertThat(result).hasSize(10);
+        assertThat(result)
+                .allSatisfy(match -> assertThat(match.documentId())
+                        .startsWith("hnsw-doc-"));
+        assertThat(result)
+                .extracting(VectorSearchMatch::documentId)
+                .allSatisfy(documentId -> {
+                    int id = Integer.parseInt(
+                            documentId.substring("hnsw-doc-".length())
+                    );
+                    assertThat(id).isBetween(1, 50);
+                });
+    }
+
+    private void lifecycle(
+            String documentId,
+            long published,
+            long accessLevel
+    ) {
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_lifecycle (
+                    document_id, lifecycle_policy, lifecycle_status,
+                    generation, attempt_count, row_version,
+                    created_at, updated_at, retention_status,
+                    published_generation, next_generation, access_level
+                ) VALUES (?, 'PERMANENT', 'READY', ?, 0, 0,
+                          clock_timestamp(), clock_timestamp(), 'ACTIVE', ?, ?, ?)
+                """,
+                documentId, published, published, published + 1, accessLevel
         );
     }
 
@@ -133,11 +289,12 @@ class PublishedVectorSearchIntegrationTest {
                     document_id, generation, generation_status, generation_kind,
                     embedding_profile_id, content_fingerprint,
                     physical_id_version, cleanup_required, started_at,
-                    published_at, retired_at
+                    published_at, retired_at, access_level
                 ) VALUES (?, ?, ?, 'INGESTION', ?, 'fp', 2, false,
                           clock_timestamp() - interval '1 hour',
                           CASE WHEN ? = 'PUBLISHED' THEN clock_timestamp() ELSE NULL END,
-                          CASE WHEN ? = 'RETIRED' THEN clock_timestamp() ELSE NULL END)
+                          CASE WHEN ? = 'RETIRED' THEN clock_timestamp() ELSE NULL END,
+                          1)
                 """,
                 documentId, generation, status, profile.profileId(), status, status
         );

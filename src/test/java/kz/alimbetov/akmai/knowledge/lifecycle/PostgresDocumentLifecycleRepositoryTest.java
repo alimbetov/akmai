@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -110,14 +111,20 @@ class PostgresDocumentLifecycleRepositoryTest {
     void reingestionInvalidatesOldRetentionClaim() {
         Instant now = Instant.parse("2026-10-01T10:00:00Z");
         long firstGeneration = repository.beginIngestion(
-                "reingested", RetentionPolicy.TTL, now.minusSeconds(60)
+                "reingested",
+                RetentionPolicy.TTL,
+                now.minusSeconds(60),
+                1L
         );
         assertThat(repository.publishIngestion("reingested", firstGeneration, now.minusSeconds(30)))
                 .isTrue();
         RetentionClaim stale = repository.claimExpired(now, 1, 5, "pod-a", Duration.ofMinutes(10)).getFirst();
 
         long secondGeneration = repository.beginIngestion(
-                "reingested", RetentionPolicy.PERMANENT, null
+                "reingested",
+                RetentionPolicy.PERMANENT,
+                null,
+                1L
         );
         assertThat(repository.publishIngestion("reingested", secondGeneration, now))
                 .isTrue();
@@ -128,6 +135,39 @@ class PostgresDocumentLifecycleRepositoryTest {
         assertThat(repository.markDeleting(stale, now)).isFalse();
         assertThat(repository.findByDocumentId("reingested").orElseThrow().status())
                 .isEqualTo(LifecycleStatus.READY);
+    }
+
+    @Test
+    void legacyLifecycleIngestionCannotChangeAccessLevel() {
+        Instant now = Instant.parse("2026-10-01T10:00:00Z");
+        long generation = repository.beginIngestion(
+                "access-change",
+                RetentionPolicy.PERMANENT,
+                null,
+                1L
+        );
+        assertThat(repository.publishIngestion(
+                "access-change",
+                generation,
+                now
+        )).isTrue();
+
+        assertThatThrownBy(() -> repository.beginIngestion(
+                "access-change",
+                RetentionPolicy.PERMANENT,
+                null,
+                2L
+        )).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("generation-aware ingestion");
+
+        assertThat(jdbcTemplate.queryForObject(
+                """
+                SELECT access_level
+                FROM knowledge_document_lifecycle
+                WHERE document_id = 'access-change'
+                """,
+                Long.class
+        )).isEqualTo(1L);
     }
 
     @Test
@@ -256,7 +296,12 @@ class PostgresDocumentLifecycleRepositoryTest {
             RetentionPolicy policy,
             Instant expiresAt
     ) {
-        long generation = repository.beginIngestion(documentId, policy, expiresAt);
+        long generation = repository.beginIngestion(
+                documentId,
+                policy,
+                expiresAt,
+                1L
+        );
         assertThat(repository.publishIngestion(
                 documentId, generation, Instant.parse("2026-10-01T09:59:00Z")
         )).isTrue();

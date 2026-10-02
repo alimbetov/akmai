@@ -15,7 +15,12 @@ class SecurityApiIntegrationTest {
 
     private final ApiKeyAuthenticationFilter filter =
             new ApiKeyAuthenticationFilter(
-                    new SecurityProperties(true, "secret-key", false),
+                    new SecurityProperties(
+                            true,
+                            "secret-key",
+                            false,
+                            java.util.Set.of(1L, 2L)
+                    ),
                     new ObjectMapper()
             );
 
@@ -64,5 +69,11 @@ class SecurityApiIntegrationTest {
                 .isNotNull();
         assertThat(SecurityContextHolder.getContext().getAuthentication()
                 .isAuthenticated()).isTrue();
+        assertThat(SecurityContextHolder.getContext().getAuthentication()
+                .getPrincipal())
+                .isEqualTo(new ApiKeyPrincipal(
+                        "akmai-api-key",
+                        java.util.Set.of(1L, 2L)
+                ));
     }
 }

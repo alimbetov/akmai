@@ -33,19 +33,23 @@ public class PostgresDocumentLifecycleRepository
     public long beginIngestion(
             String documentId,
             RetentionPolicy policy,
-            Instant expiresAt
+            Instant expiresAt,
+            long accessLevel
     ) {
         validatePolicy(policy, expiresAt);
-        Long generation = jdbcTemplate.queryForObject(
+        if (accessLevel <= 0) {
+            throw new IllegalArgumentException("accessLevel must be positive");
+        }
+        List<Long> generations = jdbcTemplate.queryForList(
                 """
                 INSERT INTO knowledge_document_lifecycle (
                     document_id, lifecycle_policy, lifecycle_status,
                     generation, claim_generation, claim_id, claimed_by,
                     claimed_at, lease_until, expires_at, delete_started_at,
                     deleted_at, attempt_count, last_error, row_version,
-                    ingestion_started_at, created_at, updated_at
+                    ingestion_started_at, created_at, updated_at, access_level
                 ) VALUES (?, ?, 'INGESTING', 1, NULL, NULL, NULL,
-                          NULL, NULL, ?, NULL, NULL, 0, NULL, 0, now(), now(), now())
+                          NULL, NULL, ?, NULL, NULL, 0, NULL, 0, now(), now(), now(), ?)
                 ON CONFLICT (document_id) DO UPDATE SET
                     lifecycle_policy = EXCLUDED.lifecycle_policy,
                     lifecycle_status = 'INGESTING',
@@ -63,15 +67,21 @@ public class PostgresDocumentLifecycleRepository
                     ingestion_started_at = now(),
                     row_version = knowledge_document_lifecycle.row_version + 1,
                     updated_at = now()
+                WHERE knowledge_document_lifecycle.access_level = EXCLUDED.access_level
                 RETURNING generation
                 """,
                 Long.class,
                 documentId,
                 policy.name(),
-                timestamp(expiresAt)
+                timestamp(expiresAt),
+                accessLevel
         );
+        Long generation = generations.stream().findFirst().orElse(null);
         if (generation == null) {
-            throw new IllegalStateException("Lifecycle ingestion returned no generation");
+            throw new IllegalStateException(
+                    "Lifecycle ingestion requires the existing accessLevel; "
+                            + "use generation-aware ingestion to change access"
+            );
         }
         return generation;
     }

@@ -35,6 +35,7 @@ public class CanonicalRequestFingerprint {
                 KnowledgeLanguage.parse(request.language()).code()
         );
         canonical.put("domain", request.domain().name());
+        canonical.put("accessLevel", request.accessLevel());
         canonical.put("metadata", canonicalValue(request.metadata()));
 
         try {

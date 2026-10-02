@@ -1,10 +1,12 @@
 package kz.alimbetov.akmai.knowledge.reference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import kz.alimbetov.akmai.knowledge.chunking.CrossReferenceExtractor;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.PostgresSearchProjectionRepository;
@@ -73,12 +75,12 @@ class ReferenceGraphIntegrationTest {
                     document_id, lifecycle_policy, lifecycle_status,
                     generation, attempt_count, row_version,
                     created_at, updated_at, retention_status,
-                    published_generation, next_generation
+                    published_generation, next_generation, access_level
                 ) VALUES (
                     'law-1', 'PERMANENT', 'READY',
                     1, 0, 0,
                     clock_timestamp(), clock_timestamp(),
-                    'ACTIVE', 1, 2
+                    'ACTIVE', 1, 2, 7
                 )
                 """
         );
@@ -88,11 +90,11 @@ class ReferenceGraphIntegrationTest {
                     document_id, generation, generation_status,
                     generation_kind, content_fingerprint,
                     physical_id_version, cleanup_required,
-                    started_at, published_at
+                    started_at, published_at, access_level
                 ) VALUES (
                     'law-1', 1, 'PUBLISHED',
                     'INGESTION', 'fp', 2, false,
-                    clock_timestamp(), clock_timestamp()
+                    clock_timestamp(), clock_timestamp(), 7
                 )
                 """
         );
@@ -113,10 +115,24 @@ class ReferenceGraphIntegrationTest {
         List<String> resolved = references.resolveSameDocumentTargets(
                 "law-1",
                 List.of("article-30"),
+                Set.of(7L),
                 10
         );
 
         assertThat(resolved).containsExactly("article-25");
+        assertThat(references.resolveSameDocumentTargets(
+                "law-1",
+                List.of("article-30"),
+                Set.of(8L),
+                10
+        )).isEmpty();
+        assertThatThrownBy(() -> references.resolveSameDocumentTargets(
+                "law-1",
+                List.of("article-30"),
+                Set.of(),
+                10
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("accessLevels");
         assertThat(jdbc.queryForObject(
                 """
                 SELECT count(*)

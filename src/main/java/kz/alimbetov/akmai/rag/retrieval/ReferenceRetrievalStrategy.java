@@ -5,7 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
-import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import org.springframework.stereotype.Component;
@@ -13,12 +13,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class ReferenceRetrievalStrategy implements RetrievalStrategy {
 
-    private final SearchProjectionRepository projectionRepository;
+    private final PublishedSearchProjectionReader projectionRepository;
     private final ReferenceGraphRepository referenceGraphRepository;
     private final RetrievalProperties properties;
 
     public ReferenceRetrievalStrategy(
-            SearchProjectionRepository projectionRepository,
+            PublishedSearchProjectionReader projectionRepository,
             ReferenceGraphRepository referenceGraphRepository,
             RetrievalProperties properties
     ) {
@@ -37,14 +37,18 @@ public class ReferenceRetrievalStrategy implements RetrievalStrategy {
             QueryChunk queryChunk,
             RetrievalContext context
     ) {
-        Map<String, List<String>> seedIdsByDocument = new LinkedHashMap<>();
+        Map<DocumentGeneration, List<String>> seedIds = new LinkedHashMap<>();
         for (RetrievalHit hit : context.dependencyHits()) {
-            if (hit.documentId() == null || hit.documentId().isBlank()
-                    || hit.chunkId() == null || hit.chunkId().isBlank()) {
+            long generation = generation(hit);
+            if (generation <= 0
+                    || hit.documentId() == null
+                    || hit.documentId().isBlank()
+                    || hit.chunkId() == null
+                    || hit.chunkId().isBlank()) {
                 continue;
             }
-            seedIdsByDocument.computeIfAbsent(
-                    hit.documentId(),
+            seedIds.computeIfAbsent(
+                    new DocumentGeneration(hit.documentId(), generation),
                     ignored -> new ArrayList<>()
             ).add(hit.chunkId());
         }
@@ -52,21 +56,25 @@ public class ReferenceRetrievalStrategy implements RetrievalStrategy {
         List<RetrievalHit> result = new ArrayList<>();
         int remaining = properties.referenceLimit();
 
-        for (Map.Entry<String, List<String>> entry : seedIdsByDocument.entrySet()) {
+        for (Map.Entry<DocumentGeneration, List<String>> entry : seedIds.entrySet()) {
             if (remaining <= 0) {
                 break;
             }
-            String documentId = entry.getKey();
+            DocumentGeneration scope = entry.getKey();
             List<String> seeds = entry.getValue().stream().distinct().toList();
             List<String> targetIds = referenceGraphRepository.resolveSameDocumentTargets(
-                    documentId,
+                    scope.documentId(),
+                    scope.generation(),
                     seeds,
+                    context.accessLevels(),
                     remaining
             );
             List<SearchProjection> targets =
-                    projectionRepository.findByDocumentAndChunkIds(
-                            documentId,
-                            targetIds
+                    projectionRepository.findByDocumentGenerationAndChunkIds(
+                            scope.documentId(),
+                            scope.generation(),
+                            targetIds,
+                            context.accessLevels()
                     );
             for (SearchProjection target : targets) {
                 if (remaining-- <= 0) {
@@ -93,5 +101,16 @@ public class ReferenceRetrievalStrategy implements RetrievalStrategy {
             }
         }
         return List.copyOf(result);
+    }
+
+    private long generation(RetrievalHit hit) {
+        Object value = hit.metadata().get("generation");
+        return value instanceof Number number ? number.longValue() : -1L;
+    }
+
+    private record DocumentGeneration(
+            String documentId,
+            long generation
+    ) {
     }
 }

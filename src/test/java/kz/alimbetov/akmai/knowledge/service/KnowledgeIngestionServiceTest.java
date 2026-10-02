@@ -49,6 +49,7 @@ class KnowledgeIngestionServiceTest {
                 "source",
                 "RUSSIAN",
                 KnowledgeDomain.GENERAL,
+                7L,
                 Map.of()
         ));
 
@@ -56,6 +57,14 @@ class KnowledgeIngestionServiceTest {
                 ArgumentCaptor.forClass(KnowledgeDocument.class);
         verify(chunker).chunk(captor.capture());
         assertThat(captor.getValue().language()).isEqualTo("ru");
+        assertThat(captor.getValue().metadata())
+                .containsEntry("access_level", 7L);
+        verify(persistence).persist(
+                anyList(),
+                org.mockito.ArgumentMatchers.isNull(),
+                any(),
+                org.mockito.ArgumentMatchers.eq(7L)
+        );
     }
 
     @Test
@@ -77,6 +86,7 @@ class KnowledgeIngestionServiceTest {
                 "source",
                 "de",
                 KnowledgeDomain.GENERAL,
+                1L,
                 Map.of()
         )))
                 .isInstanceOf(IllegalArgumentException.class)

@@ -8,13 +8,14 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import kz.alimbetov.akmai.knowledge.identifier.DetectedIdentifier;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
 import kz.alimbetov.akmai.knowledge.identifier.IdentifierType;
 import kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchIndex;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
-import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import org.junit.jupiter.api.Test;
 
@@ -23,8 +24,8 @@ class IdentifierRetrievalStrategyTest {
     @Test
     void exactIdentifierResolvesCanonicalChunkInsteadOfIdentifierSnippet() {
         IdentifierSearchIndex index = mock(IdentifierSearchIndex.class);
-        SearchProjectionRepository projections =
-                mock(SearchProjectionRepository.class);
+        PublishedSearchProjectionReader projections =
+                mock(PublishedSearchProjectionReader.class);
         DocumentIdentifier identifier = new DocumentIdentifier(
                 "doc-1",
                 3L,
@@ -54,9 +55,12 @@ class IdentifierRetrievalStrategyTest {
         );
         when(index.search(any(kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchQuery.class)))
                 .thenReturn(List.of(identifier));
-        when(projections.findByDocumentAndChunkIds(
+        Set<Long> scope = Set.of(3L);
+        when(projections.findByDocumentGenerationAndChunkIds(
                 "doc-1",
-                List.of("chunk-1")
+                3L,
+                List.of("chunk-1"),
+                scope
         )).thenReturn(List.of(projection));
 
         IdentifierRetrievalStrategy strategy =
@@ -82,7 +86,7 @@ class IdentifierRetrievalStrategyTest {
 
         List<RetrievalHit> hits = strategy.retrieve(
                 query,
-                new RetrievalContext(List.of())
+                new RetrievalContext(List.of(), scope)
         );
 
         assertThat(hits).singleElement().satisfies(hit -> {

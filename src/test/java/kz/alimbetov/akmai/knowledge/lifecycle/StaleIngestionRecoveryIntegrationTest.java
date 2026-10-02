@@ -102,7 +102,8 @@ class StaleIngestionRecoveryIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 profile.profileId(),
-                "fp"
+                "fp",
+                1L
         );
         jdbc.update(
                 """
@@ -120,12 +121,13 @@ class StaleIngestionRecoveryIntegrationTest {
                     document_id, lifecycle_policy, lifecycle_status,
                     generation, attempt_count, row_version,
                     ingestion_started_at, created_at, updated_at,
-                    retention_status, published_generation, next_generation
+                    retention_status, published_generation, next_generation,
+                    access_level
                 ) VALUES (
                     'doc-migration', 'PERMANENT', 'READY',
                     1, 0, 0,
                     NULL, clock_timestamp(), clock_timestamp(),
-                    'ACTIVE', NULL, 2
+                    'ACTIVE', NULL, 2, 1
                 )
                 """
         );
@@ -147,11 +149,11 @@ class StaleIngestionRecoveryIntegrationTest {
                     document_id, generation, generation_status,
                     generation_kind, migration_id, embedding_profile_id,
                     content_fingerprint, physical_id_version,
-                    cleanup_required, started_at
+                    cleanup_required, started_at, access_level
                 ) VALUES (
                     'doc-migration', 1, 'STAGING',
                     'REEMBEDDING', ?, ?, 'fp', 2,
-                    false, clock_timestamp() - interval '2 hours'
+                    false, clock_timestamp() - interval '2 hours', 1
                 )
                 """,
                 migrationId,
@@ -176,14 +178,16 @@ class StaleIngestionRecoveryIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 profile.profileId(),
-                "fp-locked"
+                "fp-locked",
+                1L
         );
         long freeGeneration = generations.allocate(
                 "doc-free",
                 RetentionPolicy.PERMANENT,
                 null,
                 profile.profileId(),
-                "fp-free"
+                "fp-free",
+                1L
         );
         jdbc.update(
                 """
