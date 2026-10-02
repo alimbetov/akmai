@@ -69,18 +69,16 @@ class ApiRequestValidatorTest {
 
     @Test
     void rejectsInvalidOrMetadataDefinedAccessLevel() {
-        assertThatThrownBy(() -> validator.validateKnowledge(
-                new AddKnowledgeRequest(
-                        "doc",
-                        "title",
-                        "text",
-                        "source",
-                        "en",
-                        KnowledgeDomain.GENERAL,
-                        0L,
-                        Map.of()
-                )
-        )).isInstanceOf(ApiValidationException.class)
+        assertThatThrownBy(() -> new AddKnowledgeRequest(
+                "doc",
+                "title",
+                "text",
+                "source",
+                "en",
+                KnowledgeDomain.GENERAL,
+                0L,
+                Map.of()
+        )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("accessLevel");
 
         assertThatThrownBy(() -> validator.validateKnowledge(
