@@ -95,9 +95,14 @@ class MultilingualRetrievalQualityRegressionTest {
     void qualityGateRejectsDeliberatelyMutatedPipelineRanking() {
         try (PipelineHarness pipeline = new PipelineHarness(CASES)) {
             RetrievalBenchmarkCase testCase = CASES.getFirst();
-            List<String> healthy = pipeline.rank(testCase);
-            List<String> mutated = new ArrayList<>(healthy);
-            Collections.reverse(mutated);
+            List<String> healthy = pipeline.rankAfterFusion(
+                    testCase,
+                    false
+            );
+            List<String> mutated = pipeline.rankAfterFusion(
+                    testCase,
+                    true
+            );
 
             RetrievalBenchmarkResult healthyResult =
                     RetrievalBenchmarkEvaluator.evaluate(testCase, healthy);
@@ -193,6 +198,25 @@ class MultilingualRetrievalQualityRegressionTest {
                             fusion.fuse(execution.hits()),
                             testCase.question()
                     ).stream()
+                    .map(RetrievalHit::chunkId)
+                    .distinct()
+                    .toList();
+        }
+
+        private List<String> rankAfterFusion(
+                RetrievalBenchmarkCase testCase,
+                boolean mutateFusionOutput
+        ) {
+            List<QueryChunk> chunks = chunker.chunk(testCase.question());
+            var execution = executor.executeDetailed(planner.plan(chunks));
+            assertThat(execution.criticalFailure()).isFalse();
+
+            List<RetrievalHit> fused =
+                    new ArrayList<>(fusion.fuse(execution.hits()));
+            if (mutateFusionOutput) {
+                Collections.reverse(fused);
+            }
+            return fused.stream()
                     .map(RetrievalHit::chunkId)
                     .distinct()
                     .toList();
