@@ -17,24 +17,11 @@ public record AddKnowledgeRequest(
         Map<String, Object> metadata
 ) {
 
-    /**
-     * Compatibility constructor for internal callers created before access
-     * scoping. HTTP deserialization uses the canonical constructor, where
-     * accessLevel is mandatory.
-     */
-    @Deprecated(forRemoval = true)
-    public AddKnowledgeRequest(
-            String documentId,
-            String title,
-            String text,
-            String source,
-            String language,
-            KnowledgeDomain domain,
-            Map<String, Object> metadata
-    ) {
-        this(documentId, title, text, source, language, domain, null, metadata);
-        throw new UnsupportedOperationException(
-                "accessLevel is required"
-        );
+    public AddKnowledgeRequest {
+        if (accessLevel == null || accessLevel <= 0) {
+            throw new IllegalArgumentException(
+                    "accessLevel must be positive"
+            );
+        }
     }
 }
