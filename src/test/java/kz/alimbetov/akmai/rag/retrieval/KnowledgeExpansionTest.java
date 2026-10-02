@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -161,7 +162,7 @@ class KnowledgeExpansionTest {
     }
 
     @Test
-    void emptyAccessScopeFailsClosed() {
+    void emptyAccessScopeFailsLoudly() {
         KnowledgeExpansion expansion =
                 new KnowledgeExpansion(
                         repository,
@@ -175,7 +176,11 @@ class KnowledgeExpansionTest {
                 Map.of("generation", 1L)
         );
 
-        assertThat(expansion.expand(List.of(seed), Set.of())).isEmpty();
+        assertThatThrownBy(() -> expansion.expand(
+                List.of(seed),
+                Set.of()
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("accessLevels");
     }
 
     private SearchProjection projection(String chunkId, int index) {
