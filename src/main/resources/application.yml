@@ -100,6 +100,7 @@ akmai:
     worker-parallelism: ${AKMAI_RETENTION_WORKER_PARALLELISM:2}
     queue-capacity: ${AKMAI_RETENTION_QUEUE_CAPACITY:8}
     lease-duration: ${AKMAI_RETENTION_LEASE_DURATION:10m}
+    cleanup-transaction-timeout: ${AKMAI_RETENTION_CLEANUP_TIMEOUT:2m}
     default-policy: ${AKMAI_RETENTION_DEFAULT_POLICY:PERMANENT}
     default-ttl: ${AKMAI_RETENTION_DEFAULT_TTL:90d}
   chunking:
