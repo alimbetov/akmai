@@ -98,3 +98,18 @@ akmai:
 server:
   port: ${SERVER_PORT:8080}
   max-http-request-header-size: ${AKMAI_MAX_REQUEST_HEADER_SIZE:32KB}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState,ping
+        readiness:
+          include: readinessState,db,embeddingProfile,ollama
