@@ -41,19 +41,11 @@ public class ParallelRetrievalExecutor {
         this.properties = properties;
     }
 
-    public List<RetrievalHit> execute(RetrievalPlan plan) {
-        return execute(plan, Set.of());
-    }
-
     public List<RetrievalHit> execute(
             RetrievalPlan plan,
             Set<Long> accessLevels
     ) {
         return executeDetailed(plan, accessLevels).hits();
-    }
-
-    public RetrievalExecutionResult executeDetailed(RetrievalPlan plan) {
-        return executeDetailed(plan, Set.of());
     }
 
     public RetrievalExecutionResult executeDetailed(
@@ -369,7 +361,9 @@ public class ParallelRetrievalExecutor {
 
     private Set<Long> normalizeAccessLevels(Set<Long> accessLevels) {
         if (accessLevels == null || accessLevels.isEmpty()) {
-            return Set.of();
+            throw new IllegalArgumentException(
+                    "accessLevels must not be empty"
+            );
         }
         java.util.TreeSet<Long> normalized = new java.util.TreeSet<>();
         for (Long value : accessLevels) {
