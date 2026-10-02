@@ -29,22 +29,37 @@ public class PostgresIdentifierSearchIndex implements IdentifierSearchIndex {
     public List<DocumentIdentifier> search(String query, int limit) {
         validateLimit(limit);
         String normalized = normalizer.normalize(query);
-        return normalized.isBlank()
-                ? List.of()
-                : repository.findExact(normalized, limit);
+        return List.of();
     }
 
     @Override
     public List<DocumentIdentifier> search(IdentifierSearchQuery query) {
         validateLimit(query.limit());
         String normalized = normalizer.normalize(query.type(), query.normalizedValue());
-        if (normalized.isBlank()) {
+        if (normalized.isBlank()
+                || query.accessLevels() == null
+                || query.accessLevels().isEmpty()) {
             return List.of();
         }
         return switch (query.matchMode()) {
-            case EXACT -> repository.findExact(query.type(), normalized, query.limit());
-            case PREFIX -> repository.findPrefix(query.type(), normalized, query.limit());
-            case PARTIAL -> repository.findPartial(query.type(), normalized, query.limit());
+            case EXACT -> repository.findExact(
+                    query.type(),
+                    normalized,
+                    query.accessLevels(),
+                    query.limit()
+            );
+            case PREFIX -> repository.findPrefix(
+                    query.type(),
+                    normalized,
+                    query.accessLevels(),
+                    query.limit()
+            );
+            case PARTIAL -> repository.findPartial(
+                    query.type(),
+                    normalized,
+                    query.accessLevels(),
+                    query.limit()
+            );
         };
     }
 
