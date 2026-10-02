@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -83,6 +84,62 @@ public class DocumentIdentifierRepository {
     public List<DocumentIdentifier> findExact(String normalizedValue, int limit) {
         return queryPublished(
                 " AND i.normalized_value = ? ",
+                limit,
+                normalizedValue
+        );
+    }
+
+    public List<DocumentIdentifier> findExact(
+            IdentifierType type,
+            String normalizedValue,
+            Set<Long> accessLevels,
+            int limit
+    ) {
+        return queryPublishedScoped(
+                " AND i.identifier_type = ? AND i.normalized_value = ? ",
+                accessLevels,
+                limit,
+                type.name(),
+                normalizedValue
+        );
+    }
+
+    public List<DocumentIdentifier> findPrefix(
+            IdentifierType type,
+            String normalizedPrefix,
+            Set<Long> accessLevels,
+            int limit
+    ) {
+        return findLikeScoped(
+                type,
+                escapeLike(normalizedPrefix) + "%",
+                accessLevels,
+                limit
+        );
+    }
+
+    public List<DocumentIdentifier> findPartial(
+            IdentifierType type,
+            String normalizedPart,
+            Set<Long> accessLevels,
+            int limit
+    ) {
+        return findLikeScoped(
+                type,
+                "%" + escapeLike(normalizedPart) + "%",
+                accessLevels,
+                limit
+        );
+    }
+
+    public List<DocumentIdentifier> findExact(
+            String normalizedValue,
+            Set<Long> accessLevels,
+            int limit
+    ) {
+        return queryPublishedScoped(
+                " AND i.normalized_value = ? ",
+                accessLevels,
                 limit,
                 normalizedValue
         );
@@ -179,6 +236,89 @@ public class DocumentIdentifierRepository {
                 """,
                 this::map,
                 bound
+        );
+    }
+
+    private List<DocumentIdentifier> findLikeScoped(
+            IdentifierType type,
+            String pattern,
+            Set<Long> accessLevels,
+            int limit
+    ) {
+        if (accessLevels == null || accessLevels.isEmpty()) {
+            return List.of();
+        }
+        return jdbcTemplate.query(
+                """
+                SELECT i.document_id, i.generation, i.chunk_id, i.page_number,
+                       i.identifier_type, i.raw_value, i.normalized_value,
+                       i.context_text, i.created_at
+                FROM document_identifier i
+                JOIN knowledge_document_lifecycle l
+                  ON l.document_id = i.document_id
+                 AND l.published_generation = i.generation
+                WHERE l.retention_status = 'ACTIVE'
+                  AND l.access_level = ANY (?)
+                  AND i.identifier_type = ?
+                  AND i.normalized_value LIKE ? ESCAPE '\\'
+                ORDER BY i.created_at DESC
+                LIMIT ?
+                """,
+                ps -> {
+                    ps.setArray(
+                            1,
+                            ps.getConnection().createArrayOf(
+                                    "bigint",
+                                    accessLevels.toArray()
+                            )
+                    );
+                    ps.setString(2, type.name());
+                    ps.setString(3, pattern);
+                    ps.setInt(4, limit);
+                },
+                this::map
+        );
+    }
+
+    private List<DocumentIdentifier> queryPublishedScoped(
+            String predicate,
+            Set<Long> accessLevels,
+            int limit,
+            String... arguments
+    ) {
+        if (accessLevels == null || accessLevels.isEmpty()) {
+            return List.of();
+        }
+        return jdbcTemplate.query(
+                """
+                SELECT i.document_id, i.generation, i.chunk_id, i.page_number,
+                       i.identifier_type, i.raw_value, i.normalized_value,
+                       i.context_text, i.created_at
+                FROM document_identifier i
+                JOIN knowledge_document_lifecycle l
+                  ON l.document_id = i.document_id
+                 AND l.published_generation = i.generation
+                WHERE l.retention_status = 'ACTIVE'
+                  AND l.access_level = ANY (?)
+                """ + predicate + """
+                ORDER BY i.created_at DESC
+                LIMIT ?
+                """,
+                ps -> {
+                    int index = 1;
+                    ps.setArray(
+                            index++,
+                            ps.getConnection().createArrayOf(
+                                    "bigint",
+                                    accessLevels.toArray()
+                            )
+                    );
+                    for (String argument : arguments) {
+                        ps.setString(index++, argument);
+                    }
+                    ps.setInt(index, limit);
+                },
+                this::map
         );
     }
 
