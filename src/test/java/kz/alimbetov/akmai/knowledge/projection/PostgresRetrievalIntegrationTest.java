@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
 import kz.alimbetov.akmai.knowledge.identifier.IdentifierType;
@@ -82,7 +83,8 @@ class PostgresRetrievalIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 null,
-                "fp-1"
+                "fp-1",
+                1L
         );
         publish("doc", first);
         projections.saveAll(List.of(
@@ -94,7 +96,8 @@ class PostgresRetrievalIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 null,
-                "fp-2"
+                "fp-2",
+                1L
         );
         projections.saveAll(List.of(
                 projection("new", second, "canonical policy phrase", "en")
@@ -105,6 +108,7 @@ class PostgresRetrievalIntegrationTest {
                 "canonical policy phrase",
                 "en",
                 List.of("doc"),
+                Set.of(1L),
                 10
         ))
                 .extracting(SearchProjection::chunkId)
@@ -122,7 +126,8 @@ class PostgresRetrievalIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 null,
-                "fp-1"
+                "fp-1",
+                1L
         );
         identifiers.saveAll(List.of(identifier(first, "old")));
         publish("doc", first);
@@ -132,7 +137,8 @@ class PostgresRetrievalIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 null,
-                "fp-2"
+                "fp-2",
+                1L
         );
         identifiers.saveAll(List.of(identifier(second, "new")));
         publish("doc", second);
@@ -140,6 +146,7 @@ class PostgresRetrievalIntegrationTest {
         assertThat(identifiers.findExact(
                 IdentifierType.DOCUMENT_NUMBER,
                 "DOC-42",
+                Set.of(1L),
                 10
         ))
                 .extracting(DocumentIdentifier::chunkId)
@@ -153,7 +160,8 @@ class PostgresRetrievalIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 null,
-                "fp-fts"
+                "fp-fts",
+                1L
         );
         projections.saveAll(List.of(
                 projection(
@@ -175,6 +183,7 @@ class PostgresRetrievalIntegrationTest {
                 "расторгнуть договор",
                 "ru",
                 List.of("doc"),
+                Set.of(1L),
                 10
         )).extracting(SearchProjection::chunkId)
                 .contains("ru-law")
@@ -184,6 +193,7 @@ class PostgresRetrievalIntegrationTest {
                 "termination agreement",
                 "en",
                 List.of("doc"),
+                Set.of(1L),
                 10
         )).extracting(SearchProjection::chunkId)
                 .contains("en-law")
@@ -199,14 +209,16 @@ class PostgresRetrievalIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 null,
-                "fp-owner-a"
+                "fp-owner-a",
+                1L
         );
         long second = generations.allocate(
                 "doc-owner-b",
                 RetentionPolicy.PERMANENT,
                 null,
                 null,
-                "fp-owner-b"
+                "fp-owner-b",
+                1L
         );
 
         projections.saveAll(List.of(
@@ -252,7 +264,8 @@ class PostgresRetrievalIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 null,
-                "fp-explain"
+                "fp-explain",
+                1L
         );
         projections.saveAll(List.of(
                 projection(
@@ -292,7 +305,8 @@ class PostgresRetrievalIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 null,
-                "fp-like"
+                "fp-like",
+                1L
         );
         projections.saveAll(List.of(
                 projection(
@@ -326,6 +340,7 @@ class PostgresRetrievalIntegrationTest {
                 "%",
                 "kk",
                 List.of("doc"),
+                Set.of(1L),
                 10
         )).extracting(SearchProjection::chunkId)
                 .containsExactly("kk-percent");
@@ -334,6 +349,7 @@ class PostgresRetrievalIntegrationTest {
                 "_",
                 "zh",
                 List.of("doc"),
+                Set.of(1L),
                 10
         )).extracting(SearchProjection::chunkId)
                 .containsExactly("zh-underscore");
@@ -342,6 +358,7 @@ class PostgresRetrievalIntegrationTest {
                 "5%",
                 "kk",
                 List.of("doc"),
+                Set.of(1L),
                 10
         )).extracting(SearchProjection::chunkId)
                 .contains("kk-percent")
@@ -355,7 +372,8 @@ class PostgresRetrievalIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 null,
-                "fp-trgm-explain"
+                "fp-trgm-explain",
+                1L
         );
         java.util.ArrayList<SearchProjection> corpus =
                 new java.util.ArrayList<>();
@@ -411,6 +429,107 @@ class PostgresRetrievalIntegrationTest {
         );
 
         assertThat(plan).contains("idx_knowledge_search_text_trgm");
+    }
+
+
+    @Test
+    void lexicalAndIdentifierReadsRespectAccessScope() {
+        long levelOne = generations.allocate(
+                "access-doc-1",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-access-1",
+                1L
+        );
+        long levelTwo = generations.allocate(
+                "access-doc-2",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-access-2",
+                2L
+        );
+
+        projections.saveAll(List.of(
+                projectionForDocument(
+                        "access-doc-1",
+                        "level-1-chunk",
+                        levelOne,
+                        "shared access policy text"
+                ),
+                projectionForDocument(
+                        "access-doc-2",
+                        "level-2-chunk",
+                        levelTwo,
+                        "shared access policy text"
+                )
+        ));
+        identifiers.saveAll(List.of(
+                identifierForDocument(
+                        "access-doc-1",
+                        levelOne,
+                        "level-1-chunk",
+                        "ACCESS-42"
+                ),
+                identifierForDocument(
+                        "access-doc-2",
+                        levelTwo,
+                        "level-2-chunk",
+                        "ACCESS-42"
+                )
+        ));
+        publish("access-doc-1", levelOne);
+        publish("access-doc-2", levelTwo);
+
+        assertThat(projections.searchLexical(
+                "shared access policy",
+                "en",
+                List.of("access-doc-1", "access-doc-2"),
+                Set.of(1L),
+                10
+        )).extracting(SearchProjection::documentId)
+                .containsExactly("access-doc-1");
+
+        assertThat(projections.searchLexical(
+                "shared access policy",
+                "en",
+                List.of("access-doc-1", "access-doc-2"),
+                Set.of(2L),
+                10
+        )).extracting(SearchProjection::documentId)
+                .containsExactly("access-doc-2");
+
+        assertThat(projections.searchLexical(
+                "shared access policy",
+                "en",
+                List.of("access-doc-1", "access-doc-2"),
+                Set.of(),
+                10
+        )).isEmpty();
+
+        assertThat(identifiers.findExact(
+                IdentifierType.DOCUMENT_NUMBER,
+                "ACCESS-42",
+                Set.of(1L),
+                10
+        )).extracting(DocumentIdentifier::documentId)
+                .containsExactly("access-doc-1");
+
+        assertThat(identifiers.findExact(
+                IdentifierType.DOCUMENT_NUMBER,
+                "ACCESS-42",
+                Set.of(2L),
+                10
+        )).extracting(DocumentIdentifier::documentId)
+                .containsExactly("access-doc-2");
+
+        assertThat(identifiers.findExact(
+                IdentifierType.DOCUMENT_NUMBER,
+                "ACCESS-42",
+                Set.of(),
+                10
+        )).isEmpty();
     }
 
 
@@ -540,6 +659,25 @@ class PostgresRetrievalIntegrationTest {
                 List.of(),
                 Map.of("source", "integration"),
                 2
+        );
+    }
+
+    private DocumentIdentifier identifierForDocument(
+            String documentId,
+            long generation,
+            String chunkId,
+            String normalizedValue
+    ) {
+        return new DocumentIdentifier(
+                documentId,
+                generation,
+                chunkId,
+                1,
+                IdentifierType.DOCUMENT_NUMBER,
+                normalizedValue,
+                normalizedValue,
+                "context",
+                Instant.parse("2026-10-02T00:00:00Z")
         );
     }
 
