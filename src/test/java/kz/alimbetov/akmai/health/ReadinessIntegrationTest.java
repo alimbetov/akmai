@@ -53,4 +53,14 @@ class ReadinessIntegrationTest {
                 .containsEntry("reason", "vector storage dimension mismatch")
                 .containsEntry("actualType", "missing");
     }
+    @Test
+    void ollamaHealthIsDownWhenEndpointIsUnavailable() {
+        var health = new OllamaHealthIndicator(
+                "http://127.0.0.1:1"
+        ).health();
+
+        assertThat(health.getStatus()).isEqualTo(Status.DOWN);
+        assertThat(health.getDetails()).containsKey("reason");
+    }
+
 }
