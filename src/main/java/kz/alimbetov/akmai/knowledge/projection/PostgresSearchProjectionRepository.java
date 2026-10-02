@@ -76,24 +76,6 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
     }
 
     @Override
-    public List<String> findChunkIdsByDocumentId(String documentId) {
-        return jdbcTemplate.queryForList(
-                """
-                SELECT p.chunk_id
-                FROM knowledge_search_projection p
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = p.document_id
-                 AND l.published_generation = p.generation
-                WHERE p.document_id = ?
-                  AND l.retention_status = 'ACTIVE'
-                ORDER BY p.chunk_index
-                """,
-                String.class,
-                documentId
-        );
-    }
-
-    @Override
     public List<String> findChunkIds(String documentId, long generation) {
         return jdbcTemplate.queryForList(
                 """
@@ -146,55 +128,6 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
                 """,
                 documentId,
                 generation
-        );
-    }
-
-    @Override
-    public List<SearchProjection> findByChunkIds(List<String> chunkIds) {
-        if (chunkIds == null || chunkIds.isEmpty()) {
-            return List.of();
-        }
-        return jdbcTemplate.query(
-                """
-                SELECT p.*
-                FROM knowledge_search_projection p
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = p.document_id
-                 AND l.published_generation = p.generation
-                WHERE p.chunk_id = ANY (?)
-                  AND l.retention_status = 'ACTIVE'
-                ORDER BY p.document_id, p.chunk_index
-                """,
-                ps -> bindArray(ps, 1, chunkIds),
-                this::map
-        );
-    }
-
-    @Override
-    public List<SearchProjection> findByDocumentAndChunkIds(
-            String documentId,
-            List<String> chunkIds
-    ) {
-        if (chunkIds == null || chunkIds.isEmpty()) {
-            return List.of();
-        }
-        return jdbcTemplate.query(
-                """
-                SELECT p.*
-                FROM knowledge_search_projection p
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = p.document_id
-                 AND l.published_generation = p.generation
-                WHERE p.document_id = ?
-                  AND p.chunk_id = ANY (?)
-                  AND l.retention_status = 'ACTIVE'
-                ORDER BY p.chunk_index
-                """,
-                ps -> {
-                    ps.setString(1, documentId);
-                    bindArray(ps, 2, chunkIds);
-                },
-                this::map
         );
     }
 
@@ -273,31 +206,6 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
     @Override
     public List<SearchProjection> findAdjacent(
             String documentId,
-            int chunkIndex,
-            int radius
-    ) {
-        return jdbcTemplate.query(
-                """
-                SELECT p.*
-                FROM knowledge_search_projection p
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = p.document_id
-                 AND l.published_generation = p.generation
-                WHERE p.document_id = ?
-                  AND l.retention_status = 'ACTIVE'
-                  AND p.chunk_index BETWEEN ? AND ?
-                ORDER BY p.chunk_index
-                """,
-                this::map,
-                documentId,
-                Math.max(0, chunkIndex - radius),
-                chunkIndex + radius
-        );
-    }
-
-    @Override
-    public List<SearchProjection> findAdjacent(
-            String documentId,
             long generation,
             int chunkIndex,
             int radius,
@@ -330,22 +238,6 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
                     ps.setInt(5, chunkIndex + radius);
                 },
                 this::map
-        );
-    }
-
-    @Override
-    public List<SearchProjection> searchLexical(
-            String query,
-            String language,
-            List<String> documentIds,
-            int limit
-    ) {
-        return searchLexical(
-                query,
-                language,
-                documentIds,
-                Set.of(),
-                limit
         );
     }
 
