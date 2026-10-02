@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 public class CrossReferenceExtractor {
 
     private static final Pattern WORD_BEFORE_NUMBER = Pattern.compile(
-            "(?iu)\\b(стать(?:я|и|е|ю|ёй|ей)|ст\\.|пункт(?:а|е|у)?|п\\.|article|art\\.|section|clause|бап|тармақ|тармақша)\\s*([0-9]+(?:\\.[0-9]+)*)"
+            "(?iu)\\b(стат(?:ья|ьи|ье|ью|ьёй|ьей)|ст\\.|пункт(?:а|е|у)?|п\\.|article|art\\.|section|clause|бап|тармақ|тармақша)\\s*([0-9]+(?:\\.[0-9]+)*)"
     );
     private static final Pattern KAZAKH_NUMBER_BEFORE = Pattern.compile(
             "(?iu)\\b([0-9]+(?:\\.[0-9]+)*)[-‑–—]?(бап|тармақ|тармақша)\\b"
