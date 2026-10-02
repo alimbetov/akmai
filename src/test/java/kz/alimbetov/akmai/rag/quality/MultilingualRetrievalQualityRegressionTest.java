@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
@@ -173,12 +174,13 @@ class MultilingualRetrievalQualityRegressionTest {
             ReferenceGraphRepository referenceRepository =
                     mock(ReferenceGraphRepository.class);
 
-            when(projectionRepository.findByDocumentAndChunkIds(
+            when(projectionRepository.findByDocumentGenerationAndChunkIds(
                     anyString(),
+                    anyLong(),
                     anyList(),
                     anySet()
             )).thenAnswer(invocation -> {
-                List<String> ids = invocation.getArgument(1);
+                List<String> ids = invocation.getArgument(2);
                 return ids.stream()
                         .map(projectionsByChunk::get)
                         .filter(java.util.Objects::nonNull)
@@ -220,6 +222,7 @@ class MultilingualRetrievalQualityRegressionTest {
 
             when(referenceRepository.resolveSameDocumentTargets(
                     anyString(),
+                    anyLong(),
                     anyList(),
                     anySet(),
                     anyInt()
@@ -288,7 +291,7 @@ class MultilingualRetrievalQualityRegressionTest {
 
             Reranker ranking = mutateReranker ? mutantReranker : reranker;
             return ranking.rerank(
-                            fusion.fuse(execution.hits()),
+                            fusion.fuse(execution.hits(), Set.of(1L)),
                             testCase.question()
                     ).stream()
                     .map(RetrievalHit::chunkId)
