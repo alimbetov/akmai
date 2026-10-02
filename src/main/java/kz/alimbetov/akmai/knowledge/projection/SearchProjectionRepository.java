@@ -30,7 +30,22 @@ public interface SearchProjectionRepository {
             Set<Long> accessLevels
     );
 
+    List<SearchProjection> findByDocumentGenerationAndChunkIds(
+            String documentId,
+            long generation,
+            List<String> chunkIds,
+            Set<Long> accessLevels
+    );
+
     List<SearchProjection> findAdjacent(String documentId, int chunkIndex, int radius);
+
+    List<SearchProjection> findAdjacent(
+            String documentId,
+            long generation,
+            int chunkIndex,
+            int radius,
+            Set<Long> accessLevels
+    );
 
     List<SearchProjection> searchLexical(
             String query,
