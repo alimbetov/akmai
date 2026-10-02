@@ -21,6 +21,7 @@ import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import kz.alimbetov.akmai.knowledge.embedding.GenerationEmbeddingService;
 import kz.alimbetov.akmai.knowledge.identifier.DetectedIdentifier;
 import kz.alimbetov.akmai.knowledge.identifier.IdentifierType;
+import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.DocumentGenerationRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionProperties;
@@ -155,6 +156,8 @@ class PersistenceCoordinatorTest {
                 mock(GenerationEmbeddingService.class);
         GenerationPublicationService publication =
                 mock(GenerationPublicationService.class);
+        IngestionIdempotencyRepository idempotency =
+                mock(IngestionIdempotencyRepository.class);
 
         EmbeddingProfile profile = new EmbeddingProfile(
                 "ep-test",
@@ -192,6 +195,7 @@ class PersistenceCoordinatorTest {
                 profiles,
                 embeddings,
                 publication,
+                idempotency,
                 properties
         );
         return new Fixture(
