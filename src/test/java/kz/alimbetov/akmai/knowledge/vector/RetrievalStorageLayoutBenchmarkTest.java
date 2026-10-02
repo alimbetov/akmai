@@ -23,12 +23,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
-import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -56,17 +56,19 @@ class RetrievalStorageLayoutBenchmarkTest {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private static JdbcTemplate jdbc;
+    private static Connection benchmarkConnection;
     private static BenchmarkConfig config;
     private static float[] queryVector;
 
     @BeforeAll
-    static void setup() {
+    static void setup() throws Exception {
         PGSimpleDataSource dataSource = new PGSimpleDataSource();
         dataSource.setURL(POSTGRES.getJdbcUrl());
         dataSource.setUser(POSTGRES.getUsername());
         dataSource.setPassword(POSTGRES.getPassword());
 
         jdbc = new JdbcTemplate(dataSource);
+        benchmarkConnection = dataSource.getConnection();
         config = BenchmarkConfig.fromEnvironment();
         queryVector = embedding(1L, config.dimensions());
 
@@ -74,6 +76,13 @@ class RetrievalStorageLayoutBenchmarkTest {
         seedCorpus();
         createIndexes();
         analyze();
+    }
+
+    @AfterAll
+    static void closeBenchmarkConnection() throws Exception {
+        if (benchmarkConnection != null) {
+            benchmarkConnection.close();
+        }
     }
 
     @Test
@@ -201,13 +210,20 @@ class RetrievalStorageLayoutBenchmarkTest {
                     plan.sharedHitBlocks(),
                     plan.sharedReadBlocks(),
                     plan.totalRowsVisited(),
+                    plan.executedRelationRows(),
                     plan.executedRelations(),
                     plan.indexNames(),
                     planJson
             ));
         }
 
-        results.add(documentExactResult(exact));
+        List<Long> documentExact = documentExactGroundTruth(
+                1L,
+                documentId(0),
+                queryVector,
+                TOP_K
+        );
+        results.add(documentExactResult(documentExact));
 
         Path output = Path.of(
                 "target",
@@ -295,6 +311,7 @@ class RetrievalStorageLayoutBenchmarkTest {
                 plan.sharedHitBlocks(),
                 plan.sharedReadBlocks(),
                 plan.totalRowsVisited(),
+                plan.executedRelationRows(),
                 plan.executedRelations(),
                 plan.indexNames(),
                 planJson
@@ -609,38 +626,67 @@ class RetrievalStorageLayoutBenchmarkTest {
         );
     }
 
+    private static List<Long> documentExactGroundTruth(
+            long accessLevel,
+            String documentId,
+            float[] vector,
+            int limit
+    ) {
+        return queryIds(
+                """
+                WITH candidates AS MATERIALIZED (
+                    SELECT id, embedding
+                    FROM bench_list
+                    WHERE access_level = ?
+                      AND document_id = ?
+                      AND generation = 1
+                )
+                SELECT id
+                FROM candidates
+                ORDER BY embedding <=> ?
+                LIMIT ?
+                """,
+                accessLevel,
+                documentId,
+                new PGvector(vector),
+                limit
+        );
+    }
+
     private static List<Long> queryIds(
             String sql,
             Object... parameters
     ) {
-        List<Long> result = jdbc.execute(
-                (ConnectionCallback<List<Long>>) connection -> {
-                    setRetrievalSession(connection);
-                    try (PreparedStatement ps =
-                            connection.prepareStatement(sql)) {
-                        bind(ps, parameters);
-                        try (ResultSet rs = ps.executeQuery()) {
-                            List<Long> ids = new ArrayList<>();
-                            while (rs.next()) {
-                                ids.add(rs.getLong(1));
-                            }
-                            return List.copyOf(ids);
-                        }
-                    } finally {
-                        resetRetrievalSession(connection);
+        try {
+            setRetrievalSession(benchmarkConnection);
+            try (PreparedStatement ps =
+                    benchmarkConnection.prepareStatement(sql)) {
+                bind(ps, parameters);
+                try (ResultSet rs = ps.executeQuery()) {
+                    List<Long> ids = new ArrayList<>();
+                    while (rs.next()) {
+                        ids.add(rs.getLong(1));
                     }
+                    return List.copyOf(ids);
                 }
-        );
-        return result == null ? List.of() : result;
+            } finally {
+                resetRetrievalSession(benchmarkConnection);
+            }
+        } catch (java.sql.SQLException exception) {
+            throw new IllegalStateException(
+                    "Benchmark query failed",
+                    exception
+            );
+        }
     }
 
     private static String explain(
             String sql,
             Object... parameters
     ) {
-        return jdbc.execute((ConnectionCallback<String>) connection -> {
-            setRetrievalSession(connection);
-            try (PreparedStatement ps = connection.prepareStatement(
+        try {
+            setRetrievalSession(benchmarkConnection);
+            try (PreparedStatement ps = benchmarkConnection.prepareStatement(
                     """
                     EXPLAIN (
                         ANALYZE,
@@ -657,9 +703,14 @@ class RetrievalStorageLayoutBenchmarkTest {
                     return rs.getString(1);
                 }
             } finally {
-                resetRetrievalSession(connection);
+                resetRetrievalSession(benchmarkConnection);
             }
-        });
+        } catch (java.sql.SQLException exception) {
+            throw new IllegalStateException(
+                    "Benchmark EXPLAIN failed",
+                    exception
+            );
+        }
     }
 
     private static void bind(
@@ -692,7 +743,8 @@ class RetrievalStorageLayoutBenchmarkTest {
             float[] vector,
             int limit
     ) {
-        return jdbc.execute((ConnectionCallback<String>) connection -> {
+        try {
+            Connection connection = benchmarkConnection;
             try (Statement statement = connection.createStatement()) {
                 statement.execute("SET hnsw.iterative_scan = strict_order");
                 statement.execute("SET plan_cache_mode = force_generic_plan");
@@ -741,7 +793,12 @@ class RetrievalStorageLayoutBenchmarkTest {
                     statement.execute("RESET hnsw.iterative_scan");
                 }
             }
-        });
+        } catch (java.sql.SQLException exception) {
+            throw new IllegalStateException(
+                    "Generic LIST plan failed",
+                    exception
+            );
+        }
     }
 
     private static PlanSummary summarizePlan(String json) {
@@ -754,8 +811,6 @@ class RetrievalStorageLayoutBenchmarkTest {
             LinkedHashSet<String> indexNames = new LinkedHashSet<>();
             Map<String, Long> executedRelationRows = new LinkedHashMap<>();
             long[] rows = new long[1];
-            long[] hits = new long[1];
-            long[] reads = new long[1];
 
             walkPlan(
                     top.path("Plan"),
@@ -763,16 +818,15 @@ class RetrievalStorageLayoutBenchmarkTest {
                     executedIndexRelations,
                     indexNames,
                     executedRelationRows,
-                    rows,
-                    hits,
-                    reads
+                    rows
             );
 
+            JsonNode rootPlan = top.path("Plan");
             return new PlanSummary(
                     top.path("Planning Time").asDouble(),
                     top.path("Execution Time").asDouble(),
-                    hits[0],
-                    reads[0],
+                    rootPlan.path("Shared Hit Blocks").asLong(),
+                    rootPlan.path("Shared Read Blocks").asLong(),
                     rows[0],
                     Set.copyOf(executedRelations),
                     Set.copyOf(executedIndexRelations),
@@ -793,9 +847,7 @@ class RetrievalStorageLayoutBenchmarkTest {
             Set<String> executedIndexRelations,
             Set<String> indexNames,
             Map<String, Long> executedRelationRows,
-            long[] rows,
-            long[] hits,
-            long[] reads
+            long[] rows
     ) {
         if (node == null || node.isMissingNode()) {
             return;
@@ -829,8 +881,6 @@ class RetrievalStorageLayoutBenchmarkTest {
             }
 
             rows[0] += node.path("Actual Rows").asLong() * loops;
-            hits[0] += node.path("Shared Hit Blocks").asLong();
-            reads[0] += node.path("Shared Read Blocks").asLong();
         }
 
         JsonNode plans = node.path("Plans");
@@ -842,9 +892,7 @@ class RetrievalStorageLayoutBenchmarkTest {
                         executedIndexRelations,
                         indexNames,
                         executedRelationRows,
-                        rows,
-                        hits,
-                        reads
+                        rows
                 );
             }
         }
@@ -972,6 +1020,7 @@ class RetrievalStorageLayoutBenchmarkTest {
             long sharedHitBlocks,
             long sharedReadBlocks,
             long totalRowsVisited,
+            Map<String, Long> executedRelationRows,
             Set<String> executedRelations,
             Set<String> indexNames,
             String explainJson
