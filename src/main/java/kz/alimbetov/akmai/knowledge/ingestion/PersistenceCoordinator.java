@@ -67,7 +67,7 @@ public class PersistenceCoordinator {
     }
 
     public void persist(List<EnrichedKnowledgeChunk> chunks) {
-        persist(chunks, null, null);
+        persist(chunks, null, null, 1L);
     }
 
     public void persist(
@@ -75,8 +75,20 @@ public class PersistenceCoordinator {
             IngestionIdempotencyContext idempotency,
             KnowledgeIngestionResponse response
     ) {
+        persist(chunks, idempotency, response, 1L);
+    }
+
+    public void persist(
+            List<EnrichedKnowledgeChunk> chunks,
+            IngestionIdempotencyContext idempotency,
+            KnowledgeIngestionResponse response,
+            long accessLevel
+    ) {
         if (chunks == null || chunks.isEmpty()) {
             return;
+        }
+        if (accessLevel <= 0) {
+            throw new IllegalArgumentException("accessLevel must be positive");
         }
 
         List<SearchProjection> baseProjections = chunks.stream()
@@ -93,7 +105,8 @@ public class PersistenceCoordinator {
                 retentionProperties.defaultPolicy(),
                 expiration(),
                 profile.profileId(),
-                contentFingerprint
+                contentFingerprint,
+                accessLevel
         );
         idempotencyRepository.attachGeneration(idempotency, generation);
 
