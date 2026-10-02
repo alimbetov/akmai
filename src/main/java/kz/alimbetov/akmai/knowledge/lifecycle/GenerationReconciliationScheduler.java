@@ -25,8 +25,13 @@ public class GenerationReconciliationScheduler {
         if (!properties.enabled()) {
             return;
         }
-        while (service.reconcileBatch() == properties.batchSize()) {
-            // Continue bounded batches until the current backlog is drained.
+        for (int batch = 0;
+                batch < properties.maxBatchesPerRun();
+                batch++) {
+            int cleaned = service.reconcileBatch();
+            if (cleaned < properties.batchSize()) {
+                return;
+            }
         }
     }
 }
