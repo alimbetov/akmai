@@ -266,6 +266,96 @@ class PostgresVectorReconciliationIntegrationTest {
         )).isEqualTo(2L);
     }
 
+    @Test
+    void missingManifestUsesVerifiedGenerationMetadataBeforeMarkingCleaned() {
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_lifecycle (
+                    document_id, lifecycle_policy, lifecycle_status,
+                    generation, attempt_count, row_version,
+                    created_at, updated_at, retention_status,
+                    published_generation, next_generation
+                ) VALUES (
+                    'doc-missing', 'PERMANENT', 'READY',
+                    2, 0, 0,
+                    clock_timestamp(), clock_timestamp(), 'ACTIVE',
+                    2, 3
+                )
+                """
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_generation (
+                    document_id, generation, generation_status,
+                    generation_kind, embedding_profile_id,
+                    content_fingerprint, physical_id_version,
+                    cleanup_required, started_at, retired_at
+                ) VALUES (
+                    'doc-missing', 1, 'RETIRED',
+                    'INGESTION', ?, 'fp-old', 2,
+                    true, clock_timestamp() - interval '1 hour',
+                    clock_timestamp() - interval '30 minutes'
+                )
+                """,
+                profile.profileId()
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_generation (
+                    document_id, generation, generation_status,
+                    generation_kind, embedding_profile_id,
+                    content_fingerprint, physical_id_version,
+                    cleanup_required, started_at, published_at
+                ) VALUES (
+                    'doc-missing', 2, 'PUBLISHED',
+                    'INGESTION', ?, 'fp-new', 2,
+                    false, clock_timestamp() - interval '20 minutes',
+                    clock_timestamp() - interval '10 minutes'
+                )
+                """,
+                profile.profileId()
+        );
+
+        String oldVectorId = VectorIdentity.physicalId(
+                "doc-missing", 1L, "old-missing"
+        );
+        vectors.insertAll(
+                profile,
+                List.of(new PostgresGenerationVectorRepository.VectorRow(
+                        oldVectorId,
+                        "embedding",
+                        Map.of(
+                                "akmaiMetadataVersion", 2,
+                                "akmaiDocumentId", "doc-missing",
+                                "akmaiGeneration", 1L,
+                                "akmaiEmbeddingProfileId", profile.profileId(),
+                                "akmaiChunkId", "old-missing"
+                        ),
+                        new float[] {1f, 0f, 0f}
+                ))
+        );
+
+        assertThat(manifests.findVectorIds("doc-missing", 1L)).isEmpty();
+        assertThat(reconciliation.reconcileBatch()).isEqualTo(1);
+        assertThat(vectors.countExisting(profile, List.of(oldVectorId))).isZero();
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT generation_status
+                FROM knowledge_document_generation
+                WHERE document_id = 'doc-missing' AND generation = 1
+                """,
+                String.class
+        )).isEqualTo("CLEANED");
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT published_generation
+                FROM knowledge_document_lifecycle
+                WHERE document_id = 'doc-missing'
+                """,
+                Long.class
+        )).isEqualTo(2L);
+    }
+
     private SearchProjection projection(
             long generation,
             String chunkId,
