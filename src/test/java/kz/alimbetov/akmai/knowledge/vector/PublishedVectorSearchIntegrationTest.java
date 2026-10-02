@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.knowledge.vector;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -158,13 +159,14 @@ class PublishedVectorSearchIntegrationTest {
         )).extracting(VectorSearchMatch::documentId)
                 .containsExactly("access-3");
 
-        assertThat(search.search(
+        assertThatThrownBy(() -> search.search(
                 "query",
                 List.of(),
                 Set.of(),
                 10,
                 0.8
-        )).isEmpty();
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("accessLevels");
 
         assertThat(search.search(
                 "query",
