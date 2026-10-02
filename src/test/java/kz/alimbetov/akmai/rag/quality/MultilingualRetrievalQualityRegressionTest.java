@@ -23,7 +23,7 @@ import kz.alimbetov.akmai.knowledge.chunking.TextNormalizer;
 import kz.alimbetov.akmai.knowledge.identifier.IdentifierExtractor;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
-import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.knowledge.vector.PublishedVectorSearchRepository;
 import kz.alimbetov.akmai.knowledge.vector.VectorSearchMatch;
@@ -167,8 +167,8 @@ class MultilingualRetrievalQualityRegressionTest {
                     new QueryLanguageDetector()
             );
 
-            SearchProjectionRepository projectionRepository =
-                    mock(SearchProjectionRepository.class);
+            PublishedSearchProjectionReader projectionRepository =
+                    mock(PublishedSearchProjectionReader.class);
             PublishedVectorSearchRepository vectorRepository =
                     mock(PublishedVectorSearchRepository.class);
             ReferenceGraphRepository referenceRepository =
