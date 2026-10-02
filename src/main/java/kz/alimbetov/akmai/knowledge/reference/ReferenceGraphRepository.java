@@ -135,6 +135,49 @@ public class ReferenceGraphRepository {
         );
     }
 
+    public void cloneGeneration(
+            String documentId,
+            long sourceGeneration,
+            long targetGeneration
+    ) {
+        jdbcTemplate.update(
+                """
+                INSERT INTO knowledge_reference_target (
+                    document_id, generation, chunk_id, reference_type,
+                    canonical_value, raw_value, language
+                )
+                SELECT document_id, ?, chunk_id, reference_type,
+                       canonical_value, raw_value, language
+                FROM knowledge_reference_target
+                WHERE document_id = ?
+                  AND generation = ?
+                ON CONFLICT DO NOTHING
+                """,
+                targetGeneration,
+                documentId,
+                sourceGeneration
+        );
+        jdbcTemplate.update(
+                """
+                INSERT INTO knowledge_reference_edge (
+                    document_id, generation, source_chunk_id,
+                    reference_type, canonical_value, raw_value, language,
+                    target_scope, target_document_id
+                )
+                SELECT document_id, ?, source_chunk_id,
+                       reference_type, canonical_value, raw_value, language,
+                       target_scope, target_document_id
+                FROM knowledge_reference_edge
+                WHERE document_id = ?
+                  AND generation = ?
+                ON CONFLICT DO NOTHING
+                """,
+                targetGeneration,
+                documentId,
+                sourceGeneration
+        );
+    }
+
     public void deleteGeneration(String documentId, long generation) {
         jdbcTemplate.update(
                 """
