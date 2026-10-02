@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -11,7 +12,10 @@ public class GenerationEmbeddingService {
 
     private final EmbeddingModel embeddingModel;
 
-    public GenerationEmbeddingService(EmbeddingModel embeddingModel) {
+    public GenerationEmbeddingService(
+            @Qualifier("vectorWriteEmbeddingModel")
+            EmbeddingModel embeddingModel
+    ) {
         this.embeddingModel = embeddingModel;
     }
 
