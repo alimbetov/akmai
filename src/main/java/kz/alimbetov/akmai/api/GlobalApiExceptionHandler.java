@@ -40,13 +40,22 @@ public class GlobalApiExceptionHandler {
             IdempotencyConflictException exception,
             HttpServletRequest request
     ) {
-        return response(
+        ResponseEntity<ApiErrorResponse> result = response(
                 HttpStatus.CONFLICT,
                 exception.code(),
                 exception.getMessage(),
                 request,
                 Map.of()
         );
+        if (exception.retryAfterSeconds() == null) {
+            return result;
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .header(
+                        "Retry-After",
+                        Long.toString(exception.retryAfterSeconds())
+                )
+                .body(result.getBody());
     }
 
     @ExceptionHandler({
