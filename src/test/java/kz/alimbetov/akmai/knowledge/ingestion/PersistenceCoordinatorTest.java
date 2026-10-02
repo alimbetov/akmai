@@ -44,7 +44,8 @@ class PersistenceCoordinatorTest {
                 eq(RetentionPolicy.PERMANENT),
                 isNull(),
                 eq(fixture.profile.profileId()),
-                anyString()
+                anyString(),
+                eq(1L)
         )).thenReturn(7L);
         when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
                 .thenReturn(List.of(
@@ -126,7 +127,8 @@ class PersistenceCoordinatorTest {
                 eq(RetentionPolicy.PERMANENT),
                 isNull(),
                 eq(fixture.profile.profileId()),
-                anyString()
+                anyString(),
+                eq(1L)
         )).thenReturn(8L);
         when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
                 .thenThrow(new IllegalStateException("embedding unavailable"));
@@ -167,7 +169,8 @@ class PersistenceCoordinatorTest {
                 eq(RetentionPolicy.PERMANENT),
                 isNull(),
                 eq(fixture.profile.profileId()),
-                anyString()
+                anyString(),
+                eq(1L)
         )).thenReturn(9L);
         when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
                 .thenReturn(List.of(new float[] {1f, 0f, 0f}));
@@ -207,7 +210,8 @@ class PersistenceCoordinatorTest {
                 eq(RetentionPolicy.PERMANENT),
                 isNull(),
                 eq(fixture.profile.profileId()),
-                anyString()
+                anyString(),
+                eq(1L)
         )).thenReturn(10L);
         when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
                 .thenReturn(List.of(new float[] {1f, 0f, 0f}));
