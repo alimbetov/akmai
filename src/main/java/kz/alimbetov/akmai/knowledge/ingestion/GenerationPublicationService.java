@@ -2,11 +2,11 @@ package kz.alimbetov.akmai.knowledge.ingestion;
 
 import java.time.Instant;
 import java.util.List;
-import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResponse;
-import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
+import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyContext;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyRepository;
+import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
 import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository;
@@ -64,9 +64,7 @@ public class GenerationPublicationService {
             List<SearchProjection> projections,
             List<DocumentIdentifier> identifiers,
             List<VectorGenerationEntry> manifest,
-            List<VectorRow> vectors,
-            IngestionIdempotencyContext idempotency,
-            KnowledgeIngestionResponse response
+            List<VectorRow> vectors
     ) {
         return publish(
                 documentId,
@@ -144,7 +142,9 @@ public class GenerationPublicationService {
             List<SearchProjection> projections,
             List<DocumentIdentifier> identifiers,
             List<VectorGenerationEntry> manifest,
-            List<VectorRow> vectors
+            List<VectorRow> vectors,
+            IngestionIdempotencyContext idempotency,
+            KnowledgeIngestionResponse response
     ) {
         GenerationLock generationState = jdbcTemplate.query(
                 """
@@ -172,7 +172,9 @@ public class GenerationPublicationService {
             );
         }
         if (!profile.profileId().equals(generationState.embeddingProfileId())) {
-            throw new IllegalStateException("Embedding profile changed for generation");
+            throw new IllegalStateException(
+                    "Embedding profile changed for generation"
+            );
         }
 
         String activeProfile = jdbcTemplate.queryForObject(
@@ -261,7 +263,9 @@ public class GenerationPublicationService {
                 generation
         );
         if (published != 1) {
-            throw new IllegalStateException("Generation publication fence failed");
+            throw new IllegalStateException(
+                    "Generation publication fence failed"
+            );
         }
 
         int lifecycle = jdbcTemplate.update(
@@ -292,10 +296,17 @@ public class GenerationPublicationService {
                 documentId
         );
         if (lifecycle != 1) {
-            throw new IllegalStateException("Lifecycle publication fence failed");
+            throw new IllegalStateException(
+                    "Lifecycle publication fence failed"
+            );
         }
 
         if (idempotency != null) {
+            if (response == null) {
+                throw new IllegalArgumentException(
+                        "Idempotent publication requires a response"
+                );
+            }
             idempotencyRepository.completeInCurrentTransaction(
                     idempotency,
                     response
@@ -309,7 +320,10 @@ public class GenerationPublicationService {
         return value == null ? null : java.sql.Timestamp.from(value);
     }
 
-    private record GenerationLock(String status, String embeddingProfileId) {
+    private record GenerationLock(
+            String status,
+            String embeddingProfileId
+    ) {
     }
 
     public enum PublicationResult {
