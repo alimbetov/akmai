@@ -90,11 +90,11 @@ public class PersistenceCoordinator {
             KnowledgeIngestionResponse response,
             long accessLevel
     ) {
-        if (chunks == null || chunks.isEmpty()) {
-            return;
-        }
         if (accessLevel <= 0) {
             throw new IllegalArgumentException("accessLevel must be positive");
+        }
+        if (chunks == null || chunks.isEmpty()) {
+            return;
         }
 
         List<SearchProjection> baseProjections = chunks.stream()
