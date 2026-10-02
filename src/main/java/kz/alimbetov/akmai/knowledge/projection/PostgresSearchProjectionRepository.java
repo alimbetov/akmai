@@ -109,6 +109,25 @@ public class PostgresSearchProjectionRepository implements SearchProjectionRepos
     }
 
     @Override
+    public List<SearchProjection> findGeneration(
+            String documentId,
+            long generation
+    ) {
+        return jdbcTemplate.query(
+                """
+                SELECT *
+                FROM knowledge_search_projection
+                WHERE document_id = ?
+                  AND generation = ?
+                ORDER BY chunk_index
+                """,
+                this::map,
+                documentId,
+                generation
+        );
+    }
+
+    @Override
     public void deleteByDocumentId(String documentId) {
         jdbcTemplate.update(
                 "DELETE FROM knowledge_search_projection WHERE document_id = ?",
