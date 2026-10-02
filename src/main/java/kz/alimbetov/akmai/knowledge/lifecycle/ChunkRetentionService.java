@@ -7,6 +7,8 @@ import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileRepository;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository;
+import kz.alimbetov.akmai.observability.AkmaiMetrics;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -22,6 +24,7 @@ public class ChunkRetentionService {
     private final VectorGenerationRepository vectorGenerationRepository;
     private final PostgresGenerationVectorRepository vectorRepository;
     private final EmbeddingProfileRepository profileRepository;
+    private AkmaiMetrics metrics;
 
     public ChunkRetentionService(
             JdbcTemplate jdbcTemplate,
@@ -43,20 +46,30 @@ public class ChunkRetentionService {
         this.profileRepository = profileRepository;
     }
 
+    @Autowired(required = false)
+    void setMetrics(AkmaiMetrics metrics) {
+        this.metrics = metrics;
+    }
+
     public RetentionCleanupResult cleanup(RetentionClaim claim) {
         try {
             RetentionCleanupResult result = transactionTemplate.execute(
                     status -> cleanupInTransaction(claim)
             );
-            return result == null ? stale(claim) : result;
+            RetentionCleanupResult observed =
+                    result == null ? stale(claim) : result;
+            observe(observed);
+            return observed;
         } catch (StaleClaimException exception) {
-            return stale(claim);
+            RetentionCleanupResult result = stale(claim);
+            observe(result);
+            return result;
         } catch (RuntimeException exception) {
             boolean failed = claimRepository.markFailed(
                     claim,
                     safeMessage(exception)
             );
-            return failed
+            RetentionCleanupResult result = failed
                     ? new RetentionCleanupResult(
                             claim.documentId(),
                             claim.generation(),
@@ -64,6 +77,8 @@ public class ChunkRetentionService {
                             RetentionCleanupResult.Status.FAILED
                     )
                     : stale(claim);
+            observe(result);
+            return result;
         }
     }
 
@@ -288,6 +303,15 @@ public class ChunkRetentionService {
                 claim.documentId()
         );
         return Boolean.TRUE.equals(valid);
+    }
+
+    private void observe(RetentionCleanupResult result) {
+        if (metrics != null) {
+            metrics.retentionResult(
+                    result.status().name(),
+                    result.deletedChunks()
+            );
+        }
     }
 
     private RetentionCleanupResult stale(RetentionClaim claim) {
