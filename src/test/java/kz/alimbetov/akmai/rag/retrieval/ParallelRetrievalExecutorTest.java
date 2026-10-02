@@ -7,6 +7,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -19,6 +20,8 @@ import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalStep;
 import org.junit.jupiter.api.Test;
 
 class ParallelRetrievalExecutorTest {
+
+    private static final Set<Long> ACCESS = Set.of(1L);
 
     @Test
     void independentRootsRunConcurrentlyAndDependentStepSeesBothResults()
@@ -58,7 +61,7 @@ class ParallelRetrievalExecutorTest {
             );
 
             var future = CompletableFuture.supplyAsync(
-                    () -> subject.execute(plan())
+                    () -> subject.execute(plan(), ACCESS)
             );
 
             assertThat(started.await(2, TimeUnit.SECONDS)).isTrue();
@@ -102,7 +105,7 @@ class ParallelRetrievalExecutorTest {
                     executor
             );
 
-            RetrievalExecutionResult result = subject.executeDetailed(plan());
+            RetrievalExecutionResult result = subject.executeDetailed(plan(), ACCESS);
 
             assertThat(result.criticalFailure()).isFalse();
             assertThat(result.degraded()).isTrue();
@@ -134,7 +137,7 @@ class ParallelRetrievalExecutorTest {
                     )
             ));
 
-            assertThatThrownBy(() -> subject.execute(cycle))
+            assertThatThrownBy(() -> subject.execute(cycle, ACCESS))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("cycle");
         } finally {
@@ -186,7 +189,7 @@ class ParallelRetrievalExecutorTest {
                     )
             ));
 
-            RetrievalExecutionResult result = subject.executeDetailed(scoped);
+            RetrievalExecutionResult result = subject.executeDetailed(scoped, ACCESS);
 
             assertThat(result.hits()).isEmpty();
             assertThat(semanticRan).isFalse();
@@ -241,7 +244,7 @@ class ParallelRetrievalExecutorTest {
                     )
             ));
 
-            RetrievalExecutionResult result = subject.executeDetailed(scoped);
+            RetrievalExecutionResult result = subject.executeDetailed(scoped, ACCESS);
 
             assertThat(result.criticalFailure()).isTrue();
             assertThat(semanticRan).isFalse();
@@ -288,7 +291,7 @@ class ParallelRetrievalExecutorTest {
             ));
 
             long started = System.nanoTime();
-            RetrievalExecutionResult result = subject.executeDetailed(plan);
+            RetrievalExecutionResult result = subject.executeDetailed(plan, ACCESS);
             Duration elapsed = Duration.ofNanos(System.nanoTime() - started);
 
             assertThat(result.outcomes().get("v").status())
@@ -340,7 +343,7 @@ class ParallelRetrievalExecutorTest {
             ));
 
             long started = System.nanoTime();
-            RetrievalExecutionResult result = subject.executeDetailed(plan);
+            RetrievalExecutionResult result = subject.executeDetailed(plan, ACCESS);
             Duration elapsed = Duration.ofNanos(System.nanoTime() - started);
 
             assertThat(result.outcomes().get("v").status())
@@ -400,7 +403,7 @@ class ParallelRetrievalExecutorTest {
             ));
 
             long started = System.nanoTime();
-            RetrievalExecutionResult result = subject.executeDetailed(plan);
+            RetrievalExecutionResult result = subject.executeDetailed(plan, ACCESS);
 
             assertThat(result.outcomes().get("v").status())
                     .isEqualTo(RetrievalOutcomeStatus.REJECTED);
