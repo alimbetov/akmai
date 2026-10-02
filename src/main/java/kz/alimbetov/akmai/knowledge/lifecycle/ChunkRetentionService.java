@@ -8,6 +8,8 @@ import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository;
 import kz.alimbetov.akmai.observability.AkmaiMetrics;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -16,6 +18,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class ChunkRetentionService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChunkRetentionService.class);
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
@@ -71,6 +75,9 @@ public class ChunkRetentionService {
                     claim,
                     safeMessage(exception)
             );
+            if (!failed && metrics != null) {
+                metrics.retentionLeaseLost();
+            }
             RetentionCleanupResult result = failed
                     ? new RetentionCleanupResult(
                             claim.documentId(),
@@ -313,7 +320,16 @@ public class ChunkRetentionService {
                     result.status().name(),
                     result.deletedChunks()
             );
+            if (result.status() == RetentionCleanupResult.Status.STALE_CLAIM) {
+                metrics.retentionStaleClaim();
+            }
         }
+        LOGGER.info(
+                "retention_cleanup event=result status={} generation={} deletedChunks={}",
+                result.status(),
+                result.generation(),
+                result.deletedChunks()
+        );
     }
 
     private RetentionCleanupResult stale(RetentionClaim claim) {
