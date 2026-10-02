@@ -12,6 +12,7 @@ import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileStorageManager;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -27,6 +28,7 @@ public class PublishedVectorSearchRepository {
     public PublishedVectorSearchRepository(
             JdbcTemplate jdbcTemplate,
             ObjectMapper objectMapper,
+            @Qualifier("retrievalEmbeddingModel")
             EmbeddingModel embeddingModel,
             EmbeddingProfileService profileService,
             EmbeddingProfileStorageManager storageManager
