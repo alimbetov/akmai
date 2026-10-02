@@ -22,7 +22,7 @@ public record AddKnowledgeRequest(
      * scoping. HTTP deserialization uses the canonical constructor, where
      * accessLevel is mandatory.
      */
-    @Deprecated(forRemoval = false)
+    @Deprecated(forRemoval = true)
     public AddKnowledgeRequest(
             String documentId,
             String title,
@@ -32,6 +32,9 @@ public record AddKnowledgeRequest(
             KnowledgeDomain domain,
             Map<String, Object> metadata
     ) {
-        this(documentId, title, text, source, language, domain, 1L, metadata);
+        this(documentId, title, text, source, language, domain, null, metadata);
+        throw new UnsupportedOperationException(
+                "accessLevel is required"
+        );
     }
 }
