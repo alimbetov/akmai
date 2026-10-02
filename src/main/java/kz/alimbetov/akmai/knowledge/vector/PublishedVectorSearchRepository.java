@@ -15,6 +15,7 @@ import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileStorageManager;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -25,6 +26,7 @@ public class PublishedVectorSearchRepository {
     private final EmbeddingModel embeddingModel;
     private final EmbeddingProfileService profileService;
     private final EmbeddingProfileStorageManager storageManager;
+    private final TransactionTemplate transactionTemplate;
 
     public PublishedVectorSearchRepository(
             JdbcTemplate jdbcTemplate,
@@ -32,13 +34,15 @@ public class PublishedVectorSearchRepository {
             @Qualifier("retrievalEmbeddingModel")
             EmbeddingModel embeddingModel,
             EmbeddingProfileService profileService,
-            EmbeddingProfileStorageManager storageManager
+            EmbeddingProfileStorageManager storageManager,
+            TransactionTemplate transactionTemplate
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
         this.embeddingModel = embeddingModel;
         this.profileService = profileService;
         this.storageManager = storageManager;
+        this.transactionTemplate = transactionTemplate;
     }
 
     public List<VectorSearchMatch> search(
@@ -105,27 +109,35 @@ public class PublishedVectorSearchRepository {
                 LIMIT ?
                 """;
 
-        return jdbcTemplate.query(
-                sql,
-                ps -> bindSearch(
-                        ps,
-                        vector,
-                        profile.profileId(),
-                        maxDistance,
-                        documentIds,
-                        accessLevels,
-                        topK
-                ),
-                (rs, rowNum) -> new VectorSearchMatch(
-                        rs.getString("vector_id"),
-                        rs.getString("document_id"),
-                        rs.getLong("generation"),
-                        rs.getString("chunk_id"),
-                        rs.getString("content"),
-                        readMetadata(rs.getString("metadata_json")),
-                        rs.getDouble("score")
-                )
-        );
+        List<VectorSearchMatch> result = transactionTemplate.execute(status -> {
+            if ("HNSW".equals(profile.indexType())) {
+                jdbcTemplate.execute(
+                        "SET LOCAL hnsw.iterative_scan = strict_order"
+                );
+            }
+            return jdbcTemplate.query(
+                    sql,
+                    ps -> bindSearch(
+                            ps,
+                            vector,
+                            profile.profileId(),
+                            maxDistance,
+                            documentIds,
+                            accessLevels,
+                            topK
+                    ),
+                    (rs, rowNum) -> new VectorSearchMatch(
+                            rs.getString("vector_id"),
+                            rs.getString("document_id"),
+                            rs.getLong("generation"),
+                            rs.getString("chunk_id"),
+                            rs.getString("content"),
+                            readMetadata(rs.getString("metadata_json")),
+                            rs.getDouble("score")
+                    )
+            );
+        });
+        return result == null ? List.of() : result;
     }
 
     private void bindSearch(
