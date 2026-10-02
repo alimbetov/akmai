@@ -102,7 +102,8 @@ class StaleIngestionRecoveryIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 profile.profileId(),
-                "fp"
+                "fp",
+                1L
         );
         jdbc.update(
                 """
@@ -176,14 +177,16 @@ class StaleIngestionRecoveryIntegrationTest {
                 RetentionPolicy.PERMANENT,
                 null,
                 profile.profileId(),
-                "fp-locked"
+                "fp-locked",
+                1L
         );
         long freeGeneration = generations.allocate(
                 "doc-free",
                 RetentionPolicy.PERMANENT,
                 null,
                 profile.profileId(),
-                "fp-free"
+                "fp-free",
+                1L
         );
         jdbc.update(
                 """
