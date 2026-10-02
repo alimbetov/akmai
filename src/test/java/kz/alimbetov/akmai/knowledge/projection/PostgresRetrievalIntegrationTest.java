@@ -216,36 +216,19 @@ class PostgresRetrievalIntegrationTest {
         ));
         publish("doc", generation);
 
-        jdbc.execute("SET enable_seqscan = off");
-        try {
-            String ruPlan = String.join("\n", jdbc.queryForList(
-                    """
-                    EXPLAIN (COSTS OFF)
-                    SELECT chunk_id
-                    FROM knowledge_search_projection
-                    WHERE search_vector_ru
-                          @@ websearch_to_tsquery('russian', ?)
-                    """,
-                    String.class,
-                    "договор"
-            ));
-            String enPlan = String.join("\n", jdbc.queryForList(
-                    """
-                    EXPLAIN (COSTS OFF)
-                    SELECT chunk_id
-                    FROM knowledge_search_projection
-                    WHERE search_vector_en
-                          @@ websearch_to_tsquery('english', ?)
-                    """,
-                    String.class,
-                    "agreement"
-            ));
+        String ruPlan = explainWithSequentialScanDisabled(
+                "search_vector_ru",
+                "russian",
+                "договор"
+        );
+        String enPlan = explainWithSequentialScanDisabled(
+                "search_vector_en",
+                "english",
+                "agreement"
+        );
 
-            assertThat(ruPlan).contains("idx_knowledge_search_fts_ru");
-            assertThat(enPlan).contains("idx_knowledge_search_fts_en");
-        } finally {
-            jdbc.execute("RESET enable_seqscan");
-        }
+        assertThat(ruPlan).contains("idx_knowledge_search_fts_ru");
+        assertThat(enPlan).contains("idx_knowledge_search_fts_en");
     }
 
     @Test
@@ -309,6 +292,50 @@ class PostgresRetrievalIntegrationTest {
         )).extracting(SearchProjection::chunkId)
                 .contains("kk-percent")
                 .doesNotContain("kk-plain");
+    }
+
+
+    private String explainWithSequentialScanDisabled(
+            String vectorColumn,
+            String configuration,
+            String query
+    ) {
+        return jdbc.execute(
+                (org.springframework.jdbc.core.ConnectionCallback<String>)
+                        connection -> {
+                            try (var setting = connection.createStatement()) {
+                                setting.execute("SET enable_seqscan = off");
+                            }
+                            try (var statement = connection.prepareStatement(
+                                    """
+                                    EXPLAIN (COSTS OFF)
+                                    SELECT chunk_id
+                                    FROM knowledge_search_projection
+                                    WHERE %s
+                                          @@ websearch_to_tsquery('%s', ?)
+                                    """.formatted(
+                                            vectorColumn,
+                                            configuration
+                                    )
+                            )) {
+                                statement.setString(1, query);
+                                try (var resultSet = statement.executeQuery()) {
+                                    StringBuilder plan = new StringBuilder();
+                                    while (resultSet.next()) {
+                                        if (!plan.isEmpty()) {
+                                            plan.append('\n');
+                                        }
+                                        plan.append(resultSet.getString(1));
+                                    }
+                                    return plan.toString();
+                                }
+                            } finally {
+                                try (var reset = connection.createStatement()) {
+                                    reset.execute("RESET enable_seqscan");
+                                }
+                            }
+                        }
+        );
     }
 
     private void publish(String documentId, long generation) {
