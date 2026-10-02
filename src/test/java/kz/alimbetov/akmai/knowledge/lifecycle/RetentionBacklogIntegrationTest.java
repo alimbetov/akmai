@@ -2,7 +2,6 @@ package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Duration;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -100,7 +99,7 @@ class RetentionBacklogIntegrationTest {
                 SET retention_status = 'DELETE_PENDING',
                     lifecycle_status = 'DELETE_PENDING',
                     claim_generation = 1,
-                    claim_id = gen_random_uuid(),
+                    claim_id = '11111111-1111-1111-1111-111111111111'::uuid,
                     claimed_by = 'pod-a',
                     claimed_at = clock_timestamp() - interval '20 minutes',
                     lease_until = clock_timestamp() - interval '1 minute'
@@ -113,7 +112,7 @@ class RetentionBacklogIntegrationTest {
                 SET retention_status = 'DELETE_PENDING',
                     lifecycle_status = 'DELETE_PENDING',
                     claim_generation = 1,
-                    claim_id = gen_random_uuid(),
+                    claim_id = '22222222-2222-2222-2222-222222222222'::uuid,
                     claimed_by = 'pod-b',
                     claimed_at = clock_timestamp(),
                     lease_until = clock_timestamp() + interval '10 minutes'
