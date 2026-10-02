@@ -10,6 +10,8 @@ public interface SearchProjectionRepository {
 
     List<String> findChunkIds(String documentId, long generation);
 
+    List<SearchProjection> findGeneration(String documentId, long generation);
+
     void deleteByDocumentId(String documentId);
 
     void deleteGeneration(String documentId, long generation);
