@@ -30,12 +30,13 @@ class StaleIngestionRecoveryIntegrationTest {
                     .withPassword("akmai");
 
     static JdbcTemplate jdbc;
+    static PGSimpleDataSource dataSource;
     static DocumentGenerationRepository generations;
     static EmbeddingProfile profile;
 
     @BeforeAll
     static void migrate() throws Exception {
-        PGSimpleDataSource dataSource = new PGSimpleDataSource();
+        dataSource = new PGSimpleDataSource();
         dataSource.setURL(POSTGRES.getJdbcUrl());
         dataSource.setUser(POSTGRES.getUsername());
         dataSource.setPassword(POSTGRES.getPassword());
@@ -165,6 +166,63 @@ class StaleIngestionRecoveryIntegrationTest {
         assertThat(recovered).isEqualTo(1);
         assertThat(status("doc-ingestion", ingestion)).isEqualTo("FAILED");
         assertThat(status("doc-migration", 1L)).isEqualTo("STAGING");
+    }
+
+    @Test
+    void lockedOldestStaleGenerationDoesNotStarveLaterCandidate()
+            throws Exception {
+        long lockedGeneration = generations.allocate(
+                "doc-locked",
+                RetentionPolicy.PERMANENT,
+                null,
+                profile.profileId(),
+                "fp-locked"
+        );
+        long freeGeneration = generations.allocate(
+                "doc-free",
+                RetentionPolicy.PERMANENT,
+                null,
+                profile.profileId(),
+                "fp-free"
+        );
+        jdbc.update(
+                """
+                UPDATE knowledge_document_generation
+                SET started_at = CASE document_id
+                    WHEN 'doc-locked' THEN clock_timestamp() - interval '3 hours'
+                    ELSE clock_timestamp() - interval '2 hours'
+                END
+                WHERE document_id IN ('doc-locked', 'doc-free')
+                """
+        );
+
+        try (var connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (var statement = connection.prepareStatement(
+                    """
+                    SELECT generation
+                    FROM knowledge_document_generation
+                    WHERE document_id = 'doc-locked'
+                      AND generation = ?
+                    FOR UPDATE
+                    """
+            )) {
+                statement.setLong(1, lockedGeneration);
+                statement.executeQuery();
+
+                int recovered = generations.failStaleIngestionBatch(
+                        Duration.ofMinutes(30),
+                        1
+                );
+
+                assertThat(recovered).isEqualTo(1);
+                assertThat(status("doc-free", freeGeneration)).isEqualTo("FAILED");
+                assertThat(status("doc-locked", lockedGeneration))
+                        .isEqualTo("STAGING");
+            } finally {
+                connection.rollback();
+            }
+        }
     }
 
     private String status(String documentId, long generation) {
