@@ -37,6 +37,10 @@ akmai:
     max-source-chars: ${AKMAI_API_MAX_SOURCE_CHARS:1000}
   idempotency:
     lease-duration: ${AKMAI_IDEMPOTENCY_LEASE_DURATION:10m}
+  security:
+    enabled: ${AKMAI_SECURITY_ENABLED:false}
+    api-key: ${AKMAI_SECURITY_API_KEY:}
+    allow-unauthenticated-local: ${AKMAI_ALLOW_UNAUTH_LOCAL:true}
   vector:
     dimensions: ${AKMAI_VECTOR_DIMENSIONS:1024}
     index-type: ${AKMAI_VECTOR_INDEX_TYPE:HNSW}
@@ -93,3 +97,4 @@ akmai:
 
 server:
   port: ${SERVER_PORT:8080}
+  max-http-request-header-size: ${AKMAI_MAX_REQUEST_HEADER_SIZE:32KB}
