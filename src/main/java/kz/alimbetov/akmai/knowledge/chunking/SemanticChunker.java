@@ -82,22 +82,7 @@ public class SemanticChunker {
                 atomicUnitProtector.protect(classified, document.domain());
 
         List<SemanticUnit> boundedUnits = protectedUnits.stream()
-                .flatMap(unit -> {
-                    int overhead = tokenEstimator.estimate(
-                            embeddingTextBuilder.build(
-                                    document,
-                                    unit.sectionPath(),
-                                    ""
-                            )
-                    );
-                    int payloadBudget = Math.max(
-                            1,
-                            properties.hardMaxTokens() - overhead
-                    );
-                    return oversizedUnitSplitter
-                            .split(unit, payloadBudget)
-                            .stream();
-                })
+                .flatMap(unit -> splitToEmbeddingBudget(unit, document).stream())
                 .toList();
 
         List<List<SemanticUnit>> groups = group(
@@ -161,6 +146,48 @@ public class SemanticChunker {
         return List.copyOf(chunks);
     }
 
+    private List<SemanticUnit> splitToEmbeddingBudget(
+            SemanticUnit unit,
+            KnowledgeDocument document
+    ) {
+        int overhead = tokenEstimator.estimate(
+                embeddingTextBuilder.build(
+                        document,
+                        unit.sectionPath(),
+                        ""
+                )
+        );
+        int payloadBudget = Math.max(
+                1,
+                properties.hardMaxTokens() - overhead
+        );
+
+        while (true) {
+            List<SemanticUnit> parts =
+                    oversizedUnitSplitter.split(unit, payloadBudget);
+            boolean allFit = parts.stream().allMatch(part -> {
+                String embeddingText = embeddingTextBuilder.build(
+                        document,
+                        part.sectionPath(),
+                        part.text()
+                );
+                return tokenEstimator.estimate(embeddingText)
+                                <= properties.hardMaxTokens()
+                        && (embeddingTokenBudgetService == null
+                        || embeddingTokenBudgetService.fits(embeddingText));
+            });
+            if (allFit) {
+                return parts;
+            }
+            if (payloadBudget == 1) {
+                throw new IllegalArgumentException(
+                        "Embedding envelope exceeds configured model context window"
+                );
+            }
+            payloadBudget = Math.max(1, payloadBudget / 2);
+        }
+    }
+
     private List<List<SemanticUnit>> group(
             List<SemanticUnit> units,
             KnowledgeDocument document
@@ -183,13 +210,21 @@ public class SemanticChunker {
 
             List<SemanticUnit> candidate = new ArrayList<>(current);
             candidate.add(unit);
-            boolean exceedsHard = embeddingTokens(candidate, document)
+            String candidateEmbedding = embeddingTextBuilder.build(
+                    document,
+                    sectionPath(candidate, document),
+                    rawText(candidate)
+            );
+            boolean exceedsHard = tokenEstimator.estimate(candidateEmbedding)
                     > properties.hardMaxTokens();
+            boolean exceedsModelBudget = embeddingTokenBudgetService != null
+                    && !embeddingTokenBudgetService.fits(candidateEmbedding);
             boolean exceedsSoft = currentTokens + unitTokens
                     > properties.softMaxTokens();
 
             if (!current.isEmpty()
                     && (exceedsHard
+                    || exceedsModelBudget
                     || medicalAtomicBoundary
                     || (sectionChanged && enoughContent)
                     || (exceedsSoft && enoughContent))) {
