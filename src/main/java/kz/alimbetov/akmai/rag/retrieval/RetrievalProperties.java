@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.validation.annotation.Validated;
 
 @Validated
@@ -85,6 +86,7 @@ public record RetrievalProperties(
         );
     }
 
+    @ConstructorBinding
     public RetrievalProperties {
         validateDuration("reranker-timeout", rerankerTimeout, Duration.ofMillis(1), Duration.ofMinutes(1));
         validateDuration("request-timeout", requestTimeout, Duration.ofMillis(10), Duration.ofMinutes(2));
