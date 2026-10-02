@@ -153,9 +153,7 @@ public class DocumentIdentifierRepository {
             Set<Long> accessLevels,
             int limit
     ) {
-        if (accessLevels == null || accessLevels.isEmpty()) {
-            return List.of();
-        }
+        requireAccessLevels(accessLevels);
         return jdbcTemplate.query(
                 """
                 SELECT i.document_id, i.generation, i.chunk_id, i.page_number,
@@ -194,9 +192,7 @@ public class DocumentIdentifierRepository {
             int limit,
             String... arguments
     ) {
-        if (accessLevels == null || accessLevels.isEmpty()) {
-            return List.of();
-        }
+        requireAccessLevels(accessLevels);
         return jdbcTemplate.query(
                 """
                 SELECT i.document_id, i.generation, i.chunk_id, i.page_number,
@@ -228,6 +224,14 @@ public class DocumentIdentifierRepository {
                 },
                 this::map
         );
+    }
+
+    private void requireAccessLevels(Set<Long> accessLevels) {
+        if (accessLevels == null || accessLevels.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "accessLevels must not be empty"
+            );
+        }
     }
 
     private DocumentIdentifier map(ResultSet rs, int rowNum) throws SQLException {
