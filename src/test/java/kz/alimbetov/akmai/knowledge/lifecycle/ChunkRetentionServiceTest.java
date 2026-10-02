@@ -123,7 +123,8 @@ class ChunkRetentionServiceTest {
                     claimed_at, lease_until, expires_at, delete_started_at,
                     deleted_at, attempt_count, last_error, row_version,
                     ingestion_started_at, created_at, updated_at,
-                    retention_status, published_generation, next_generation
+                    retention_status, published_generation, next_generation,
+                    access_level
                 ) VALUES (
                     'doc-1', 'TTL', 'DELETE_PENDING',
                     7, 7, ?::uuid, 'pod-b',
@@ -131,7 +132,7 @@ class ChunkRetentionServiceTest {
                     clock_timestamp() - interval '1 minute', NULL,
                     NULL, 0, NULL, 0,
                     NULL, clock_timestamp(), clock_timestamp(),
-                    'DELETE_PENDING', 7, 8
+                    'DELETE_PENDING', 7, 8, 1
                 )
                 """,
                 "00000000-0000-0000-0000-000000000099"
