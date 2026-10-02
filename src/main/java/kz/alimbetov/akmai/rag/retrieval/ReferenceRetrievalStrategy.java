@@ -61,12 +61,14 @@ public class ReferenceRetrievalStrategy implements RetrievalStrategy {
             List<String> targetIds = referenceGraphRepository.resolveSameDocumentTargets(
                     documentId,
                     seeds,
+                    context.accessLevels(),
                     remaining
             );
             List<SearchProjection> targets =
                     projectionRepository.findByDocumentAndChunkIds(
                             documentId,
-                            targetIds
+                            targetIds,
+                            context.accessLevels()
                     );
             for (SearchProjection target : targets) {
                 if (remaining-- <= 0) {
