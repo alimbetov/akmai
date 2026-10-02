@@ -86,7 +86,7 @@ class MultilingualRetrievalQualityRegressionTest {
                         "QUALITY corpus=%s language=%s case=%s recall5=%.3f recall10=%.3f mrr=%.3f ndcg10=%.3f%n",
                         CORPUS_VERSION,
                         result.language(),
-                        result.id(),
+                        result.caseId(),
                         result.recallAt5(),
                         result.recallAt10(),
                         result.reciprocalRank(),
@@ -307,7 +307,7 @@ class MultilingualRetrievalQualityRegressionTest {
                     .filter(testCase -> testCase.question().equals(query)
                             || testCase.question().contains(query)
                             || query.contains(testCase.question()))
-                    .map(RetrievalBenchmarkCase::caseId)
+                    .map(RetrievalBenchmarkCase::id)
                     .findFirst()
                     .orElse("unknown");
         }
