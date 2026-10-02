@@ -431,14 +431,15 @@ public class ReembeddingService {
 
             LifecycleSnapshot lifecycle = jdbcTemplate.query(
                     """
-                    SELECT published_generation, next_generation
+                    SELECT published_generation, next_generation, access_level
                     FROM knowledge_document_lifecycle
                     WHERE document_id = ?
                     FOR UPDATE
                     """,
                     (rs, rowNum) -> new LifecycleSnapshot(
                             rs.getLong("published_generation"),
-                            rs.getLong("next_generation")
+                            rs.getLong("next_generation"),
+                            rs.getLong("access_level")
                     ),
                     snapshot.documentId()
             ).stream().findFirst().orElseThrow();
@@ -480,17 +481,18 @@ public class ReembeddingService {
                         document_id, generation, generation_status,
                         generation_kind, migration_id, embedding_profile_id,
                         content_fingerprint, physical_id_version,
-                        cleanup_required, started_at
+                        cleanup_required, started_at, access_level
                     ) VALUES (
                         ?, ?, 'STAGING', 'REEMBEDDING', ?, ?, ?, 2,
-                        false, clock_timestamp()
+                        false, clock_timestamp(), ?
                     )
                     """,
                     snapshot.documentId(),
                     candidate,
                     migrationId,
                     target.profileId(),
-                    fingerprint
+                    fingerprint,
+                    lifecycle.accessLevel()
             );
             jdbcTemplate.update(
                     """
@@ -602,6 +604,7 @@ public class ReembeddingService {
                           OR candidate.document_id IS NULL
                           OR candidate.generation_status <> 'STAGING'
                           OR candidate.embedding_profile_id IS DISTINCT FROM ?
+                          OR candidate.access_level IS DISTINCT FROM l.access_level
                       )
                     """,
                     Integer.class,
@@ -649,9 +652,13 @@ public class ReembeddingService {
                     SET published_generation = d.candidate_generation,
                         generation = d.candidate_generation,
                         lifecycle_status = 'READY',
+                        access_level = candidate.access_level,
                         row_version = l.row_version + 1,
                         updated_at = clock_timestamp()
                     FROM knowledge_embedding_migration_document d
+                    JOIN knowledge_document_generation candidate
+                      ON candidate.document_id = d.document_id
+                     AND candidate.generation = d.candidate_generation
                     WHERE d.migration_id = ?
                       AND l.document_id = d.document_id
                       AND l.published_generation = d.source_generation
@@ -810,7 +817,8 @@ public class ReembeddingService {
 
     private record LifecycleSnapshot(
             long publishedGeneration,
-            long nextGeneration
+            long nextGeneration,
+            long accessLevel
     ) {
     }
 
