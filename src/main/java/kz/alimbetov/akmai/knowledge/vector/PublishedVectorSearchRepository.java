@@ -52,11 +52,12 @@ public class PublishedVectorSearchRepository {
             int topK,
             double similarityThreshold
     ) {
-        if (query == null
-                || query.isBlank()
-                || topK <= 0
-                || accessLevels == null
-                || accessLevels.isEmpty()) {
+        if (accessLevels == null || accessLevels.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "accessLevels must not be empty"
+            );
+        }
+        if (query == null || query.isBlank() || topK <= 0) {
             return List.of();
         }
         profileService.assertConfiguredProfileIsActive();
