@@ -40,7 +40,7 @@ public class PostgresDocumentLifecycleRepository
         if (accessLevel <= 0) {
             throw new IllegalArgumentException("accessLevel must be positive");
         }
-        Long generation = jdbcTemplate.queryForObject(
+        List<Long> generations = jdbcTemplate.queryForList(
                 """
                 INSERT INTO knowledge_document_lifecycle (
                     document_id, lifecycle_policy, lifecycle_status,
@@ -76,6 +76,7 @@ public class PostgresDocumentLifecycleRepository
                 timestamp(expiresAt),
                 accessLevel
         );
+        Long generation = generations.stream().findFirst().orElse(null);
         if (generation == null) {
             throw new IllegalStateException(
                     "Lifecycle ingestion requires the existing accessLevel; "
