@@ -265,6 +265,103 @@ class PostgresVectorPublicationIntegrationTest {
         )).isNull();
     }
 
+    @Test
+    void failureAfterSecondRelationalBatchRollsBackEveryStagedRow() {
+        long generation = generations.allocate(
+                "doc-batch",
+                RetentionPolicy.PERMANENT,
+                null,
+                profile.profileId(),
+                "fp-batch"
+        );
+        java.util.ArrayList<SearchProjection> projectionRows =
+                new java.util.ArrayList<>();
+        java.util.ArrayList<VectorGenerationEntry> manifestRows =
+                new java.util.ArrayList<>();
+        java.util.ArrayList<PostgresGenerationVectorRepository.VectorRow> vectorRows =
+                new java.util.ArrayList<>();
+
+        for (int index = 0; index < 101; index++) {
+            String chunkId = "batch-" + index;
+            SearchProjection projection = new SearchProjection(
+                    chunkId,
+                    "doc-batch",
+                    generation,
+                    null,
+                    index,
+                    "text-" + index,
+                    "embedding-" + index,
+                    "en",
+                    KnowledgeDomain.GENERAL,
+                    "section",
+                    List.of(),
+                    List.of(),
+                    Map.of("source", "batch"),
+                    2
+            );
+            String vectorId = VectorIdentity.physicalId(
+                    "doc-batch",
+                    generation,
+                    chunkId
+            );
+            projectionRows.add(projection);
+            manifestRows.add(new VectorGenerationEntry(vectorId, chunkId));
+            vectorRows.add(new PostgresGenerationVectorRepository.VectorRow(
+                    vectorId,
+                    projection.embeddingText(),
+                    Map.of(
+                            "akmaiMetadataVersion", 2,
+                            "akmaiDocumentId", "doc-batch",
+                            "akmaiGeneration", generation,
+                            "akmaiEmbeddingProfileId", profile.profileId(),
+                            "akmaiChunkId", chunkId
+                    ),
+                    index == 100
+                            ? new float[] {1f, 2f}
+                            : new float[] {1f, 0f, 0f}
+            ));
+        }
+
+        assertThatThrownBy(() -> publication.publish(
+                "doc-batch",
+                generation,
+                RetentionPolicy.PERMANENT,
+                null,
+                profile,
+                projectionRows,
+                List.of(),
+                manifestRows,
+                vectorRows
+        )).isInstanceOf(RuntimeException.class);
+
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_search_projection
+                WHERE document_id = 'doc-batch' AND generation = ?
+                """,
+                Integer.class,
+                generation
+        )).isZero();
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_document_vector_generation
+                WHERE document_id = 'doc-batch' AND generation = ?
+                """,
+                Integer.class,
+                generation
+        )).isZero();
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT published_generation
+                FROM knowledge_document_lifecycle
+                WHERE document_id = 'doc-batch'
+                """,
+                Long.class
+        )).isNull();
+    }
+
     private SearchProjection projection(long generation, String chunkId) {
         return new SearchProjection(
                 chunkId,
