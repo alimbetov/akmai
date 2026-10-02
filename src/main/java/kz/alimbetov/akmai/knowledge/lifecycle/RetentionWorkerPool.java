@@ -7,6 +7,8 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import kz.alimbetov.akmai.observability.AkmaiMetrics;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,6 +20,7 @@ public class RetentionWorkerPool {
     private final ThreadPoolExecutor workers;
     private final Semaphore permits;
     private final AtomicBoolean accepting = new AtomicBoolean(true);
+    private AkmaiMetrics metrics;
 
     public RetentionWorkerPool(
             RetentionClaimRepository claimRepository,
@@ -36,6 +39,11 @@ public class RetentionWorkerPool {
                 new SynchronousQueue<>(),
                 new ThreadPoolExecutor.AbortPolicy()
         );
+    }
+
+    @Autowired(required = false)
+    void setMetrics(AkmaiMetrics metrics) {
+        this.metrics = metrics;
     }
 
     public int availableCapacity() {
@@ -67,6 +75,10 @@ public class RetentionWorkerPool {
         } catch (RuntimeException exception) {
             permits.release(acquired);
             throw exception;
+        }
+
+        if (metrics != null) {
+            metrics.retentionClaimed(claims.size());
         }
 
         int unused = acquired - claims.size();
