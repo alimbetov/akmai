@@ -86,6 +86,7 @@ class KnowledgeIngestionServiceTest {
                 "source",
                 "de",
                 KnowledgeDomain.GENERAL,
+                1L,
                 Map.of()
         )))
                 .isInstanceOf(IllegalArgumentException.class)
