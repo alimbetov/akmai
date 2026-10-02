@@ -9,7 +9,8 @@ SET access_level = 0
 WHERE access_level IS NULL;
 
 ALTER TABLE knowledge_document_lifecycle
-    ALTER COLUMN access_level SET NOT NULL;
+    ALTER COLUMN access_level SET NOT NULL,
+    ALTER COLUMN access_level SET DEFAULT 0;
 
 ALTER TABLE knowledge_document_lifecycle
     ADD CONSTRAINT ck_knowledge_lifecycle_access_level
@@ -29,7 +30,8 @@ SET access_level = 0
 WHERE access_level IS NULL;
 
 ALTER TABLE knowledge_document_generation
-    ALTER COLUMN access_level SET NOT NULL;
+    ALTER COLUMN access_level SET NOT NULL,
+    ALTER COLUMN access_level SET DEFAULT 0;
 
 ALTER TABLE knowledge_document_generation
     ADD CONSTRAINT ck_document_generation_access_level
