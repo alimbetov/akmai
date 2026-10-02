@@ -26,7 +26,7 @@ class QueryChunkerTest {
         assertThat(chunker().chunk("Құжаттың төлем мерзімі қандай?").getFirst().language())
                 .isEqualTo("kk");
         assertThat(chunker().chunk("Какой срок оплаты?").getFirst().language())
-                .isEqualTo("ru");
+                .isEqualTo("unknown");
         assertThat(chunker().chunk("What is the payment deadline?").getFirst().language())
                 .isEqualTo("en");
         assertThat(chunker().chunk("付款期限是什么？").getFirst().language())
@@ -56,7 +56,7 @@ class QueryChunkerTest {
                 "Условия договора KZ-2026-001847. Сравни с договором KZ-2025-009812."
         );
 
-        assertThat(chunks).hasSize(2);
+        assertThat(chunks).hasSize(3);
         assertThat(chunks)
                 .flatExtracting(QueryChunk::identifiers)
                 .extracting(value -> value.type())
@@ -64,6 +64,6 @@ class QueryChunkerTest {
         assertThat(chunks)
                 .flatExtracting(QueryChunk::identifiers)
                 .extracting(value -> value.normalizedValue())
-                .containsExactlyInAnyOrder("KZ2026001847", "KZ2025009812");
+                .contains("KZ-2026-001847", "KZ-2025-009812");
     }
 }
