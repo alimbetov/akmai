@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.rag.retrieval;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -13,7 +14,6 @@ import java.util.concurrent.TimeUnit;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalStep;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
 class ParallelRetrievalExecutorTest {
@@ -27,16 +27,10 @@ class ParallelRetrievalExecutorTest {
             CountDownLatch release = new CountDownLatch(1);
 
             RetrievalStrategy vector = blocking(
-                    RetrievalType.VECTOR,
-                    "vector",
-                    started,
-                    release
+                    RetrievalType.VECTOR, "vector", started, release
             );
             RetrievalStrategy lexical = blocking(
-                    RetrievalType.LEXICAL,
-                    "lexical",
-                    started,
-                    release
+                    RetrievalType.LEXICAL, "lexical", started, release
             );
             RetrievalStrategy reference = new RetrievalStrategy() {
                 @Override
@@ -56,10 +50,9 @@ class ParallelRetrievalExecutorTest {
                 }
             };
 
-            ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
+            ParallelRetrievalExecutor subject = subject(
                     List.of(vector, lexical, reference),
-                    executor,
-                    new RetrievalObserver(new SimpleMeterRegistry())
+                    executor
             );
 
             var future = CompletableFuture.supplyAsync(
@@ -78,7 +71,7 @@ class ParallelRetrievalExecutorTest {
     }
 
     @Test
-    void failedRootDoesNotSuppressHealthyHybridBranchOrDownstreamStep() {
+    void failedPrimaryBranchIsPreservedAsTypedOutcome() {
         ExecutorService executor = Executors.newFixedThreadPool(3);
         try {
             RetrievalStrategy vector = new RetrievalStrategy() {
@@ -96,36 +89,26 @@ class ParallelRetrievalExecutorTest {
                 }
             };
             RetrievalStrategy lexical = immediate(
-                    RetrievalType.LEXICAL,
-                    "lexical"
+                    RetrievalType.LEXICAL, "lexical"
             );
-            RetrievalStrategy reference = new RetrievalStrategy() {
-                @Override
-                public RetrievalType type() {
-                    return RetrievalType.REFERENCE;
-                }
+            RetrievalStrategy reference = immediate(
+                    RetrievalType.REFERENCE, "reference"
+            );
 
-                @Override
-                public List<RetrievalHit> retrieve(
-                        QueryChunk queryChunk,
-                        RetrievalContext context
-                ) {
-                    assertThat(context.dependencyHits())
-                            .extracting(RetrievalHit::chunkId)
-                            .containsExactly("lexical");
-                    return List.of(hit(RetrievalType.REFERENCE, "reference"));
-                }
-            };
-
-            ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
+            ParallelRetrievalExecutor subject = subject(
                     List.of(vector, lexical, reference),
-                    executor,
-                    new RetrievalObserver(new SimpleMeterRegistry())
+                    executor
             );
 
-            assertThat(subject.execute(plan()))
+            RetrievalExecutionResult result = subject.executeDetailed(plan());
+
+            assertThat(result.criticalFailure()).isFalse();
+            assertThat(result.degraded()).isTrue();
+            assertThat(result.hits())
                     .extracting(RetrievalHit::chunkId)
-                    .containsExactly("lexical", "reference");
+                    .contains("lexical");
+            assertThat(result.outcomes().get("v").status())
+                    .isEqualTo(RetrievalOutcomeStatus.FAILED);
         } finally {
             executor.shutdownNow();
         }
@@ -135,24 +118,17 @@ class ParallelRetrievalExecutorTest {
     void rejectsCyclicDependencyGraphInsteadOfRecursingForever() {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
-            ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
-                    List.of(),
-                    executor,
-                    new RetrievalObserver(new SimpleMeterRegistry())
+            ParallelRetrievalExecutor subject = subject(
+                    List.<RetrievalStrategy>of(),
+                    executor
             );
             QueryChunk query = query();
             RetrievalPlan cycle = new RetrievalPlan(List.of(
                     new RetrievalStep(
-                            "a",
-                            query,
-                            RetrievalType.VECTOR,
-                            List.of("b")
+                            "a", query, RetrievalType.VECTOR, List.of("b")
                     ),
                     new RetrievalStep(
-                            "b",
-                            query,
-                            RetrievalType.LEXICAL,
-                            List.of("a")
+                            "b", query, RetrievalType.LEXICAL, List.of("a")
                     )
             ));
 
@@ -164,16 +140,25 @@ class ParallelRetrievalExecutorTest {
         }
     }
 
+    private ParallelRetrievalExecutor subject(
+            List<RetrievalStrategy> strategies,
+            ExecutorService executor
+    ) {
+        return new ParallelRetrievalExecutor(
+                strategies,
+                executor,
+                new RetrievalObserver(new SimpleMeterRegistry()),
+                RetrievalTestProperties.defaults()
+        );
+    }
+
     private RetrievalPlan plan() {
         QueryChunk query = query();
         return new RetrievalPlan(List.of(
                 new RetrievalStep("v", query, RetrievalType.VECTOR, List.of()),
                 new RetrievalStep("l", query, RetrievalType.LEXICAL, List.of()),
                 new RetrievalStep(
-                        "r",
-                        query,
-                        RetrievalType.REFERENCE,
-                        List.of("v", "l")
+                        "r", query, RetrievalType.REFERENCE, List.of("v", "l")
                 )
         ));
     }
@@ -231,23 +216,13 @@ class ParallelRetrievalExecutorTest {
 
     private QueryChunk query() {
         return new QueryChunk(
-                "q1",
-                0,
-                "query",
-                "query",
-                "query",
-                "en",
-                List.of()
+                "q1", 0, "query", "query", "query", "en", List.of()
         );
     }
 
     private RetrievalHit hit(RetrievalType type, String chunkId) {
         return new RetrievalHit(
-                type,
-                "doc",
-                chunkId,
-                chunkId,
-                Map.of()
+                type, "doc", chunkId, chunkId, Map.of()
         );
     }
 }

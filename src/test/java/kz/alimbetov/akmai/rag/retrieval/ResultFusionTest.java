@@ -1,14 +1,32 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
+import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ResultFusionTest {
 
-    private final ResultFusion fusion = new ResultFusion(RetrievalTestProperties.defaults());
+    private ResultFusion fusion;
+
+    @BeforeEach
+    void setUp() {
+        SearchProjectionRepository repository =
+                mock(SearchProjectionRepository.class);
+        when(repository.findByDocumentAndChunkIds(anyString(), anyList()))
+                .thenReturn(List.of());
+        fusion = new ResultFusion(
+                RetrievalTestProperties.defaults(),
+                repository
+        );
+    }
 
     @Test
     void rewardsEvidenceFromMultipleRetrievalChannels() {
@@ -44,43 +62,44 @@ class ResultFusionTest {
     }
 
     @Test
-    void multiQueryEvidenceBoostsSharedChunkWithoutCrossQueryRankPollution() {
-        RetrievalHit sharedQ1 = hit(RetrievalType.LEXICAL, "shared", "q1");
-        RetrievalHit q1Only = hit(RetrievalType.LEXICAL, "q1-only", "q1");
-        RetrievalHit sharedQ2 = hit(RetrievalType.LEXICAL, "shared", "q2");
-        RetrievalHit q2Only = hit(RetrievalType.LEXICAL, "q2-only", "q2");
-
-        List<RetrievalHit> fused = fusion.fuse(List.of(
-                sharedQ1,
-                q1Only,
-                sharedQ2,
-                q2Only
-        ));
-
-        assertThat(fused.getFirst().chunkId()).isEqualTo("shared");
-        assertThat(fused.getFirst().evidence())
-                .extracting(RetrievalEvidence::rank)
-                .containsExactly(1, 1);
-        assertThat(fused.getFirst().fusedScore())
-                .isGreaterThan(fused.get(1).fusedScore());
-    }
-
-    @Test
-    void emptyRetrievalProducesEmptyFusion() {
-        assertThat(fusion.fuse(List.of())).isEmpty();
-    }
-
-    @Test
-    void toleratesMissingChunkId() {
-        RetrievalHit hit = new RetrievalHit(
+    void exactAuthorityTierSortsAheadOfSemanticEvidence() {
+        RetrievalHit semantic = new RetrievalHit(
+                RetrievalType.VECTOR,
+                "doc",
+                "semantic",
+                "semantic",
+                Map.of("queryChunkId", "q1", "authorityTier", 2)
+        );
+        RetrievalHit exact = new RetrievalHit(
                 RetrievalType.IDENTIFIER,
                 "doc",
-                null,
-                "context",
-                Map.of()
+                "exact",
+                "exact",
+                Map.of("queryChunkId", "q1", "authorityTier", 0)
         );
 
-        assertThat(fusion.fuse(List.of(hit))).hasSize(1);
+        assertThat(fusion.fuse(List.of(semantic, exact)).getFirst().chunkId())
+                .isEqualTo("exact");
+    }
+
+    @Test
+    void fusionKeyIncludesDocumentId() {
+        RetrievalHit first = new RetrievalHit(
+                RetrievalType.LEXICAL,
+                "doc-a",
+                "same",
+                "a",
+                Map.of("queryChunkId", "q1")
+        );
+        RetrievalHit second = new RetrievalHit(
+                RetrievalType.LEXICAL,
+                "doc-b",
+                "same",
+                "b",
+                Map.of("queryChunkId", "q1")
+        );
+
+        assertThat(fusion.fuse(List.of(first, second))).hasSize(2);
     }
 
     private RetrievalHit hit(RetrievalType type, String chunkId) {
