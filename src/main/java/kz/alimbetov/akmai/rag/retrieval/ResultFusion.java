@@ -24,11 +24,6 @@ public class ResultFusion {
         this.projectionRepository = projectionRepository;
     }
 
-    @Deprecated(forRemoval = true)
-    public List<RetrievalHit> fuse(List<RetrievalHit> hits) {
-        throw new IllegalStateException("access-scoped fusion is required");
-    }
-
     public List<RetrievalHit> fuse(
             List<RetrievalHit> hits,
             Set<Long> accessLevels
