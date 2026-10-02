@@ -114,7 +114,11 @@ class PostgresRetrievalIntegrationTest {
                 .extracting(SearchProjection::chunkId)
                 .containsExactly("new");
 
-        assertThat(projections.findByChunkIds(List.of("old", "new")))
+        assertThat(projections.findByDocumentAndChunkIds(
+                "doc",
+                List.of("old", "new"),
+                Set.of(1L)
+        ))
                 .extracting(SearchProjection::chunkId)
                 .containsExactly("new");
     }
