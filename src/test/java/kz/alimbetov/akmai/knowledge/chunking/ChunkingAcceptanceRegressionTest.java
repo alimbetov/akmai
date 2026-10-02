@@ -145,6 +145,45 @@ class ChunkingAcceptanceRegressionTest {
                 ).isLessThanOrEqualTo(properties.hardMaxTokens()));
     }
 
+    @Test
+    void activeEmbeddingProfileWindowParticipatesInPacking() {
+        ChunkingProperties properties = new ChunkingProperties(
+                300,
+                400,
+                500,
+                1
+        );
+        SemanticChunker chunker = chunker(properties);
+        var registry = new kz.alimbetov.akmai.token.ModelTokenBudgetRegistry(
+                new kz.alimbetov.akmai.token.Utf8ByteUpperBoundTokenCounter(),
+                new kz.alimbetov.akmai.config.ModelBudgetProperties(
+                        2048,
+                        256
+                )
+        );
+        var embeddingBudget =
+                new kz.alimbetov.akmai.knowledge.embedding.EmbeddingTokenBudgetService(
+                        registry
+                );
+        chunker.setEmbeddingTokenBudgetService(embeddingBudget);
+
+        KnowledgeDocument document = new KnowledgeDocument(
+                "profile-budget",
+                "Compact but non-empty title",
+                "payload ".repeat(180),
+                "en",
+                KnowledgeDomain.GENERAL,
+                Map.of("source", "profile-budget")
+        );
+
+        var chunks = chunker.chunk(document);
+
+        assertThat(chunks).hasSizeGreaterThan(1);
+        assertThat(chunks).allSatisfy(chunk -> assertThat(
+                embeddingBudget.upperBound(chunk.embeddingText())
+        ).isLessThanOrEqualTo(embeddingBudget.contextWindow()));
+    }
+
     private SemanticChunker chunker(ChunkingProperties properties) {
         return new SemanticChunker(
                 new TextNormalizer(),
