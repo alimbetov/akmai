@@ -24,6 +24,8 @@ import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository.VectorG
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionFactory;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository.VectorRow;
+import kz.alimbetov.akmai.observability.AkmaiMetrics;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -36,6 +38,7 @@ public class PersistenceCoordinator {
     private final GenerationPublicationService publicationService;
     private final IngestionIdempotencyRepository idempotencyRepository;
     private final RetentionProperties retentionProperties;
+    private AkmaiMetrics metrics;
 
     public PersistenceCoordinator(
             SearchProjectionFactory projectionFactory,
@@ -53,6 +56,11 @@ public class PersistenceCoordinator {
         this.publicationService = publicationService;
         this.idempotencyRepository = idempotencyRepository;
         this.retentionProperties = retentionProperties;
+    }
+
+    @Autowired(required = false)
+    void setMetrics(AkmaiMetrics metrics) {
+        this.metrics = metrics;
     }
 
     public void persist(List<EnrichedKnowledgeChunk> chunks) {
@@ -86,6 +94,7 @@ public class PersistenceCoordinator {
         );
         idempotencyRepository.attachGeneration(idempotency, generation);
 
+        long startedNanos = System.nanoTime();
         try {
             List<SearchProjection> projections = baseProjections.stream()
                     .map(value -> value.withGeneration(generation))
@@ -119,7 +128,25 @@ public class PersistenceCoordinator {
                         "Generation was superseded by a newer publication"
                 );
             }
+            if (metrics != null) {
+                metrics.ingestion(
+                        "success",
+                        java.time.Duration.ofNanos(
+                                System.nanoTime() - startedNanos
+                        ),
+                        chunks.size()
+                );
+            }
         } catch (RuntimeException exception) {
+            if (metrics != null) {
+                metrics.ingestion(
+                        "failure",
+                        java.time.Duration.ofNanos(
+                                System.nanoTime() - startedNanos
+                        ),
+                        chunks.size()
+                );
+            }
             generationRepository.fail(
                     documentId,
                     generation,
