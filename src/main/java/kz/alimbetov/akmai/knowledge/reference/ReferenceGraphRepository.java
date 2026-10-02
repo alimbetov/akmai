@@ -2,6 +2,7 @@ package kz.alimbetov.akmai.knowledge.reference;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import kz.alimbetov.akmai.knowledge.chunking.CrossReferenceExtractor;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -98,7 +99,25 @@ public class ReferenceGraphRepository {
             List<String> sourceChunkIds,
             int limit
     ) {
-        if (sourceChunkIds == null || sourceChunkIds.isEmpty() || limit <= 0) {
+        return resolveSameDocumentTargets(
+                documentId,
+                sourceChunkIds,
+                Set.of(),
+                limit
+        );
+    }
+
+    public List<String> resolveSameDocumentTargets(
+            String documentId,
+            List<String> sourceChunkIds,
+            Set<Long> accessLevels,
+            int limit
+    ) {
+        if (sourceChunkIds == null
+                || sourceChunkIds.isEmpty()
+                || accessLevels == null
+                || accessLevels.isEmpty()
+                || limit <= 0) {
             return List.of();
         }
         return jdbcTemplate.query(
@@ -115,6 +134,7 @@ public class ReferenceGraphRepository {
                  AND t.canonical_value = e.canonical_value
                 WHERE e.document_id = ?
                   AND e.source_chunk_id = ANY (?)
+                  AND l.access_level = ANY (?)
                   AND e.target_scope = 'SAME_DOCUMENT'
                   AND l.retention_status = 'ACTIVE'
                   AND t.chunk_id <> ALL (?)
@@ -123,13 +143,20 @@ public class ReferenceGraphRepository {
                 """,
                 ps -> {
                     ps.setString(1, documentId);
-                    var array = ps.getConnection().createArrayOf(
+                    var sourceArray = ps.getConnection().createArrayOf(
                             "varchar",
                             sourceChunkIds.toArray()
                     );
-                    ps.setArray(2, array);
-                    ps.setArray(3, array);
-                    ps.setInt(4, limit);
+                    ps.setArray(2, sourceArray);
+                    ps.setArray(
+                            3,
+                            ps.getConnection().createArrayOf(
+                                    "bigint",
+                                    accessLevels.toArray()
+                            )
+                    );
+                    ps.setArray(4, sourceArray);
+                    ps.setInt(5, limit);
                 },
                 (rs, rowNum) -> rs.getString(1)
         );
