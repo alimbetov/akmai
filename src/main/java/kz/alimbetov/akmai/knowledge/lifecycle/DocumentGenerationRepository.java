@@ -32,13 +32,8 @@ public class DocumentGenerationRepository {
             String embeddingProfileId,
             String contentFingerprint
     ) {
-        return allocate(
-                documentId,
-                requestedPolicy,
-                requestedExpiresAt,
-                embeddingProfileId,
-                contentFingerprint,
-                1L
+        throw new UnsupportedOperationException(
+                "accessLevel is required"
         );
     }
 
