@@ -348,6 +348,62 @@ class PostgresRetrievalIntegrationTest {
                 .doesNotContain("kk-plain");
     }
 
+    @Test
+    void escapedWildcardLikeQueryCanUseTrigramIndex() {
+        long generation = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-trgm-explain"
+        );
+        projections.saveAll(List.of(
+                projection(
+                        "kk-plan",
+                        generation,
+                        "Жеңілдік мөлшері 5% болады.",
+                        "kk"
+                )
+        ));
+        publish("doc", generation);
+
+        String plan = jdbc.execute(
+                (org.springframework.jdbc.core.ConnectionCallback<String>)
+                        connection -> {
+                            try (var setting = connection.createStatement()) {
+                                setting.execute("SET enable_seqscan = off");
+                            }
+                            try (var statement = connection.prepareStatement(
+                                    """
+                                    EXPLAIN (COSTS OFF)
+                                    SELECT chunk_id
+                                    FROM knowledge_search_projection
+                                    WHERE lower(text_content)
+                                          LIKE ('%' || lower(?) || '%') ESCAPE '\\'
+                                    """
+                            )) {
+                                statement.setString(1, "5\\%");
+                                try (var resultSet = statement.executeQuery()) {
+                                    StringBuilder explain = new StringBuilder();
+                                    while (resultSet.next()) {
+                                        if (!explain.isEmpty()) {
+                                            explain.append('\n');
+                                        }
+                                        explain.append(resultSet.getString(1));
+                                    }
+                                    return explain.toString();
+                                }
+                            } finally {
+                                try (var reset = connection.createStatement()) {
+                                    reset.execute("RESET enable_seqscan");
+                                }
+                            }
+                        }
+        );
+
+        assertThat(plan).contains("idx_knowledge_search_text_trgm");
+    }
+
 
     private String explainWithSequentialScanDisabled(
             String vectorColumn,
