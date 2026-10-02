@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Set;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
-import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -25,8 +25,8 @@ class ResultFusionTest {
 
     @BeforeEach
     void setUp() {
-        SearchProjectionRepository repository =
-                mock(SearchProjectionRepository.class);
+        PublishedSearchProjectionReader repository =
+                mock(PublishedSearchProjectionReader.class);
         when(repository.findByDocumentGenerationAndChunkIds(
                 anyString(),
                 anyLong(),
@@ -136,8 +136,8 @@ class ResultFusionTest {
 
     @Test
     void canonicalProjectionPayloadReplacesIdentifierSnippetRepresentative() {
-        SearchProjectionRepository repository =
-                mock(SearchProjectionRepository.class);
+        PublishedSearchProjectionReader repository =
+                mock(PublishedSearchProjectionReader.class);
         SearchProjection canonical = projection(
                 "doc",
                 2L,
@@ -176,8 +176,8 @@ class ResultFusionTest {
 
     @Test
     void staleGenerationIsDroppedInsteadOfReadingNewPublication() {
-        SearchProjectionRepository repository =
-                mock(SearchProjectionRepository.class);
+        PublishedSearchProjectionReader repository =
+                mock(PublishedSearchProjectionReader.class);
         when(repository.findByDocumentGenerationAndChunkIds(
                 "doc",
                 1L,
