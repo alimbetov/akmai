@@ -34,10 +34,10 @@ class ReferenceRetrievalStrategyTest {
         );
 
         when(referenceGraphRepository.resolveSameDocumentTargets(
-                "doc", List.of("seed"), 20
+                "doc", List.of("seed"), Set.of(1L), 20
         )).thenReturn(List.of("target"));
         when(projectionRepository.findByDocumentAndChunkIds(
-                "doc", List.of("target")
+                "doc", List.of("target"), Set.of(1L)
         )).thenReturn(List.of(target));
 
         ReferenceRetrievalStrategy subject = new ReferenceRetrievalStrategy(
@@ -74,10 +74,10 @@ class ReferenceRetrievalStrategyTest {
                 "Canonical target."
         );
         when(referenceGraphRepository.resolveSameDocumentTargets(
-                "doc", List.of("seed-1", "seed-2"), 20
+                "doc", List.of("seed-1", "seed-2"), Set.of(1L), 20
         )).thenReturn(List.of("target-batch"));
         when(projectionRepository.findByDocumentAndChunkIds(
-                "doc", List.of("target-batch")
+                "doc", List.of("target-batch"), Set.of(1L)
         )).thenReturn(List.of(target));
 
         ReferenceRetrievalStrategy subject = new ReferenceRetrievalStrategy(
@@ -111,6 +111,7 @@ class ReferenceRetrievalStrategyTest {
         verify(referenceGraphRepository).resolveSameDocumentTargets(
                 "doc",
                 List.of("seed-1", "seed-2"),
+                Set.of(1L),
                 20
         );
     }
