@@ -56,8 +56,9 @@ class IdentifierRetrievalStrategyTest {
         when(index.search(any(kz.alimbetov.akmai.knowledge.identifier.search.IdentifierSearchQuery.class)))
                 .thenReturn(List.of(identifier));
         Set<Long> scope = Set.of(3L);
-        when(projections.findByDocumentAndChunkIds(
+        when(projections.findByDocumentGenerationAndChunkIds(
                 "doc-1",
+                3L,
                 List.of("chunk-1"),
                 scope
         )).thenReturn(List.of(projection));
