@@ -46,6 +46,37 @@ class KnowledgeExpansionTest {
                 .containsEntry("expansion", "neighbor");
     }
 
+    @Test
+    void expandedNeighborIsInterleavedBeforeContextCanFillWithOriginals() {
+        KnowledgeExpansion expansion =
+                new KnowledgeExpansion(repository, RetrievalTestProperties.defaults());
+        java.util.List<RetrievalHit> ranked =
+                java.util.stream.IntStream.range(0, 12)
+                        .mapToObj(index -> new RetrievalHit(
+                                RetrievalType.VECTOR,
+                                "doc",
+                                "chunk-" + index,
+                                "seed-" + index,
+                                index == 0
+                                        ? Map.of("chunkIndex", 0)
+                                        : Map.of("chunkIndex", index)
+                        ))
+                        .toList();
+        SearchProjection seed = projection("chunk-0", 0);
+        SearchProjection neighbor = projection("neighbor", 1);
+
+        when(repository.findAdjacent("doc", 0, 1))
+                .thenReturn(List.of(seed, neighbor));
+
+        List<RetrievalHit> result = expansion.expand(ranked);
+
+        assertThat(result.get(0).chunkId()).isEqualTo("chunk-0");
+        assertThat(result.get(1).chunkId()).isEqualTo("neighbor");
+        assertThat(result.subList(0, 12))
+                .extracting(RetrievalHit::chunkId)
+                .contains("neighbor");
+    }
+
     private SearchProjection projection(String chunkId, int index) {
         return new SearchProjection(
                 chunkId,
