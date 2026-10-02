@@ -48,21 +48,6 @@ public class PublishedVectorSearchRepository {
     public List<VectorSearchMatch> search(
             String query,
             List<String> documentIds,
-            int topK,
-            double similarityThreshold
-    ) {
-        return search(
-                query,
-                documentIds,
-                Set.of(),
-                topK,
-                similarityThreshold
-        );
-    }
-
-    public List<VectorSearchMatch> search(
-            String query,
-            List<String> documentIds,
             Set<Long> accessLevels,
             int topK,
             double similarityThreshold
