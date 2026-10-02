@@ -7,18 +7,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
-import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
+import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ResultFusion {
 
     private final RetrievalProperties properties;
-    private final SearchProjectionRepository projectionRepository;
+    private final PublishedSearchProjectionReader projectionRepository;
 
     public ResultFusion(
             RetrievalProperties properties,
-            SearchProjectionRepository projectionRepository
+            PublishedSearchProjectionReader projectionRepository
     ) {
         this.properties = properties;
         this.projectionRepository = projectionRepository;
