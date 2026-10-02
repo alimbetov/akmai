@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.Map;
 import kz.alimbetov.akmai.config.ApiProperties;
 import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
+import kz.alimbetov.akmai.knowledge.model.DocumentMetadata;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +36,10 @@ public class ApiRequestValidator {
             KnowledgeLanguage.parse(request.language());
         } catch (IllegalArgumentException exception) {
             throw new ApiValidationException(exception.getMessage());
+        }
+
+        if (request.accessLevel() == null || request.accessLevel() <= 0) {
+            throw new ApiValidationException("accessLevel must be positive");
         }
 
         validateMetadata(request.metadata());
@@ -112,9 +117,16 @@ public class ApiRequestValidator {
             int maxDepth = depth;
             for (Map.Entry<?, ?> entry : map.entrySet()) {
                 String key = String.valueOf(entry.getKey());
-                if (key.toLowerCase(Locale.ROOT).startsWith("akmai")) {
+                String normalizedKey = key.toLowerCase(Locale.ROOT);
+                if (normalizedKey.startsWith("akmai")) {
                     throw new ApiValidationException(
                             "metadata keys beginning with 'akmai' are reserved"
+                    );
+                }
+                if (DocumentMetadata.ACCESS_LEVEL.equals(normalizedKey)) {
+                    throw new ApiValidationException(
+                            "metadata key '" + DocumentMetadata.ACCESS_LEVEL
+                                    + "' is reserved; use accessLevel"
                     );
                 }
                 MetadataStats nested = inspect(entry.getValue(), depth + 1);
