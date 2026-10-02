@@ -31,6 +31,7 @@ akmai:
     chat-context-window: ${AKMAI_CHAT_CONTEXT_WINDOW:32768}
     embedding-context-window: ${AKMAI_EMBEDDING_CONTEXT_WINDOW:8192}
   api:
+    max-request-bytes: ${AKMAI_API_MAX_REQUEST_BYTES:2097152}
     max-document-chars: ${AKMAI_API_MAX_DOCUMENT_CHARS:1000000}
     max-question-chars: ${AKMAI_API_MAX_QUESTION_CHARS:20000}
     max-metadata-bytes: ${AKMAI_API_MAX_METADATA_BYTES:65536}
@@ -112,6 +113,9 @@ akmai:
 server:
   port: ${SERVER_PORT:8080}
   max-http-request-header-size: ${AKMAI_MAX_REQUEST_HEADER_SIZE:32KB}
+  tomcat:
+    max-http-form-post-size: ${AKMAI_MAX_REQUEST_BODY_SIZE:2MB}
+    max-swallow-size: ${AKMAI_MAX_REQUEST_BODY_SIZE:2MB}
 
 management:
   endpoints:
