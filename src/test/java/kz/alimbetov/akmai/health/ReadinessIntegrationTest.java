@@ -63,4 +63,57 @@ class ReadinessIntegrationTest {
         assertThat(health.getDetails()).containsKey("reason");
     }
 
+    @Test
+    void ollamaAndEmbeddingProfileHealthAreUpWhenCompatible() throws Exception {
+        com.sun.net.httpserver.HttpServer server =
+                com.sun.net.httpserver.HttpServer.create(
+                        new java.net.InetSocketAddress("127.0.0.1", 0),
+                        0
+                );
+        server.createContext("/api/tags", exchange -> {
+            exchange.sendResponseHeaders(200, 0);
+            exchange.getResponseBody().close();
+        });
+        server.start();
+
+        try {
+            var ollama = new OllamaHealthIndicator(
+                    "http://127.0.0.1:" + server.getAddress().getPort()
+            ).health();
+            assertThat(ollama.getStatus()).isEqualTo(Status.UP);
+
+            kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileResolver resolver =
+                    mock(kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileResolver.class);
+            EmbeddingProfileService profiles = mock(EmbeddingProfileService.class);
+            EmbeddingProfile profile = new EmbeddingProfile(
+                    "ep-compatible",
+                    "ollama",
+                    "model",
+                    3,
+                    "COSINE_DISTANCE",
+                    "tokenizer",
+                    "fingerprint",
+                    "akmai_vector",
+                    "p_compatible",
+                    "NONE",
+                    (short) 1,
+                    Instant.parse("2026-10-02T00:00:00Z")
+            );
+            when(resolver.configuredProfile()).thenReturn(profile);
+            when(profiles.activeProfile()).thenReturn(profile);
+
+            var profileHealth = new EmbeddingProfileHealthIndicator(
+                    resolver,
+                    profiles
+            ).health();
+
+            assertThat(profileHealth.getStatus()).isEqualTo(Status.UP);
+            assertThat(profileHealth.getDetails())
+                    .containsEntry("profileId", "ep-compatible")
+                    .containsEntry("dimensions", 3);
+        } finally {
+            server.stop(0);
+        }
+    }
+
 }
