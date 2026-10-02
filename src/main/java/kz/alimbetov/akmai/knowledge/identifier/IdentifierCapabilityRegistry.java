@@ -1,26 +1,27 @@
 package kz.alimbetov.akmai.knowledge.identifier;
 
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
 public class IdentifierCapabilityRegistry {
 
-    private static final Set<IdentifierType> SUPPORTED = EnumSet.of(
-            IdentifierType.CONTRACT_NUMBER,
-            IdentifierType.DOCUMENT_NUMBER,
-            IdentifierType.ORDER_NUMBER,
-            IdentifierType.INVOICE_NUMBER,
-            IdentifierType.APPLICATION_NUMBER,
-            IdentifierType.CASE_NUMBER
-    );
+    private final Set<IdentifierType> supported;
+
+    public IdentifierCapabilityRegistry(List<IdentifierParser> parsers) {
+        EnumSet<IdentifierType> discovered =
+                EnumSet.noneOf(IdentifierType.class);
+        parsers.forEach(parser -> discovered.add(parser.type()));
+        this.supported = Set.copyOf(discovered);
+    }
 
     public Set<IdentifierType> supportedTypes() {
-        return Set.copyOf(SUPPORTED);
+        return supported;
     }
 
     public boolean isSupported(IdentifierType type) {
-        return SUPPORTED.contains(type);
+        return supported.contains(type);
     }
 }
