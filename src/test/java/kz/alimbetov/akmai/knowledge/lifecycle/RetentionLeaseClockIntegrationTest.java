@@ -106,13 +106,14 @@ class RetentionLeaseClockIntegrationTest {
                     document_id, lifecycle_policy, lifecycle_status,
                     generation, attempt_count, row_version,
                     created_at, updated_at, retention_status,
-                    published_generation, next_generation, expires_at
+                    published_generation, next_generation, expires_at,
+                    access_level
                 ) VALUES (
                     'doc-ttl', 'TTL', 'READY',
                     1, 0, 0,
                     clock_timestamp(), clock_timestamp(),
                     'ACTIVE', 1, 2,
-                    clock_timestamp() - interval '1 minute'
+                    clock_timestamp() - interval '1 minute', 1
                 )
                 """
         );
@@ -122,12 +123,12 @@ class RetentionLeaseClockIntegrationTest {
                     document_id, generation, generation_status,
                     generation_kind, content_fingerprint,
                     physical_id_version, cleanup_required,
-                    started_at, published_at
+                    started_at, published_at, access_level
                 ) VALUES (
                     'doc-ttl', 1, 'PUBLISHED',
                     'INGESTION', 'fp', 2, false,
                     clock_timestamp() - interval '1 hour',
-                    clock_timestamp() - interval '30 minutes'
+                    clock_timestamp() - interval '30 minutes', 1
                 )
                 """
         );
