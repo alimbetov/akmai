@@ -133,4 +133,21 @@ class RetentionWorkerPoolTest {
                 RetentionCleanupResult.Status.DELETED
         );
     }
+    @Test
+    void retentionWorkerHasNoSharedHeartbeatSchedulerOrRenewalQueue() {
+        assertThat(java.util.Arrays.stream(
+                RetentionWorkerPool.class.getDeclaredFields()
+        ).map(field -> field.getType().getName()))
+                .noneMatch(type -> type.contains("ScheduledExecutor")
+                        || type.contains("ScheduledThreadPoolExecutor"));
+
+        assertThat(java.util.Arrays.stream(
+                RetentionWorkerPool.class.getDeclaredMethods()
+        ).map(java.lang.reflect.Method::getName))
+                .noneMatch(name -> name.toLowerCase(java.util.Locale.ROOT)
+                        .contains("heartbeat")
+                        || name.toLowerCase(java.util.Locale.ROOT)
+                        .contains("renewlease"));
+    }
+
 }
