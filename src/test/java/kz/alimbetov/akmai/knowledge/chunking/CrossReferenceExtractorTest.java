@@ -25,4 +25,35 @@ class CrossReferenceExtractorTest {
                     assertThat(reference.language()).isEqualTo("ru");
                 });
     }
+    @Test
+    void normalizesEquivalentArticleReferencesAcrossSupportedLanguages() {
+        CrossReferenceExtractor extractor = new CrossReferenceExtractor();
+
+        var ru = extractor.extractTyped("См. статью 25 настоящего закона.");
+        var en = extractor.extractTyped("See Article 25 of this law.");
+        var kk = extractor.extractTyped("Қараңыз 25-бап бойынша.");
+        var zh = extractor.extractTyped("参见第二十五条。");
+
+        assertThat(ru).singleElement().satisfies(reference -> {
+            assertThat(reference.type())
+                    .isEqualTo(kz.alimbetov.akmai.knowledge.reference.CrossReferenceType.ARTICLE);
+            assertThat(reference.canonicalValue()).isEqualTo("25");
+        });
+        assertThat(en).singleElement().satisfies(reference -> {
+            assertThat(reference.type())
+                    .isEqualTo(kz.alimbetov.akmai.knowledge.reference.CrossReferenceType.ARTICLE);
+            assertThat(reference.canonicalValue()).isEqualTo("25");
+        });
+        assertThat(kk).singleElement().satisfies(reference -> {
+            assertThat(reference.type())
+                    .isEqualTo(kz.alimbetov.akmai.knowledge.reference.CrossReferenceType.ARTICLE);
+            assertThat(reference.canonicalValue()).isEqualTo("25");
+        });
+        assertThat(zh).singleElement().satisfies(reference -> {
+            assertThat(reference.type())
+                    .isEqualTo(kz.alimbetov.akmai.knowledge.reference.CrossReferenceType.ARTICLE);
+            assertThat(reference.canonicalValue()).isEqualTo("25");
+        });
+    }
+
 }
