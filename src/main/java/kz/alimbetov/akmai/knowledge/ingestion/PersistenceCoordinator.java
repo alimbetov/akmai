@@ -66,16 +66,22 @@ public class PersistenceCoordinator {
         this.metrics = metrics;
     }
 
+    @Deprecated(forRemoval = true)
     public void persist(List<EnrichedKnowledgeChunk> chunks) {
-        persist(chunks, null, null, 1L);
+        throw new UnsupportedOperationException(
+                "accessLevel is required"
+        );
     }
 
+    @Deprecated(forRemoval = true)
     public void persist(
             List<EnrichedKnowledgeChunk> chunks,
             IngestionIdempotencyContext idempotency,
             KnowledgeIngestionResponse response
     ) {
-        persist(chunks, idempotency, response, 1L);
+        throw new UnsupportedOperationException(
+                "accessLevel is required"
+        );
     }
 
     public void persist(
