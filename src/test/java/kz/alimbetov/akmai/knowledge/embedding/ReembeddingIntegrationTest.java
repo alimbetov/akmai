@@ -247,12 +247,12 @@ class ReembeddingIntegrationTest {
                     document_id, lifecycle_policy, lifecycle_status,
                     generation, attempt_count, row_version,
                     created_at, updated_at, retention_status,
-                    published_generation, next_generation
+                    published_generation, next_generation, access_level
                 ) VALUES (
                     ?, 'PERMANENT', 'READY',
                     1, 0, 0,
                     clock_timestamp(), clock_timestamp(), 'ACTIVE',
-                    1, 2
+                    1, 2, 1
                 )
                 """,
                 documentId
@@ -263,12 +263,12 @@ class ReembeddingIntegrationTest {
                     document_id, generation, generation_status,
                     generation_kind, embedding_profile_id,
                     content_fingerprint, physical_id_version,
-                    cleanup_required, started_at, published_at
+                    cleanup_required, started_at, published_at, access_level
                 ) VALUES (
                     ?, 1, 'PUBLISHED', 'INGESTION', ?,
                     'fp', 2, false,
                     clock_timestamp() - interval '1 hour',
-                    clock_timestamp() - interval '30 minutes'
+                    clock_timestamp() - interval '30 minutes', 1
                 )
                 """,
                 documentId,
