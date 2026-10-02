@@ -31,6 +31,7 @@ public class GenerationPublicationService {
     private final ReferenceGraphRepository referenceGraphRepository;
     private final PostgresGenerationVectorRepository vectorRepository;
     private final IngestionIdempotencyRepository idempotencyRepository;
+    private final PublicationOutcomeResolver outcomeResolver;
 
     public GenerationPublicationService(
             JdbcTemplate jdbcTemplate,
@@ -40,7 +41,8 @@ public class GenerationPublicationService {
             VectorGenerationRepository vectorGenerationRepository,
             ReferenceGraphRepository referenceGraphRepository,
             PostgresGenerationVectorRepository vectorRepository,
-            IngestionIdempotencyRepository idempotencyRepository
+            IngestionIdempotencyRepository idempotencyRepository,
+            PublicationOutcomeResolver outcomeResolver
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactionTemplate = transactionTemplate;
@@ -50,6 +52,7 @@ public class GenerationPublicationService {
         this.referenceGraphRepository = referenceGraphRepository;
         this.vectorRepository = vectorRepository;
         this.idempotencyRepository = idempotencyRepository;
+        this.outcomeResolver = outcomeResolver;
     }
 
     public PublicationResult publish(
@@ -93,19 +96,43 @@ public class GenerationPublicationService {
             IngestionIdempotencyContext idempotency,
             KnowledgeIngestionResponse response
     ) {
-        return transactionTemplate.execute(status -> publishInTransaction(
-                documentId,
-                generation,
-                policy,
-                expiresAt,
-                profile,
-                projections,
-                identifiers,
-                manifest,
-                vectors,
-                idempotency,
-                response
-        ));
+        try {
+            PublicationResult result = transactionTemplate.execute(
+                    status -> publishInTransaction(
+                            documentId,
+                            generation,
+                            policy,
+                            expiresAt,
+                            profile,
+                            projections,
+                            identifiers,
+                            manifest,
+                            vectors,
+                            idempotency,
+                            response
+                    )
+            );
+            if (result == null) {
+                throw new IllegalStateException(
+                        "Publication transaction returned no result"
+                );
+            }
+            return result;
+        } catch (RuntimeException exception) {
+            PublicationOutcomeResolver.Outcome outcome =
+                    outcomeResolver.resolve(
+                            documentId,
+                            generation,
+                            idempotency
+                    );
+            if (outcome == PublicationOutcomeResolver.Outcome.COMMITTED) {
+                return PublicationResult.PUBLISHED;
+            }
+            if (outcome == PublicationOutcomeResolver.Outcome.SUPERSEDED) {
+                return PublicationResult.SUPERSEDED;
+            }
+            throw exception;
+        }
     }
 
     private PublicationResult publishInTransaction(
