@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.config;
 
 import java.time.Duration;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalProperties;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.ollama.OllamaChatModel;
