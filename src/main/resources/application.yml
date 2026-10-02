@@ -77,6 +77,12 @@ akmai:
     embedding-http-timeout: ${AKMAI_RETRIEVAL_EMBEDDING_TIMEOUT:3s}
     context-expansion-max-chunks: ${AKMAI_CONTEXT_EXPANSION_MAX_CHUNKS:3}
     answer-reserved-tokens: ${AKMAI_ANSWER_RESERVED_TOKENS:1024}
+  reconciliation:
+    enabled: ${AKMAI_RECONCILIATION_ENABLED:true}
+    batch-size: ${AKMAI_RECONCILIATION_BATCH_SIZE:100}
+    max-batches-per-run: ${AKMAI_RECONCILIATION_MAX_BATCHES:10}
+    grace-period: ${AKMAI_RECONCILIATION_GRACE_PERIOD:5m}
+    fixed-delay: ${AKMAI_RECONCILIATION_FIXED_DELAY:5m}
   retention:
     enabled: ${AKMAI_RETENTION_ENABLED:true}
     cron: "${AKMAI_RETENTION_CRON:0 30 3 * * *}"
