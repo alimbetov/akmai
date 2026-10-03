@@ -73,6 +73,84 @@ class HotRetentionArchitectureTest {
     }
 
     @Test
+    void globalAnnFencesPublishedGenerationBeforeBranchLimit()
+            throws Exception {
+        String source = normalized(
+                "src/main/java/kz/alimbetov/akmai/knowledge/vector/"
+                        + "PublishedVectorSearchRepository.java"
+        );
+        int globalAnn = source.indexOf(
+                "private searchstatement globalann"
+        );
+        int documentExact = source.indexOf(
+                "private searchstatement documentexact"
+        );
+        String method = source.substring(globalAnn, documentExact);
+
+        int lifecycle = method.indexOf(
+                "join knowledge_document_lifecycle"
+        );
+        int limit = method.indexOf("limit ?");
+
+        assertThat(lifecycle).isGreaterThanOrEqualTo(0);
+        assertThat(limit).isGreaterThan(lifecycle);
+        assertThat(method).contains("retention_status = 'active'");
+    }
+
+    @Test
+    void replacementCutoversUseRetiringBeforePayloadCleanup()
+            throws Exception {
+        String publication = normalized(
+                "src/main/java/kz/alimbetov/akmai/knowledge/ingestion/"
+                        + "GenerationPublicationService.java"
+        );
+        assertThat(publication)
+                .contains("generation_status = 'retiring'")
+                .contains("cleanup_required = true");
+
+        String reembedding = normalized(
+                "src/main/java/kz/alimbetov/akmai/knowledge/embedding/"
+                        + "ReembeddingService.java"
+        );
+        int cutover = reembedding.indexOf("private void cutover");
+        String cutoverMethod = reembedding.substring(cutover);
+        int lifecycleLock = cutoverMethod.indexOf("for update of l");
+        int generationMutation = cutoverMethod.indexOf(
+                "update knowledge_document_generation source"
+        );
+
+        assertThat(lifecycleLock).isGreaterThanOrEqualTo(0);
+        assertThat(generationMutation).isGreaterThan(lifecycleLock);
+        assertThat(cutoverMethod)
+                .contains("generation_status = 'retiring'")
+                .contains("cleanup_required = true");
+    }
+
+    @Test
+    void directPurgeVerifiesEveryPayloadStoreBeforePurged()
+            throws Exception {
+        String cleanup = normalized(
+                "src/main/java/kz/alimbetov/akmai/knowledge/lifecycle/"
+                        + "ChunkRetentionService.java"
+        );
+        int residual = cleanup.indexOf(
+                "residualcounts residual = residualcounts"
+        );
+        int purged = cleanup.indexOf(
+                "set cleanup_status = 'purged'"
+        );
+
+        assertThat(residual).isGreaterThanOrEqualTo(0);
+        assertThat(purged).isGreaterThan(residual);
+        assertThat(cleanup)
+                .contains("knowledge_search_projection")
+                .contains("document_identifier")
+                .contains("knowledge_reference_target")
+                .contains("knowledge_reference_edge")
+                .contains("knowledge_document_vector_generation");
+    }
+
+    @Test
     void claimAndRepairPathsStayBoundedAndSeparated()
             throws Exception {
         String claims = normalized(
