@@ -1,0 +1,12 @@
+id: software
+domain: TECHNICAL
+names:
+  kk: Бағдарламалық жасақтама
+  ru: Программное обеспечение
+  en: Software engineering
+  zh: 软件工程
+headings:
+  "*":
+    - level: 6
+      pattern: '^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+/\S+.*$'
+semanticTypes: {}

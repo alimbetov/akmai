@@ -2,79 +2,9 @@ package kz.alimbetov.akmai.knowledge.chunking;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 final class MultilingualSentenceSplitter {
-
-    private static final Map<String, Set<String>> ABBREVIATIONS = Map.ofEntries(
-            Map.entry(
-                    "en",
-                    Set.of(
-                            "mr.", "mrs.", "ms.", "dr.", "prof.", "etc.",
-                            "e.g.", "i.e.", "vs.", "fig.", "no.", "sec.",
-                            "art."
-                    )
-            ),
-            Map.entry(
-                    "ru",
-                    Set.of(
-                            "г.", "гг.", "т.е.", "т.д.", "т.п.", "др.",
-                            "стр.", "рис.", "им.", "см.", "напр.", "п.",
-                            "пп.", "ст.", "табл.", "разд."
-                    )
-            ),
-            Map.entry(
-                    "kk",
-                    Set.of(
-                            "ж.", "т.б.", "т.с.с.", "мыс.", "ст.", "п."
-                    )
-            ),
-            Map.entry(
-                    "de",
-                    Set.of(
-                            "dr.", "prof.", "hr.", "fr.", "bzw.", "z.b.",
-                            "u.a.", "ziff.", "abs.", "art."
-                    )
-            ),
-            Map.entry(
-                    "fr",
-                    Set.of(
-                            "m.", "mme.", "mlle.", "dr.", "pr.", "art.",
-                            "etc."
-                    )
-            ),
-            Map.entry(
-                    "es",
-                    Set.of(
-                            "sr.", "sra.", "srta.", "dr.", "dra.", "ud.",
-                            "uds.", "art.", "etc."
-                    )
-            ),
-            Map.entry(
-                    "pt",
-                    Set.of(
-                            "sr.", "sra.", "dr.", "dra.", "prof.", "art.",
-                            "etc."
-                    )
-            ),
-            Map.entry(
-                    "it",
-                    Set.of(
-                            "dott.", "dott.ssa.", "sig.", "sig.ra.", "prof.",
-                            "art.", "ecc."
-                    )
-            ),
-            Map.entry(
-                    "tr",
-                    Set.of(
-                            "dr.", "prof.", "sn.", "vb.", "vs.", "md."
-                    )
-            ),
-            Map.entry("el", Set.of("δρ.", "κ.", "κα.", "αρ.")),
-            Map.entry("zh", Set.of())
-    );
 
     private MultilingualSentenceSplitter() {
     }
@@ -83,17 +13,21 @@ final class MultilingualSentenceSplitter {
             String text,
             String language
     ) {
+        return split(text, LanguageProfiles.forCode(language));
+    }
+
+    static List<String> split(
+            String text,
+            LanguageProfile languageProfile
+    ) {
         if (text == null || text.isBlank()) {
             return List.of();
         }
 
-        String code = language == null
-                ? "unknown"
-                : language.trim().toLowerCase(Locale.ROOT);
-        Set<String> abbreviations = ABBREVIATIONS.getOrDefault(
-                code,
-                Set.of()
-        );
+        LanguageProfile profile = languageProfile == null
+                ? LanguageProfiles.forCode(null)
+                : languageProfile;
+        Set<String> abbreviations = profile.abbreviations();
 
         List<String> result = new ArrayList<>();
         int start = 0;
@@ -101,7 +35,7 @@ final class MultilingualSentenceSplitter {
 
         while (index < text.length()) {
             char value = text.charAt(index);
-            if (!isTerminal(value, code)) {
+            if (!profile.terminalChars().contains(value)) {
                 index++;
                 continue;
             }
@@ -114,7 +48,7 @@ final class MultilingualSentenceSplitter {
 
             int end = index + 1;
             while (end < text.length()
-                    && isTerminal(text.charAt(end), code)) {
+                    && profile.terminalChars().contains(text.charAt(end))) {
                 end++;
             }
             while (end < text.length()
@@ -211,7 +145,7 @@ final class MultilingualSentenceSplitter {
             start--;
         }
         return text.substring(start, periodIndex + 1)
-                .toLowerCase(Locale.ROOT);
+                .toLowerCase(java.util.Locale.ROOT);
     }
 
     private static char nextLexicalChar(
@@ -228,21 +162,6 @@ final class MultilingualSentenceSplitter {
             cursor++;
         }
         return 0;
-    }
-
-    private static boolean isTerminal(
-            char value,
-            String language
-    ) {
-        return value == '.'
-                || value == '!'
-                || value == '?'
-                || value == '。'
-                || value == '！'
-                || value == '？'
-                || value == '…'
-                || value == ';'
-                || ("el".equals(language) && value == ';');
     }
 
     private static boolean isCloser(char value) {
