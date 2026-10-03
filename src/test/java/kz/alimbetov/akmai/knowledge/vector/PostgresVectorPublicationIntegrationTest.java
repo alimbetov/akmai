@@ -591,7 +591,8 @@ class PostgresVectorPublicationIntegrationTest {
                             "akmaiDocumentId", "doc-batch",
                             "akmaiGeneration", generation,
                             "akmaiEmbeddingProfileId", profile.profileId(),
-                            "akmaiChunkId", chunkId
+                            "akmaiChunkId", chunkId,
+                            "language", "en"
                     ),
                     index == 100
                             ? new float[] {1f, 2f}
