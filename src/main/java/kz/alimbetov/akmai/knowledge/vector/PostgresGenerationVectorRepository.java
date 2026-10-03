@@ -97,11 +97,22 @@ public class PostgresGenerationVectorRepository {
             return;
         }
         if (hasTypedRouting(profile)) {
-            insertAll(
-                    profile,
-                    identityFromRows(rows),
-                    rows
-            );
+            rows.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(
+                            this::generationKey,
+                            java.util.LinkedHashMap::new,
+                            java.util.stream.Collectors.toList()
+                    ))
+                    .forEach((key, values) ->
+                            insertAll(
+                                    profile,
+                                    identityFor(
+                                            key.documentId(),
+                                            key.generation()
+                                    ),
+                                    values
+                            )
+                    );
             return;
         }
         insertLegacy(profile, rows);
@@ -330,16 +341,23 @@ public class PostgresGenerationVectorRepository {
         return Boolean.TRUE.equals(result);
     }
 
-    private GenerationIdentity identityFromRows(List<VectorRow> rows) {
-        VectorRow first = rows.getFirst();
-        String documentId = textMetadata(
-                first.metadata(),
-                "akmaiDocumentId"
+    private GenerationKey generationKey(VectorRow row) {
+        return new GenerationKey(
+                textMetadata(
+                        row.metadata(),
+                        "akmaiDocumentId"
+                ),
+                longMetadata(
+                        row.metadata(),
+                        "akmaiGeneration"
+                )
         );
-        long generation = longMetadata(
-                first.metadata(),
-                "akmaiGeneration"
-        );
+    }
+
+    private GenerationIdentity identityFor(
+            String documentId,
+            long generation
+    ) {
         return jdbcTemplate.query(
                 """
                 SELECT access_level
@@ -398,6 +416,12 @@ public class PostgresGenerationVectorRepository {
         } catch (JsonProcessingException exception) {
             throw new IllegalArgumentException("Cannot serialize vector metadata", exception);
         }
+    }
+
+    private record GenerationKey(
+            String documentId,
+            long generation
+    ) {
     }
 
     public record VectorRow(
