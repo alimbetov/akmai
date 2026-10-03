@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -69,8 +70,12 @@ class PostgresVectorReconciliationIntegrationTest {
         liquibase.afterPropertiesSet();
 
         jdbc = new JdbcTemplate(dataSource);
-        TransactionTemplate tx = new TransactionTemplate(
-                new DataSourceTransactionManager(dataSource)
+        DataSourceTransactionManager manager =
+                new DataSourceTransactionManager(dataSource);
+        TransactionTemplate tx = new TransactionTemplate(manager);
+        TransactionTemplate repairTx = new TransactionTemplate(manager);
+        repairTx.setPropagationBehavior(
+                TransactionDefinition.PROPAGATION_REQUIRES_NEW
         );
         ObjectMapper mapper = new ObjectMapper();
 
@@ -111,13 +116,20 @@ class PostgresVectorReconciliationIntegrationTest {
                 new ReferenceGraphRepository(jdbc, new CrossReferenceExtractor());
         vectors = new PostgresGenerationVectorRepository(jdbc, mapper, storage);
 
+        ReconciliationProperties reconciliationProperties =
+                new ReconciliationProperties(
+                        true,
+                        10,
+                        1,
+                        Duration.ZERO,
+                        Duration.ofMinutes(5)
+                );
         GenerationRepairService repairService =
                 new GenerationRepairService(
-                        vectors,
-                        references,
-                        identifiers,
-                        projections,
-                        manifests
+                        jdbc,
+                        storage,
+                        reconciliationProperties,
+                        repairTx
                 );
 
         reconciliation = new GenerationReconciliationService(
@@ -126,13 +138,7 @@ class PostgresVectorReconciliationIntegrationTest {
                 vectors,
                 profileRepository,
                 repairService,
-                new ReconciliationProperties(
-                        true,
-                        10,
-                        1,
-                        Duration.ZERO,
-                        Duration.ofMinutes(5)
-                ),
+                reconciliationProperties,
                 new AuditEventRepository(jdbc, mapper)
         );
     }
