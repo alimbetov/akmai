@@ -117,6 +117,30 @@ class SecurityApiIntegrationTest {
     }
 
     @Test
+    void authenticatesPrometheusScrapeWithBearerCredential()
+            throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET",
+                "/actuator/prometheus"
+        );
+        request.addHeader(
+                "Authorization",
+                "Bearer 0123456789abcdef0123456789abcdef"
+        );
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(
+                request,
+                response,
+                new MockFilterChain()
+        );
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(SecurityContextHolder.getContext().getAuthentication())
+                .isNotNull();
+    }
+
+    @Test
     void authenticatesValidApiKeyForMetrics() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest(
                 "GET",

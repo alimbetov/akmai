@@ -1,0 +1,102 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Retention backlog",
+      "id": 1,
+      "gridPos": {"h": 7, "w": 6, "x": 0, "y": 0},
+      "targets": [{"expr": "akmai_retention_backlog", "refId": "A"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Executor rejections / 5m",
+      "id": 2,
+      "gridPos": {"h": 7, "w": 9, "x": 6, "y": 0},
+      "targets": [{
+        "expr": "sum by (role) (increase(akmai_executor_rejected_total[5m]))",
+        "legendFormat": "{{role}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Retrieval timeout/rejected outcomes / 5m",
+      "id": 3,
+      "gridPos": {"h": 7, "w": 9, "x": 15, "y": 0},
+      "targets": [{
+        "expr": "sum by (strategy, status) (increase(akmai_retrieval_outcomes_total{status=~\"TIMED_OUT|REJECTED\"}[5m]))",
+        "legendFormat": "{{strategy}} {{status}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Retrieval strategy p95",
+      "id": 4,
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 7},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum by (le, strategy) (rate(akmai_retrieval_strategy_seconds_bucket{outcome=\"success\"}[5m])))",
+        "legendFormat": "{{strategy}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Retrieval dead row ratio",
+      "id": 5,
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 7},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "max": 1}},
+      "targets": [{
+        "expr": "akmai_retrieval_store_dead_rows_estimated / clamp_min(akmai_retrieval_store_live_rows_estimated + akmai_retrieval_store_dead_rows_estimated, 1)",
+        "legendFormat": "{{store}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Pending verification age",
+      "id": 6,
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 15},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [{
+        "expr": "akmai_retention_oldest_verification_age_seconds",
+        "refId": "A"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "HOT retrieval storage bytes",
+      "id": 7,
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 15},
+      "fieldConfig": {"defaults": {"unit": "bytes"}},
+      "targets": [{
+        "expr": "akmai_retrieval_store_bytes",
+        "legendFormat": "{{store}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Hikari pending connections",
+      "id": 8,
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 15},
+      "targets": [{
+        "expr": "hikaricp_connections_pending",
+        "legendFormat": "{{pool}}",
+        "refId": "A"
+      }]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["akmai", "rag", "production"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timezone": "browser",
+  "title": "AkmAI Production Overview",
+  "uid": "akmai-production-overview",
+  "version": 1
+}

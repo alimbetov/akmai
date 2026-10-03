@@ -1,0 +1,117 @@
+groups:
+  - name: akmai-production
+    rules:
+      - alert: AkmaiRetentionBacklogHigh
+        expr: akmai_retention_backlog > 500
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: AkmAI retention backlog is above the operational threshold
+          description: Retention backlog has remained above 500 rows for 15 minutes.
+
+      - alert: AkmaiRetentionVerificationStalled
+        expr: akmai_retention_oldest_verification_age_seconds > 3600
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: Retired generations are waiting too long for verification
+          description: The oldest pending retention verification is older than one hour.
+
+      - alert: AkmaiRetentionLeaseLost
+        expr: increase(akmai_retention_lease_lost_total[10m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: Retention cleanup lost a lease
+          description: At least one retention cleanup lease was lost in the last 10 minutes.
+
+      - alert: AkmaiRetentionRunFailed
+        expr: increase(akmai_retention_run_seconds_count{outcome="FAILED"}[15m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: Retention scheduler run failed
+          description: A retention scheduler run failed in the last 15 minutes.
+
+      - alert: AkmaiReconciliationRunFailed
+        expr: increase(akmai_reconciliation_run_seconds_count{outcome="FAILED"}[15m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: Generation reconciliation failed
+          description: A reconciliation run failed in the last 15 minutes.
+
+      - alert: AkmaiExecutorRejectedWork
+        expr: increase(akmai_executor_rejected_total[5m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: A bounded AkmAI executor rejected work
+          description: Executor {{ $labels.role }} rejected at least one task in the last 5 minutes.
+
+      - alert: AkmaiRetrievalTimeouts
+        expr: increase(akmai_retrieval_outcomes_total{status="TIMED_OUT"}[5m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: Retrieval strategy timed out
+          description: Retrieval strategy {{ $labels.strategy }} timed out in the last 5 minutes.
+
+      - alert: AkmaiRetrievalRejected
+        expr: increase(akmai_retrieval_outcomes_total{status="REJECTED"}[5m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: Retrieval work was rejected
+          description: Retrieval strategy {{ $labels.strategy }} was rejected by the executor.
+
+      - alert: AkmaiRetrievalFailures
+        expr: increase(akmai_retrieval_failures_total[10m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Retrieval strategy failures detected
+          description: Retrieval strategy {{ $labels.strategy }} is reporting failures.
+
+      - alert: AkmaiRetrievalDeadRowRatioHigh
+        expr: |
+          akmai_retrieval_store_dead_rows_estimated
+          /
+          clamp_min(
+            akmai_retrieval_store_live_rows_estimated
+            + akmai_retrieval_store_dead_rows_estimated,
+            1
+          ) > 0.20
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: Retrieval leaf dead-row ratio is high
+          description: Store {{ $labels.store }} has more than 20% estimated dead rows for 30 minutes.
+
+      - alert: AkmaiRetrievalP95High
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le, strategy) (
+              rate(akmai_retrieval_strategy_seconds_bucket{outcome="success"}[5m])
+            )
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Retrieval p95 latency is above two seconds
+          description: Retrieval strategy {{ $labels.strategy }} p95 latency exceeded two seconds.
+
+      - alert: AkmaiDatabasePoolPending
+        expr: hikaricp_connections_pending > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Database connection pool has pending callers
+          description: HikariCP has callers waiting for a database connection for five minutes.

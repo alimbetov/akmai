@@ -10,6 +10,18 @@ akmai:
     allow-unauthenticated-local: false
 
 management:
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://otel-collector:4318/v1/traces}
+      export:
+        enabled: ${AKMAI_OTLP_TRACING_ENABLED:true}
+  tracing:
+    sampling:
+      probability: ${AKMAI_TRACING_SAMPLING_PROBABILITY:0.10}
+  opentelemetry:
+    resource-attributes:
+      service.name: ${OTEL_SERVICE_NAME:akmai}
+      deployment.environment: ${AKMAI_ENVIRONMENT:production}
   endpoint:
     health:
       show-details: never

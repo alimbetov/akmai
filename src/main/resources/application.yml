@@ -128,7 +128,22 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
+  metrics:
+    distribution:
+      percentiles-histogram:
+        akmai.ingestion: true
+        akmai.retrieval.strategy: true
+        akmai.retrieval.reranker: true
+        akmai.retention.run: true
+        akmai.reconciliation.run: true
+  tracing:
+    sampling:
+      probability: ${AKMAI_TRACING_SAMPLING_PROBABILITY:0.10}
+  opentelemetry:
+    resource-attributes:
+      service.name: ${OTEL_SERVICE_NAME:akmai}
+      deployment.environment: ${AKMAI_ENVIRONMENT:local}
   endpoint:
     health:
       probes:
