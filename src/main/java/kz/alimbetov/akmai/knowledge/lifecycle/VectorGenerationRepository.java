@@ -22,11 +22,7 @@ public class VectorGenerationRepository {
                     "identity must not be null"
             );
         }
-        save(
-                identity.documentId(),
-                identity.generation(),
-                entries
-        );
+        save(identity, null, (short) 2, entries);
     }
 
     public void save(
@@ -34,7 +30,12 @@ public class VectorGenerationRepository {
             long generation,
             List<VectorGenerationEntry> entries
     ) {
-        save(documentId, generation, null, (short) 2, entries);
+        save(
+                identityFor(documentId, generation),
+                null,
+                (short) 2,
+                entries
+        );
     }
 
     public void save(
@@ -48,12 +49,39 @@ public class VectorGenerationRepository {
                     "identity must not be null"
             );
         }
-        save(
-                identity.documentId(),
-                identity.generation(),
-                embeddingProfileId,
-                physicalIdVersion,
-                entries
+        if (entries == null || entries.isEmpty()) {
+            return;
+        }
+
+        jdbcTemplate.batchUpdate(
+                """
+                INSERT INTO knowledge_document_vector_generation (
+                    access_level,
+                    document_id,
+                    generation,
+                    vector_id,
+                    chunk_id,
+                    embedding_profile_id,
+                    physical_id_version
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (
+                    access_level,
+                    document_id,
+                    generation,
+                    vector_id
+                ) DO NOTHING
+                """,
+                entries,
+                100,
+                (ps, entry) -> {
+                    ps.setLong(1, identity.accessLevel());
+                    ps.setString(2, identity.documentId());
+                    ps.setLong(3, identity.generation());
+                    ps.setString(4, entry.vectorId());
+                    ps.setString(5, entry.chunkId());
+                    ps.setString(6, embeddingProfileId);
+                    ps.setShort(7, physicalIdVersion);
+                }
         );
     }
 
@@ -64,27 +92,11 @@ public class VectorGenerationRepository {
             short physicalIdVersion,
             List<VectorGenerationEntry> entries
     ) {
-        if (entries == null || entries.isEmpty()) {
-            return;
-        }
-        jdbcTemplate.batchUpdate(
-                """
-                INSERT INTO knowledge_document_vector_generation (
-                    document_id, generation, vector_id, chunk_id,
-                    embedding_profile_id, physical_id_version
-                ) VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT (document_id, generation, vector_id) DO NOTHING
-                """,
-                entries,
-                100,
-                (ps, entry) -> {
-                    ps.setString(1, documentId);
-                    ps.setLong(2, generation);
-                    ps.setString(3, entry.vectorId());
-                    ps.setString(4, entry.chunkId());
-                    ps.setString(5, embeddingProfileId);
-                    ps.setShort(6, physicalIdVersion);
-                }
+        save(
+                identityFor(documentId, generation),
+                embeddingProfileId,
+                physicalIdVersion,
+                entries
         );
     }
 
@@ -94,25 +106,24 @@ public class VectorGenerationRepository {
                     "identity must not be null"
             );
         }
-        return findVectorIds(
+        return jdbcTemplate.queryForList(
+                """
+                SELECT vector_id
+                FROM knowledge_document_vector_generation
+                WHERE access_level = ?
+                  AND document_id = ?
+                  AND generation = ?
+                ORDER BY vector_id
+                """,
+                String.class,
+                identity.accessLevel(),
                 identity.documentId(),
                 identity.generation()
         );
     }
 
     public List<String> findVectorIds(String documentId, long generation) {
-        return jdbcTemplate.queryForList(
-                """
-                SELECT vector_id
-                FROM knowledge_document_vector_generation
-                WHERE document_id = ?
-                  AND generation = ?
-                ORDER BY vector_id
-                """,
-                String.class,
-                documentId,
-                generation
-        );
+        return findVectorIds(identityFor(documentId, generation));
     }
 
     public String findEmbeddingProfileId(GenerationIdentity identity) {
@@ -121,26 +132,27 @@ public class VectorGenerationRepository {
                     "identity must not be null"
             );
         }
-        return findEmbeddingProfileId(
-                identity.documentId(),
-                identity.generation()
-        );
-    }
-
-    public String findEmbeddingProfileId(String documentId, long generation) {
         return jdbcTemplate.query(
                 """
                 SELECT embedding_profile_id
                 FROM knowledge_document_vector_generation
-                WHERE document_id = ?
+                WHERE access_level = ?
+                  AND document_id = ?
                   AND generation = ?
                   AND embedding_profile_id IS NOT NULL
                 LIMIT 1
                 """,
                 (rs, rowNum) -> rs.getString(1),
-                documentId,
-                generation
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
         ).stream().findFirst().orElse(null);
+    }
+
+    public String findEmbeddingProfileId(String documentId, long generation) {
+        return findEmbeddingProfileId(
+                identityFor(documentId, generation)
+        );
     }
 
     public void deleteGeneration(GenerationIdentity identity) {
@@ -149,21 +161,48 @@ public class VectorGenerationRepository {
                     "identity must not be null"
             );
         }
-        deleteGeneration(
+        jdbcTemplate.update(
+                """
+                DELETE FROM knowledge_document_vector_generation
+                WHERE access_level = ?
+                  AND document_id = ?
+                  AND generation = ?
+                """,
+                identity.accessLevel(),
                 identity.documentId(),
                 identity.generation()
         );
     }
 
     public void deleteGeneration(String documentId, long generation) {
-        jdbcTemplate.update(
+        deleteGeneration(identityFor(documentId, generation));
+    }
+
+    private GenerationIdentity identityFor(
+            String documentId,
+            long generation
+    ) {
+        return jdbcTemplate.query(
                 """
-                DELETE FROM knowledge_document_vector_generation
+                SELECT access_level
+                FROM knowledge_document_generation
                 WHERE document_id = ?
                   AND generation = ?
                 """,
+                (rs, rowNum) -> new GenerationIdentity(
+                        documentId,
+                        generation,
+                        rs.getLong("access_level")
+                ),
                 documentId,
                 generation
+        ).stream().findFirst().orElseThrow(() ->
+                new IllegalStateException(
+                        "Generation identity does not exist: "
+                                + documentId
+                                + "/"
+                                + generation
+                )
         );
     }
 
