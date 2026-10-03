@@ -19,8 +19,6 @@ import kz.alimbetov.akmai.knowledge.ingestion.VectorIdentity;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.PostgresSearchProjectionRepository;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
-import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
-import kz.alimbetov.akmai.knowledge.chunking.CrossReferenceExtractor;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
