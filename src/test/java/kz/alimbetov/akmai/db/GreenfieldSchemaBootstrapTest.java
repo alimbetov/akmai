@@ -424,6 +424,36 @@ class GreenfieldSchemaBootstrapTest {
         )).isInstanceOf(DataIntegrityViolationException.class);
     }
 
+    @Test
+    void retirementTombstoneIsStandaloneFromGenerationControlRow() {
+        Integer foreignKeys = jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM pg_constraint
+                WHERE conrelid =
+                    'knowledge_retired_generation'::regclass
+                  AND contype = 'f'
+                """,
+                Integer.class
+        );
+        assertThat(foreignKeys).isZero();
+
+        String primaryKey = jdbc.queryForObject(
+                """
+                SELECT pg_get_constraintdef(oid)
+                FROM pg_constraint
+                WHERE conrelid =
+                    'knowledge_retired_generation'::regclass
+                  AND contype = 'p'
+                """,
+                String.class
+        );
+        assertThat(primaryKey)
+                .isEqualTo(
+                        "PRIMARY KEY (document_id, generation, access_level)"
+                );
+    }
+
     private static void provision(long accessLevel) {
         jdbc.query(
                 "SELECT akmai_admin.ensure_access_level(?)",
