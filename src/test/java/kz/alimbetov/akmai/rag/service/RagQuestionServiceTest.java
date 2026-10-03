@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphOnlineExpansion;
 import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphShadowExpansion;
 import kz.alimbetov.akmai.knowledge.graph.AssociationLearningRecorder;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
@@ -46,6 +47,8 @@ class RagQuestionServiceTest {
                 mock(AssociationLearningRecorder.class);
         AdaptiveGraphShadowExpansion shadowExpansion =
                 mock(AdaptiveGraphShadowExpansion.class);
+        AdaptiveGraphOnlineExpansion onlineExpansion =
+                mock(AdaptiveGraphOnlineExpansion.class);
 
         QueryChunk query = new QueryChunk(
                 "q", 0, "question", "question", "question", "en", List.of()
@@ -79,6 +82,27 @@ class RagQuestionServiceTest {
         when(reranker.rerank(List.of(hit), "question"))
                 .thenReturn(List.of(hit));
         when(expansion.expand(List.of(hit), scope)).thenReturn(List.of(hit));
+        AdaptiveGraphShadowExpansion.ShadowExpansionReport graphReport =
+                new AdaptiveGraphShadowExpansion.ShadowExpansionReport(
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        List.of(),
+                        false
+                );
+        when(shadowExpansion.observe(
+                List.of(hit),
+                List.of(hit),
+                scope
+        )).thenReturn(graphReport);
+        when(onlineExpansion.expand(
+                List.of(hit),
+                graphReport,
+                scope
+        )).thenReturn(List.of(hit));
         when(budget.apply(List.of(hit), "question")).thenReturn(List.of(hit));
         when(assembler.assemble(anyList())).thenReturn("{\"sources\":[]}");
         when(generation.generate(eq("question"), eq("{\"sources\":[]}")))
@@ -96,7 +120,8 @@ class RagQuestionServiceTest {
                 new CitationValidator(),
                 generation,
                 learning,
-                shadowExpansion
+                shadowExpansion,
+                onlineExpansion
         );
 
         var response = service.ask("question", scope);
