@@ -236,6 +236,7 @@ public class PublishedVectorSearchRepository {
                             v.embedding <=> ? AS distance
                         FROM %s v
                         WHERE v.access_level = ?
+                          AND v.storage_state = 0
                     """.formatted(table));
             if (language != null) {
                 sql.append(" AND v.language = ?\n");
@@ -308,6 +309,7 @@ public class PublishedVectorSearchRepository {
                     FROM knowledge_document_lifecycle l
                     JOIN %s v
                       ON v.access_level = ?
+                     AND v.storage_state = 0
                      AND v.document_id = l.document_id
                      AND v.generation = l.published_generation
                     WHERE l.access_level = ?
