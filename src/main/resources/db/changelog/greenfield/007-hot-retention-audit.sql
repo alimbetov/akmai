@@ -31,8 +31,7 @@ CREATE TABLE knowledge_retired_generation (
         CHECK (cleanup_status IN (
             'PURGING',
             'PURGED',
-            'VERIFIED',
-            'REPAIR_REQUIRED'
+            'VERIFIED'
         )),
     CONSTRAINT ck_retired_generation_timestamps
         CHECK (
@@ -45,8 +44,7 @@ CREATE TABLE knowledge_retired_generation (
             (
                 cleanup_status IN (
                     'PURGED',
-                    'VERIFIED',
-                    'REPAIR_REQUIRED'
+                    'VERIFIED'
                 )
                 AND retired_at IS NOT NULL
                 AND purge_after IS NOT NULL
@@ -161,7 +159,7 @@ BEGIN
     END LOOP;
 
     v_cutoff := (
-        date_trunc('month', clock_timestamp()) - interval '12 months'
+        date_trunc('month', clock_timestamp()) - interval '11 months'
     )::date;
 
     FOR v_partition IN
