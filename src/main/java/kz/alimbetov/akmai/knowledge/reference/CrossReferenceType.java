@@ -5,5 +5,13 @@ public enum CrossReferenceType {
     SECTION,
     CLAUSE,
     PARAGRAPH,
-    SUBPARAGRAPH
+    SUBPARAGRAPH,
+    CHAPTER,
+    PART,
+    APPENDIX,
+    TABLE,
+    FIGURE,
+    EXTERNAL_LAW,
+    EXTERNAL_STANDARD,
+    EXTERNAL_TECHNICAL
 }

@@ -155,7 +155,7 @@ public class SemanticChunker {
                     sectionPath,
                     document.language(),
                     document.domain(),
-                    referenceExtractor.extract(rawText),
+                    referenceExtractor.extract(rawText, document.language()),
                     Map.copyOf(metadata)
             ));
         }

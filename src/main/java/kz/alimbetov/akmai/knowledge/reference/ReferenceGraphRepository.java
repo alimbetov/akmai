@@ -61,11 +61,17 @@ public class ReferenceGraphRepository {
         List<EdgeRow> edges = new ArrayList<>();
 
         for (SearchProjection projection : projections) {
-            extractor.extractAnchor(projection.text()).ifPresent(anchor ->
+            extractor.extractAnchor(
+                    projection.text(),
+                    projection.language()
+            ).ifPresent(anchor ->
                     targets.add(new TargetRow(projection, anchor))
             );
             for (CrossReference reference
-                    : extractor.extractTyped(projection.text())) {
+                    : extractor.extractTyped(
+                            projection.text(),
+                            projection.language()
+                    )) {
                 edges.add(new EdgeRow(projection, reference));
             }
         }
