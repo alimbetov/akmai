@@ -143,6 +143,9 @@ class ChunkRetentionServiceIntegrationTest {
         assertThat(payloadCount(
                 "knowledge_document_vector_generation"
         )).isZero();
+        assertThat(payloadCount("document_identifier")).isZero();
+        assertThat(payloadCount("knowledge_reference_target")).isZero();
+        assertThat(payloadCount("knowledge_reference_edge")).isZero();
         assertThat(vectors.countGeneration(
                 profile,
                 identity()
@@ -233,6 +236,9 @@ class ChunkRetentionServiceIntegrationTest {
         assertThat(payloadCount(
                 "knowledge_document_vector_generation"
         )).isEqualTo(1);
+        assertThat(payloadCount("document_identifier")).isEqualTo(1);
+        assertThat(payloadCount("knowledge_reference_target")).isEqualTo(1);
+        assertThat(payloadCount("knowledge_reference_edge")).isEqualTo(1);
         assertThat(vectors.countGeneration(
                 profile,
                 identity()
