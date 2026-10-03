@@ -156,10 +156,18 @@ AND storage_state = ACTIVE
 Results are merged and deduplicated by physical vector id.
 
 This preserves multilingual recall without paying the twelve-language ANN
-fan-out on the ordinary same-language path.
+fan-out on the ordinary same-language path. The benchmark keeps all twelve
+supported language leaves as a worst-case ceiling; ordinary deployments are
+expected to use a smaller active language set, commonly no more than five
+language domains.
 
 When query language is `unknown`, retrieval starts directly in the
 cross-language fallback mode.
+
+Known languages that do not have a dedicated PostgreSQL stemming
+configuration use the generic `simple` FTS vector, but remain constrained by
+`language = ?`. They therefore retain executor-time language partition pruning
+instead of degrading to a cross-language lexical scan.
 
 ## Document-scoped semantic retrieval
 
@@ -241,6 +249,18 @@ good fit for independent operational/time-series tables.
 8. Unknown/unprovisioned routing values fail closed at INSERT.
 9. Downstream retrieval preserves exact ACL/generation identity.
 10. Cross-language retrieval never scans ARCHIVED leaves.
+
+## Benchmark contract
+
+The runtime and language/storage benchmark use `hnsw.ef_search = 40` with
+`hnsw.iterative_scan = strict_order`. The natural PostgreSQL planner is free to
+prefer a sequential scan for a small language leaf when that has lower cost.
+That choice is recorded as benchmark diagnostics, not treated as a topology
+failure. A separate planner probe with sequential scans disabled verifies that
+the production ANN query shape can use the local HNSW index.
+
+This separates three independent gates: partition pruning, ANN recall/latency,
+and HNSW index usability.
 
 ## Remaining merge gates
 

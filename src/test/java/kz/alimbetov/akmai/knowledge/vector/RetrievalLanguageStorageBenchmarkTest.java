@@ -123,9 +123,10 @@ class RetrievalLanguageStorageBenchmarkTest {
                 .count())
                 .isGreaterThan(1);
 
-        assertThat(same.plan().indexes())
-                .anyMatch(name -> name.contains("hnsw"));
-        assertThat(cross.plan().indexes())
+        Plan hnswUsability = summarize(
+                explainWithSequentialScanDisabled(sameLanguage)
+        );
+        assertThat(hnswUsability.indexes())
                 .anyMatch(name -> name.contains("hnsw"));
 
         Path output = Path.of(
@@ -456,10 +457,46 @@ class RetrievalLanguageStorageBenchmarkTest {
         }
     }
 
+    private static String explainWithSequentialScanDisabled(Query query) {
+        try {
+            setSession();
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("SET enable_seqscan = off");
+            }
+            try (PreparedStatement ps = connection.prepareStatement(
+                    """
+                    EXPLAIN (
+                        ANALYZE,
+                        BUFFERS,
+                        SETTINGS,
+                        SUMMARY,
+                        FORMAT JSON
+                    )
+                    """ + query.sql()
+            )) {
+                bind(ps, query.parameters());
+                try (ResultSet rs = ps.executeQuery()) {
+                    rs.next();
+                    return rs.getString(1);
+                }
+            } finally {
+                try (Statement statement = connection.createStatement()) {
+                    statement.execute("RESET enable_seqscan");
+                }
+                resetSession();
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException(
+                    "Language benchmark HNSW usability EXPLAIN failed",
+                    exception
+            );
+        }
+    }
+
     private static void setSession() throws Exception {
         try (Statement statement = connection.createStatement()) {
             statement.execute("SET hnsw.iterative_scan = strict_order");
-            statement.execute("SET hnsw.ef_search = 80");
+            statement.execute("SET hnsw.ef_search = 40");
         }
     }
 

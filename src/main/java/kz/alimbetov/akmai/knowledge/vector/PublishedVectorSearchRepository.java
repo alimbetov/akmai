@@ -24,6 +24,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Repository
 public class PublishedVectorSearchRepository {
 
+    private static final int HNSW_EF_SEARCH = 40;
+
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
     private final EmbeddingModel embeddingModel;
@@ -174,6 +176,10 @@ public class PublishedVectorSearchRepository {
                     if ("HNSW".equals(profile.indexType())) {
                         jdbcTemplate.execute(
                                 "SET LOCAL hnsw.iterative_scan = strict_order"
+                        );
+                        jdbcTemplate.execute(
+                                "SET LOCAL hnsw.ef_search = "
+                                        + HNSW_EF_SEARCH
                         );
                     }
                     return jdbcTemplate.query(

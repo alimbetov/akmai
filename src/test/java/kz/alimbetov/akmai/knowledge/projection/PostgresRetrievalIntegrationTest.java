@@ -380,6 +380,42 @@ class PostgresRetrievalIntegrationTest {
     }
 
     @Test
+    void genericLanguageFtsStaysInsideRequestedLanguageLeaf() {
+        long generation = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-generic-language",
+                1L
+        );
+        projections.saveAll(List.of(
+                projection(
+                        "de-generic",
+                        generation,
+                        "sharedtoken vertrag regelung",
+                        "de"
+                ),
+                projection(
+                        "fr-generic",
+                        generation,
+                        "sharedtoken contrat regle",
+                        "fr"
+                )
+        ));
+        publish("doc", generation);
+
+        assertThat(projections.searchLexical(
+                "sharedtoken",
+                "de",
+                List.of("doc"),
+                Set.of(1L),
+                10
+        )).extracting(SearchProjection::chunkId)
+                .containsExactly("de-generic");
+    }
+
+    @Test
     void escapedWildcardLikeQueryCanUseTrigramIndex() {
         long generation = generations.allocate(
                 "doc",

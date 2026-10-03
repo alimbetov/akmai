@@ -12,6 +12,7 @@ import java.util.Set;
 import kz.alimbetov.akmai.knowledge.identifier.DetectedIdentifier;
 import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
+import kz.alimbetov.akmai.knowledge.model.RetrievalLanguageCatalog;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -399,6 +400,8 @@ public class PostgresSearchProjectionRepository
         }
         LexicalSearchLanguage searchLanguage =
                 LexicalSearchLanguage.from(language);
+        String routedLanguage =
+                RetrievalLanguageCatalog.normalizeOrUnknown(language);
         return switch (searchLanguage) {
             case RU -> searchFtsWithLanguageFallback(
                     query,
@@ -434,6 +437,9 @@ public class PostgresSearchProjectionRepository
             );
             case UNKNOWN -> searchSimple(
                     query,
+                    RetrievalLanguageCatalog.UNKNOWN.equals(routedLanguage)
+                            ? null
+                            : routedLanguage,
                     documentIds,
                     accessLevels,
                     limit
@@ -696,11 +702,15 @@ public class PostgresSearchProjectionRepository
 
     private List<SearchProjection> searchSimple(
             String query,
+            String language,
             List<String> documentIds,
             Set<Long> accessLevels,
             int limit
     ) {
         List<Long> routed = routedAccessLevels(accessLevels);
+        String languageFilter = language == null
+                ? ""
+                : "      AND p.language = ?\\n";
         String branch = """
                 (
                     SELECT p.*,
@@ -716,6 +726,7 @@ public class PostgresSearchProjectionRepository
                     WHERE p.access_level = ?
                       AND p.storage_state = 0
                       AND l.retention_status = 'ACTIVE'
+                """ + languageFilter + """
                       AND p.search_vector
                           @@ websearch_to_tsquery('simple', ?)
                 """ + documentFilter(documentIds) + """
@@ -732,6 +743,9 @@ public class PostgresSearchProjectionRepository
         for (long accessLevel : routed) {
             parameters.add(query);
             parameters.add(accessLevel);
+            if (language != null) {
+                parameters.add(language);
+            }
             parameters.add(query);
             if (documentIds != null && !documentIds.isEmpty()) {
                 parameters.add(documentIds);
