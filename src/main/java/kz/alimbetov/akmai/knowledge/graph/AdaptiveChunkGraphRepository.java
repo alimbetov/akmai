@@ -59,6 +59,7 @@ public class AdaptiveChunkGraphRepository {
         }
 
         transactionTemplate.executeWithoutResult(status -> {
+            lockOrder.forEach(this::lockPublishedGeneration);
             lockOrder.forEach(this::lockNode);
             observations.forEach(observation ->
                     upsertPair(
@@ -214,6 +215,31 @@ public class AdaptiveChunkGraphRepository {
                 .anyMatch(value -> value == null || value <= 0)) {
             throw new IllegalArgumentException(
                     "allowedAccessLevels must contain positive values"
+            );
+        }
+    }
+
+    private void lockPublishedGeneration(ChunkGraphNode node) {
+        Integer published = jdbcTemplate.query(
+                """
+                SELECT 1
+                FROM knowledge_document_lifecycle
+                WHERE document_id = ?
+                  AND access_level = ?
+                  AND published_generation = ?
+                  AND retention_status = 'ACTIVE'
+                FOR SHARE
+                """,
+                (rs, rowNum) -> rs.getInt(1),
+                node.documentId(),
+                node.accessLevel(),
+                node.generation()
+        ).stream().findFirst().orElse(null);
+
+        if (published == null) {
+            throw new IllegalStateException(
+                    "adaptive graph reinforcement requires "
+                            + "ACTIVE/PUBLISHED generation"
             );
         }
     }
