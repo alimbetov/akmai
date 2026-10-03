@@ -22,14 +22,57 @@ public class DocumentIdentifierRepository {
         if (identifiers == null || identifiers.isEmpty()) {
             return;
         }
+
+        identifiers.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        value -> new GenerationKey(
+                                value.documentId(),
+                                value.generation()
+                        ),
+                        java.util.LinkedHashMap::new,
+                        java.util.stream.Collectors.toList()
+                ))
+                .forEach((key, values) ->
+                        saveAll(
+                                identityFor(
+                                        key.documentId(),
+                                        key.generation()
+                                ),
+                                values
+                        )
+                );
+    }
+
+    public void saveAll(
+            GenerationIdentity identity,
+            List<DocumentIdentifier> identifiers
+    ) {
+        requireGenerationIdentity(identity, identifiers);
+        if (identifiers == null || identifiers.isEmpty()) {
+            return;
+        }
+
         jdbcTemplate.batchUpdate(
                 """
                 INSERT INTO document_identifier (
-                    document_id, generation, chunk_id, page_number, identifier_type,
-                    raw_value, normalized_value, context_text, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    access_level,
+                    document_id,
+                    generation,
+                    chunk_id,
+                    page_number,
+                    identifier_type,
+                    raw_value,
+                    normalized_value,
+                    context_text,
+                    created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (
-                    document_id, generation, chunk_id, identifier_type, normalized_value
+                    access_level,
+                    document_id,
+                    generation,
+                    chunk_id,
+                    identifier_type,
+                    normalized_value
                 )
                 DO UPDATE SET
                     raw_value = EXCLUDED.raw_value,
@@ -40,25 +83,21 @@ public class DocumentIdentifierRepository {
                 identifiers,
                 100,
                 (ps, value) -> {
-                    ps.setString(1, value.documentId());
-                    ps.setLong(2, value.generation());
-                    ps.setString(3, value.chunkId());
-                    ps.setInt(4, value.pageNumber());
-                    ps.setString(5, value.type().name());
-                    ps.setString(6, value.rawValue());
-                    ps.setString(7, value.normalizedValue());
-                    ps.setString(8, value.contextText());
-                    ps.setTimestamp(9, Timestamp.from(value.createdAt()));
+                    ps.setLong(1, identity.accessLevel());
+                    ps.setString(2, identity.documentId());
+                    ps.setLong(3, identity.generation());
+                    ps.setString(4, value.chunkId());
+                    ps.setInt(5, value.pageNumber());
+                    ps.setString(6, value.type().name());
+                    ps.setString(7, value.rawValue());
+                    ps.setString(8, value.normalizedValue());
+                    ps.setString(9, value.contextText());
+                    ps.setTimestamp(
+                            10,
+                            Timestamp.from(value.createdAt())
+                    );
                 }
         );
-    }
-
-    public void saveAll(
-            GenerationIdentity identity,
-            List<DocumentIdentifier> identifiers
-    ) {
-        requireGenerationIdentity(identity, identifiers);
-        saveAll(identifiers);
     }
 
     public List<DocumentIdentifier> findExact(
@@ -121,20 +160,7 @@ public class DocumentIdentifierRepository {
             String documentId,
             long generation
     ) {
-        return jdbcTemplate.query(
-                """
-                SELECT document_id, generation, chunk_id, page_number,
-                       identifier_type, raw_value, normalized_value,
-                       context_text, created_at
-                FROM document_identifier
-                WHERE document_id = ?
-                  AND generation = ?
-                ORDER BY id
-                """,
-                this::map,
-                documentId,
-                generation
-        );
+        return findGeneration(identityFor(documentId, generation));
     }
 
     public List<DocumentIdentifier> findGeneration(
@@ -145,22 +171,26 @@ public class DocumentIdentifierRepository {
                     "identity must not be null"
             );
         }
-        return findGeneration(
+        return jdbcTemplate.query(
+                """
+                SELECT document_id, generation, chunk_id, page_number,
+                       identifier_type, raw_value, normalized_value,
+                       context_text, created_at
+                FROM document_identifier
+                WHERE access_level = ?
+                  AND document_id = ?
+                  AND generation = ?
+                ORDER BY id
+                """,
+                this::map,
+                identity.accessLevel(),
                 identity.documentId(),
                 identity.generation()
         );
     }
 
     public void deleteGeneration(String documentId, long generation) {
-        jdbcTemplate.update(
-                """
-                DELETE FROM document_identifier
-                WHERE document_id = ?
-                  AND generation = ?
-                """,
-                documentId,
-                generation
-        );
+        deleteGeneration(identityFor(documentId, generation));
     }
 
     public void deleteGeneration(GenerationIdentity identity) {
@@ -169,7 +199,14 @@ public class DocumentIdentifierRepository {
                     "identity must not be null"
             );
         }
-        deleteGeneration(
+        jdbcTemplate.update(
+                """
+                DELETE FROM document_identifier
+                WHERE access_level = ?
+                  AND document_id = ?
+                  AND generation = ?
+                """,
+                identity.accessLevel(),
                 identity.documentId(),
                 identity.generation()
         );
@@ -179,6 +216,34 @@ public class DocumentIdentifierRepository {
         jdbcTemplate.update(
                 "DELETE FROM document_identifier WHERE document_id = ?",
                 documentId
+        );
+    }
+
+    private GenerationIdentity identityFor(
+            String documentId,
+            long generation
+    ) {
+        return jdbcTemplate.query(
+                """
+                SELECT access_level
+                FROM knowledge_document_generation
+                WHERE document_id = ?
+                  AND generation = ?
+                """,
+                (rs, rowNum) -> new GenerationIdentity(
+                        documentId,
+                        generation,
+                        rs.getLong("access_level")
+                ),
+                documentId,
+                generation
+        ).stream().findFirst().orElseThrow(() ->
+                new IllegalStateException(
+                        "Generation identity does not exist: "
+                                + documentId
+                                + "/"
+                                + generation
+                )
         );
     }
 
@@ -224,8 +289,9 @@ public class DocumentIdentifierRepository {
                 JOIN knowledge_document_lifecycle l
                   ON l.document_id = i.document_id
                  AND l.published_generation = i.generation
+                 AND l.access_level = i.access_level
                 WHERE l.retention_status = 'ACTIVE'
-                  AND l.access_level = ANY (?)
+                  AND i.access_level = ANY (?)
                   AND i.identifier_type = ?
                   AND i.normalized_value LIKE ? ESCAPE '\\'
                 ORDER BY i.created_at DESC
@@ -263,8 +329,9 @@ public class DocumentIdentifierRepository {
                 JOIN knowledge_document_lifecycle l
                   ON l.document_id = i.document_id
                  AND l.published_generation = i.generation
+                 AND l.access_level = i.access_level
                 WHERE l.retention_status = 'ACTIVE'
-                  AND l.access_level = ANY (?)
+                  AND i.access_level = ANY (?)
                 """ + predicate + """
                 ORDER BY i.created_at DESC
                 LIMIT ?
@@ -307,6 +374,12 @@ public class DocumentIdentifierRepository {
                 rs.getString("context_text"),
                 rs.getTimestamp("created_at").toInstant()
         );
+    }
+
+    private record GenerationKey(
+            String documentId,
+            long generation
+    ) {
     }
 
     private String escapeLike(String value) {
