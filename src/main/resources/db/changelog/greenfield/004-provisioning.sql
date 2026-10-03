@@ -13,6 +13,9 @@ AS $$
 DECLARE
     v_access_child TEXT;
     v_language_child TEXT;
+    v_active_child TEXT;
+    v_archive_child TEXT;
+    v_index_prefix TEXT;
 BEGIN
     IF p_access_level IS NULL OR p_access_level <= 0 THEN
         RAISE EXCEPTION 'access_level must be positive';
@@ -36,6 +39,10 @@ BEGIN
         'knowledge_search_projection_al_' || p_access_level::TEXT;
     v_language_child :=
         v_access_child || '_lang_' || p_language;
+    v_active_child := v_language_child || '_s0';
+    v_archive_child := v_language_child || '_s1';
+    v_index_prefix :=
+        'ksp_' || p_access_level::TEXT || '_' || p_language;
 
     IF to_regclass(format('public.%I', v_access_child)) IS NULL THEN
         RAISE EXCEPTION
@@ -46,10 +53,64 @@ BEGIN
     EXECUTE format(
         'CREATE TABLE IF NOT EXISTS public.%I
          PARTITION OF public.%I
-         FOR VALUES IN (%L)',
+         FOR VALUES IN (%L)
+         PARTITION BY LIST (storage_state)',
         v_language_child,
         v_access_child,
         p_language
+    );
+
+    EXECUTE format(
+        'CREATE TABLE IF NOT EXISTS public.%I
+         PARTITION OF public.%I
+         FOR VALUES IN (0)',
+        v_active_child,
+        v_language_child
+    );
+
+    EXECUTE format(
+        'CREATE TABLE IF NOT EXISTS public.%I
+         PARTITION OF public.%I
+         FOR VALUES IN (1)',
+        v_archive_child,
+        v_language_child
+    );
+
+    EXECUTE format(
+        'CREATE INDEX IF NOT EXISTS %I
+         ON public.%I (
+             document_id,
+             generation,
+             chunk_index
+         )',
+        v_index_prefix || '_act_doc',
+        v_active_child
+    );
+
+    EXECUTE format(
+        'CREATE INDEX IF NOT EXISTS %I
+         ON public.%I
+         USING GIN (search_vector)',
+        v_index_prefix || '_act_fts',
+        v_active_child
+    );
+
+    EXECUTE format(
+        'CREATE INDEX IF NOT EXISTS %I
+         ON public.%I
+         USING GIN (lower(text_content) gin_trgm_ops)',
+        v_index_prefix || '_act_txt',
+        v_active_child
+    );
+
+    EXECUTE format(
+        'CREATE INDEX IF NOT EXISTS %I
+         ON public.%I
+         USING GIN (
+             lower(coalesce(section_path, '''')) gin_trgm_ops
+         )',
+        v_index_prefix || '_act_sec',
+        v_active_child
     );
 
     IF p_language = 'ru' THEN
@@ -57,18 +118,28 @@ BEGIN
             'CREATE INDEX IF NOT EXISTS %I
              ON public.%I
              USING GIN (search_vector_ru)',
-            v_language_child || '_fts_ru',
-            v_language_child
+            v_index_prefix || '_act_ru',
+            v_active_child
         );
     ELSIF p_language = 'en' THEN
         EXECUTE format(
             'CREATE INDEX IF NOT EXISTS %I
              ON public.%I
              USING GIN (search_vector_en)',
-            v_language_child || '_fts_en',
-            v_language_child
+            v_index_prefix || '_act_en',
+            v_active_child
         );
     END IF;
+
+    EXECUTE format(
+        'CREATE INDEX IF NOT EXISTS %I
+         ON public.%I (
+             document_id,
+             generation
+         )',
+        v_index_prefix || '_arc_doc',
+        v_archive_child
+    );
 END;
 $$;
 
@@ -86,6 +157,11 @@ AS $$
 DECLARE
     v_access_child TEXT;
     v_language_child TEXT;
+    v_active_child TEXT;
+    v_archive_child TEXT;
+    v_hnsw_index TEXT;
+    v_active_doc_index TEXT;
+    v_archive_doc_index TEXT;
 BEGIN
     IF p_access_level IS NULL OR p_access_level <= 0 THEN
         RAISE EXCEPTION 'access_level must be positive';
@@ -115,6 +191,36 @@ BEGIN
         p_vector_table || '_al_' || p_access_level::TEXT;
     v_language_child :=
         v_access_child || '_lang_' || p_language;
+    v_active_child := v_language_child || '_s0';
+    v_archive_child := v_language_child || '_s1';
+
+    v_hnsw_index :=
+        'v_' || substr(
+            md5(
+                p_vector_table || ':' || p_access_level::TEXT
+                || ':' || p_language || ':h'
+            ),
+            1,
+            24
+        );
+    v_active_doc_index :=
+        'v_' || substr(
+            md5(
+                p_vector_table || ':' || p_access_level::TEXT
+                || ':' || p_language || ':a'
+            ),
+            1,
+            24
+        );
+    v_archive_doc_index :=
+        'v_' || substr(
+            md5(
+                p_vector_table || ':' || p_access_level::TEXT
+                || ':' || p_language || ':r'
+            ),
+            1,
+            24
+        );
 
     IF to_regclass(
         format('akmai_vector.%I', v_access_child)
@@ -127,10 +233,55 @@ BEGIN
     EXECUTE format(
         'CREATE TABLE IF NOT EXISTS akmai_vector.%I
          PARTITION OF akmai_vector.%I
-         FOR VALUES IN (%L)',
+         FOR VALUES IN (%L)
+         PARTITION BY LIST (storage_state)',
         v_language_child,
         v_access_child,
         p_language
+    );
+
+    EXECUTE format(
+        'CREATE TABLE IF NOT EXISTS akmai_vector.%I
+         PARTITION OF akmai_vector.%I
+         FOR VALUES IN (0)',
+        v_active_child,
+        v_language_child
+    );
+
+    EXECUTE format(
+        'CREATE TABLE IF NOT EXISTS akmai_vector.%I
+         PARTITION OF akmai_vector.%I
+         FOR VALUES IN (1)',
+        v_archive_child,
+        v_language_child
+    );
+
+    EXECUTE format(
+        'CREATE INDEX IF NOT EXISTS %I
+         ON akmai_vector.%I
+         USING HNSW (embedding vector_cosine_ops)',
+        v_hnsw_index,
+        v_active_child
+    );
+
+    EXECUTE format(
+        'CREATE INDEX IF NOT EXISTS %I
+         ON akmai_vector.%I (
+             document_id,
+             generation
+         )',
+        v_active_doc_index,
+        v_active_child
+    );
+
+    EXECUTE format(
+        'CREATE INDEX IF NOT EXISTS %I
+         ON akmai_vector.%I (
+             document_id,
+             generation
+         )',
+        v_archive_doc_index,
+        v_archive_child
     );
 END;
 $$;
@@ -205,7 +356,6 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, akmai_vector, akmai_admin
 AS $$
 DECLARE
-    v_hnsw_index TEXT;
     v_row RECORD;
 BEGIN
     IF p_vector_table IS NULL
@@ -232,6 +382,7 @@ BEGIN
         'CREATE TABLE IF NOT EXISTS akmai_vector.%I (
             access_level BIGINT NOT NULL,
             language VARCHAR(16) NOT NULL,
+            storage_state SMALLINT NOT NULL DEFAULT 0,
             document_id VARCHAR(100) NOT NULL,
             generation BIGINT NOT NULL,
             chunk_id VARCHAR(100) NOT NULL,
@@ -240,11 +391,17 @@ BEGIN
             metadata JSONB NOT NULL DEFAULT ''{}''::jsonb,
             embedding VECTOR(%s) NOT NULL,
 
-            PRIMARY KEY (access_level, language, id),
+            PRIMARY KEY (
+                access_level,
+                language,
+                storage_state,
+                id
+            ),
 
             UNIQUE (
                 access_level,
                 language,
+                storage_state,
                 document_id,
                 generation,
                 chunk_id
@@ -263,6 +420,7 @@ BEGIN
 
             CHECK (access_level > 0),
             CHECK (generation > 0),
+            CHECK (storage_state IN (0, 1)),
             CHECK (
                 language = lower(language)
                 AND language ~ ''^[a-z]{2,8}$''
@@ -271,16 +429,6 @@ BEGIN
         PARTITION BY LIST (access_level)',
         p_vector_table,
         p_dimensions
-    );
-
-    v_hnsw_index := p_vector_table || '_embedding_hnsw';
-
-    EXECUTE format(
-        'CREATE INDEX IF NOT EXISTS %I
-         ON akmai_vector.%I
-         USING HNSW (embedding vector_cosine_ops)',
-        v_hnsw_index,
-        p_vector_table
     );
 
     FOR v_row IN
