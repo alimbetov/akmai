@@ -268,6 +268,7 @@ public class AdaptiveGraphShadowExpansion {
         List<ChunkAssociation> associations = graphRepository.findRelated(
                 allowedAccessLevels,
                 seed.node(),
+                properties.graphVersion(),
                 Set.of(band),
                 minimumWeight,
                 limit

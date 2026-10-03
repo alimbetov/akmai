@@ -54,10 +54,15 @@ class AdaptiveGraphOnlineExpansionTest {
                         false
                 );
 
-        when(projectionReader.findByDocumentGenerationAndChunkIds(
-                "target-doc",
-                3,
-                List.of("target"),
+        List<PublishedSearchProjectionReader.ProjectionKey> keys =
+                List.of(new PublishedSearchProjectionReader.ProjectionKey(
+                        1,
+                        "target-doc",
+                        3,
+                        "target"
+                ));
+        when(projectionReader.findPublishedByKeys(
+                keys,
                 Set.of(1L)
         )).thenReturn(List.of(projection()));
 
@@ -84,6 +89,10 @@ class AdaptiveGraphOnlineExpansionTest {
                 .containsEntry("adaptiveGraphVersion", 1);
         assertThat(graph.fusedScore()).isEqualTo(0.72);
 
+        verify(projectionReader).findPublishedByKeys(
+                keys,
+                Set.of(1L)
+        );
         verify(metrics).adaptiveGraphExpansion("online_added", 1);
     }
 
@@ -103,10 +112,13 @@ class AdaptiveGraphOnlineExpansionTest {
         AdaptiveGraphShadowExpansion.ShadowExpansionReport report =
                 report(new ChunkGraphNode(1, "target-doc", 3, "target"));
 
-        when(projectionReader.findByDocumentGenerationAndChunkIds(
-                "target-doc",
-                3,
-                List.of("target"),
+        when(projectionReader.findPublishedByKeys(
+                List.of(new PublishedSearchProjectionReader.ProjectionKey(
+                        1,
+                        "target-doc",
+                        3,
+                        "target"
+                )),
                 Set.of(1L)
         )).thenReturn(List.of());
 

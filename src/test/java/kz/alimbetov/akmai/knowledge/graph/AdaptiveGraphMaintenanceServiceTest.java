@@ -97,6 +97,7 @@ class AdaptiveGraphMaintenanceServiceTest {
         List<ChunkAssociation> fromA = repository.findRelated(
                 Set.of(1L),
                 a,
+                properties.graphVersion(),
                 Set.of(
                         AssociationBand.CANDIDATE,
                         AssociationBand.WARM,

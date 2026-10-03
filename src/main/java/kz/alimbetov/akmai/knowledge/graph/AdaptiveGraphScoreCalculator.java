@@ -45,20 +45,17 @@ public class AdaptiveGraphScoreCalculator {
                 distinctQuerySupport,
                 scoring.distinctQueryScale()
         );
-        double context = saturating(
-                contextCount,
-                scoring.contextScale()
-        );
         double citation = saturating(
                 citationCount,
                 scoring.citationScale()
         );
 
+        double scoredEvidenceWeight = scoring.distinctQueryWeight()
+                + scoring.citationWeight();
         double evidence = (
                 scoring.distinctQueryWeight() * distinct
-                        + scoring.contextWeight() * context
                         + scoring.citationWeight() * citation
-        ) / scoring.totalEvidenceWeight();
+        ) / scoredEvidenceWeight;
 
         Duration age = Duration.between(lastReinforcedAt, now);
         if (age.isNegative()) {

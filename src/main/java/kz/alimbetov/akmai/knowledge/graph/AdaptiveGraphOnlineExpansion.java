@@ -78,7 +78,10 @@ public class AdaptiveGraphOnlineExpansion {
                 .filter(RetrievalHit::hasRoutingIdentity)
                 .forEach(hit -> existing.add(NodeKey.of(hit)));
 
-        List<RetrievalHit> admitted = new ArrayList<>();
+        LinkedHashMap<
+                NodeKey,
+                AdaptiveGraphShadowExpansion.ShadowCandidate
+        > pending = new LinkedHashMap<>();
         int lifecycleRejected = 0;
         int aclRejected = 0;
         int duplicateRejected = 0;
@@ -96,32 +99,39 @@ public class AdaptiveGraphOnlineExpansion {
                 duplicateRejected++;
                 continue;
             }
+            pending.put(key, candidate);
+        }
 
-            SearchProjection projection = projectionReader
-                    .findByDocumentGenerationAndChunkIds(
-                            node.documentId(),
-                            node.generation(),
-                            List.of(node.chunkId()),
-                            Set.of(node.accessLevel())
-                    )
-                    .stream()
-                    .filter(value ->
-                            value.accessLevel() == node.accessLevel()
-                                    && value.generation() == node.generation()
-                                    && node.documentId().equals(
-                                            value.documentId()
-                                    )
-                                    && node.chunkId().equals(value.chunkId())
-                    )
-                    .findFirst()
-                    .orElse(null);
+        List<RetrievalHit> admitted = new ArrayList<>();
+        if (!pending.isEmpty()) {
+            List<PublishedSearchProjectionReader.ProjectionKey> keys =
+                    pending.keySet().stream()
+                            .map(NodeKey::toProjectionKey)
+                            .toList();
+            List<SearchProjection> published =
+                    projectionReader.findPublishedByKeys(
+                            keys,
+                            allowedAccessLevels
+                    );
 
-            if (projection == null) {
-                lifecycleRejected++;
-                continue;
-            }
+            LinkedHashMap<NodeKey, SearchProjection> projections =
+                    new LinkedHashMap<>();
+            published.forEach(projection -> {
+                NodeKey key = NodeKey.of(projection);
+                if (allowedAccessLevels.contains(key.accessLevel())
+                        && pending.containsKey(key)) {
+                    projections.putIfAbsent(key, projection);
+                }
+            });
 
-            admitted.add(toHit(projection, candidate));
+            pending.forEach((key, candidate) -> {
+                SearchProjection projection = projections.get(key);
+                if (projection == null) {
+                    return;
+                }
+                admitted.add(toHit(projection, candidate));
+            });
+            lifecycleRejected = pending.size() - admitted.size();
         }
 
         metrics.adaptiveGraphExpansion("online_added", admitted.size());
@@ -234,6 +244,24 @@ public class AdaptiveGraphOnlineExpansion {
                     node.documentId(),
                     node.generation(),
                     node.chunkId()
+            );
+        }
+
+        static NodeKey of(SearchProjection projection) {
+            return new NodeKey(
+                    projection.accessLevel(),
+                    projection.documentId(),
+                    projection.generation(),
+                    projection.chunkId()
+            );
+        }
+
+        PublishedSearchProjectionReader.ProjectionKey toProjectionKey() {
+            return new PublishedSearchProjectionReader.ProjectionKey(
+                    accessLevel,
+                    documentId,
+                    generation,
+                    chunkId
             );
         }
     }
