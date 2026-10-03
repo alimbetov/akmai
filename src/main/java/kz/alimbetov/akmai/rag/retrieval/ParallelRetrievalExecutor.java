@@ -284,6 +284,7 @@ public class ParallelRetrievalExecutor {
             RetrievalOutcomeStatus status,
             String category
     ) {
+        observer.outcome(step.type(), status, category);
         return new RetrievalStepOutcome(
                 step.id(),
                 step.type(),
