@@ -105,23 +105,19 @@ public class ArchiveEconomicsService {
                 FROM sized
                 GROUP BY store
                 """,
-                rs -> {
-                    while (rs.next()) {
-                        stores.put(
-                                rs.getString("store"),
-                                new ArchiveEconomicsSnapshot.StoreFootprint(
-                                        rs.getLong("estimated_live_rows"),
-                                        rs.getLong("estimated_dead_rows"),
-                                        rs.getLong("inserted_rows"),
-                                        rs.getLong("deleted_rows"),
-                                        rs.getLong("autovacuum_runs"),
-                                        rs.getLong("total_bytes"),
-                                        rs.getLong("leaf_count"),
-                                        rs.getLong("max_leaf_bytes")
-                                )
-                        );
-                    }
-                }
+                rs -> stores.put(
+                        rs.getString("store"),
+                        new ArchiveEconomicsSnapshot.StoreFootprint(
+                                rs.getLong("estimated_live_rows"),
+                                rs.getLong("estimated_dead_rows"),
+                                rs.getLong("inserted_rows"),
+                                rs.getLong("deleted_rows"),
+                                rs.getLong("autovacuum_runs"),
+                                rs.getLong("total_bytes"),
+                                rs.getLong("leaf_count"),
+                                rs.getLong("max_leaf_bytes")
+                        )
+                )
         );
 
         ArchiveBacklog resolved = backlog == null
