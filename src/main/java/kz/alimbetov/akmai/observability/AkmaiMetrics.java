@@ -243,6 +243,20 @@ public class AkmaiMetrics {
         ).increment(count);
     }
 
+    public void adaptiveGraphShadowSeeds(int count) {
+        if (count >= 0) {
+            registry.summary("akmai.adaptive.graph.shadow.seeds")
+                    .record(count);
+        }
+    }
+
+    public void adaptiveGraphShadowCandidateScore(double score) {
+        if (Double.isFinite(score) && score >= 0.0 && score <= 1.0) {
+            registry.summary("akmai.adaptive.graph.shadow.candidate.score")
+                    .record(score);
+        }
+    }
+
     public void adaptiveGraphBandTransition(
             String from,
             String to,

@@ -24,6 +24,9 @@ class PrivacySafeQueryFingerprintTest {
                 ),
                 AdaptiveGraphTestProperties.create(
                         new AdaptiveGraphProperties.BandQuotas(8, 8, 16)
+                ).shadowExpansion(),
+                AdaptiveGraphTestProperties.create(
+                        new AdaptiveGraphProperties.BandQuotas(8, 8, 16)
                 ).scoring(),
                 AdaptiveGraphTestProperties.create(
                         new AdaptiveGraphProperties.BandQuotas(8, 8, 16)

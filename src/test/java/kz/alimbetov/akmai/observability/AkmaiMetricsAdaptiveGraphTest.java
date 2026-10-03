@@ -19,6 +19,8 @@ class AkmaiMetricsAdaptiveGraphTest {
         metrics.adaptiveGraphLearning("citation", "accepted", 3);
         metrics.adaptiveGraphLookup("hot", Duration.ofMillis(12), 5);
         metrics.adaptiveGraphExpansion("accepted", 2);
+        metrics.adaptiveGraphShadowSeeds(3);
+        metrics.adaptiveGraphShadowCandidateScore(0.82);
         metrics.adaptiveGraphBandTransition("warm", "hot", 1);
         metrics.adaptiveGraphMaintenance(
                 "success",
@@ -43,6 +45,12 @@ class AkmaiMetricsAdaptiveGraphTest {
                 .tag("band", "hot")
                 .timer()
                 .count()).isEqualTo(1);
+        assertThat(registry.get("akmai.adaptive.graph.shadow.seeds")
+                .summary()
+                .count()).isEqualTo(1);
+        assertThat(registry.get(
+                "akmai.adaptive.graph.shadow.candidate.score"
+        ).summary().max()).isEqualTo(0.82);
     }
 
     @Test

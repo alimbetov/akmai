@@ -56,6 +56,16 @@ akmai:
       max-context-chunks: ${AKMAI_ADAPTIVE_GRAPH_LEARNING_MAX_CONTEXT_CHUNKS:8}
       max-pairs-per-request: ${AKMAI_ADAPTIVE_GRAPH_LEARNING_MAX_PAIRS:32}
       fingerprint-secret: ${AKMAI_ADAPTIVE_GRAPH_FINGERPRINT_SECRET:}
+    shadow-expansion:
+      max-seeds: ${AKMAI_ADAPTIVE_GRAPH_SHADOW_MAX_SEEDS:4}
+      hot-per-seed: ${AKMAI_ADAPTIVE_GRAPH_SHADOW_HOT_PER_SEED:4}
+      warm-per-seed: ${AKMAI_ADAPTIVE_GRAPH_SHADOW_WARM_PER_SEED:2}
+      max-candidates: ${AKMAI_ADAPTIVE_GRAPH_SHADOW_MAX_CANDIDATES:12}
+      min-seed-strength: ${AKMAI_ADAPTIVE_GRAPH_SHADOW_MIN_SEED_STRENGTH:0.25}
+      min-hot-weight: ${AKMAI_ADAPTIVE_GRAPH_SHADOW_MIN_HOT_WEIGHT:0.50}
+      min-warm-weight: ${AKMAI_ADAPTIVE_GRAPH_SHADOW_MIN_WARM_WEIGHT:0.30}
+      hot-band-factor: ${AKMAI_ADAPTIVE_GRAPH_SHADOW_HOT_FACTOR:1.0}
+      warm-band-factor: ${AKMAI_ADAPTIVE_GRAPH_SHADOW_WARM_FACTOR:0.70}
     scoring:
       distinct-query-weight: ${AKMAI_ADAPTIVE_GRAPH_DISTINCT_QUERY_WEIGHT:0.45}
       context-weight: ${AKMAI_ADAPTIVE_GRAPH_CONTEXT_WEIGHT:0.20}

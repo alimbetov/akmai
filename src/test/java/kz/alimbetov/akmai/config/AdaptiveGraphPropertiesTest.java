@@ -36,6 +36,7 @@ class AdaptiveGraphPropertiesTest {
                                 32,
                                 "too-short"
                         ),
+                        shadowExpansion(),
                         scoring(),
                         maintenance(),
                         new AdaptiveGraphProperties.BandQuotas(8, 8, 16),
@@ -96,10 +97,25 @@ class AdaptiveGraphPropertiesTest {
                                 ? "0123456789abcdef0123456789abcdef"
                                 : ""
                 ),
+                shadowExpansion(),
                 scoring(),
                 maintenance(),
                 new AdaptiveGraphProperties.BandQuotas(8, 8, 16),
                 storage
+        );
+    }
+
+    private AdaptiveGraphProperties.ShadowExpansion shadowExpansion() {
+        return new AdaptiveGraphProperties.ShadowExpansion(
+                4,
+                4,
+                2,
+                12,
+                0.25,
+                0.50,
+                0.30,
+                1.0,
+                0.70
         );
     }
 

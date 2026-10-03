@@ -18,6 +18,17 @@ final class AdaptiveGraphTestProperties {
                 false,
                 1,
                 new AdaptiveGraphProperties.Learning(8, 32, ""),
+                new AdaptiveGraphProperties.ShadowExpansion(
+                        4,
+                        4,
+                        2,
+                        12,
+                        0.25,
+                        0.50,
+                        0.30,
+                        1.0,
+                        0.70
+                ),
                 new AdaptiveGraphProperties.Scoring(
                         0.45,
                         0.20,

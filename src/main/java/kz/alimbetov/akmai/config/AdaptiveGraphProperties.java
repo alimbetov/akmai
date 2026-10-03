@@ -14,6 +14,7 @@ public record AdaptiveGraphProperties(
         boolean expansionEnabled,
         int graphVersion,
         Learning learning,
+        ShadowExpansion shadowExpansion,
         Scoring scoring,
         Maintenance maintenance,
         BandQuotas quotas,
@@ -40,6 +41,11 @@ public record AdaptiveGraphProperties(
             throw new IllegalArgumentException(
                     "adaptive-graph learning requires a fingerprint secret "
                             + "of at least 32 characters"
+            );
+        }
+        if (shadowExpansion == null) {
+            throw new IllegalArgumentException(
+                    "adaptive-graph shadowExpansion must not be null"
             );
         }
         if (scoring == null) {
@@ -103,6 +109,64 @@ public record AdaptiveGraphProperties(
                     + ", maxPairsPerRequest="
                     + maxPairsPerRequest
                     + ", fingerprintSecret=<redacted>]";
+        }
+    }
+
+    public record ShadowExpansion(
+            int maxSeeds,
+            int hotPerSeed,
+            int warmPerSeed,
+            int maxCandidates,
+            double minSeedStrength,
+            double minHotWeight,
+            double minWarmWeight,
+            double hotBandFactor,
+            double warmBandFactor
+    ) {
+        public ShadowExpansion {
+            boundedInt("maxSeeds", maxSeeds, 1, 32);
+            boundedInt("hotPerSeed", hotPerSeed, 1, 64);
+            boundedInt("warmPerSeed", warmPerSeed, 0, 64);
+            boundedInt("maxCandidates", maxCandidates, 1, 128);
+            boundedUnit("minSeedStrength", minSeedStrength);
+            boundedUnit("minHotWeight", minHotWeight);
+            boundedUnit("minWarmWeight", minWarmWeight);
+            boundedUnit("hotBandFactor", hotBandFactor);
+            boundedUnit("warmBandFactor", warmBandFactor);
+            if (warmBandFactor > hotBandFactor) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph warmBandFactor must be <= hotBandFactor"
+                );
+            }
+        }
+
+        private static void boundedInt(
+                String name,
+                int value,
+                int minimum,
+                int maximum
+        ) {
+            if (value < minimum || value > maximum) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph "
+                                + name
+                                + " must be in ["
+                                + minimum
+                                + ", "
+                                + maximum
+                                + "]"
+                );
+            }
+        }
+
+        private static void boundedUnit(String name, double value) {
+            if (!Double.isFinite(value) || value < 0 || value > 1) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph "
+                                + name
+                                + " must be in [0, 1]"
+                );
+            }
         }
     }
 
