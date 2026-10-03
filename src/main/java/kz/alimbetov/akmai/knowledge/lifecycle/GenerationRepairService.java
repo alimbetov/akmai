@@ -72,6 +72,10 @@ public class GenerationRepairService {
                 identity,
                 batchSize
         );
+        deleted += deleteAssociationBatch(
+                identity,
+                batchSize
+        );
         deleted += deleteBatch(
                 "knowledge_reference_edge",
                 identity,
@@ -99,6 +103,43 @@ public class GenerationRepairService {
         );
 
         return deleted;
+    }
+
+    private int deleteAssociationBatch(
+            GenerationIdentity identity,
+            int batchSize
+    ) {
+        return jdbcTemplate.update(
+                """
+                WITH batch AS (
+                    SELECT tableoid, ctid
+                    FROM knowledge_chunk_association
+                    WHERE access_level = ?
+                      AND (
+                          (
+                              source_document_id = ?
+                              AND source_generation = ?
+                          )
+                          OR
+                          (
+                              target_document_id = ?
+                              AND target_generation = ?
+                          )
+                      )
+                    LIMIT ?
+                )
+                DELETE FROM knowledge_chunk_association target
+                USING batch
+                WHERE target.tableoid = batch.tableoid
+                  AND target.ctid = batch.ctid
+                """,
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation(),
+                identity.documentId(),
+                identity.generation(),
+                batchSize
+        );
     }
 
     private int deleteBatch(

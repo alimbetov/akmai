@@ -46,6 +46,17 @@ akmai:
     api-key: ${AKMAI_SECURITY_API_KEY:}
     allow-unauthenticated-local: ${AKMAI_ALLOW_UNAUTH_LOCAL:true}
     access-levels: ${AKMAI_SECURITY_ACCESS_LEVELS:1}
+  adaptive-graph:
+    learning-enabled: ${AKMAI_ADAPTIVE_GRAPH_LEARNING_ENABLED:false}
+    maintenance-enabled: ${AKMAI_ADAPTIVE_GRAPH_MAINTENANCE_ENABLED:false}
+    shadow-expansion-enabled: ${AKMAI_ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED:false}
+    expansion-enabled: ${AKMAI_ADAPTIVE_GRAPH_EXPANSION_ENABLED:false}
+    quotas:
+      hot: ${AKMAI_ADAPTIVE_GRAPH_HOT_QUOTA:8}
+      warm: ${AKMAI_ADAPTIVE_GRAPH_WARM_QUOTA:8}
+      candidate: ${AKMAI_ADAPTIVE_GRAPH_CANDIDATE_QUOTA:16}
+    storage:
+      hash-buckets-per-acl: ${AKMAI_ADAPTIVE_GRAPH_HASH_BUCKETS_PER_ACL:32}
   vector:
     dimensions: ${AKMAI_VECTOR_DIMENSIONS:1024}
     index-type: ${AKMAI_VECTOR_INDEX_TYPE:HNSW}
