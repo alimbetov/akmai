@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import kz.alimbetov.akmai.knowledge.identifier.DetectedIdentifier;
+import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -77,6 +78,15 @@ public class PostgresSearchProjectionRepository
     }
 
     @Override
+    public void saveAll(
+            GenerationIdentity identity,
+            List<SearchProjection> projections
+    ) {
+        requireGenerationIdentity(identity, projections);
+        saveAll(projections);
+    }
+
+    @Override
     public List<String> findChunkIds(String documentId, long generation) {
         return jdbcTemplate.queryForList(
                 """
@@ -112,6 +122,21 @@ public class PostgresSearchProjectionRepository
     }
 
     @Override
+    public List<SearchProjection> findGeneration(
+            GenerationIdentity identity
+    ) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        return findGeneration(
+                identity.documentId(),
+                identity.generation()
+        );
+    }
+
+    @Override
     public void deleteByDocumentId(String documentId) {
         jdbcTemplate.update(
                 "DELETE FROM knowledge_search_projection WHERE document_id = ?",
@@ -129,6 +154,19 @@ public class PostgresSearchProjectionRepository
                 """,
                 documentId,
                 generation
+        );
+    }
+
+    @Override
+    public void deleteGeneration(GenerationIdentity identity) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        deleteGeneration(
+                identity.documentId(),
+                identity.generation()
         );
     }
 
@@ -545,6 +583,32 @@ public class PostgresSearchProjectionRepository
             bindArray(ps, index++, documentIds);
         }
         return index;
+    }
+
+    private void requireGenerationIdentity(
+            GenerationIdentity identity,
+            List<SearchProjection> projections
+    ) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        if (projections == null || projections.isEmpty()) {
+            return;
+        }
+        boolean mismatch = projections.stream().anyMatch(
+                projection -> !identity.documentId().equals(
+                                projection.documentId()
+                        )
+                        || identity.generation()
+                                != projection.generation()
+        );
+        if (mismatch) {
+            throw new IllegalArgumentException(
+                    "All projections must belong to generation identity"
+            );
+        }
     }
 
     private void requireAccessLevels(Set<Long> accessLevels) {
