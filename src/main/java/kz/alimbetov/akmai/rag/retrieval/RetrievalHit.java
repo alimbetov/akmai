@@ -6,7 +6,9 @@ import java.util.Map;
 
 public record RetrievalHit(
         RetrievalType type,
+        long accessLevel,
         String documentId,
+        long generation,
         String chunkId,
         String text,
         Map<String, Object> metadata,
@@ -20,15 +22,93 @@ public record RetrievalHit(
 
     public RetrievalHit(
             RetrievalType type,
+            long accessLevel,
+            String documentId,
+            long generation,
+            String chunkId,
+            String text,
+            Map<String, Object> metadata
+    ) {
+        this(
+                type,
+                accessLevel,
+                documentId,
+                generation,
+                chunkId,
+                text,
+                metadata,
+                List.of(),
+                0.0
+        );
+    }
+
+    public RetrievalHit(
+            RetrievalType type,
             String documentId,
             String chunkId,
             String text,
             Map<String, Object> metadata
     ) {
-        this(type, documentId, chunkId, text, metadata, List.of(), 0.0);
+        this(
+                type,
+                number(metadata, "accessLevel"),
+                documentId,
+                number(metadata, "generation"),
+                chunkId,
+                text,
+                metadata,
+                List.of(),
+                0.0
+        );
     }
 
-    private static Map<String, Object> canonicalMetadata(Map<String, Object> input) {
+    public RetrievalHit(
+            RetrievalType type,
+            String documentId,
+            String chunkId,
+            String text,
+            Map<String, Object> metadata,
+            List<RetrievalEvidence> evidence,
+            double fusedScore
+    ) {
+        this(
+                type,
+                number(metadata, "accessLevel"),
+                documentId,
+                number(metadata, "generation"),
+                chunkId,
+                text,
+                metadata,
+                evidence,
+                fusedScore
+        );
+    }
+
+    public boolean hasRoutingIdentity() {
+        return accessLevel > 0
+                && generation > 0
+                && documentId != null
+                && !documentId.isBlank()
+                && chunkId != null
+                && !chunkId.isBlank();
+    }
+
+    private static long number(
+            Map<String, Object> metadata,
+            String key
+    ) {
+        if (metadata == null) {
+            return 0L;
+        }
+        Object value = metadata.get(key);
+        return value instanceof Number number
+                ? number.longValue()
+                : 0L;
+    }
+
+    private static Map<String, Object> canonicalMetadata(
+            Map<String, Object> input
+    ) {
         if (input == null || input.isEmpty()) {
             return Map.of();
         }
