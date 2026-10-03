@@ -216,6 +216,16 @@ class AdaptiveChunkGraphRepositoryTest {
 
         jdbc.update(
                 """
+                UPDATE knowledge_document_generation
+                SET generation_status = 'RETIRED',
+                    retired_at = clock_timestamp(),
+                    cleanup_required = true
+                WHERE document_id = 'doc-b'
+                  AND generation = 1
+                """
+        );
+        jdbc.update(
+                """
                 INSERT INTO knowledge_document_generation (
                     document_id,
                     generation,
