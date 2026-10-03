@@ -534,6 +534,18 @@ GRAPH_REBUILD_REQUIRED
 
 A semantic-library update does not automatically require graph destruction.
 
+## Measurement-driven calibration
+
+Adaptive graph limits are calibrated rather than permanently guessed. The gated process is:
+
+    measure -> calibrate -> replay/load validate -> approve -> canary
+
+Runtime traffic never rewrites its own degree, activation, decay, hash-bucket or maintenance limits.
+
+Before learned graph data exists, explicit reference degree is only a cold-start structural prior. Once shadow learning is available, limits are selected from adaptive-graph telemetry and retrieval-quality evidence.
+
+See adaptive-chunk-graph-calibration.md.
+
 ## Initial implementation boundary
 
 Version 1 intentionally does not include:

@@ -59,6 +59,14 @@ Measure:
 
 No user-visible retrieval change.
 
+## Phase 2.5 — Calibration report
+
+Generate a versioned calibration report from shadow measurements before activation and maintenance parameters are promoted.
+
+The report proposes degree bounds, activation gates, decay/TTL, compaction capacity and HASH bucket count. It is advisory and never edits production configuration automatically.
+
+Promotion requires replay quality gates and capacity tests. See adaptive-chunk-graph-calibration.md.
+
 ## Phase 3 — Maintenance and bounded activation
 
 Add bounded maintenance:
