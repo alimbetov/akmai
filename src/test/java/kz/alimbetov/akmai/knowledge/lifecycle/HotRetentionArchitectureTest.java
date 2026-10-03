@@ -73,7 +73,7 @@ class HotRetentionArchitectureTest {
     }
 
     @Test
-    void globalAnnFencesPublishedGenerationBeforeBranchLimit()
+    void globalAnnPreservesHnswThenDetectsStaleCandidateCrowding()
             throws Exception {
         String source = normalized(
                 "src/main/java/kz/alimbetov/akmai/knowledge/vector/"
@@ -82,19 +82,27 @@ class HotRetentionArchitectureTest {
         int globalAnn = source.indexOf(
                 "private searchstatement globalann"
         );
-        int documentExact = source.indexOf(
-                "private searchstatement documentexact"
+        int fencedFallback = source.indexOf(
+                "private searchstatement fencedglobalann"
         );
-        String method = source.substring(globalAnn, documentExact);
+        String method = source.substring(globalAnn, fencedFallback);
 
+        int candidateLimit = method.indexOf("limit ?");
         int lifecycle = method.indexOf(
                 "join knowledge_document_lifecycle"
         );
-        int limit = method.indexOf("limit ?");
 
-        assertThat(lifecycle).isGreaterThanOrEqualTo(0);
-        assertThat(limit).isGreaterThan(lifecycle);
-        assertThat(method).contains("retention_status = 'active'");
+        assertThat(candidateLimit).isGreaterThanOrEqualTo(0);
+        assertThat(lifecycle).isGreaterThan(candidateLimit);
+        assertThat(method)
+                .contains("needs_retry")
+                .contains("raw_counts")
+                .contains("visible_counts")
+                .contains("retention_status = 'active'");
+        assertThat(source)
+                .contains("ann_retry_multiplier")
+                .contains("ann_max_candidates_per_branch")
+                .contains("fencedglobalann");
     }
 
     @Test
