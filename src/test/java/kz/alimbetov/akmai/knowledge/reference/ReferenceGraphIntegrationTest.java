@@ -52,6 +52,7 @@ class ReferenceGraphIntegrationTest {
         liquibase.afterPropertiesSet();
 
         jdbc = new JdbcTemplate(ds);
+        jdbc.execute("SELECT akmai_admin.ensure_access_level(7)");
         projections = new PostgresSearchProjectionRepository(
                 jdbc,
                 new ObjectMapper()
