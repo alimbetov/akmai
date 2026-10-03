@@ -54,6 +54,7 @@ class PostgresVectorReconciliationIntegrationTest {
     static VectorGenerationRepository manifests;
     static PostgresSearchProjectionRepository projections;
     static GenerationReconciliationService reconciliation;
+    static TransactionTemplate repairTx;
 
     @BeforeAll
     static void migrate() throws Exception {
@@ -73,7 +74,7 @@ class PostgresVectorReconciliationIntegrationTest {
         DataSourceTransactionManager manager =
                 new DataSourceTransactionManager(dataSource);
         TransactionTemplate tx = new TransactionTemplate(manager);
-        TransactionTemplate repairTx = new TransactionTemplate(manager);
+        repairTx = new TransactionTemplate(manager);
         repairTx.setPropagationBehavior(
                 TransactionDefinition.PROPAGATION_REQUIRES_NEW
         );
@@ -559,6 +560,87 @@ class PostgresVectorReconciliationIntegrationTest {
                 """,
                 String.class
         )).isEqualTo("CLEANED");
+    }
+
+    @Test
+    void boundedRepairDeletesAssociationPairSymmetrically() {
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_generation (
+                    document_id,
+                    generation,
+                    generation_status,
+                    generation_kind,
+                    access_level
+                ) VALUES
+                    (
+                        'doc-repair-old', 1, 'RETIRED',
+                        'INGESTION', 1
+                    ),
+                    (
+                        'doc-repair-live', 1, 'PUBLISHED',
+                        'INGESTION', 1
+                    )
+                """
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_chunk_association (
+                    access_level,
+                    source_document_id,
+                    source_generation,
+                    source_chunk_id,
+                    target_document_id,
+                    target_generation,
+                    target_chunk_id,
+                    band,
+                    weight,
+                    support_count
+                ) VALUES
+                    (
+                        1, 'doc-repair-old', 1, 'old-chunk',
+                        'doc-repair-live', 1, 'live-chunk',
+                        'HOT', 0.9, 3
+                    ),
+                    (
+                        1, 'doc-repair-live', 1, 'live-chunk',
+                        'doc-repair-old', 1, 'old-chunk',
+                        'HOT', 0.9, 3
+                    )
+                """
+        );
+
+        ReconciliationProperties bounded =
+                new ReconciliationProperties(
+                        true,
+                        1,
+                        1,
+                        Duration.ZERO,
+                        Duration.ofMinutes(5)
+                );
+        GenerationRepairService repair =
+                new GenerationRepairService(
+                        jdbc,
+                        storage,
+                        bounded,
+                        repairTx
+                );
+
+        GenerationRepairService.RepairOutcome outcome =
+                repair.repair(
+                        profile,
+                        new GenerationIdentity(
+                                "doc-repair-old",
+                                1,
+                                1
+                        )
+                );
+
+        assertThat(outcome.deletedRows()).isEqualTo(2);
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM knowledge_chunk_association",
+                Integer.class
+        )).isZero();
     }
 
     @Test
