@@ -887,7 +887,7 @@ public class PostgresSearchProjectionRepository
                 rs.getString("chunk_id"),
                 rs.getString("document_id"),
                 rs.getLong("generation"),
-                accessLevel(rs),
+                rs.getLong("access_level"),
                 rs.getString("parent_chunk_id"),
                 rs.getInt("chunk_index"),
                 rs.getString("text_content"),
@@ -900,24 +900,6 @@ public class PostgresSearchProjectionRepository
                 readJson(rs.getString("metadata_json"), new TypeReference<Map<String, Object>>() {}),
                 rs.getInt("projection_version")
         );
-    }
-
-    private long accessLevel(ResultSet rs) {
-        try {
-            long value = rs.getLong("access_level");
-            if (!rs.wasNull()) {
-                return value;
-            }
-        } catch (SQLException ignored) {
-            // Transitional old schema has no physical projection ACL.
-        }
-
-        try {
-            long value = rs.getLong("resolved_access_level");
-            return rs.wasNull() ? 0L : value;
-        } catch (SQLException ignored) {
-            return 0L;
-        }
     }
 
     private String writeJson(Object value) {
