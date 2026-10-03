@@ -14,6 +14,7 @@ import java.util.Set;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileStorageManager;
+import kz.alimbetov.akmai.knowledge.model.RetrievalLanguageCatalog;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -205,6 +206,10 @@ public class PublishedVectorSearchRepository {
             double maxDistance
     ) {
         String table = storageManager.qualified(profile);
+        List<String> languages = language == null
+                ? RetrievalLanguageCatalog.codes()
+                : List.of(language);
+
         StringBuilder sql = new StringBuilder("""
                 SELECT candidate.id::text AS vector_id,
                        candidate.access_level,
@@ -217,43 +222,41 @@ public class PublishedVectorSearchRepository {
                 FROM (
                 """);
         List<Object> parameters = new ArrayList<>();
+        boolean firstBranch = true;
 
-        for (int index = 0; index < accessLevels.size(); index++) {
-            if (index > 0) {
-                sql.append("\nUNION ALL\n");
-            }
+        for (long accessLevel : accessLevels) {
+            for (String routedLanguage : languages) {
+                if (!firstBranch) {
+                    sql.append("\nUNION ALL\n");
+                }
+                firstBranch = false;
 
-            sql.append("""
-                    (
-                        SELECT
-                            v.id,
-                            v.access_level,
-                            v.document_id,
-                            v.generation,
-                            v.chunk_id,
-                            v.content,
-                            v.metadata,
-                            v.embedding <=> ? AS distance
-                        FROM %s v
-                        WHERE v.access_level = ?
-                          AND v.storage_state = 0
-                    """.formatted(table));
-            if (language != null) {
-                sql.append(" AND v.language = ?\n");
-            }
-            sql.append("""
-                        ORDER BY v.embedding <=> ?
-                        LIMIT ?
-                    )
-                    """);
+                sql.append("""
+                        (
+                            SELECT
+                                v.id,
+                                v.access_level,
+                                v.document_id,
+                                v.generation,
+                                v.chunk_id,
+                                v.content,
+                                v.metadata,
+                                v.embedding <=> ? AS distance
+                            FROM %s v
+                            WHERE v.access_level = ?
+                              AND v.language = ?
+                              AND v.storage_state = 0
+                            ORDER BY v.embedding <=> ?
+                            LIMIT ?
+                        )
+                        """.formatted(table));
 
-            parameters.add(vector);
-            parameters.add(accessLevels.get(index));
-            if (language != null) {
-                parameters.add(language);
+                parameters.add(vector);
+                parameters.add(accessLevel);
+                parameters.add(routedLanguage);
+                parameters.add(vector);
+                parameters.add(topK);
             }
-            parameters.add(vector);
-            parameters.add(topK);
         }
 
         sql.append("""
@@ -357,20 +360,11 @@ public class PublishedVectorSearchRepository {
     }
 
     private String routedLanguage(String language) {
-        if (language == null || language.isBlank()) {
-            return null;
-        }
-
-        String normalized = language.toLowerCase(
-                java.util.Locale.ROOT
-        );
-        if ("unknown".equals(normalized)) {
-            return null;
-        }
-        if (!normalized.matches("[a-z]{2,8}")) {
-            return null;
-        }
-        return normalized;
+        String normalized =
+                RetrievalLanguageCatalog.normalizeOrUnknown(language);
+        return RetrievalLanguageCatalog.UNKNOWN.equals(normalized)
+                ? null
+                : normalized;
     }
 
     private List<Long> routedAccessLevels(Set<Long> accessLevels) {
