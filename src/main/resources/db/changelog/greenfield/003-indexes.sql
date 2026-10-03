@@ -81,4 +81,4 @@ CREATE INDEX idx_document_generation_retention_verify
     )
     INCLUDE (chunk_count)
     WHERE cleanup_required
-      AND generation_status = 'RETIRED';
+      AND generation_status IN ('RETIRING', 'RETIRED');
