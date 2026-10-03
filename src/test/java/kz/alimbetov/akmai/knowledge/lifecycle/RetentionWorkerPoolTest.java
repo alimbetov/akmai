@@ -57,7 +57,7 @@ class RetentionWorkerPoolTest {
     }
 
     @Test
-    void drainRefillsWorkersUntilRunLimitIsSubmitted() {
+    void drainRefillsWorkersUntilRunLimitIsSubmitted() throws Exception {
         RetentionClaimRepository claims = mock(RetentionClaimRepository.class);
         ChunkRetentionService cleanup = mock(ChunkRetentionService.class);
         RetentionProperties properties = properties(2, 100);
