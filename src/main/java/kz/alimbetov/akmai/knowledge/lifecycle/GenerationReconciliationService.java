@@ -5,9 +5,6 @@ import kz.alimbetov.akmai.config.ReconciliationProperties;
 import kz.alimbetov.akmai.knowledge.audit.AuditEventRepository;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileRepository;
-import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
-import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
-import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -19,12 +16,8 @@ public class GenerationReconciliationService {
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
-    private final VectorGenerationRepository manifests;
     private final PostgresGenerationVectorRepository vectors;
     private final EmbeddingProfileRepository profiles;
-    private final SearchProjectionRepository projections;
-    private final DocumentIdentifierRepository identifiers;
-    private final ReferenceGraphRepository references;
     private final GenerationRepairService repairService;
     private final ReconciliationProperties properties;
     private final AuditEventRepository audit;
@@ -33,24 +26,16 @@ public class GenerationReconciliationService {
             JdbcTemplate jdbcTemplate,
             @Qualifier("cleanupTransactionTemplate")
             TransactionTemplate transactionTemplate,
-            VectorGenerationRepository manifests,
             PostgresGenerationVectorRepository vectors,
             EmbeddingProfileRepository profiles,
-            SearchProjectionRepository projections,
-            DocumentIdentifierRepository identifiers,
-            ReferenceGraphRepository references,
             GenerationRepairService repairService,
             ReconciliationProperties properties,
             AuditEventRepository audit
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactionTemplate = transactionTemplate;
-        this.manifests = manifests;
         this.vectors = vectors;
         this.profiles = profiles;
-        this.projections = projections;
-        this.identifiers = identifiers;
-        this.references = references;
         this.repairService = repairService;
         this.properties = properties;
         this.audit = audit;
@@ -177,12 +162,9 @@ public class GenerationReconciliationService {
                     SET last_error = 'Residual retrieval rows remain'
                     WHERE document_id = ?
                       AND generation = ?
-                      AND access_level = ?
-                      AND cleanup_status = 'PURGED'
                     """,
                     key.documentId(),
-                    key.generation(),
-                    key.accessLevel()
+                    key.generation()
             );
             throw new IllegalStateException(
                     "Generation payload remains after reconciliation"
@@ -199,9 +181,12 @@ public class GenerationReconciliationService {
                         last_error = NULL
                     WHERE document_id = ?
                       AND generation = ?
+                      AND access_level = ?
+                      AND cleanup_status = 'PURGED'
                     """,
                     key.documentId(),
-                    key.generation()
+                    key.generation(),
+                    key.accessLevel()
             );
             if (verified != 1) {
                 throw new IllegalStateException(
