@@ -24,7 +24,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Repository
 public class PublishedVectorSearchRepository {
 
-    private static final int HNSW_EF_SEARCH = 40;
+    private static final int DEFAULT_HNSW_EF_SEARCH = 40;
     private static final int ANN_RETRY_MULTIPLIER = 4;
     private static final int ANN_MAX_CANDIDATES_PER_BRANCH = 4096;
 
@@ -175,9 +175,14 @@ public class PublishedVectorSearchRepository {
             int topK,
             double maxDistance
     ) {
-        int candidateLimit = topK;
+        AnnSearchTuningPolicy.AnnSearchTuning tuning =
+                AnnSearchTuningPolicy.forAccessScope(accessLevels.size());
+        int candidateLimit = Math.min(
+                ANN_MAX_CANDIDATES_PER_BRANCH,
+                tuning.candidateLimit(topK)
+        );
         int maxCandidateLimit = Math.max(
-                topK,
+                candidateLimit,
                 ANN_MAX_CANDIDATES_PER_BRANCH
         );
 
@@ -192,7 +197,8 @@ public class PublishedVectorSearchRepository {
                             candidateLimit,
                             maxDistance
                     ),
-                    profile
+                    profile,
+                    tuning.efSearch()
             );
             if (!result.needsRetry()) {
                 return result.matches();
@@ -207,7 +213,8 @@ public class PublishedVectorSearchRepository {
                                 topK,
                                 maxDistance
                         ),
-                        profile
+                        profile,
+                        tuning.efSearch()
                 );
             }
 
@@ -226,9 +233,21 @@ public class PublishedVectorSearchRepository {
             SearchStatement statement,
             EmbeddingProfile profile
     ) {
+        return execute(
+                statement,
+                profile,
+                DEFAULT_HNSW_EF_SEARCH
+        );
+    }
+
+    private List<VectorSearchMatch> execute(
+            SearchStatement statement,
+            EmbeddingProfile profile,
+            int efSearch
+    ) {
         List<VectorSearchMatch> result =
                 transactionTemplate.execute(status -> {
-                    configureAnn(profile);
+                    configureAnn(profile, efSearch);
                     return jdbcTemplate.query(
                             statement.sql(),
                             ps -> bind(ps, statement.parameters()),
@@ -252,10 +271,11 @@ public class PublishedVectorSearchRepository {
 
     private AnnQueryResult executeAnn(
             SearchStatement statement,
-            EmbeddingProfile profile
+            EmbeddingProfile profile,
+            int efSearch
     ) {
         AnnQueryResult result = transactionTemplate.execute(status -> {
-            configureAnn(profile);
+            configureAnn(profile, efSearch);
             List<VectorSearchMatch> matches = new ArrayList<>();
             boolean[] needsRetry = {false};
 
@@ -293,14 +313,17 @@ public class PublishedVectorSearchRepository {
                 : result;
     }
 
-    private void configureAnn(EmbeddingProfile profile) {
+    private void configureAnn(
+            EmbeddingProfile profile,
+            int efSearch
+    ) {
         if ("HNSW".equals(profile.indexType())) {
             jdbcTemplate.execute(
                     "SET LOCAL hnsw.iterative_scan = strict_order"
             );
             jdbcTemplate.execute(
                     "SET LOCAL hnsw.ef_search = "
-                            + HNSW_EF_SEARCH
+                            + efSearch
             );
         }
     }

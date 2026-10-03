@@ -37,9 +37,10 @@ class RetentionSchedulerObservabilityTest {
                 Duration.ofMinutes(10),
                 10
         )).thenReturn(0);
-        when(workers.availableCapacity()).thenReturn(1);
-        when(workers.claimAndSubmit(org.mockito.ArgumentMatchers.anyString()))
-                .thenReturn(0);
+        when(workers.drain(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.eq(20)
+        )).thenReturn(0);
         when(workers.backlogCount()).thenReturn(5L);
 
         SimpleMeterRegistry registry = new SimpleMeterRegistry();

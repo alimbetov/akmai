@@ -48,28 +48,25 @@ public class RetentionScheduler {
         }
 
         Instant started = Instant.now();
-        int submitted = 0;
+        int initialSubmitted = 0;
+        int runBudget = 0;
         int recovered = 0;
         String outcome = "SUCCESS";
 
         try {
             recovered = recoverAbandonedIngestions();
 
-            for (int batch = 0; batch < properties.maxBatchesPerRun(); batch++) {
-                if (workerPool.availableCapacity() == 0) {
-                    break;
-                }
-                int claimed = workerPool.claimAndSubmit(workerId);
-                submitted += claimed;
-                if (claimed == 0) {
-                    break;
-                }
-            }
+            runBudget = Math.multiplyExact(
+                    properties.batchSize(),
+                    properties.maxBatchesPerRun()
+            );
+            initialSubmitted = workerPool.drain(workerId, runBudget);
         } catch (RuntimeException exception) {
             outcome = "FAILED";
             LOGGER.error(
-                    "retention_run event=failed submitted={} recovered={} errorType={}",
-                    submitted,
+                    "retention_run event=failed initialSubmitted={} runBudget={} recovered={} errorType={}",
+                    initialSubmitted,
+                    runBudget,
                     recovered,
                     exception.getClass().getSimpleName()
             );
@@ -82,9 +79,10 @@ public class RetentionScheduler {
                 metrics.retentionRun(outcome, duration);
             }
             LOGGER.info(
-                    "retention_run event=completed outcome={} submitted={} recovered={} backlog={} durationMs={}",
+                    "retention_run event=completed outcome={} initialSubmitted={} runBudget={} recovered={} backlog={} durationMs={}",
                     outcome,
-                    submitted,
+                    initialSubmitted,
+                    runBudget,
                     recovered,
                     backlog,
                     duration.toMillis()

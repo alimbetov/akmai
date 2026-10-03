@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class RetentionWorkerPoolTest {
@@ -51,6 +52,52 @@ class RetentionWorkerPoolTest {
             );
         } finally {
             block.countDown();
+            pool.shutdown();
+        }
+    }
+
+    @Test
+    void drainRefillsWorkersUntilRunLimitIsSubmitted() throws Exception {
+        RetentionClaimRepository claims = mock(RetentionClaimRepository.class);
+        ChunkRetentionService cleanup = mock(ChunkRetentionService.class);
+        RetentionProperties properties = properties(2, 100);
+        AtomicInteger sequence = new AtomicInteger();
+        CountDownLatch completed = new CountDownLatch(5);
+
+        when(claims.claimExpired(
+                org.mockito.ArgumentMatchers.anyInt(),
+                eq(5),
+                eq("pod-a"),
+                eq(Duration.ofMinutes(10))
+        )).thenAnswer(invocation -> {
+            int requested = invocation.getArgument(0);
+            java.util.ArrayList<RetentionClaim> result =
+                    new java.util.ArrayList<>();
+            for (int index = 0; index < requested; index++) {
+                int next = sequence.incrementAndGet();
+                if (next > 5) {
+                    break;
+                }
+                result.add(claim("doc-" + next, next));
+            }
+            return List.copyOf(result);
+        });
+        when(cleanup.cleanup(any())).thenAnswer(invocation -> {
+            completed.countDown();
+            return deleted(invocation.getArgument(0));
+        });
+
+        RetentionWorkerPool pool = new RetentionWorkerPool(
+                claims,
+                cleanup,
+                properties
+        );
+        try {
+            assertThat(pool.drain("pod-a", 5)).isEqualTo(2);
+            assertThat(completed.await(2, TimeUnit.SECONDS)).isTrue();
+            verify(cleanup, org.mockito.Mockito.times(5)).cleanup(any());
+            assertThat(sequence.get()).isGreaterThanOrEqualTo(5);
+        } finally {
             pool.shutdown();
         }
     }

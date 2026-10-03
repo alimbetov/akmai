@@ -139,6 +139,21 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
 
         List<QualityTuningResult> qualityTuningResults =
                 tuneQuality(widestScope, widestExact);
+        AnnSearchTuningPolicy.AnnSearchTuning productionTuning =
+                AnnSearchTuningPolicy.forAccessScope(widestScope);
+        QualityTuningResult productionQuality = measureQualityTuning(
+                multiAclQuery(
+                        widestScope,
+                        productionTuning.candidateLimit(TOP_K)
+                ),
+                widestExact,
+                productionTuning.candidateMultiplier(),
+                productionTuning.efSearch()
+        );
+        assertThat(productionQuality.recallAtK())
+                .as("production ANN policy must preserve Recall@10")
+                .isEqualTo(1.0);
+
         QualityTuningResult selectedTuning = qualityTuningResults.stream()
                 .filter(result -> result.recallAtK() >= 0.999)
                 .min(java.util.Comparator
@@ -150,6 +165,8 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
                 ));
 
         List<ConcurrencyResult> concurrencyResults = new ArrayList<>();
+        List<ConcurrencyResult> productionConcurrencyResults =
+                new ArrayList<>();
         List<ConcurrencyResult> tunedConcurrencyResults = new ArrayList<>();
 
         for (int concurrency : config.concurrencyLevels()) {
@@ -158,6 +175,15 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
                     widestExact,
                     concurrency,
                     config.defaultEfSearch()
+            ));
+            productionConcurrencyResults.add(runConcurrent(
+                    multiAclQuery(
+                            widestScope,
+                            productionTuning.candidateLimit(TOP_K)
+                    ),
+                    widestExact,
+                    concurrency,
+                    productionTuning.efSearch()
             ));
             tunedConcurrencyResults.add(runConcurrent(
                     multiAclQuery(
@@ -188,8 +214,14 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
         report.put("topK", TOP_K);
         report.put("scopeResults", scopeResults);
         report.put("qualityTuningResults", qualityTuningResults);
+        report.put("productionTuning", productionTuning);
+        report.put("productionQuality", productionQuality);
         report.put("selectedTuning", selectedTuning);
         report.put("concurrencyResults", concurrencyResults);
+        report.put(
+                "productionConcurrencyResults",
+                productionConcurrencyResults
+        );
         report.put("tunedConcurrencyResults", tunedConcurrencyResults);
 
         MAPPER.writerWithDefaultPrettyPrinter()
@@ -204,6 +236,13 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
                 .extracting(ConcurrencyResult::recallAtK)
                 .allSatisfy(recall ->
                         assertThat(recall).isBetween(0.0, 1.0)
+                );
+        assertThat(productionConcurrencyResults)
+                .extracting(ConcurrencyResult::recallAtK)
+                .allSatisfy(recall ->
+                        assertThat(recall)
+                                .as("production ANN policy concurrent Recall@10")
+                                .isEqualTo(1.0)
                 );
         assertThat(tunedConcurrencyResults)
                 .extracting(ConcurrencyResult::recallAtK)
