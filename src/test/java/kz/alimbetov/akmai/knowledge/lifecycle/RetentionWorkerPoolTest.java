@@ -62,6 +62,7 @@ class RetentionWorkerPoolTest {
         ChunkRetentionService cleanup = mock(ChunkRetentionService.class);
         RetentionProperties properties = properties(2, 100);
         AtomicInteger sequence = new AtomicInteger();
+        CountDownLatch completed = new CountDownLatch(5);
 
         when(claims.claimExpired(
                 org.mockito.ArgumentMatchers.anyInt(),
@@ -81,9 +82,10 @@ class RetentionWorkerPoolTest {
             }
             return List.copyOf(result);
         });
-        when(cleanup.cleanup(any())).thenAnswer(invocation ->
-                deleted(invocation.getArgument(0))
-        );
+        when(cleanup.cleanup(any())).thenAnswer(invocation -> {
+            completed.countDown();
+            return deleted(invocation.getArgument(0));
+        });
 
         RetentionWorkerPool pool = new RetentionWorkerPool(
                 claims,
@@ -91,7 +93,8 @@ class RetentionWorkerPoolTest {
                 properties
         );
         try {
-            assertThat(pool.drain("pod-a", 5)).isEqualTo(5);
+            assertThat(pool.drain("pod-a", 5)).isEqualTo(2);
+            assertThat(completed.await(2, TimeUnit.SECONDS)).isTrue();
             verify(cleanup, org.mockito.Mockito.times(5)).cleanup(any());
             assertThat(sequence.get()).isGreaterThanOrEqualTo(5);
         } finally {
