@@ -226,6 +226,25 @@ class AccessLevelArchitectureTest {
                 .contains("rs.getLong(\"access_level\")");
     }
 
+    @Test
+    void publishedRetrievalIsPinnedToActiveStorageState()
+            throws Exception {
+        for (String source : List.of(
+                "src/main/java/kz/alimbetov/akmai/knowledge/vector/"
+                        + "PublishedVectorSearchRepository.java",
+                "src/main/java/kz/alimbetov/akmai/knowledge/projection/"
+                        + "PostgresSearchProjectionRepository.java"
+        )) {
+            String text = Files.readString(Path.of(source))
+                    .replaceAll("\\s+", " ")
+                    .toLowerCase();
+
+            assertThat(text)
+                    .as("%s must prune archived retrieval storage", source)
+                    .contains("storage_state = 0");
+        }
+    }
+
     private Method[] methods(
             Class<?> type,
             Predicate<Method> predicate
