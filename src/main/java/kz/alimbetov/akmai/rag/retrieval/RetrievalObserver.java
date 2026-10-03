@@ -31,6 +31,19 @@ public class RetrievalObserver {
         ).increment();
     }
 
+    public void outcome(
+            RetrievalType type,
+            RetrievalOutcomeStatus status,
+            String category
+    ) {
+        meterRegistry.counter(
+                "akmai.retrieval.outcomes",
+                "strategy", type.name(),
+                "status", status.name(),
+                "category", category == null ? "NONE" : category
+        ).increment();
+    }
+
     public void rerankSuccess(Duration duration, int candidates) {
         Timer.builder("akmai.retrieval.reranker")
                 .tag("outcome", "success")
