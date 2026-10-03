@@ -260,6 +260,17 @@ class ConcurrentGenerationPublicationIntegrationTest {
         assertThat(accessLevel("doc-access-cutover")).isEqualTo(2L);
         assertThat(jdbc.queryForObject(
                 """
+                SELECT generation_status
+                       || ':' || cleanup_required::text
+                FROM knowledge_document_generation
+                WHERE document_id = 'doc-access-cutover'
+                  AND generation = ?
+                """,
+                String.class,
+                first
+        )).isEqualTo("RETIRING:true");
+        assertThat(jdbc.queryForObject(
+                """
                 SELECT access_level
                 FROM knowledge_document_generation
                 WHERE document_id = 'doc-access-cutover'
