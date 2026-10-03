@@ -15,3 +15,5 @@ databaseChangeLog:
       file: db/changelog/greenfield/007-hot-retention-audit.sql
   - include:
       file: db/changelog/greenfield/008-adaptive-association-graph.sql
+  - include:
+      file: db/changelog/greenfield/009-adaptive-shadow-learning.sql

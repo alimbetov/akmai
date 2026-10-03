@@ -51,6 +51,11 @@ akmai:
     maintenance-enabled: ${AKMAI_ADAPTIVE_GRAPH_MAINTENANCE_ENABLED:false}
     shadow-expansion-enabled: ${AKMAI_ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED:false}
     expansion-enabled: ${AKMAI_ADAPTIVE_GRAPH_EXPANSION_ENABLED:false}
+    graph-version: ${AKMAI_ADAPTIVE_GRAPH_VERSION:1}
+    learning:
+      max-context-chunks: ${AKMAI_ADAPTIVE_GRAPH_LEARNING_MAX_CONTEXT_CHUNKS:8}
+      max-pairs-per-request: ${AKMAI_ADAPTIVE_GRAPH_LEARNING_MAX_PAIRS:32}
+      fingerprint-secret: ${AKMAI_ADAPTIVE_GRAPH_FINGERPRINT_SECRET:}
     quotas:
       hot: ${AKMAI_ADAPTIVE_GRAPH_HOT_QUOTA:8}
       warm: ${AKMAI_ADAPTIVE_GRAPH_WARM_QUOTA:8}

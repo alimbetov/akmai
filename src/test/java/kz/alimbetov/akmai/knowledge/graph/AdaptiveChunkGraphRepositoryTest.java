@@ -210,6 +210,64 @@ class AdaptiveChunkGraphRepositoryTest {
     }
 
     @Test
+    void repeatedQueryBucketDoesNotInflateEvidenceCounters() {
+        insertGeneration("doc-a", 1, 1);
+        insertGeneration("doc-b", 1, 1);
+
+        ChunkGraphNode left = new ChunkGraphNode(1, "doc-a", 1, "chunk-a");
+        ChunkGraphNode right = new ChunkGraphNode(1, "doc-b", 1, "chunk-b");
+
+        AssociationEvidence first = new AssociationEvidence(
+                0.0, 1, 1, 1, 17, Instant.now(), 1
+        );
+        repository.reinforceSymmetric(
+                left,
+                right,
+                AssociationBand.CANDIDATE,
+                first
+        );
+        repository.reinforceSymmetric(
+                left,
+                right,
+                AssociationBand.CANDIDATE,
+                first
+        );
+
+        List<ChunkAssociation> once = repository.findRelated(
+                Set.of(1L),
+                left,
+                Set.of(AssociationBand.CANDIDATE),
+                0.0,
+                10
+        );
+        assertThat(once.getFirst().supportCount()).isEqualTo(1);
+        assertThat(once.getFirst().contextCount()).isEqualTo(1);
+        assertThat(once.getFirst().citationCount()).isEqualTo(1);
+        assertThat(once.getFirst().distinctQuerySupport()).isEqualTo(1);
+
+        repository.reinforceSymmetric(
+                left,
+                right,
+                AssociationBand.CANDIDATE,
+                new AssociationEvidence(
+                        0.0, 1, 1, 0, 18, Instant.now(), 1
+                )
+        );
+
+        List<ChunkAssociation> twice = repository.findRelated(
+                Set.of(1L),
+                left,
+                Set.of(AssociationBand.CANDIDATE),
+                0.0,
+                10
+        );
+        assertThat(twice.getFirst().supportCount()).isEqualTo(2);
+        assertThat(twice.getFirst().contextCount()).isEqualTo(2);
+        assertThat(twice.getFirst().citationCount()).isEqualTo(1);
+        assertThat(twice.getFirst().distinctQuerySupport()).isEqualTo(2);
+    }
+
+    @Test
     void queryPlanPrunesToAclAndSingleHashLeaf() {
         insertGeneration("doc-a", 1, 1);
         insertGeneration("doc-b", 1, 1);

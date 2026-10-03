@@ -2,6 +2,7 @@ package kz.alimbetov.akmai.rag.service;
 
 import java.util.List;
 import java.util.Set;
+import kz.alimbetov.akmai.knowledge.graph.AssociationLearningRecorder;
 import kz.alimbetov.akmai.rag.api.RagResponse;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
@@ -34,6 +35,7 @@ public class RagQuestionService {
     private final ContextAssembler contextAssembler;
     private final CitationValidator citationValidator;
     private final AnswerGenerationService answerGenerationService;
+    private final AssociationLearningRecorder associationLearningRecorder;
 
     public RagQuestionService(
             QueryChunker queryChunker,
@@ -45,7 +47,8 @@ public class RagQuestionService {
             ContextBudget contextBudget,
             ContextAssembler contextAssembler,
             CitationValidator citationValidator,
-            AnswerGenerationService answerGenerationService
+            AnswerGenerationService answerGenerationService,
+            AssociationLearningRecorder associationLearningRecorder
     ) {
         this.queryChunker = queryChunker;
         this.retrievalPlanner = retrievalPlanner;
@@ -57,6 +60,7 @@ public class RagQuestionService {
         this.contextAssembler = contextAssembler;
         this.citationValidator = citationValidator;
         this.answerGenerationService = answerGenerationService;
+        this.associationLearningRecorder = associationLearningRecorder;
     }
 
     public RagResponse ask(String question, Set<Long> accessLevels) {
@@ -94,6 +98,13 @@ public class RagQuestionService {
                 || validation.citedSources().isEmpty()) {
             return insufficientInformation();
         }
+
+        associationLearningRecorder.record(
+                queryChunks,
+                accessLevels,
+                bounded,
+                validation
+        );
 
         List<RagResponse.Source> sources = validation.citedSources().stream()
                 .map(source -> new RagResponse.Source(

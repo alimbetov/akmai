@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -29,23 +30,46 @@ public class AdaptiveChunkGraphRepository {
             AssociationBand band,
             AssociationEvidence evidence
     ) {
-        requirePair(left, right);
-        if (band == null || band == AssociationBand.DECAYED) {
-            throw new IllegalArgumentException(
-                    "reinforcement band must be CANDIDATE, WARM, or HOT"
-            );
-        }
-        if (evidence == null) {
-            throw new IllegalArgumentException("evidence must not be null");
+        reinforceSymmetricBatch(List.of(
+                new AssociationObservation(left, right, band, evidence)
+        ));
+    }
+
+    public void reinforceSymmetricBatch(
+            List<AssociationObservation> observations
+    ) {
+        if (observations == null || observations.isEmpty()) {
+            return;
         }
 
-        List<ChunkGraphNode> lockOrder = new ArrayList<>(List.of(left, right));
-        lockOrder.sort(Comparator.naturalOrder());
+        TreeSet<ChunkGraphNode> lockOrder = new TreeSet<>();
+        for (AssociationObservation observation : observations) {
+            if (observation == null) {
+                throw new IllegalArgumentException(
+                        "association observation must not be null"
+                );
+            }
+            requirePair(observation.left(), observation.right());
+            requireBand(observation.band());
+            if (observation.evidence() == null) {
+                throw new IllegalArgumentException(
+                        "evidence must not be null"
+                );
+            }
+            lockOrder.add(observation.left());
+            lockOrder.add(observation.right());
+        }
 
         transactionTemplate.executeWithoutResult(status -> {
-            lockNode(lockOrder.get(0));
-            lockNode(lockOrder.get(1));
-            upsertPair(left, right, band, evidence);
+            lockOrder.forEach(this::lockNode);
+            observations.forEach(observation ->
+                    upsertPair(
+                            observation.left(),
+                            observation.right(),
+                            observation.band(),
+                            observation.evidence()
+                    )
+            );
         });
     }
 
@@ -174,6 +198,14 @@ public class AdaptiveChunkGraphRepository {
         }
     }
 
+    private void requireBand(AssociationBand band) {
+        if (band == null || band == AssociationBand.DECAYED) {
+            throw new IllegalArgumentException(
+                    "reinforcement band must be CANDIDATE, WARM, or HOT"
+            );
+        }
+    }
+
     private void requireAllowedAccessLevels(Set<Long> allowedAccessLevels) {
         if (allowedAccessLevels == null || allowedAccessLevels.isEmpty()) {
             throw new IllegalArgumentException(
@@ -221,6 +253,7 @@ public class AdaptiveChunkGraphRepository {
                     support_count,
                     context_count,
                     citation_count,
+                    query_support_sketch,
                     distinct_query_support,
                     graph_version,
                     first_seen_at,
@@ -228,9 +261,13 @@ public class AdaptiveChunkGraphRepository {
                     last_reinforced_at,
                     updated_at
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, clock_timestamp()
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    set_bit(0::bit(256), ?, 1),
+                    1, ?, ?, ?, ?, clock_timestamp()
                 ), (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, clock_timestamp()
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    set_bit(0::bit(256), ?, 1),
+                    1, ?, ?, ?, ?, clock_timestamp()
                 )
                 ON CONFLICT (
                     access_level,
@@ -256,16 +293,47 @@ public class AdaptiveChunkGraphRepository {
                     ),
                     support_count =
                         knowledge_chunk_association.support_count
-                        + EXCLUDED.support_count,
+                        + CASE
+                            WHEN bit_count(
+                                knowledge_chunk_association.query_support_sketch
+                                | EXCLUDED.query_support_sketch
+                            ) > bit_count(
+                                knowledge_chunk_association.query_support_sketch
+                            )
+                            THEN EXCLUDED.support_count
+                            ELSE 0
+                          END,
                     context_count =
                         knowledge_chunk_association.context_count
-                        + EXCLUDED.context_count,
+                        + CASE
+                            WHEN bit_count(
+                                knowledge_chunk_association.query_support_sketch
+                                | EXCLUDED.query_support_sketch
+                            ) > bit_count(
+                                knowledge_chunk_association.query_support_sketch
+                            )
+                            THEN EXCLUDED.context_count
+                            ELSE 0
+                          END,
                     citation_count =
                         knowledge_chunk_association.citation_count
-                        + EXCLUDED.citation_count,
-                    distinct_query_support =
-                        knowledge_chunk_association.distinct_query_support
-                        + EXCLUDED.distinct_query_support,
+                        + CASE
+                            WHEN bit_count(
+                                knowledge_chunk_association.query_support_sketch
+                                | EXCLUDED.query_support_sketch
+                            ) > bit_count(
+                                knowledge_chunk_association.query_support_sketch
+                            )
+                            THEN EXCLUDED.citation_count
+                            ELSE 0
+                          END,
+                    distinct_query_support = bit_count(
+                        knowledge_chunk_association.query_support_sketch
+                        | EXCLUDED.query_support_sketch
+                    ),
+                    query_support_sketch =
+                        knowledge_chunk_association.query_support_sketch
+                        | EXCLUDED.query_support_sketch,
                     graph_version = greatest(
                         knowledge_chunk_association.graph_version,
                         EXCLUDED.graph_version
@@ -274,10 +342,19 @@ public class AdaptiveChunkGraphRepository {
                         knowledge_chunk_association.last_seen_at,
                         EXCLUDED.last_seen_at
                     ),
-                    last_reinforced_at = greatest(
-                        knowledge_chunk_association.last_reinforced_at,
-                        EXCLUDED.last_reinforced_at
-                    ),
+                    last_reinforced_at = CASE
+                        WHEN bit_count(
+                            knowledge_chunk_association.query_support_sketch
+                            | EXCLUDED.query_support_sketch
+                        ) > bit_count(
+                            knowledge_chunk_association.query_support_sketch
+                        )
+                        THEN greatest(
+                            knowledge_chunk_association.last_reinforced_at,
+                            EXCLUDED.last_reinforced_at
+                        )
+                        ELSE knowledge_chunk_association.last_reinforced_at
+                    END,
                     updated_at = clock_timestamp()
                 """;
 
@@ -327,7 +404,7 @@ public class AdaptiveChunkGraphRepository {
         ps.setLong(index++, evidence.supportDelta());
         ps.setLong(index++, evidence.contextDelta());
         ps.setLong(index++, evidence.citationDelta());
-        ps.setLong(index++, evidence.distinctQueryDelta());
+        ps.setInt(index++, evidence.querySupportBucket());
         ps.setInt(index++, evidence.graphVersion());
         ps.setTimestamp(index++, observed);
         ps.setTimestamp(index++, observed);

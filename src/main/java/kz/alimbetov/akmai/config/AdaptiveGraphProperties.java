@@ -11,6 +11,8 @@ public record AdaptiveGraphProperties(
         boolean maintenanceEnabled,
         boolean shadowExpansionEnabled,
         boolean expansionEnabled,
+        int graphVersion,
+        Learning learning,
         BandQuotas quotas,
         Storage storage
 ) {
@@ -19,6 +21,24 @@ public record AdaptiveGraphProperties(
 
     @ConstructorBinding
     public AdaptiveGraphProperties {
+        if (graphVersion <= 0) {
+            throw new IllegalArgumentException(
+                    "adaptive-graph graphVersion must be positive"
+            );
+        }
+        if (learning == null) {
+            throw new IllegalArgumentException(
+                    "adaptive-graph learning must not be null"
+            );
+        }
+        if (learningEnabled
+                && (learning.fingerprintSecret() == null
+                || learning.fingerprintSecret().length() < 32)) {
+            throw new IllegalArgumentException(
+                    "adaptive-graph learning requires a fingerprint secret "
+                            + "of at least 32 characters"
+            );
+        }
         if (quotas == null) {
             throw new IllegalArgumentException(
                     "adaptive-graph quotas must not be null"
@@ -40,6 +60,36 @@ public record AdaptiveGraphProperties(
                             + STORAGE_HASH_BUCKETS_V1
                             + " hash buckets per ACL"
             );
+        }
+    }
+
+    public record Learning(
+            int maxContextChunks,
+            int maxPairsPerRequest,
+            String fingerprintSecret
+    ) {
+        public Learning {
+            if (maxContextChunks < 2 || maxContextChunks > 32) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph maxContextChunks must be in [2, 32]"
+                );
+            }
+            if (maxPairsPerRequest < 1 || maxPairsPerRequest > 128) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph maxPairsPerRequest must be in [1, 128]"
+                );
+            }
+            fingerprintSecret =
+                    fingerprintSecret == null ? "" : fingerprintSecret;
+        }
+
+        @Override
+        public String toString() {
+            return "Learning[maxContextChunks="
+                    + maxContextChunks
+                    + ", maxPairsPerRequest="
+                    + maxPairsPerRequest
+                    + ", fingerprintSecret=<redacted>]";
         }
     }
 
