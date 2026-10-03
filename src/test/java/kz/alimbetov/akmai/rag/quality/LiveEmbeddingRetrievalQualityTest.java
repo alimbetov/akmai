@@ -47,6 +47,55 @@ class LiveEmbeddingRetrievalQualityTest {
                     "剂量是多少？",
                     "推荐剂量是每日一次10毫克。本节说明剂量是多少。",
                     "合同可由双方书面协议终止。"
+            ),
+            new Case(
+                    "de-live",
+                    "de",
+                    "Welche Kontraindikationen sind angegeben?",
+                    "Kontraindikationen: Das Arzneimittel darf bei schwerer Niereninsuffizienz nicht angewendet werden.",
+                    "Der Vertrag kann schriftlich von beiden Parteien beendet werden."
+            ),
+            new Case(
+                    "fr-live",
+                    "fr",
+                    "Quelle surveillance est requise?",
+                    "Une surveillance hebdomadaire de la pression artérielle et de la fonction rénale est requise.",
+                    "La facture doit être payée dans un délai de trente jours."
+            ),
+            new Case(
+                    "es-live",
+                    "es",
+                    "¿Qué dosis se recomienda?",
+                    "La dosis recomendada es de 10 mg una vez al día.",
+                    "El contrato podrá terminarse por acuerdo escrito."
+            ),
+            new Case(
+                    "pt-live",
+                    "pt",
+                    "Qual monitorização é necessária?",
+                    "É necessária monitorização semanal da pressão arterial e da função renal.",
+                    "A fatura deve ser paga no prazo de trinta dias."
+            ),
+            new Case(
+                    "it-live",
+                    "it",
+                    "Quale dose è richiesta?",
+                    "La dose raccomandata è di 10 mg una volta al giorno.",
+                    "Il contratto può essere risolto mediante accordo scritto."
+            ),
+            new Case(
+                    "tr-live",
+                    "tr",
+                    "Hangi doz gereklidir?",
+                    "Önerilen doz günde bir kez 10 mg'dır.",
+                    "Sözleşme tarafların yazılı anlaşmasıyla sona erdirilebilir."
+            ),
+            new Case(
+                    "el-live",
+                    "el",
+                    "Ποια δόση απαιτείται;",
+                    "Η συνιστώμενη δόση είναι 10 mg μία φορά την ημέρα.",
+                    "Η σύμβαση μπορεί να λυθεί με γραπτή συμφωνία."
             )
     );
 

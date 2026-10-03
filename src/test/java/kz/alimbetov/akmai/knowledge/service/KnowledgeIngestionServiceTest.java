@@ -68,6 +68,42 @@ class KnowledgeIngestionServiceTest {
     }
 
     @Test
+    void acceptsExpandedLanguageAliasBeforeChunking() {
+        SemanticChunker chunker = mock(SemanticChunker.class);
+        ParallelIngestionExecutor executor =
+                mock(ParallelIngestionExecutor.class);
+        PersistenceCoordinator persistence =
+                mock(PersistenceCoordinator.class);
+        when(chunker.chunk(any())).thenReturn(List.of());
+        when(executor.execute(anyList())).thenReturn(List.of());
+
+        KnowledgeIngestionService service = new KnowledgeIngestionService(
+                chunker,
+                executor,
+                persistence,
+                mock(IngestionIdempotencyRepository.class),
+                mock(CanonicalRequestFingerprint.class),
+                new IdempotencyProperties(Duration.ofMinutes(5))
+        );
+
+        service.addText(new AddKnowledgeRequest(
+                "doc-de",
+                "Titel",
+                "Text",
+                "source",
+                "Deutsch",
+                KnowledgeDomain.GENERAL,
+                1L,
+                Map.of()
+        ));
+
+        ArgumentCaptor<KnowledgeDocument> captor =
+                ArgumentCaptor.forClass(KnowledgeDocument.class);
+        verify(chunker).chunk(captor.capture());
+        assertThat(captor.getValue().language()).isEqualTo("de");
+    }
+
+    @Test
     void rejectsUnsupportedLanguageBeforeAnyChunkingWork() {
         SemanticChunker chunker = mock(SemanticChunker.class);
         KnowledgeIngestionService service = new KnowledgeIngestionService(
@@ -84,7 +120,7 @@ class KnowledgeIngestionServiceTest {
                 "Title",
                 "Text",
                 "source",
-                "de",
+                "ja",
                 KnowledgeDomain.GENERAL,
                 1L,
                 Map.of()

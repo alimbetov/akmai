@@ -70,6 +70,48 @@ class MultilingualRetrievalQualityRegressionTest {
                     "zh",
                     "剂量是多少？",
                     Set.of("zh-dose")
+            ),
+            new RetrievalBenchmarkCase(
+                    "de-contra",
+                    "de",
+                    "Welche Kontraindikationen sind angegeben?",
+                    Set.of("de-contra")
+            ),
+            new RetrievalBenchmarkCase(
+                    "fr-monitor",
+                    "fr",
+                    "Quelle surveillance est requise?",
+                    Set.of("fr-monitor")
+            ),
+            new RetrievalBenchmarkCase(
+                    "es-dose",
+                    "es",
+                    "¿Qué dosis se recomienda?",
+                    Set.of("es-dose")
+            ),
+            new RetrievalBenchmarkCase(
+                    "pt-monitor",
+                    "pt",
+                    "Qual monitorização é necessária?",
+                    Set.of("pt-monitor")
+            ),
+            new RetrievalBenchmarkCase(
+                    "it-dose",
+                    "it",
+                    "Quale dose è richiesta?",
+                    Set.of("it-dose")
+            ),
+            new RetrievalBenchmarkCase(
+                    "tr-dose",
+                    "tr",
+                    "Hangi doz gereklidir?",
+                    Set.of("tr-dose")
+            ),
+            new RetrievalBenchmarkCase(
+                    "el-dose",
+                    "el",
+                    "Ποια δόση απαιτείται;",
+                    Set.of("el-dose")
             )
     );
 
@@ -284,8 +326,12 @@ class MultilingualRetrievalQualityRegressionTest {
                 RetrievalBenchmarkCase testCase,
                 boolean mutateReranker
         ) {
+            var queryChunks = chunker.chunk(testCase.question());
+            assertThat(queryChunks.getFirst().language())
+                    .isEqualTo(testCase.language());
+
             var execution = executor.executeDetailed(
-                    planner.plan(chunker.chunk(testCase.question())),
+                    planner.plan(queryChunks),
                     Set.of(1L)
             );
             assertThat(execution.criticalFailure()).isFalse();

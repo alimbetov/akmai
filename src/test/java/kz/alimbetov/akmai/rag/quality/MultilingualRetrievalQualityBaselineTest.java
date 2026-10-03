@@ -53,6 +53,48 @@ class MultilingualRetrievalQualityBaselineTest {
                         List.of("zh-law", "noise", "other"),
                         Set.of("zh-law"),
                         1.0, 1.0, 1.0
+                ),
+                Arguments.of(
+                        "de",
+                        List.of("de-law", "noise"),
+                        Set.of("de-law"),
+                        1.0, 1.0, 1.0
+                ),
+                Arguments.of(
+                        "fr",
+                        List.of("fr-med", "noise"),
+                        Set.of("fr-med"),
+                        1.0, 1.0, 1.0
+                ),
+                Arguments.of(
+                        "es",
+                        List.of("es-med", "noise"),
+                        Set.of("es-med"),
+                        1.0, 1.0, 1.0
+                ),
+                Arguments.of(
+                        "pt",
+                        List.of("pt-med", "noise"),
+                        Set.of("pt-med"),
+                        1.0, 1.0, 1.0
+                ),
+                Arguments.of(
+                        "it",
+                        List.of("it-med", "noise"),
+                        Set.of("it-med"),
+                        1.0, 1.0, 1.0
+                ),
+                Arguments.of(
+                        "tr",
+                        List.of("tr-med", "noise"),
+                        Set.of("tr-med"),
+                        1.0, 1.0, 1.0
+                ),
+                Arguments.of(
+                        "el",
+                        List.of("el-med", "noise"),
+                        Set.of("el-med"),
+                        1.0, 1.0, 1.0
                 )
         );
     }
