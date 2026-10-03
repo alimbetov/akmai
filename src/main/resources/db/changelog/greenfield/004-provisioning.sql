@@ -70,7 +70,7 @@ BEGIN
         );
     END IF;
 END;
-$;
+$$;
 
 --changeset akmai-greenfield:004-vector-language-partition splitStatements:false
 CREATE OR REPLACE FUNCTION akmai_admin.ensure_vector_language_partition(
