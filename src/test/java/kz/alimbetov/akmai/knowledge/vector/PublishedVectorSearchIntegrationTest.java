@@ -129,6 +129,42 @@ class PublishedVectorSearchIntegrationTest {
     }
 
     @Test
+    void globalAnnAppliesPublicationFenceBeforeBranchLimit() {
+        lifecycle("ann-doc", 2L, 1L);
+        generation("ann-doc", 1L, "RETIRING");
+        generation("ann-doc", 2L, "PUBLISHED");
+
+        List<PostgresGenerationVectorRepository.VectorRow> stale =
+                java.util.stream.IntStream.range(0, 20)
+                        .mapToObj(index -> row(
+                                "ann-doc",
+                                1L,
+                                "stale-" + index,
+                                new float[] {1f, 0f, 0f}
+                        ))
+                        .toList();
+        java.util.ArrayList<PostgresGenerationVectorRepository.VectorRow> rows =
+                new java.util.ArrayList<>(stale);
+        rows.add(row(
+                "ann-doc",
+                2L,
+                "published",
+                new float[] {0.95f, 0.1f, 0f}
+        ));
+        vectors.insertAll(profile, rows);
+
+        assertThat(search.search(
+                "query",
+                "en",
+                List.of(),
+                Set.of(1L),
+                1,
+                0.5
+        )).extracting(VectorSearchMatch::chunkId)
+                .containsExactly("published");
+    }
+
+    @Test
     void vectorSearchReturnsOnlyAuthorizedAccessLevels() {
         lifecycle("access-1", 1L, 1L);
         lifecycle("access-2", 1L, 2L);
@@ -380,11 +416,12 @@ class PublishedVectorSearchIntegrationTest {
                     cleanup_required, started_at, published_at,
                     retired_at, access_level
                 ) VALUES (
-                    ?, ?, ?, 'INGESTION', ?, 'fp', 2, false,
+                    ?, ?, ?, 'INGESTION', ?, 'fp', 2,
+                    CASE WHEN ? = 'RETIRING' THEN true ELSE false END,
                     clock_timestamp() - interval '1 hour',
                     CASE WHEN ? = 'PUBLISHED'
                         THEN clock_timestamp() ELSE NULL END,
-                    CASE WHEN ? = 'RETIRED'
+                    CASE WHEN ? IN ('RETIRING', 'RETIRED')
                         THEN clock_timestamp() ELSE NULL END,
                     ?
                 )
@@ -393,6 +430,7 @@ class PublishedVectorSearchIntegrationTest {
                 generation,
                 status,
                 profile.profileId(),
+                status,
                 status,
                 status,
                 accessLevel
