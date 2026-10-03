@@ -139,7 +139,6 @@ class PostgresVectorReconciliationIntegrationTest {
         jdbc.update("DELETE FROM knowledge_document_vector_generation");
         jdbc.update("DELETE FROM knowledge_document_generation");
         jdbc.update("DELETE FROM knowledge_document_lifecycle");
-        jdbc.update("DELETE FROM knowledge_legacy_reconciliation");
     }
 
     @Test
