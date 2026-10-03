@@ -182,7 +182,7 @@ public class PostgresSearchProjectionRepository
         }
         return jdbcTemplate.query(
                 """
-                SELECT p.*
+                SELECT p.*, l.access_level AS resolved_access_level
                 FROM knowledge_search_projection p
                 JOIN knowledge_document_lifecycle l
                   ON l.document_id = p.document_id
@@ -215,7 +215,7 @@ public class PostgresSearchProjectionRepository
         }
         return jdbcTemplate.query(
                 """
-                SELECT p.*
+                SELECT p.*, l.access_level AS resolved_access_level
                 FROM knowledge_search_projection p
                 JOIN knowledge_document_lifecycle l
                   ON l.document_id = p.document_id
@@ -251,7 +251,7 @@ public class PostgresSearchProjectionRepository
         }
         return jdbcTemplate.query(
                 """
-                SELECT p.*
+                SELECT p.*, l.access_level AS resolved_access_level
                 FROM knowledge_search_projection p
                 JOIN knowledge_document_lifecycle l
                   ON l.document_id = p.document_id
@@ -407,7 +407,7 @@ public class PostgresSearchProjectionRepository
                 .collect(java.util.stream.Collectors.joining(" AND "));
 
         String sql = """
-                SELECT p.*,
+                SELECT p.*, l.access_level AS resolved_access_level,
                        (%s) / %d AS lexical_rank
                 FROM knowledge_search_projection p
                 JOIN knowledge_document_lifecycle l
@@ -455,7 +455,7 @@ public class PostgresSearchProjectionRepository
             String configuration
     ) {
         String sql = """
-                SELECT p.*,
+                SELECT p.*, l.access_level AS resolved_access_level,
                        ts_rank(p.%s, websearch_to_tsquery('%s', ?)) AS lexical_rank
                 FROM knowledge_search_projection p
                 JOIN knowledge_document_lifecycle l
@@ -495,7 +495,7 @@ public class PostgresSearchProjectionRepository
     ) {
         String escaped = escapeLikeLiteral(query);
         String sql = """
-                SELECT p.*,
+                SELECT p.*, l.access_level AS resolved_access_level,
                        greatest(
                            similarity(lower(p.text_content), lower(?)),
                            similarity(lower(coalesce(p.section_path, '')), lower(?))
@@ -541,7 +541,7 @@ public class PostgresSearchProjectionRepository
             int limit
     ) {
         String sql = """
-                SELECT p.*,
+                SELECT p.*, l.access_level AS resolved_access_level,
                        ts_rank(p.search_vector, websearch_to_tsquery('simple', ?)) AS lexical_rank
                 FROM knowledge_search_projection p
                 JOIN knowledge_document_lifecycle l
@@ -603,6 +603,8 @@ public class PostgresSearchProjectionRepository
                         )
                         || identity.generation()
                                 != projection.generation()
+                        || identity.accessLevel()
+                                != projection.accessLevel()
         );
         if (mismatch) {
             throw new IllegalArgumentException(
@@ -656,6 +658,7 @@ public class PostgresSearchProjectionRepository
                 rs.getString("chunk_id"),
                 rs.getString("document_id"),
                 rs.getLong("generation"),
+                accessLevel(rs),
                 rs.getString("parent_chunk_id"),
                 rs.getInt("chunk_index"),
                 rs.getString("text_content"),
@@ -668,6 +671,24 @@ public class PostgresSearchProjectionRepository
                 readJson(rs.getString("metadata_json"), new TypeReference<Map<String, Object>>() {}),
                 rs.getInt("projection_version")
         );
+    }
+
+    private long accessLevel(ResultSet rs) {
+        try {
+            long value = rs.getLong("access_level");
+            if (!rs.wasNull()) {
+                return value;
+            }
+        } catch (SQLException ignored) {
+            // Transitional old schema has no physical projection ACL.
+        }
+
+        try {
+            long value = rs.getLong("resolved_access_level");
+            return rs.wasNull() ? 0L : value;
+        } catch (SQLException ignored) {
+            return 0L;
+        }
     }
 
     private String writeJson(Object value) {
