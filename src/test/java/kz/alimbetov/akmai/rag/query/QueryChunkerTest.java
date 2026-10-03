@@ -26,11 +26,32 @@ class QueryChunkerTest {
         assertThat(chunker().chunk("Құжаттың төлем мерзімі қандай?").getFirst().language())
                 .isEqualTo("kk");
         assertThat(chunker().chunk("Какой срок оплаты?").getFirst().language())
-                .isEqualTo("unknown");
+                .isEqualTo("ru");
         assertThat(chunker().chunk("What is the payment deadline?").getFirst().language())
                 .isEqualTo("en");
         assertThat(chunker().chunk("付款期限是什么？").getFirst().language())
                 .isEqualTo("zh");
+        assertThat(chunker().chunk(
+                "Welche Kontraindikationen sind angegeben?"
+        ).getFirst().language()).isEqualTo("de");
+        assertThat(chunker().chunk(
+                "Quelle surveillance est requise?"
+        ).getFirst().language()).isEqualTo("fr");
+        assertThat(chunker().chunk(
+                "¿Qué dosis se recomienda?"
+        ).getFirst().language()).isEqualTo("es");
+        assertThat(chunker().chunk(
+                "Qual monitorização é necessária?"
+        ).getFirst().language()).isEqualTo("pt");
+        assertThat(chunker().chunk(
+                "Quale dose è richiesta?"
+        ).getFirst().language()).isEqualTo("it");
+        assertThat(chunker().chunk(
+                "Hangi doz gereklidir?"
+        ).getFirst().language()).isEqualTo("tr");
+        assertThat(chunker().chunk(
+                "Ποια δόση απαιτείται;"
+        ).getFirst().language()).isEqualTo("el");
     }
 
 
