@@ -149,11 +149,12 @@ class ReembeddingIntegrationTest {
         assertThat(jdbc.queryForObject(
                 """
                 SELECT generation_status
+                       || ':' || cleanup_required::text
                 FROM knowledge_document_generation
                 WHERE document_id = 'doc-1' AND generation = 1
                 """,
                 String.class
-        )).isEqualTo("RETIRED");
+        )).isEqualTo("RETIRING:true");
         assertThat(jdbc.queryForObject(
                 """
                 SELECT generation_status

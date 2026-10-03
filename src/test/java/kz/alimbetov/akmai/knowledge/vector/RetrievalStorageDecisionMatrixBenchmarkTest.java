@@ -116,6 +116,7 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
                     explain(benchmarkConnection, query)
             );
             assertAuthorizedPartitionsOnly(plan, scopeSize);
+            assertHnswCandidateBound(plan, TOP_K);
 
             scopeResults.add(new ScopeResult(
                     scopeSize,
@@ -423,9 +424,14 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
         );
         String sql = """
                 WITH candidates AS MATERIALIZED (
-                    SELECT id, embedding
-                    FROM matrix_list
-                    WHERE access_level IN (%s)
+                    SELECT v.id, v.embedding
+                    FROM matrix_list v
+                    JOIN matrix_lifecycle l
+                      ON l.document_id = v.document_id
+                     AND l.published_generation = v.generation
+                     AND l.access_level = v.access_level
+                    WHERE v.access_level IN (%s)
+                      AND l.retention_status = 'ACTIVE'
                 )
                 SELECT id
                 FROM candidates
@@ -727,6 +733,25 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
             statement.execute("RESET hnsw.ef_search");
             statement.execute("RESET hnsw.iterative_scan");
         }
+    }
+
+    private static void assertHnswCandidateBound(
+            PlanSummary plan,
+            int candidateLimit
+    ) {
+        assertThat(plan.indexNames())
+                .anySatisfy(index ->
+                        assertThat(index.toLowerCase())
+                                .contains("embedding")
+                );
+
+        plan.executedRelationRows().forEach((relation, rows) -> {
+            if (relation.startsWith("matrix_list_al_")) {
+                assertThat(rows)
+                        .as("%s must stay candidate-bounded", relation)
+                        .isLessThanOrEqualTo(candidateLimit);
+            }
+        });
     }
 
     private static void assertAuthorizedPartitionsOnly(

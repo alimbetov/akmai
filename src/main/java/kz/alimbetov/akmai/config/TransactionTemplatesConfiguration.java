@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Configuration
@@ -41,6 +42,21 @@ public class TransactionTemplatesConfiguration {
             );
         }
         return bounded(manager, timeout);
+    }
+
+    @Bean(name = "repairTransactionTemplate")
+    public TransactionTemplate repairTransactionTemplate(
+            PlatformTransactionManager manager,
+            RetentionCleanupProperties cleanupProperties
+    ) {
+        TransactionTemplate template = bounded(
+                manager,
+                cleanupProperties.cleanupTransactionTimeout()
+        );
+        template.setPropagationBehavior(
+                TransactionDefinition.PROPAGATION_REQUIRES_NEW
+        );
+        return template;
     }
 
     @Bean(name = "reembeddingTransactionTemplate")

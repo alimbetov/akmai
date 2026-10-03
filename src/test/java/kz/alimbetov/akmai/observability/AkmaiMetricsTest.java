@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 class AkmaiMetricsTest {
 
     @Test
-    void exposesRetentionRunBacklogFailureAndLeaseSignals() {
+    void exposesRetentionEconomicsAndReconciliationSignals() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
         AkmaiMetrics metrics = new AkmaiMetrics(registry);
 
@@ -19,18 +19,22 @@ class AkmaiMetricsTest {
         metrics.retentionResult("FAILED", 0);
         metrics.retentionStaleClaim();
         metrics.retentionLeaseLost();
-        metrics.archiveBacklog(4, 120, 600);
-        metrics.archiveStore(
+        metrics.retentionEconomicsBacklog(4, 120, 600);
+        metrics.retentionTombstones(2, 8, 64_000);
+        metrics.retrievalStore(
                 "projection",
                 100, 20, 300, 200, 3,
                 1_000_000, 12, 250_000
         );
-        metrics.archiveStore(
+        metrics.retrievalStore(
                 "vector",
                 100, 10, 300, 200, 2,
                 2_000_000, 12, 500_000
         );
-        metrics.archiveSample("SUCCESS", Duration.ofMillis(5));
+        metrics.retentionEconomicsSample(
+                "SUCCESS",
+                Duration.ofMillis(5)
+        );
         metrics.reconciliationRun(
                 "SUCCESS", Duration.ofMillis(10), 2, 1
         );
@@ -47,19 +51,27 @@ class AkmaiMetricsTest {
                 .isEqualTo(1.0);
         assertThat(registry.get("akmai.retention.lease.lost").counter().count())
                 .isEqualTo(1.0);
-        assertThat(registry.get("akmai.archive.pending.generations")
-                .gauge().value()).isEqualTo(4.0);
-        assertThat(registry.get("akmai.archive.pending.chunks")
-                .gauge().value()).isEqualTo(120.0);
-        assertThat(registry.get("akmai.archive.oldest.age.seconds")
-                .gauge().value()).isEqualTo(600.0);
-        assertThat(registry.get("akmai.archive.store.bytes")
+        assertThat(registry.get(
+                "akmai.retention.pending.verification.generations"
+        ).gauge().value()).isEqualTo(4.0);
+        assertThat(registry.get(
+                "akmai.retention.pending.verification.chunks"
+        ).gauge().value()).isEqualTo(120.0);
+        assertThat(registry.get(
+                "akmai.retention.oldest.verification.age.seconds"
+        ).gauge().value()).isEqualTo(600.0);
+        assertThat(registry.get("akmai.retention.tombstones.pending")
+                .gauge().value()).isEqualTo(2.0);
+        assertThat(registry.get("akmai.retention.tombstones.verified")
+                .gauge().value()).isEqualTo(8.0);
+        assertThat(registry.get("akmai.retrieval.store.bytes")
                 .tag("store", "projection")
                 .gauge().value()).isEqualTo(1_000_000.0);
-        assertThat(registry.get("akmai.archive.store.dead.rows.estimated")
-                .tag("store", "vector")
+        assertThat(registry.get(
+                "akmai.retrieval.store.dead.rows.estimated"
+        ).tag("store", "vector")
                 .gauge().value()).isEqualTo(10.0);
-        assertThat(registry.get("akmai.archive.sample")
+        assertThat(registry.get("akmai.retention.economics.sample")
                 .tag("outcome", "SUCCESS").timer().count()).isEqualTo(1);
         assertThat(registry.get("akmai.reconciliation.run")
                 .tag("outcome", "SUCCESS").timer().count()).isEqualTo(1);

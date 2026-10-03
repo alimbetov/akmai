@@ -1,7 +1,9 @@
 package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import kz.alimbetov.akmai.knowledge.audit.AuditEventRepository;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileRepository;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
@@ -29,6 +31,7 @@ public class ChunkRetentionService {
     private final VectorGenerationRepository vectorGenerationRepository;
     private final PostgresGenerationVectorRepository vectorRepository;
     private final EmbeddingProfileRepository profileRepository;
+    private final AuditEventRepository audit;
     private AkmaiMetrics metrics;
 
     public ChunkRetentionService(
@@ -40,7 +43,8 @@ public class ChunkRetentionService {
             DocumentIdentifierRepository identifierRepository,
             VectorGenerationRepository vectorGenerationRepository,
             PostgresGenerationVectorRepository vectorRepository,
-            EmbeddingProfileRepository profileRepository
+            EmbeddingProfileRepository profileRepository,
+            AuditEventRepository audit
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactionTemplate = transactionTemplate;
@@ -50,6 +54,7 @@ public class ChunkRetentionService {
         this.vectorGenerationRepository = vectorGenerationRepository;
         this.vectorRepository = vectorRepository;
         this.profileRepository = profileRepository;
+        this.audit = audit;
     }
 
     @Autowired(required = false)
@@ -126,36 +131,55 @@ public class ChunkRetentionService {
             throw new StaleClaimException();
         }
 
-        String profileId = jdbcTemplate.queryForObject(
+        GenerationDescriptor generation = jdbcTemplate.query(
                 """
-                SELECT embedding_profile_id
+                SELECT embedding_profile_id,
+                       content_fingerprint,
+                       physical_id_version,
+                       chunk_count
                 FROM knowledge_document_generation
                 WHERE document_id = ?
                   AND generation = ?
+                FOR UPDATE
                 """,
-                String.class,
+                (rs, rowNum) -> new GenerationDescriptor(
+                        rs.getString("embedding_profile_id"),
+                        rs.getString("content_fingerprint"),
+                        rs.getShort("physical_id_version"),
+                        (Integer) rs.getObject("chunk_count")
+                ),
                 claim.documentId(),
                 claim.generation()
+        ).stream().findFirst().orElseThrow(() ->
+                new IllegalStateException(
+                        "Generation does not exist for retention"
+                )
         );
-        if (profileId == null || profileId.isBlank()) {
+
+        if (generation.profileId() == null
+                || generation.profileId().isBlank()) {
             throw new IllegalStateException(
                     "Generation has no verifiable embedding profile"
             );
         }
-        EmbeddingProfile profile = profileRepository.findById(profileId)
+        EmbeddingProfile profile = profileRepository
+                .findById(generation.profileId())
                 .orElseThrow(() -> new IllegalStateException(
-                        "Embedding profile is missing: " + profileId
+                        "Embedding profile is missing: "
+                                + generation.profileId()
                 ));
 
         List<String> vectorIds =
                 vectorGenerationRepository.findVectorIds(identity);
-        if (vectorIds.isEmpty()) {
+        if (vectorIds.isEmpty()
+                && generation.chunkCount() != null
+                && generation.chunkCount() > 0) {
             throw new IllegalStateException(
                     "Vector manifest missing; reconciliation is required"
             );
         }
 
-        Integer chunkCount = jdbcTemplate.queryForObject(
+        Integer projectionCount = jdbcTemplate.queryForObject(
                 """
                 SELECT count(*)
                 FROM knowledge_search_projection
@@ -168,32 +192,81 @@ public class ChunkRetentionService {
                 identity.documentId(),
                 identity.generation()
         );
+        int expectedProjections =
+                projectionCount == null ? 0 : projectionCount;
+        if (generation.chunkCount() != null
+                && generation.chunkCount() != expectedProjections) {
+            throw new IllegalStateException(
+                    "Projection count does not match generation chunk_count"
+            );
+        }
+        if (vectorIds.size() != expectedProjections) {
+            throw new IllegalStateException(
+                    "Vector manifest count does not match projection count"
+            );
+        }
 
-        int archivedVectors = vectorRepository.archiveGeneration(
+        int tombstone = jdbcTemplate.update(
+                """
+                INSERT INTO knowledge_retired_generation (
+                    document_id,
+                    generation,
+                    access_level,
+                    embedding_profile_id,
+                    projection_count,
+                    vector_count,
+                    content_fingerprint,
+                    physical_id_version,
+                    retention_policy,
+                    purge_started_at,
+                    cleanup_status
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    clock_timestamp(),
+                    'PURGING'
+                )
+                ON CONFLICT (
+                    document_id,
+                    generation,
+                    access_level
+                ) DO NOTHING
+                """,
+                identity.documentId(),
+                identity.generation(),
+                identity.accessLevel(),
+                generation.profileId(),
+                expectedProjections,
+                vectorIds.size(),
+                generation.contentFingerprint(),
+                generation.physicalIdVersion(),
+                fence.lifecyclePolicy()
+        );
+        if (tombstone != 1) {
+            throw new IllegalStateException(
+                    "Retired generation tombstone already exists"
+            );
+        }
+
+        int deletedVectors = vectorRepository.deleteGeneration(
                 profile,
                 identity
         );
-        if (archivedVectors != vectorIds.size()) {
+        if (deletedVectors != vectorIds.size()) {
             throw new IllegalStateException(
-                    "Vector archive count does not match generation manifest"
+                    "Vector delete count does not match generation manifest"
             );
         }
-        if (vectorRepository.countGeneration(
-                profile,
-                identity,
-                RetrievalStorageState.ACTIVE
-        ) != 0) {
+        if (vectorRepository.countGeneration(profile, identity) != 0) {
             throw new IllegalStateException(
-                    "Active vectors remain after generation archive"
+                    "Vectors remain after hot generation purge"
             );
         }
 
-        int archivedProjections =
-                projectionRepository.archiveGeneration(identity);
-        if (chunkCount != null
-                && archivedProjections != chunkCount) {
+        int deletedProjections =
+                projectionRepository.deleteGenerationCount(identity);
+        if (deletedProjections != expectedProjections) {
             throw new IllegalStateException(
-                    "Projection archive count does not match generation"
+                    "Projection delete count does not match generation"
             );
         }
 
@@ -220,12 +293,55 @@ public class ChunkRetentionService {
                 identity.generation()
         );
         identifierRepository.deleteGeneration(identity);
+        vectorGenerationRepository.deleteGeneration(identity);
+
+        ResidualCounts residual = residualCounts(profile, identity);
+        if (residual.total() != 0) {
+            throw new IllegalStateException(
+                    "Generation payload remains after hot purge: "
+                            + residual
+            );
+        }
 
         if (!finalFenceValid(claim)) {
             throw new StaleClaimException();
         }
 
-        jdbcTemplate.update(
+        int purged = jdbcTemplate.update(
+                """
+                UPDATE knowledge_retired_generation
+                SET cleanup_status = 'PURGED',
+                    retired_at = clock_timestamp(),
+                    purge_after = clock_timestamp() + interval '7 days',
+                    cleanup_attempts = cleanup_attempts + 1,
+                    last_error = NULL
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND access_level = ?
+                  AND cleanup_status = 'PURGING'
+                """,
+                identity.documentId(),
+                identity.generation(),
+                identity.accessLevel()
+        );
+        if (purged != 1) {
+            throw new IllegalStateException(
+                    "Retired generation tombstone cannot be finalized"
+            );
+        }
+
+        audit.append(
+                "HOT_PAYLOAD_PURGED",
+                identity,
+                claim.claimId(),
+                "retention-worker",
+                Map.of(
+                        "projectionCount", deletedProjections,
+                        "vectorCount", deletedVectors
+                )
+        );
+
+        int retired = jdbcTemplate.update(
                 """
                 UPDATE knowledge_document_generation
                 SET generation_status = 'RETIRED',
@@ -233,11 +349,16 @@ public class ChunkRetentionService {
                     cleanup_required = true
                 WHERE document_id = ?
                   AND generation = ?
-                  AND generation_status IN ('PUBLISHED', 'RETIRED')
+                  AND generation_status = 'PUBLISHED'
                 """,
                 claim.documentId(),
                 claim.generation()
         );
+        if (retired != 1) {
+            throw new IllegalStateException(
+                    "Generation is no longer published during retention"
+            );
+        }
 
         int deleted = jdbcTemplate.update(
                 """
@@ -275,7 +396,7 @@ public class ChunkRetentionService {
         return new RetentionCleanupResult(
                 claim.documentId(),
                 claim.generation(),
-                chunkCount == null ? 0 : chunkCount,
+                deletedProjections,
                 RetentionCleanupResult.Status.DELETED
         );
     }
@@ -289,6 +410,7 @@ public class ChunkRetentionService {
                        published_generation,
                        retention_status,
                        access_level,
+                       lifecycle_policy,
                        lease_until > clock_timestamp() AS lease_valid
                 FROM knowledge_document_lifecycle
                 WHERE document_id = ?
@@ -308,10 +430,48 @@ public class ChunkRetentionService {
                                         rs.getString("retention_status")
                                 )
                                 && rs.getBoolean("lease_valid"),
-                        rs.getLong("access_level")
+                        rs.getLong("access_level"),
+                        rs.getString("lifecycle_policy")
                 ),
                 claim.documentId()
-        ).stream().findFirst().orElse(new ClaimFence(false, 0L));
+        ).stream().findFirst().orElse(new ClaimFence(false, 0L, "TTL"));
+    }
+
+    private ResidualCounts residualCounts(
+            EmbeddingProfile profile,
+            GenerationIdentity identity
+    ) {
+        return new ResidualCounts(
+                vectorRepository.countGeneration(profile, identity),
+                countPayload("knowledge_search_projection", identity),
+                countPayload("document_identifier", identity),
+                countPayload("knowledge_reference_target", identity),
+                countPayload("knowledge_reference_edge", identity),
+                countPayload(
+                        "knowledge_document_vector_generation",
+                        identity
+                )
+        );
+    }
+
+    private int countPayload(
+            String table,
+            GenerationIdentity identity
+    ) {
+        Integer value = jdbcTemplate.queryForObject(
+                """
+                SELECT count(*)
+                FROM %s
+                WHERE access_level = ?
+                  AND document_id = ?
+                  AND generation = ?
+                """.formatted(table),
+                Integer.class,
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
+        );
+        return value == null ? 0 : value;
     }
 
     private boolean finalFenceValid(RetentionClaim claim) {
@@ -345,7 +505,7 @@ public class ChunkRetentionService {
             }
         }
         LOGGER.info(
-                "retention_archive event=result status={} generation={} archivedChunks={}",
+                "retention_hot_purge event=result status={} generation={} deletedChunks={}",
                 result.status(),
                 result.generation(),
                 result.deletedChunks()
@@ -371,8 +531,35 @@ public class ChunkRetentionService {
 
     private record ClaimFence(
             boolean valid,
-            long accessLevel
+            long accessLevel,
+            String lifecyclePolicy
     ) {
+    }
+
+    private record GenerationDescriptor(
+            String profileId,
+            String contentFingerprint,
+            short physicalIdVersion,
+            Integer chunkCount
+    ) {
+    }
+
+    private record ResidualCounts(
+            int vectors,
+            int projections,
+            int identifiers,
+            int referenceTargets,
+            int referenceEdges,
+            int manifests
+    ) {
+        int total() {
+            return vectors
+                    + projections
+                    + identifiers
+                    + referenceTargets
+                    + referenceEdges
+                    + manifests;
+        }
     }
 
     private static final class StaleClaimException extends RuntimeException {

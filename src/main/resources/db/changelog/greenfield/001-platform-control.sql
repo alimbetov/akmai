@@ -151,6 +151,7 @@ CREATE TABLE knowledge_document_generation (
         CHECK (generation_status IN (
             'STAGING',
             'PUBLISHED',
+            'RETIRING',
             'FAILED',
             'RETIRED',
             'CLEANED'

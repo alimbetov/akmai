@@ -1,6 +1,12 @@
 # Retrieval archive purge economics
 
 Date: 2026-10-03
+Status: Historical baseline — superseded for retrieval topology decisions by
+`retrieval-hot-only-tombstone.md`.
+
+> This document records the pre-HOT measurement phase. Its PostgreSQL
+> observability principles remain useful, but ACTIVE/ARCHIVED retrieval leaves
+> are no longer the implementation target.
 
 ## Purpose
 

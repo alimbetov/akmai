@@ -19,7 +19,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 @Testcontainers
-class ArchiveEconomicsServiceIntegrationTest {
+class RetentionEconomicsServiceIntegrationTest {
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
@@ -31,7 +31,7 @@ class ArchiveEconomicsServiceIntegrationTest {
                     .withPassword("akmai");
 
     static JdbcTemplate jdbc;
-    static ArchiveEconomicsService service;
+    static RetentionEconomicsService service;
 
     @BeforeAll
     static void setup() throws Exception {
@@ -109,7 +109,6 @@ class ArchiveEconomicsServiceIntegrationTest {
                     text_content,
                     embedding_text,
                     language,
-                    storage_state,
                     domain
                 ) VALUES (
                     1,
@@ -117,10 +116,9 @@ class ArchiveEconomicsServiceIntegrationTest {
                     1,
                     'economics-chunk',
                     0,
-                    'archive economics',
-                    'archive economics',
+                    'retention economics',
+                    'retention economics',
                     'en',
-                    1,
                     'GENERAL'
                 )
                 """
@@ -131,7 +129,6 @@ class ArchiveEconomicsServiceIntegrationTest {
                 INSERT INTO akmai_vector.p_economics (
                     access_level,
                     language,
-                    storage_state,
                     document_id,
                     generation,
                     chunk_id,
@@ -139,37 +136,74 @@ class ArchiveEconomicsServiceIntegrationTest {
                     content,
                     metadata,
                     embedding
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?)
                 """,
                 1L,
                 "en",
-                (short) 1,
                 "economics-doc",
                 1L,
                 "economics-chunk",
                 UUID.fromString("11111111-1111-1111-1111-111111111111"),
-                "archive economics",
+                "retention economics",
                 "{}",
                 new PGvector(new float[] {1f, 0f, 0f})
         );
 
+        jdbc.update(
+                """
+                INSERT INTO knowledge_retired_generation (
+                    document_id,
+                    generation,
+                    access_level,
+                    embedding_profile_id,
+                    projection_count,
+                    vector_count,
+                    content_fingerprint,
+                    physical_id_version,
+                    retention_policy,
+                    purge_started_at,
+                    retired_at,
+                    purge_after,
+                    cleanup_status
+                ) VALUES (
+                    'economics-doc',
+                    1,
+                    1,
+                    ?,
+                    1,
+                    1,
+                    'fp-economics',
+                    2,
+                    'TTL',
+                    clock_timestamp() - interval '11 minutes',
+                    clock_timestamp() - interval '10 minutes',
+                    clock_timestamp() + interval '7 days',
+                    'PURGED'
+                )
+                """,
+                profile.profileId()
+        );
+
         jdbc.execute(
-                "ANALYZE knowledge_search_projection_al_1_lang_en_s1"
+                "ANALYZE knowledge_search_projection_al_1_lang_en"
         );
         jdbc.execute(
-                "ANALYZE akmai_vector.p_economics_al_1_lang_en_s1"
+                "ANALYZE akmai_vector.p_economics_al_1_lang_en"
         );
-        service = new ArchiveEconomicsService(jdbc);
+        service = new RetentionEconomicsService(jdbc);
     }
 
     @Test
-    void samplesArchiveFootprintWithoutScanningArchiveRows() {
-        ArchiveEconomicsSnapshot snapshot = service.snapshot();
+    void samplesHotFootprintAndRetirementBacklogWithoutScanningPayload() {
+        RetentionEconomicsSnapshot snapshot = service.snapshot();
 
         assertThat(snapshot.pendingGenerations()).isEqualTo(1);
         assertThat(snapshot.pendingChunks()).isEqualTo(1);
         assertThat(snapshot.oldestRetiredAgeSeconds())
                 .isGreaterThanOrEqualTo(9 * 60L);
+        assertThat(snapshot.pendingTombstones()).isEqualTo(1);
+        assertThat(snapshot.verifiedTombstones()).isZero();
+        assertThat(snapshot.tombstoneBytes()).isGreaterThan(0);
 
         assertThat(snapshot.projection().leafCount())
                 .isGreaterThanOrEqualTo(120);

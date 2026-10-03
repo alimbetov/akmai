@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.config.ReconciliationProperties;
+import kz.alimbetov.akmai.knowledge.audit.AuditEventRepository;
 import kz.alimbetov.akmai.knowledge.chunking.CrossReferenceExtractor;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileRepository;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -68,8 +70,12 @@ class PostgresVectorReconciliationIntegrationTest {
         liquibase.afterPropertiesSet();
 
         jdbc = new JdbcTemplate(dataSource);
-        TransactionTemplate tx = new TransactionTemplate(
-                new DataSourceTransactionManager(dataSource)
+        DataSourceTransactionManager manager =
+                new DataSourceTransactionManager(dataSource);
+        TransactionTemplate tx = new TransactionTemplate(manager);
+        TransactionTemplate repairTx = new TransactionTemplate(manager);
+        repairTx.setPropagationBehavior(
+                TransactionDefinition.PROPAGATION_REQUIRES_NEW
         );
         ObjectMapper mapper = new ObjectMapper();
 
@@ -110,27 +116,37 @@ class PostgresVectorReconciliationIntegrationTest {
                 new ReferenceGraphRepository(jdbc, new CrossReferenceExtractor());
         vectors = new PostgresGenerationVectorRepository(jdbc, mapper, storage);
 
-        reconciliation = new GenerationReconciliationService(
-                jdbc,
-                tx,
-                manifests,
-                vectors,
-                profileRepository,
-                projections,
-                identifiers,
-                references,
+        ReconciliationProperties reconciliationProperties =
                 new ReconciliationProperties(
                         true,
                         10,
                         1,
                         Duration.ZERO,
                         Duration.ofMinutes(5)
-                )
+                );
+        GenerationRepairService repairService =
+                new GenerationRepairService(
+                        jdbc,
+                        storage,
+                        reconciliationProperties,
+                        repairTx
+                );
+
+        reconciliation = new GenerationReconciliationService(
+                jdbc,
+                tx,
+                vectors,
+                profileRepository,
+                repairService,
+                reconciliationProperties,
+                new AuditEventRepository(jdbc, mapper)
         );
     }
 
     @BeforeEach
     void clean() {
+        jdbc.update("DELETE FROM knowledge_audit_event");
+        jdbc.update("DELETE FROM knowledge_retired_generation");
         jdbc.update("DELETE FROM akmai_vector.p_reconcile");
         jdbc.update("DELETE FROM knowledge_reference_edge");
         jdbc.update("DELETE FROM knowledge_reference_target");
@@ -231,23 +247,19 @@ class PostgresVectorReconciliationIntegrationTest {
 
         GenerationIdentity oldIdentity =
                 new GenerationIdentity("doc-1", 1L, 1L);
-        assertThat(projections.archiveGeneration(oldIdentity))
+        insertRetiredTombstone(
+                "doc-1",
+                1L,
+                profile.profileId(),
+                1,
+                1
+        );
+        assertThat(vectors.countGeneration(profile, oldIdentity))
                 .isEqualTo(1);
-        assertThat(vectors.archiveGeneration(profile, oldIdentity))
-                .isEqualTo(1);
-        assertThat(vectors.countGeneration(
-                profile,
-                oldIdentity,
-                RetrievalStorageState.ARCHIVED
-        )).isEqualTo(1);
 
         assertThat(reconciliation.reconcileBatch()).isEqualTo(1);
 
-        assertThat(vectors.countGeneration(
-                profile,
-                oldIdentity,
-                RetrievalStorageState.ARCHIVED
-        )).isZero();
+        assertThat(vectors.countGeneration(profile, oldIdentity)).isZero();
         assertThat(vectors.countExisting(
                 profile,
                 new GenerationIdentity("doc-1", 2L, 1L),
@@ -274,6 +286,168 @@ class PostgresVectorReconciliationIntegrationTest {
                 SELECT published_generation
                 FROM knowledge_document_lifecycle
                 WHERE document_id = 'doc-1'
+                """,
+                Long.class
+        )).isEqualTo(2L);
+    }
+
+    @Test
+    void retiringGenerationPurgesBeforeRetiredAndThenVerifies() {
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_lifecycle (
+                    document_id, lifecycle_policy, lifecycle_status,
+                    generation, attempt_count, row_version,
+                    created_at, updated_at, retention_status,
+                    published_generation, next_generation, access_level
+                ) VALUES (
+                    'doc-retiring', 'PERMANENT', 'READY',
+                    2, 0, 0,
+                    clock_timestamp(), clock_timestamp(), 'ACTIVE',
+                    2, 3, 1
+                )
+                """
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_generation (
+                    document_id, generation, generation_status,
+                    generation_kind, embedding_profile_id,
+                    content_fingerprint, physical_id_version,
+                    cleanup_required, started_at, retired_at, access_level,
+                    chunk_count
+                ) VALUES (
+                    'doc-retiring', 1, 'RETIRING',
+                    'INGESTION', ?, 'fp-old', 2,
+                    true, clock_timestamp() - interval '1 hour',
+                    clock_timestamp() - interval '30 minutes', 1, 1
+                )
+                """,
+                profile.profileId()
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_generation (
+                    document_id, generation, generation_status,
+                    generation_kind, embedding_profile_id,
+                    content_fingerprint, physical_id_version,
+                    cleanup_required, started_at, published_at, access_level,
+                    chunk_count
+                ) VALUES (
+                    'doc-retiring', 2, 'PUBLISHED',
+                    'INGESTION', ?, 'fp-new', 2,
+                    false, clock_timestamp() - interval '20 minutes',
+                    clock_timestamp() - interval '10 minutes', 1, 0
+                )
+                """,
+                profile.profileId()
+        );
+
+        GenerationIdentity oldIdentity =
+                new GenerationIdentity("doc-retiring", 1L, 1L);
+        projections.saveAll(
+                oldIdentity,
+                List.of(new SearchProjection(
+                        "old-chunk",
+                        "doc-retiring",
+                        1L,
+                        1L,
+                        null,
+                        0,
+                        "old text",
+                        "old text",
+                        "en",
+                        KnowledgeDomain.GENERAL,
+                        "section",
+                        List.of(),
+                        List.of(),
+                        Map.of("source", "retiring-test"),
+                        2
+                ))
+        );
+
+        String vectorId = VectorIdentity.physicalId(
+                "doc-retiring",
+                1L,
+                "old-chunk"
+        );
+        manifests.save(
+                oldIdentity,
+                profile.profileId(),
+                VectorIdentity.VERSION,
+                List.of(new VectorGenerationRepository.VectorGenerationEntry(
+                        vectorId,
+                        "old-chunk"
+                ))
+        );
+        vectors.insertAll(
+                profile,
+                oldIdentity,
+                List.of(new PostgresGenerationVectorRepository.VectorRow(
+                        vectorId,
+                        "old-chunk",
+                        "en",
+                        "old text",
+                        Map.of(
+                                "akmaiDocumentId", "doc-retiring",
+                                "akmaiGeneration", 1L,
+                                "akmaiChunkId", "old-chunk",
+                                "language", "en"
+                        ),
+                        new float[] {1f, 0f, 0f}
+                ))
+        );
+
+        assertThat(reconciliation.reconcileBatch()).isZero();
+
+        assertThat(vectors.countGeneration(profile, oldIdentity)).isZero();
+        assertThat(projections.findGeneration(oldIdentity)).isEmpty();
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT generation_status
+                FROM knowledge_document_generation
+                WHERE document_id = 'doc-retiring'
+                  AND generation = 1
+                """,
+                String.class
+        )).isEqualTo("RETIRED");
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT cleanup_status
+                FROM knowledge_retired_generation
+                WHERE document_id = 'doc-retiring'
+                  AND generation = 1
+                  AND access_level = 1
+                """,
+                String.class
+        )).isEqualTo("PURGED");
+
+        assertThat(reconciliation.reconcileBatch()).isEqualTo(1);
+
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT generation_status
+                FROM knowledge_document_generation
+                WHERE document_id = 'doc-retiring'
+                  AND generation = 1
+                """,
+                String.class
+        )).isEqualTo("CLEANED");
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT cleanup_status
+                FROM knowledge_retired_generation
+                WHERE document_id = 'doc-retiring'
+                  AND generation = 1
+                  AND access_level = 1
+                """,
+                String.class
+        )).isEqualTo("VERIFIED");
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT published_generation
+                FROM knowledge_document_lifecycle
+                WHERE document_id = 'doc-retiring'
                 """,
                 Long.class
         )).isEqualTo(2L);
@@ -351,16 +525,17 @@ class PostgresVectorReconciliationIntegrationTest {
 
         GenerationIdentity oldIdentity =
                 new GenerationIdentity("doc-missing", 1L, 1L);
-        assertThat(vectors.archiveGeneration(profile, oldIdentity))
-                .isEqualTo(1);
+        insertRetiredTombstone(
+                "doc-missing",
+                1L,
+                profile.profileId(),
+                0,
+                1
+        );
 
         assertThat(manifests.findVectorIds("doc-missing", 1L)).isEmpty();
         assertThat(reconciliation.reconcileBatch()).isEqualTo(1);
-        assertThat(vectors.countGeneration(
-                profile,
-                oldIdentity,
-                RetrievalStorageState.ARCHIVED
-        )).isZero();
+        assertThat(vectors.countGeneration(profile, oldIdentity)).isZero();
         assertThat(jdbc.queryForObject(
                 """
                 SELECT generation_status
@@ -377,6 +552,58 @@ class PostgresVectorReconciliationIntegrationTest {
                 """,
                 Long.class
         )).isEqualTo(2L);
+    }
+
+    private void insertRetiredTombstone(
+            String documentId,
+            long generation,
+            String profileId,
+            int projectionCount,
+            int vectorCount
+    ) {
+        jdbc.update(
+                """
+                INSERT INTO knowledge_retired_generation (
+                    document_id,
+                    generation,
+                    access_level,
+                    embedding_profile_id,
+                    projection_count,
+                    vector_count,
+                    content_fingerprint,
+                    physical_id_version,
+                    retention_policy,
+                    purge_started_at,
+                    retired_at,
+                    purge_after,
+                    cleanup_status
+                )
+                SELECT g.document_id,
+                       g.generation,
+                       g.access_level,
+                       ?,
+                       ?,
+                       ?,
+                       g.content_fingerprint,
+                       g.physical_id_version,
+                       l.lifecycle_policy,
+                       COALESCE(g.retired_at, clock_timestamp())
+                           - interval '1 minute',
+                       COALESCE(g.retired_at, clock_timestamp()),
+                       clock_timestamp() + interval '7 days',
+                       'PURGED'
+                FROM knowledge_document_generation g
+                JOIN knowledge_document_lifecycle l
+                  ON l.document_id = g.document_id
+                WHERE g.document_id = ?
+                  AND g.generation = ?
+                """,
+                profileId,
+                projectionCount,
+                vectorCount,
+                documentId,
+                generation
+        );
     }
 
     private SearchProjection projection(

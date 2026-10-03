@@ -1,6 +1,7 @@
 # AKMAI — Greenfield Retrieval Storage Blueprint
 
-Status: concrete target design  
+Status: historical greenfield baseline; retrieval lifecycle/topology is
+superseded by `retrieval-hot-only-tombstone.md`.  
 Branch: `feature/retrieval-partitioning-architecture`  
 Database: PostgreSQL 17 + pgvector  
 Deployment state: no database has been deployed; schema is free to be redesigned before first release.

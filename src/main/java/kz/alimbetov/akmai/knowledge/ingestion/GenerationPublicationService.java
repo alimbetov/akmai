@@ -149,6 +149,32 @@ public class GenerationPublicationService {
             IngestionIdempotencyContext idempotency,
             KnowledgeIngestionResponse response
     ) {
+        String activeProfile = jdbcTemplate.queryForObject(
+                """
+                SELECT active_profile_id
+                FROM knowledge_embedding_runtime
+                WHERE singleton_id = 1
+                FOR UPDATE
+                """,
+                String.class
+        );
+        if (!profile.profileId().equals(activeProfile)) {
+            throw new IllegalStateException(
+                    "Generation profile is not the corpus active profile"
+            );
+        }
+
+        Long previous = jdbcTemplate.queryForObject(
+                """
+                SELECT published_generation
+                FROM knowledge_document_lifecycle
+                WHERE document_id = ?
+                FOR UPDATE
+                """,
+                Long.class,
+                documentId
+        );
+
         GenerationLock generationState = jdbcTemplate.query(
                 """
                 SELECT generation_status, embedding_profile_id, access_level
@@ -180,32 +206,6 @@ public class GenerationPublicationService {
                     "Embedding profile changed for generation"
             );
         }
-
-        String activeProfile = jdbcTemplate.queryForObject(
-                """
-                SELECT active_profile_id
-                FROM knowledge_embedding_runtime
-                WHERE singleton_id = 1
-                FOR UPDATE
-                """,
-                String.class
-        );
-        if (!profile.profileId().equals(activeProfile)) {
-            throw new IllegalStateException(
-                    "Generation profile is not the corpus active profile"
-            );
-        }
-
-        Long previous = jdbcTemplate.queryForObject(
-                """
-                SELECT published_generation
-                FROM knowledge_document_lifecycle
-                WHERE document_id = ?
-                FOR UPDATE
-                """,
-                Long.class,
-                documentId
-        );
 
         if (previous != null && previous > generation) {
             jdbcTemplate.update(
@@ -243,11 +243,13 @@ public class GenerationPublicationService {
         vectorRepository.insertAll(profile, identity, vectors);
 
         if (previous != null && previous != generation) {
-            jdbcTemplate.update(
+            int retiring = jdbcTemplate.update(
                     """
                     UPDATE knowledge_document_generation
-                    SET generation_status = 'RETIRED',
-                        retired_at = clock_timestamp()
+                    SET generation_status = 'RETIRING',
+                        retired_at = clock_timestamp(),
+                        cleanup_required = true,
+                        last_error = NULL
                     WHERE document_id = ?
                       AND generation = ?
                       AND generation_status = 'PUBLISHED'
@@ -255,6 +257,11 @@ public class GenerationPublicationService {
                     documentId,
                     previous
             );
+            if (retiring != 1) {
+                throw new IllegalStateException(
+                        "Previous generation retirement fence failed"
+                );
+            }
         }
 
         int published = jdbcTemplate.update(
