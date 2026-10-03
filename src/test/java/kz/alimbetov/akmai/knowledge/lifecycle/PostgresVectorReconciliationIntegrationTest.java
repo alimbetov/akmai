@@ -148,6 +148,7 @@ class PostgresVectorReconciliationIntegrationTest {
         jdbc.update("DELETE FROM knowledge_audit_event");
         jdbc.update("DELETE FROM knowledge_retired_generation");
         jdbc.update("DELETE FROM akmai_vector.p_reconcile");
+        jdbc.update("DELETE FROM knowledge_chunk_association");
         jdbc.update("DELETE FROM knowledge_reference_edge");
         jdbc.update("DELETE FROM knowledge_reference_target");
         jdbc.update("DELETE FROM document_identifier");
@@ -451,6 +452,113 @@ class PostgresVectorReconciliationIntegrationTest {
                 """,
                 Long.class
         )).isEqualTo(2L);
+    }
+
+    @Test
+    void associationOnlyResidualIsRepairedBeforeGenerationIsCleaned() {
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_lifecycle (
+                    document_id, lifecycle_policy, lifecycle_status,
+                    generation, attempt_count, row_version,
+                    created_at, updated_at, retention_status,
+                    published_generation, next_generation, access_level
+                ) VALUES (
+                    'doc-assoc', 'PERMANENT', 'READY',
+                    2, 0, 0,
+                    clock_timestamp(), clock_timestamp(), 'ACTIVE',
+                    2, 3, 1
+                )
+                """
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_generation (
+                    document_id, generation, generation_status,
+                    generation_kind, embedding_profile_id,
+                    content_fingerprint, physical_id_version,
+                    cleanup_required, started_at, retired_at, access_level
+                ) VALUES (
+                    'doc-assoc', 1, 'RETIRED',
+                    'INGESTION', ?, 'fp-old-assoc', 2,
+                    true, clock_timestamp() - interval '1 hour',
+                    clock_timestamp() - interval '30 minutes', 1
+                )
+                """,
+                profile.profileId()
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_generation (
+                    document_id, generation, generation_status,
+                    generation_kind, embedding_profile_id,
+                    content_fingerprint, physical_id_version,
+                    cleanup_required, started_at, published_at, access_level
+                ) VALUES (
+                    'doc-assoc', 2, 'PUBLISHED',
+                    'INGESTION', ?, 'fp-new-assoc', 2,
+                    false, clock_timestamp() - interval '20 minutes',
+                    clock_timestamp() - interval '10 minutes', 1
+                )
+                """,
+                profile.profileId()
+        );
+
+        insertRetiredTombstone(
+                "doc-assoc",
+                1L,
+                profile.profileId(),
+                0,
+                0
+        );
+
+        jdbc.update(
+                """
+                INSERT INTO knowledge_chunk_association (
+                    access_level,
+                    source_document_id,
+                    source_generation,
+                    source_chunk_id,
+                    target_document_id,
+                    target_generation,
+                    target_chunk_id,
+                    band,
+                    weight,
+                    support_count
+                ) VALUES
+                    (
+                        1, 'doc-assoc', 1, 'old-chunk',
+                        'doc-assoc', 2, 'new-chunk',
+                        'HOT', 0.9, 3
+                    ),
+                    (
+                        1, 'doc-assoc', 2, 'new-chunk',
+                        'doc-assoc', 1, 'old-chunk',
+                        'HOT', 0.9, 3
+                    )
+                """
+        );
+
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM knowledge_chunk_association",
+                Integer.class
+        )).isEqualTo(2);
+
+        assertThat(reconciliation.reconcileBatch()).isEqualTo(1);
+
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM knowledge_chunk_association",
+                Integer.class
+        )).isZero();
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT generation_status
+                FROM knowledge_document_generation
+                WHERE document_id = 'doc-assoc'
+                  AND generation = 1
+                """,
+                String.class
+        )).isEqualTo("CLEANED");
     }
 
     @Test

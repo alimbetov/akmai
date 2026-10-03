@@ -605,6 +605,7 @@ public class GenerationReconciliationService {
                 "knowledge_reference_edge",
                 identity
         );
+        int associationRows = countAssociations(identity);
         int manifestRows = count(
                 "knowledge_document_vector_generation",
                 identity
@@ -615,8 +616,37 @@ public class GenerationReconciliationService {
                 identifierRows,
                 referenceTargetRows,
                 referenceEdgeRows,
+                associationRows,
                 manifestRows
         );
+    }
+
+    private int countAssociations(GenerationIdentity identity) {
+        Integer value = jdbcTemplate.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_chunk_association
+                WHERE access_level = ?
+                  AND (
+                      (
+                          source_document_id = ?
+                          AND source_generation = ?
+                      )
+                      OR
+                      (
+                          target_document_id = ?
+                          AND target_generation = ?
+                      )
+                  )
+                """,
+                Integer.class,
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation(),
+                identity.documentId(),
+                identity.generation()
+        );
+        return value == null ? 0 : value;
     }
 
     private int count(String table, GenerationIdentity identity) {
@@ -691,6 +721,7 @@ public class GenerationReconciliationService {
             int identifiers,
             int referenceTargets,
             int referenceEdges,
+            int associations,
             int manifests
     ) {
         int total() {
@@ -699,6 +730,7 @@ public class GenerationReconciliationService {
                     + identifiers
                     + referenceTargets
                     + referenceEdges
+                    + associations
                     + manifests;
         }
     }
