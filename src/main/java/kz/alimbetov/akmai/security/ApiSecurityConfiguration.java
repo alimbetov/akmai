@@ -29,7 +29,9 @@ public class ApiSecurityConfiguration {
                     "/actuator/metrics",
                     "/actuator/metrics/**",
                     "/actuator/info",
-                    "/actuator/info/**"
+                    "/actuator/info/**",
+                    "/actuator/prometheus",
+                    "/actuator/prometheus/**"
             };
             if (properties.enabled()) {
                 auth.requestMatchers(protectedEndpoints)
