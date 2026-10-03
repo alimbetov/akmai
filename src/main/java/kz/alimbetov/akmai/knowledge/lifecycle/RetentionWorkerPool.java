@@ -16,7 +16,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class RetentionWorkerPool {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(RetentionWorkerPool.class);
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(RetentionWorkerPool.class);
 
     private final RetentionClaimRepository claimRepository;
     private final ChunkRetentionService cleanupService;
@@ -24,6 +25,8 @@ public class RetentionWorkerPool {
     private final ThreadPoolExecutor workers;
     private final Semaphore permits;
     private final AtomicBoolean accepting = new AtomicBoolean(true);
+    private final Object drainMonitor = new Object();
+    private DrainRun activeDrain;
     private AkmaiMetrics metrics;
 
     public RetentionWorkerPool(
@@ -59,7 +62,11 @@ public class RetentionWorkerPool {
     }
 
     public int claimAndSubmit(String workerId) {
-        return claimAndSubmit(workerId, properties.workerParallelism());
+        return claimAndSubmit(
+                workerId,
+                properties.workerParallelism(),
+                null
+        );
     }
 
     public int drain(String workerId, int maxClaims) {
@@ -67,28 +74,102 @@ public class RetentionWorkerPool {
             return 0;
         }
 
-        int submitted = 0;
-        while (accepting.get() && submitted < maxClaims) {
-            int claimed = claimAndSubmit(
-                    workerId,
-                    maxClaims - submitted
-            );
-            if (claimed > 0) {
-                submitted += claimed;
-                continue;
+        DrainRun run;
+        synchronized (drainMonitor) {
+            if (activeDrain == null) {
+                activeDrain = new DrainRun(workerId, maxClaims);
             }
-
-            if (availableCapacity() > 0) {
-                break;
-            }
-            if (!awaitWorkerCapacity()) {
-                break;
-            }
+            run = activeDrain;
         }
+
+        int submitted = refill(run);
+        completeDrainIfDone(run);
         return submitted;
     }
 
-    private int claimAndSubmit(String workerId, int remainingClaims) {
+    private int refill(DrainRun run) {
+        synchronized (run) {
+            if (!accepting.get()
+                    || run.exhausted
+                    || run.remainingClaims <= 0) {
+                return 0;
+            }
+
+            int submitted = 0;
+            while (accepting.get()
+                    && !run.exhausted
+                    && run.remainingClaims > 0) {
+                int requested = Math.min(
+                        Math.min(
+                                properties.batchSize(),
+                                properties.workerParallelism()
+                        ),
+                        run.remainingClaims
+                );
+                int acquired = acquireUpTo(requested);
+                if (acquired == 0) {
+                    break;
+                }
+
+                List<RetentionClaim> claims;
+                try {
+                    claims = claimRepository.claimExpired(
+                            acquired,
+                            properties.retryLimit(),
+                            run.workerId,
+                            properties.leaseDuration()
+                    );
+                } catch (RuntimeException exception) {
+                    permits.release(acquired);
+                    throw exception;
+                }
+
+                if (metrics != null) {
+                    metrics.retentionClaimed(claims.size());
+                }
+                LOGGER.info(
+                        "retention_claim event=claimed count={} capacity={}",
+                        claims.size(),
+                        acquired
+                );
+
+                int unused = acquired - claims.size();
+                if (unused > 0) {
+                    permits.release(unused);
+                }
+                if (claims.isEmpty()) {
+                    run.exhausted = true;
+                    break;
+                }
+
+                for (RetentionClaim claim : claims) {
+                    try {
+                        run.remainingClaims--;
+                        run.activeTasks++;
+                        workers.execute(() -> runClaim(claim, run));
+                        submitted++;
+                    } catch (RuntimeException exception) {
+                        run.remainingClaims++;
+                        run.activeTasks--;
+                        boolean released = claimRepository.release(claim);
+                        LOGGER.warn(
+                                "retention_claim event=submission_rejected generation={} released={}",
+                                claim.generation(),
+                                released
+                        );
+                        permits.release();
+                    }
+                }
+            }
+            return submitted;
+        }
+    }
+
+    private int claimAndSubmit(
+            String workerId,
+            int remainingClaims,
+            DrainRun run
+    ) {
         if (!accepting.get() || remainingClaims <= 0) {
             return 0;
         }
@@ -135,7 +216,7 @@ public class RetentionWorkerPool {
         int submitted = 0;
         for (RetentionClaim claim : claims) {
             try {
-                workers.execute(() -> runClaim(claim));
+                workers.execute(() -> runClaim(claim, run));
                 submitted++;
             } catch (RuntimeException exception) {
                 boolean released = claimRepository.release(claim);
@@ -150,30 +231,20 @@ public class RetentionWorkerPool {
         return submitted;
     }
 
-    private boolean awaitWorkerCapacity() {
-        synchronized (permits) {
-            while (accepting.get()
-                    && permits.availablePermits() == 0) {
-                try {
-                    permits.wait();
-                } catch (InterruptedException exception) {
-                    Thread.currentThread().interrupt();
-                    return false;
-                }
-            }
-        }
-        return accepting.get();
-    }
-
     private int acquireUpTo(int requested) {
         int acquired = 0;
-        while (acquired < requested && accepting.get() && permits.tryAcquire()) {
+        while (acquired < requested
+                && accepting.get()
+                && permits.tryAcquire()) {
             acquired++;
         }
         return acquired;
     }
 
-    private void runClaim(RetentionClaim claim) {
+    private void runClaim(
+            RetentionClaim claim,
+            DrainRun run
+    ) {
         try {
             RetentionCleanupResult result = cleanupService.cleanup(claim);
             LOGGER.info(
@@ -183,9 +254,36 @@ public class RetentionWorkerPool {
                     result.deletedChunks()
             );
         } finally {
-            synchronized (permits) {
-                permits.release();
-                permits.notifyAll();
+            permits.release();
+            if (run != null) {
+                synchronized (run) {
+                    run.activeTasks--;
+                }
+                try {
+                    refill(run);
+                } catch (RuntimeException exception) {
+                    LOGGER.error(
+                            "retention_drain event=refill_failed errorType={}",
+                            exception.getClass().getSimpleName()
+                    );
+                }
+                completeDrainIfDone(run);
+            }
+        }
+    }
+
+    private void completeDrainIfDone(DrainRun run) {
+        boolean done;
+        synchronized (run) {
+            done = run.activeTasks == 0
+                    && (run.exhausted || run.remainingClaims <= 0);
+        }
+        if (!done) {
+            return;
+        }
+        synchronized (drainMonitor) {
+            if (activeDrain == run) {
+                activeDrain = null;
             }
         }
     }
@@ -201,6 +299,18 @@ public class RetentionWorkerPool {
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             workers.shutdownNow();
+        }
+    }
+
+    private static final class DrainRun {
+        private final String workerId;
+        private int remainingClaims;
+        private int activeTasks;
+        private boolean exhausted;
+
+        private DrainRun(String workerId, int maxClaims) {
+            this.workerId = workerId;
+            this.remainingClaims = maxClaims;
         }
     }
 }
