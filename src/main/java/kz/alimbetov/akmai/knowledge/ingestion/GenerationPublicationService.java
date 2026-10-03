@@ -262,12 +262,14 @@ public class GenerationPublicationService {
                 UPDATE knowledge_document_generation
                 SET generation_status = 'PUBLISHED',
                     published_at = clock_timestamp(),
+                    chunk_count = ?,
                     failure_code = NULL,
                     last_error = NULL
                 WHERE document_id = ?
                   AND generation = ?
                   AND generation_status = 'STAGING'
                 """,
+                projections.size(),
                 documentId,
                 generation
         );
