@@ -150,25 +150,45 @@ public class GenerationReconciliationService {
                 ));
 
         ResidualCounts before = residualCounts(profile, identity);
-        if (before.total() > 0) {
-            repairService.repair(profile, identity);
-        }
+        GenerationRepairService.RepairOutcome repair =
+                before.total() == 0
+                        ? new GenerationRepairService.RepairOutcome(
+                                0L,
+                                0,
+                                false
+                        )
+                        : repairService.repair(profile, identity);
 
         ResidualCounts after = residualCounts(profile, identity);
         if (after.total() != 0) {
             jdbcTemplate.update(
                     """
                     UPDATE knowledge_document_generation
-                    SET last_error = 'Residual retrieval rows remain'
+                    SET last_error = ?
                     WHERE document_id = ?
                       AND generation = ?
                     """,
+                    "Residual retrieval rows remain after "
+                            + repair.batches()
+                            + " repair batches",
                     key.documentId(),
                     key.generation()
             );
-            throw new IllegalStateException(
-                    "Generation payload remains after reconciliation"
+            audit.append(
+                    "GENERATION_REPAIR_DEFERRED",
+                    identity,
+                    null,
+                    "generation-reconciler",
+                    Map.of(
+                            "residualRowsBefore", before.total(),
+                            "residualRowsAfter", after.total(),
+                            "deletedRows", repair.deletedRows(),
+                            "repairBatches", repair.batches(),
+                            "batchLimitReached",
+                            repair.batchLimitReached()
+                    )
             );
+            return false;
         }
 
         if ("RETIRED".equals(row.status())) {
@@ -189,9 +209,25 @@ public class GenerationReconciliationService {
                     key.accessLevel()
             );
             if (verified != 1) {
-                throw new IllegalStateException(
-                        "Retired generation tombstone is missing"
+                Integer alreadyVerified = jdbcTemplate.queryForObject(
+                        """
+                        SELECT count(*)
+                        FROM knowledge_retired_generation
+                        WHERE document_id = ?
+                          AND generation = ?
+                          AND access_level = ?
+                          AND cleanup_status = 'VERIFIED'
+                        """,
+                        Integer.class,
+                        key.documentId(),
+                        key.generation(),
+                        key.accessLevel()
                 );
+                if (alreadyVerified == null || alreadyVerified != 1) {
+                    throw new IllegalStateException(
+                            "Retired generation tombstone is missing"
+                    );
+                }
             }
         }
 
@@ -204,6 +240,8 @@ public class GenerationReconciliationService {
                 "generation-reconciler",
                 Map.of(
                         "residualRowsBefore", before.total(),
+                        "deletedRows", repair.deletedRows(),
+                        "repairBatches", repair.batches(),
                         "generationStatus", row.status()
                 )
         );
@@ -213,7 +251,8 @@ public class GenerationReconciliationService {
                 UPDATE knowledge_document_generation
                 SET generation_status = 'CLEANED',
                     cleaned_at = clock_timestamp(),
-                    cleanup_required = false
+                    cleanup_required = false,
+                    last_error = NULL
                 WHERE document_id = ?
                   AND generation = ?
                   AND generation_status IN ('RETIRED', 'FAILED')
