@@ -27,8 +27,22 @@ public class ParallelIngestionExecutor {
         this.identifierExtractor = identifierExtractor;
         this.ingestionExecutor = ingestionExecutor;
         this.maxInFlight = ingestionExecutor instanceof ThreadPoolExecutor pool
-                ? Math.max(1, pool.getMaximumPoolSize())
+                ? safeInFlightWindow(pool)
                 : 1;
+    }
+
+    private int safeInFlightWindow(ThreadPoolExecutor pool) {
+        int queueCapacity = Math.addExact(
+                pool.getQueue().size(),
+                pool.getQueue().remainingCapacity()
+        );
+        return Math.max(
+                1,
+                Math.min(
+                        pool.getMaximumPoolSize(),
+                        Math.max(1, queueCapacity)
+                )
+        );
     }
 
     public List<EnrichedKnowledgeChunk> execute(List<KnowledgeChunk> chunks) {
