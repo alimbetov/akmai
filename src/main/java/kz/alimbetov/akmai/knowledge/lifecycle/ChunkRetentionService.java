@@ -96,6 +96,11 @@ public class ChunkRetentionService {
         if (!fence.valid()) {
             throw new StaleClaimException();
         }
+        GenerationIdentity identity = new GenerationIdentity(
+                claim.documentId(),
+                claim.generation(),
+                fence.accessLevel()
+        );
 
         int marked = jdbcTemplate.update(
                 """
@@ -142,10 +147,8 @@ public class ChunkRetentionService {
                         "Embedding profile is missing: " + profileId
                 ));
 
-        List<String> vectorIds = vectorGenerationRepository.findVectorIds(
-                claim.documentId(),
-                claim.generation()
-        );
+        List<String> vectorIds =
+                vectorGenerationRepository.findVectorIds(identity);
         if (vectorIds.isEmpty()) {
             throw new IllegalStateException(
                     "Vector manifest missing; reconciliation is required"
@@ -156,16 +159,26 @@ public class ChunkRetentionService {
                 """
                 SELECT count(*)
                 FROM knowledge_search_projection
-                WHERE document_id = ?
+                WHERE access_level = ?
+                  AND document_id = ?
                   AND generation = ?
                 """,
                 Integer.class,
-                claim.documentId(),
-                claim.generation()
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
         );
 
-        vectorRepository.deleteIds(profile, vectorIds);
-        if (vectorRepository.countExisting(profile, vectorIds) != 0) {
+        vectorRepository.deleteIds(
+                profile,
+                identity,
+                vectorIds
+        );
+        if (vectorRepository.countExisting(
+                profile,
+                identity,
+                vectorIds
+        ) != 0) {
             throw new IllegalStateException(
                     "Physical vectors remain after generation delete"
             );
@@ -174,33 +187,28 @@ public class ChunkRetentionService {
         jdbcTemplate.update(
                 """
                 DELETE FROM knowledge_reference_edge
-                WHERE document_id = ?
+                WHERE access_level = ?
+                  AND document_id = ?
                   AND generation = ?
                 """,
-                claim.documentId(),
-                claim.generation()
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
         );
         jdbcTemplate.update(
                 """
                 DELETE FROM knowledge_reference_target
-                WHERE document_id = ?
+                WHERE access_level = ?
+                  AND document_id = ?
                   AND generation = ?
                 """,
-                claim.documentId(),
-                claim.generation()
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
         );
-        identifierRepository.deleteGeneration(
-                claim.documentId(),
-                claim.generation()
-        );
-        projectionRepository.deleteGeneration(
-                claim.documentId(),
-                claim.generation()
-        );
-        vectorGenerationRepository.deleteGeneration(
-                claim.documentId(),
-                claim.generation()
-        );
+        identifierRepository.deleteGeneration(identity);
+        projectionRepository.deleteGeneration(identity);
+        vectorGenerationRepository.deleteGeneration(identity);
 
         if (!finalFenceValid(claim)) {
             throw new StaleClaimException();
@@ -270,6 +278,7 @@ public class ChunkRetentionService {
                        claimed_by,
                        published_generation,
                        retention_status,
+                       access_level,
                        lease_until > clock_timestamp() AS lease_valid
                 FROM knowledge_document_lifecycle
                 WHERE document_id = ?
@@ -288,10 +297,11 @@ public class ChunkRetentionService {
                                 && "DELETE_PENDING".equals(
                                         rs.getString("retention_status")
                                 )
-                                && rs.getBoolean("lease_valid")
+                                && rs.getBoolean("lease_valid"),
+                        rs.getLong("access_level")
                 ),
                 claim.documentId()
-        ).stream().findFirst().orElse(new ClaimFence(false));
+        ).stream().findFirst().orElse(new ClaimFence(false, 0L));
     }
 
     private boolean finalFenceValid(RetentionClaim claim) {
@@ -349,7 +359,10 @@ public class ChunkRetentionService {
         return value.length() <= 1000 ? value : value.substring(0, 1000);
     }
 
-    private record ClaimFence(boolean valid) {
+    private record ClaimFence(
+            boolean valid,
+            long accessLevel
+    ) {
     }
 
     private static final class StaleClaimException extends RuntimeException {
