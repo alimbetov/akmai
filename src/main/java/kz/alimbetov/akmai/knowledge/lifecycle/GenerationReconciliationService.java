@@ -59,12 +59,23 @@ public class GenerationReconciliationService {
                     'FAILED'
                 )
                   AND g.cleanup_required
-                  AND COALESCE(
-                          g.retired_at,
-                          g.failed_at,
-                          g.started_at
-                      ) < clock_timestamp()
-                          - (? * interval '1 millisecond')
+                  AND (
+                      (
+                          g.generation_status = 'RETIRING'
+                          AND COALESCE(g.retired_at, g.started_at)
+                              < clock_timestamp()
+                      )
+                      OR
+                      (
+                          g.generation_status IN ('RETIRED', 'FAILED')
+                          AND COALESCE(
+                                  g.retired_at,
+                                  g.failed_at,
+                                  g.started_at
+                              ) < clock_timestamp()
+                                  - (? * interval '1 millisecond')
+                      )
+                  )
                   AND NOT EXISTS (
                       SELECT 1
                       FROM knowledge_document_lifecycle l
