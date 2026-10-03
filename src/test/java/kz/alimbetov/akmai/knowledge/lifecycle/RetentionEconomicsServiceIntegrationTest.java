@@ -161,6 +161,7 @@ class RetentionEconomicsServiceIntegrationTest {
                     content_fingerprint,
                     physical_id_version,
                     retention_policy,
+                    purge_started_at,
                     retired_at,
                     purge_after,
                     cleanup_status
@@ -174,9 +175,10 @@ class RetentionEconomicsServiceIntegrationTest {
                     'fp-economics',
                     2,
                     'TTL',
+                    clock_timestamp() - interval '11 minutes',
                     clock_timestamp() - interval '10 minutes',
                     clock_timestamp() + interval '7 days',
-                    'PENDING_VERIFY'
+                    'PURGED'
                 )
                 """,
                 profile.profileId()
