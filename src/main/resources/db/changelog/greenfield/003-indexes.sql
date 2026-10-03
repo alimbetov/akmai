@@ -48,25 +48,6 @@ CREATE INDEX idx_lifecycle_active_acl_document
     INCLUDE (published_generation)
     WHERE retention_status = 'ACTIVE';
 
-CREATE INDEX idx_projection_document_generation_chunk_index
-    ON knowledge_search_projection(
-        document_id,
-        generation,
-        chunk_index
-    );
-
-CREATE INDEX idx_projection_fts_simple
-    ON knowledge_search_projection
-    USING GIN (search_vector);
-
-CREATE INDEX idx_projection_text_trgm
-    ON knowledge_search_projection
-    USING GIN (lower(text_content) gin_trgm_ops);
-
-CREATE INDEX idx_projection_section_trgm
-    ON knowledge_search_projection
-    USING GIN (lower(coalesce(section_path, '')) gin_trgm_ops);
-
 CREATE INDEX idx_identifier_type_exact
     ON document_identifier(
         identifier_type,
