@@ -36,7 +36,7 @@ public class EmbeddingProfileResolver {
         );
         String fingerprint = sha256(canonical);
         String profileId = "ep_" + fingerprint;
-        String table = "p_" + fingerprint.substring(0, 32);
+        String table = "p_" + fingerprint.substring(0, 30);
         return new EmbeddingProfile(
                 profileId,
                 "ollama",
