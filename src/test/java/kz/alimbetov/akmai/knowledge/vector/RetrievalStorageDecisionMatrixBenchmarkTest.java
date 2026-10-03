@@ -93,7 +93,7 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
         List<ScopeResult> scopeResults = new ArrayList<>();
 
         for (int scopeSize : scopeSizes(config.accessLevels())) {
-            PreparedQuery query = multiAclQuery(scopeSize);
+            PreparedQuery query = multiAclQuery(scopeSize, TOP_K);
             List<Long> exact = exactGroundTruth(scopeSize);
 
             for (int ignored = 0;
@@ -135,13 +135,37 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
 
         int widestScope = config.accessLevels();
         List<Long> widestExact = exactGroundTruth(widestScope);
+
+        List<QualityTuningResult> qualityTuningResults =
+                tuneQuality(widestScope, widestExact);
+        QualityTuningResult selectedTuning = qualityTuningResults.stream()
+                .filter(result -> result.recallAtK() >= 0.999)
+                .min(java.util.Comparator
+                        .comparingDouble(QualityTuningResult::p95Ms)
+                        .thenComparingInt(QualityTuningResult::candidateMultiplier)
+                        .thenComparingInt(QualityTuningResult::efSearch))
+                .orElseThrow(() -> new AssertionError(
+                        "No ANN fan-out tuning reached Recall@10 = 1.0"
+                ));
+
         List<ConcurrencyResult> concurrencyResults = new ArrayList<>();
+        List<ConcurrencyResult> tunedConcurrencyResults = new ArrayList<>();
 
         for (int concurrency : config.concurrencyLevels()) {
             concurrencyResults.add(runConcurrent(
-                    multiAclQuery(widestScope),
+                    multiAclQuery(widestScope, TOP_K),
                     widestExact,
-                    concurrency
+                    concurrency,
+                    config.defaultEfSearch()
+            ));
+            tunedConcurrencyResults.add(runConcurrent(
+                    multiAclQuery(
+                            widestScope,
+                            TOP_K * selectedTuning.candidateMultiplier()
+                    ),
+                    widestExact,
+                    concurrency,
+                    selectedTuning.efSearch()
             ));
         }
 
@@ -162,7 +186,10 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
         report.put("chunksPerDocument", config.chunksPerDocument());
         report.put("topK", TOP_K);
         report.put("scopeResults", scopeResults);
+        report.put("qualityTuningResults", qualityTuningResults);
+        report.put("selectedTuning", selectedTuning);
         report.put("concurrencyResults", concurrencyResults);
+        report.put("tunedConcurrencyResults", tunedConcurrencyResults);
 
         MAPPER.writerWithDefaultPrettyPrinter()
                 .writeValue(output.toFile(), report);
@@ -176,6 +203,11 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
                 .extracting(ConcurrencyResult::recallAtK)
                 .allSatisfy(recall ->
                         assertThat(recall).isBetween(0.0, 1.0)
+                );
+        assertThat(tunedConcurrencyResults)
+                .extracting(ConcurrencyResult::recallAtK)
+                .allSatisfy(recall ->
+                        assertThat(recall).isEqualTo(1.0)
                 );
     }
 
@@ -317,10 +349,18 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
         jdbc.execute("ANALYZE matrix_list");
     }
 
-    private static PreparedQuery multiAclQuery(int scopeSize) {
+    private static PreparedQuery multiAclQuery(
+            int scopeSize,
+            int branchCandidateLimit
+    ) {
         if (scopeSize <= 0 || scopeSize > config.accessLevels()) {
             throw new IllegalArgumentException(
                     "Invalid ACL scope size: " + scopeSize
+            );
+        }
+        if (branchCandidateLimit < TOP_K) {
+            throw new IllegalArgumentException(
+                    "branchCandidateLimit must be >= TOP_K"
             );
         }
 
@@ -355,7 +395,7 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
             parameters.add(new PGvector(queryVector));
             parameters.add((long) accessLevel);
             parameters.add(new PGvector(queryVector));
-            parameters.add(TOP_K);
+            parameters.add(branchCandidateLimit);
         }
 
         sql.append("""
@@ -408,10 +448,76 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
         );
     }
 
+    private static List<QualityTuningResult> tuneQuality(
+            int scopeSize,
+            List<Long> exact
+    ) throws Exception {
+        List<QualityTuningResult> results = new ArrayList<>();
+
+        for (int candidateMultiplier : config.candidateMultipliers()) {
+            for (int efSearch : config.efSearchValues()) {
+                PreparedQuery query = multiAclQuery(
+                        scopeSize,
+                        TOP_K * candidateMultiplier
+                );
+                results.add(measureQualityTuning(
+                        query,
+                        exact,
+                        candidateMultiplier,
+                        efSearch
+                ));
+            }
+        }
+
+        return List.copyOf(results);
+    }
+
+    private static QualityTuningResult measureQualityTuning(
+            PreparedQuery query,
+            List<Long> exact,
+            int candidateMultiplier,
+            int efSearch
+    ) throws Exception {
+        setRetrievalSession(benchmarkConnection, efSearch);
+
+        try (PreparedStatement ps =
+                benchmarkConnection.prepareStatement(query.sql())) {
+            for (int ignored = 0;
+                    ignored < config.warmupIterations();
+                    ignored++) {
+                executeIds(ps, query.parameters());
+            }
+
+            long[] nanos = new long[config.measureIterations()];
+            List<Long> last = List.of();
+
+            for (int index = 0;
+                    index < config.measureIterations();
+                    index++) {
+                long started = System.nanoTime();
+                last = executeIds(ps, query.parameters());
+                nanos[index] = System.nanoTime() - started;
+            }
+
+            return new QualityTuningResult(
+                    candidateMultiplier,
+                    TOP_K * candidateMultiplier,
+                    efSearch,
+                    recallAtK(last, exact),
+                    percentileMillis(nanos, 0.50),
+                    percentileMillis(nanos, 0.95),
+                    percentileMillis(nanos, 0.99)
+            );
+        } finally {
+            resetRetrievalSession(benchmarkConnection);
+        }
+    }
+
     private static ConcurrencyResult runConcurrent(
             PreparedQuery query,
             List<Long> exact,
-            int concurrency
+            int concurrency,
+            int efSearch
     ) throws Exception {
         ExecutorService executor =
                 Executors.newFixedThreadPool(concurrency);
@@ -424,7 +530,8 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
                 futures.add(executor.submit(() -> runWorker(
                         query,
                         ready,
-                        start
+                        start,
+                        efSearch
                 )));
             }
 
@@ -475,10 +582,11 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
     private static WorkerResult runWorker(
             PreparedQuery query,
             CountDownLatch ready,
-            CountDownLatch start
+            CountDownLatch start,
+            int efSearch
     ) throws Exception {
         try (Connection connection = dataSource.getConnection()) {
-            setRetrievalSession(connection);
+            setRetrievalSession(connection, efSearch);
 
             try (PreparedStatement ps =
                     connection.prepareStatement(query.sql())) {
@@ -593,8 +701,22 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
     private static void setRetrievalSession(
             Connection connection
     ) throws java.sql.SQLException {
+        setRetrievalSession(connection, config.defaultEfSearch());
+    }
+
+    private static void setRetrievalSession(
+            Connection connection,
+            int efSearch
+    ) throws java.sql.SQLException {
+        if (efSearch <= 0) {
+            throw new IllegalArgumentException(
+                    "efSearch must be positive"
+            );
+        }
+
         try (Statement statement = connection.createStatement()) {
             statement.execute("SET hnsw.iterative_scan = strict_order");
+            statement.execute("SET hnsw.ef_search = " + efSearch);
         }
     }
 
@@ -602,6 +724,7 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
             Connection connection
     ) throws java.sql.SQLException {
         try (Statement statement = connection.createStatement()) {
+            statement.execute("RESET hnsw.ef_search");
             statement.execute("RESET hnsw.iterative_scan");
         }
     }
@@ -848,6 +971,17 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
     ) {
     }
 
+    private record QualityTuningResult(
+            int candidateMultiplier,
+            int branchCandidateLimit,
+            int efSearch,
+            double recallAtK,
+            double p50Ms,
+            double p95Ms,
+            double p99Ms
+    ) {
+    }
+
     private record ConcurrencyResult(
             int concurrency,
             int scopeSize,
@@ -868,7 +1002,10 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
             int warmupIterations,
             int measureIterations,
             int concurrentIterations,
-            List<Integer> concurrencyLevels
+            List<Integer> concurrencyLevels,
+            int defaultEfSearch,
+            List<Integer> candidateMultipliers,
+            List<Integer> efSearchValues
     ) {
         private static MatrixConfig fromEnvironment() {
             int accessLevels = intValue(
@@ -906,7 +1043,19 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
                             "AKMAI_MATRIX_CONCURRENT_ITERATIONS",
                             10
                     ),
-                    concurrency
+                    concurrency,
+                    intValue(
+                            "AKMAI_MATRIX_DEFAULT_EF_SEARCH",
+                            40
+                    ),
+                    intList(
+                            "AKMAI_MATRIX_CANDIDATE_MULTIPLIERS",
+                            "1,2,4"
+                    ),
+                    intList(
+                            "AKMAI_MATRIX_EF_SEARCH_VALUES",
+                            "40,80,120"
+                    )
             );
         }
 
