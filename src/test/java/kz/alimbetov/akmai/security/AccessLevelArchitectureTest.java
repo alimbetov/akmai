@@ -5,7 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
@@ -169,6 +172,58 @@ class AccessLevelArchitectureTest {
                 constructor,
                 5
         ));
+    }
+
+    @Test
+    void partitionRoutingNeverUsesArrayPredicateOnAccessLevel()
+            throws Exception {
+        for (String source : List.of(
+                "src/main/java/kz/alimbetov/akmai/knowledge/vector/"
+                        + "PublishedVectorSearchRepository.java",
+                "src/main/java/kz/alimbetov/akmai/knowledge/projection/"
+                        + "PostgresSearchProjectionRepository.java",
+                "src/main/java/kz/alimbetov/akmai/knowledge/identifier/"
+                        + "DocumentIdentifierRepository.java",
+                "src/main/java/kz/alimbetov/akmai/knowledge/reference/"
+                        + "ReferenceGraphRepository.java"
+        )) {
+            String text = Files.readString(Path.of(source))
+                    .replaceAll("\\s+", " ")
+                    .toLowerCase();
+
+            assertThat(text)
+                    .as("%s must not route ACL partitions with ANY", source)
+                    .doesNotContain("access_level = any")
+                    .doesNotContain("access_level=any");
+        }
+    }
+
+    @Test
+    void vectorStorageHasNoLegacySchemaFallback() throws Exception {
+        String source = Files.readString(Path.of(
+                "src/main/java/kz/alimbetov/akmai/knowledge/vector/"
+                        + "PostgresGenerationVectorRepository.java"
+        ));
+
+        assertThat(source)
+                .doesNotContain(
+                        "hasTypedRouting",
+                        "insertLegacy",
+                        "findIdsByGenerationMetadata",
+                        "metadata->>'akmaiDocumentId'"
+                );
+    }
+
+    @Test
+    void projectionReadsRequirePhysicalAccessLevel() throws Exception {
+        String source = Files.readString(Path.of(
+                "src/main/java/kz/alimbetov/akmai/knowledge/projection/"
+                        + "PostgresSearchProjectionRepository.java"
+        ));
+
+        assertThat(source)
+                .doesNotContain("resolved_access_level")
+                .contains("rs.getLong(\"access_level\")");
     }
 
     private Method[] methods(
