@@ -566,9 +566,8 @@ class PostgresRetrievalIntegrationTest {
                                     """
                                     EXPLAIN (COSTS OFF)
                                     SELECT chunk_id
-                                    FROM knowledge_search_projection
-                                    WHERE access_level = 1
-                                      AND language = ?
+                                    FROM knowledge_search_projection_al_1
+                                    WHERE language = ?
                                       AND %s
                                           @@ websearch_to_tsquery('%s', ?)
                                     """.formatted(
