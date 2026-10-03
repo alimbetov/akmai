@@ -41,6 +41,7 @@ public class GenerationVectorAssembler {
             ));
             vectors.add(new VectorRow(
                     vectorId,
+                    projection.chunkId(),
                     projection.embeddingText(),
                     metadata(projection, profile, generation),
                     embeddings.get(index)
