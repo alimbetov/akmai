@@ -111,15 +111,21 @@ class PostgresVectorReconciliationIntegrationTest {
                 new ReferenceGraphRepository(jdbc, new CrossReferenceExtractor());
         vectors = new PostgresGenerationVectorRepository(jdbc, mapper, storage);
 
+        GenerationRepairService repairService =
+                new GenerationRepairService(
+                        vectors,
+                        references,
+                        identifiers,
+                        projections,
+                        manifests
+                );
+
         reconciliation = new GenerationReconciliationService(
                 jdbc,
                 tx,
-                manifests,
                 vectors,
                 profileRepository,
-                projections,
-                identifiers,
-                references,
+                repairService,
                 new ReconciliationProperties(
                         true,
                         10,
@@ -399,6 +405,7 @@ class PostgresVectorReconciliationIntegrationTest {
                     content_fingerprint,
                     physical_id_version,
                     retention_policy,
+                    purge_started_at,
                     retired_at,
                     purge_after,
                     cleanup_status
@@ -412,9 +419,11 @@ class PostgresVectorReconciliationIntegrationTest {
                        g.content_fingerprint,
                        g.physical_id_version,
                        l.lifecycle_policy,
+                       COALESCE(g.retired_at, clock_timestamp())
+                           - interval '1 minute',
                        COALESCE(g.retired_at, clock_timestamp()),
                        clock_timestamp() + interval '7 days',
-                       'PENDING_VERIFY'
+                       'PURGED'
                 FROM knowledge_document_generation g
                 JOIN knowledge_document_lifecycle l
                   ON l.document_id = g.document_id
