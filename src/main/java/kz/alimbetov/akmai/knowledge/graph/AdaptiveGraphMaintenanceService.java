@@ -202,7 +202,7 @@ public class AdaptiveGraphMaintenanceService {
                             THEN COALESCE(decayed_at, ?)
                         ELSE NULL
                     END,
-                    compaction_required = TRUE,
+                    compaction_required = ?,
                     updated_at = clock_timestamp()
                 WHERE access_level = ?
                   AND (
@@ -232,6 +232,7 @@ public class AdaptiveGraphMaintenanceService {
                 Timestamp.from(now),
                 decision.targetBand().name(),
                 decayed ? Timestamp.from(now) : null,
+                !decayed,
                 edge.source().accessLevel(),
                 edge.source().documentId(),
                 edge.source().generation(),
@@ -371,7 +372,12 @@ public class AdaptiveGraphMaintenanceService {
                 JOIN overflow
                   ON edge.tableoid = overflow.tableoid
                  AND edge.ctid = overflow.ctid
-                ORDER BY overflow.band,
+                ORDER BY CASE overflow.band
+                             WHEN 'CANDIDATE' THEN 0
+                             WHEN 'WARM' THEN 1
+                             WHEN 'HOT' THEN 2
+                             ELSE 3
+                         END,
                          overflow.position DESC,
                          edge.target_document_id,
                          edge.target_generation,

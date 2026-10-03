@@ -353,6 +353,11 @@ public class AdaptiveChunkGraphRepository {
                         )
                         ELSE knowledge_chunk_association.last_reinforced_at
                     END,
+                    band_changed_at = CASE
+                        WHEN knowledge_chunk_association.band = 'DECAYED'
+                            THEN clock_timestamp()
+                        ELSE knowledge_chunk_association.band_changed_at
+                    END,
                     decayed_at = NULL,
                     compaction_required = TRUE,
                     updated_at = clock_timestamp()
