@@ -411,6 +411,14 @@ public class PostgresSearchProjectionRepository
                     accessLevels,
                     limit
             );
+            case DE, FR, ES, PT, IT, TR, EL ->
+                    searchSimpleWithLanguageFallback(
+                            query,
+                            searchLanguage.code(),
+                            documentIds,
+                            accessLevels,
+                            limit
+                    );
             case UNKNOWN -> searchSimple(
                     query,
                     RetrievalLanguageCatalog.UNKNOWN.equals(routedLanguage)
@@ -421,6 +429,32 @@ public class PostgresSearchProjectionRepository
                     limit
             );
         };
+    }
+
+    private List<SearchProjection> searchSimpleWithLanguageFallback(
+            String query,
+            String language,
+            List<String> documentIds,
+            Set<Long> accessLevels,
+            int limit
+    ) {
+        List<SearchProjection> simple = searchSimple(
+                query,
+                language,
+                documentIds,
+                accessLevels,
+                limit
+        );
+        if (!simple.isEmpty()) {
+            return simple;
+        }
+        return searchLanguageTrigramFallback(
+                query,
+                language,
+                documentIds,
+                accessLevels,
+                limit
+        );
     }
 
     private List<SearchProjection> searchFtsWithLanguageFallback(
