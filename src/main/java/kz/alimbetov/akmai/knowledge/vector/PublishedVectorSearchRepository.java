@@ -54,6 +54,24 @@ public class PublishedVectorSearchRepository {
             int topK,
             double similarityThreshold
     ) {
+        return search(
+                query,
+                null,
+                documentIds,
+                accessLevels,
+                topK,
+                similarityThreshold
+        );
+    }
+
+    public List<VectorSearchMatch> search(
+            String query,
+            String language,
+            List<String> documentIds,
+            Set<Long> accessLevels,
+            int topK,
+            double similarityThreshold
+    ) {
         List<Long> routedAccessLevels = routedAccessLevels(accessLevels);
         if (query == null || query.isBlank() || topK <= 0) {
             return List.of();
@@ -66,13 +84,72 @@ public class PublishedVectorSearchRepository {
 
         PGvector vector = new PGvector(raw);
         double maxDistance = 1.0 - similarityThreshold;
+        String routedLanguage = routedLanguage(language);
 
-        SearchStatement statement = documentIds == null
-                || documentIds.isEmpty()
+        List<VectorSearchMatch> local = execute(
+                statement(
+                        profile,
+                        vector,
+                        documentIds,
+                        routedAccessLevels,
+                        routedLanguage,
+                        topK,
+                        maxDistance
+                ),
+                profile
+        );
+
+        if (routedLanguage == null || local.size() >= topK) {
+            return local;
+        }
+
+        List<VectorSearchMatch> fallback = execute(
+                statement(
+                        profile,
+                        vector,
+                        documentIds,
+                        routedAccessLevels,
+                        null,
+                        topK,
+                        maxDistance
+                ),
+                profile
+        );
+
+        java.util.LinkedHashMap<String, VectorSearchMatch> merged =
+                new java.util.LinkedHashMap<>();
+        java.util.stream.Stream.concat(
+                        local.stream(),
+                        fallback.stream()
+                )
+                .sorted(java.util.Comparator
+                        .comparingDouble(VectorSearchMatch::score)
+                        .reversed()
+                        .thenComparing(VectorSearchMatch::vectorId))
+                .forEach(match ->
+                        merged.putIfAbsent(match.vectorId(), match)
+                );
+
+        return merged.values().stream()
+                .limit(topK)
+                .toList();
+    }
+
+    private SearchStatement statement(
+            EmbeddingProfile profile,
+            PGvector vector,
+            List<String> documentIds,
+            List<Long> accessLevels,
+            String language,
+            int topK,
+            double maxDistance
+    ) {
+        return documentIds == null || documentIds.isEmpty()
                 ? globalAnn(
                         profile,
                         vector,
-                        routedAccessLevels,
+                        accessLevels,
+                        language,
                         topK,
                         maxDistance
                 )
@@ -80,11 +157,17 @@ public class PublishedVectorSearchRepository {
                         profile,
                         vector,
                         documentIds,
-                        routedAccessLevels,
+                        accessLevels,
+                        language,
                         topK,
                         maxDistance
                 );
+    }
 
+    private List<VectorSearchMatch> execute(
+            SearchStatement statement,
+            EmbeddingProfile profile
+    ) {
         List<VectorSearchMatch> result =
                 transactionTemplate.execute(status -> {
                     if ("HNSW".equals(profile.indexType())) {
@@ -117,6 +200,7 @@ public class PublishedVectorSearchRepository {
             EmbeddingProfile profile,
             PGvector vector,
             List<Long> accessLevels,
+            String language,
             int topK,
             double maxDistance
     ) {
@@ -152,13 +236,21 @@ public class PublishedVectorSearchRepository {
                             v.embedding <=> ? AS distance
                         FROM %s v
                         WHERE v.access_level = ?
+                    """.formatted(table));
+            if (language != null) {
+                sql.append(" AND v.language = ?\n");
+            }
+            sql.append("""
                         ORDER BY v.embedding <=> ?
                         LIMIT ?
                     )
-                    """.formatted(table));
+                    """);
 
             parameters.add(vector);
             parameters.add(accessLevels.get(index));
+            if (language != null) {
+                parameters.add(language);
+            }
             parameters.add(vector);
             parameters.add(topK);
         }
@@ -188,6 +280,7 @@ public class PublishedVectorSearchRepository {
             PGvector vector,
             List<String> documentIds,
             List<Long> accessLevels,
+            String language,
             int topK,
             double maxDistance
     ) {
@@ -221,11 +314,17 @@ public class PublishedVectorSearchRepository {
                       AND l.retention_status = 'ACTIVE'
                       AND l.document_id = ANY (?)
                     """.formatted(table));
+            if (language != null) {
+                sql.append(" AND v.language = ?\n");
+            }
 
             long accessLevel = accessLevels.get(index);
             parameters.add(accessLevel);
             parameters.add(accessLevel);
             parameters.add(documentIds);
+            if (language != null) {
+                parameters.add(language);
+            }
         }
 
         sql.append("""
@@ -253,6 +352,23 @@ public class PublishedVectorSearchRepository {
                 sql.toString(),
                 List.copyOf(parameters)
         );
+    }
+
+    private String routedLanguage(String language) {
+        if (language == null || language.isBlank()) {
+            return null;
+        }
+
+        String normalized = language.toLowerCase(
+                java.util.Locale.ROOT
+        );
+        if ("unknown".equals(normalized)) {
+            return null;
+        }
+        if (!normalized.matches("[a-z]{2,8}")) {
+            return null;
+        }
+        return normalized;
     }
 
     private List<Long> routedAccessLevels(Set<Long> accessLevels) {
