@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.config.ReconciliationProperties;
+import kz.alimbetov.akmai.knowledge.audit.AuditEventRepository;
 import kz.alimbetov.akmai.knowledge.chunking.CrossReferenceExtractor;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileRepository;
@@ -125,12 +126,15 @@ class PostgresVectorReconciliationIntegrationTest {
                         1,
                         Duration.ZERO,
                         Duration.ofMinutes(5)
-                )
+                ),
+                new AuditEventRepository(jdbc, mapper)
         );
     }
 
     @BeforeEach
     void clean() {
+        jdbc.update("DELETE FROM knowledge_audit_event");
+        jdbc.update("DELETE FROM knowledge_retired_generation");
         jdbc.update("DELETE FROM akmai_vector.p_reconcile");
         jdbc.update("DELETE FROM knowledge_reference_edge");
         jdbc.update("DELETE FROM knowledge_reference_target");
@@ -231,23 +235,19 @@ class PostgresVectorReconciliationIntegrationTest {
 
         GenerationIdentity oldIdentity =
                 new GenerationIdentity("doc-1", 1L, 1L);
-        assertThat(projections.archiveGeneration(oldIdentity))
+        insertRetiredTombstone(
+                "doc-1",
+                1L,
+                profile.profileId(),
+                1,
+                1
+        );
+        assertThat(vectors.countGeneration(profile, oldIdentity))
                 .isEqualTo(1);
-        assertThat(vectors.archiveGeneration(profile, oldIdentity))
-                .isEqualTo(1);
-        assertThat(vectors.countGeneration(
-                profile,
-                oldIdentity,
-                RetrievalStorageState.ARCHIVED
-        )).isEqualTo(1);
 
         assertThat(reconciliation.reconcileBatch()).isEqualTo(1);
 
-        assertThat(vectors.countGeneration(
-                profile,
-                oldIdentity,
-                RetrievalStorageState.ARCHIVED
-        )).isZero();
+        assertThat(vectors.countGeneration(profile, oldIdentity)).isZero();
         assertThat(vectors.countExisting(
                 profile,
                 new GenerationIdentity("doc-1", 2L, 1L),
@@ -351,16 +351,17 @@ class PostgresVectorReconciliationIntegrationTest {
 
         GenerationIdentity oldIdentity =
                 new GenerationIdentity("doc-missing", 1L, 1L);
-        assertThat(vectors.archiveGeneration(profile, oldIdentity))
-                .isEqualTo(1);
+        insertRetiredTombstone(
+                "doc-missing",
+                1L,
+                profile.profileId(),
+                0,
+                1
+        );
 
         assertThat(manifests.findVectorIds("doc-missing", 1L)).isEmpty();
         assertThat(reconciliation.reconcileBatch()).isEqualTo(1);
-        assertThat(vectors.countGeneration(
-                profile,
-                oldIdentity,
-                RetrievalStorageState.ARCHIVED
-        )).isZero();
+        assertThat(vectors.countGeneration(profile, oldIdentity)).isZero();
         assertThat(jdbc.queryForObject(
                 """
                 SELECT generation_status
@@ -377,6 +378,55 @@ class PostgresVectorReconciliationIntegrationTest {
                 """,
                 Long.class
         )).isEqualTo(2L);
+    }
+
+    private void insertRetiredTombstone(
+            String documentId,
+            long generation,
+            String profileId,
+            int projectionCount,
+            int vectorCount
+    ) {
+        jdbc.update(
+                """
+                INSERT INTO knowledge_retired_generation (
+                    document_id,
+                    generation,
+                    access_level,
+                    embedding_profile_id,
+                    projection_count,
+                    vector_count,
+                    content_fingerprint,
+                    physical_id_version,
+                    retention_policy,
+                    retired_at,
+                    purge_after,
+                    cleanup_status
+                )
+                SELECT g.document_id,
+                       g.generation,
+                       g.access_level,
+                       ?,
+                       ?,
+                       ?,
+                       g.content_fingerprint,
+                       g.physical_id_version,
+                       l.lifecycle_policy,
+                       COALESCE(g.retired_at, clock_timestamp()),
+                       clock_timestamp() + interval '7 days',
+                       'PENDING_VERIFY'
+                FROM knowledge_document_generation g
+                JOIN knowledge_document_lifecycle l
+                  ON l.document_id = g.document_id
+                WHERE g.document_id = ?
+                  AND g.generation = ?
+                """,
+                profileId,
+                projectionCount,
+                vectorCount,
+                documentId,
+                generation
+        );
     }
 
     private SearchProjection projection(

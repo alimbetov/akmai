@@ -6,17 +6,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 @Validated
-@ConfigurationProperties(prefix = "akmai.archive-economics")
-public record ArchiveEconomicsProperties(
+@ConfigurationProperties(prefix = "akmai.retention-economics")
+public record RetentionEconomicsProperties(
         boolean enabled,
         @NotNull Duration fixedDelay
 ) {
-    public ArchiveEconomicsProperties {
+    public RetentionEconomicsProperties {
         if (fixedDelay == null
                 || fixedDelay.isZero()
                 || fixedDelay.isNegative()) {
             throw new IllegalArgumentException(
-                    "archive-economics fixed-delay must be positive"
+                    "retention-economics fixed-delay must be positive"
             );
         }
     }

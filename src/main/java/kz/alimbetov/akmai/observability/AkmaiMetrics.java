@@ -12,11 +12,16 @@ public class AkmaiMetrics {
 
     private final MeterRegistry registry;
     private final AtomicLong retentionBacklog = new AtomicLong();
-    private final AtomicLong archivePendingGenerations = new AtomicLong();
-    private final AtomicLong archivePendingChunks = new AtomicLong();
-    private final AtomicLong archiveOldestAgeSeconds = new AtomicLong();
-    private final ArchiveStoreGauges projectionArchive = new ArchiveStoreGauges();
-    private final ArchiveStoreGauges vectorArchive = new ArchiveStoreGauges();
+    private final AtomicLong pendingVerificationGenerations = new AtomicLong();
+    private final AtomicLong pendingVerificationChunks = new AtomicLong();
+    private final AtomicLong oldestVerificationAgeSeconds = new AtomicLong();
+    private final AtomicLong pendingTombstones = new AtomicLong();
+    private final AtomicLong verifiedTombstones = new AtomicLong();
+    private final AtomicLong tombstoneBytes = new AtomicLong();
+    private final RetrievalStoreGauges projectionStore =
+            new RetrievalStoreGauges();
+    private final RetrievalStoreGauges vectorStore =
+            new RetrievalStoreGauges();
 
     public AkmaiMetrics(MeterRegistry registry) {
         this.registry = registry;
@@ -29,29 +34,50 @@ public class AkmaiMetrics {
                 .register(registry);
 
         Gauge.builder(
-                        "akmai.archive.pending.generations",
-                        archivePendingGenerations,
+                        "akmai.retention.pending.verification.generations",
+                        pendingVerificationGenerations,
                         AtomicLong::get
                 )
-                .description("Retired generations waiting for physical purge")
+                .description("Retired generations awaiting consistency verification")
                 .register(registry);
         Gauge.builder(
-                        "akmai.archive.pending.chunks",
-                        archivePendingChunks,
+                        "akmai.retention.pending.verification.chunks",
+                        pendingVerificationChunks,
                         AtomicLong::get
                 )
-                .description("Chunks in retired generations waiting for purge")
+                .description("Chunks represented by retired generations awaiting verification")
                 .register(registry);
         Gauge.builder(
-                        "akmai.archive.oldest.age.seconds",
-                        archiveOldestAgeSeconds,
+                        "akmai.retention.oldest.verification.age.seconds",
+                        oldestVerificationAgeSeconds,
                         AtomicLong::get
                 )
-                .description("Age of the oldest retired generation awaiting purge")
+                .description("Age of the oldest retired generation awaiting verification")
+                .register(registry);
+        Gauge.builder(
+                        "akmai.retention.tombstones.pending",
+                        pendingTombstones,
+                        AtomicLong::get
+                )
+                .description("Retirement tombstones awaiting verification")
+                .register(registry);
+        Gauge.builder(
+                        "akmai.retention.tombstones.verified",
+                        verifiedTombstones,
+                        AtomicLong::get
+                )
+                .description("Verified retirement tombstones awaiting expiry")
+                .register(registry);
+        Gauge.builder(
+                        "akmai.retention.tombstones.bytes",
+                        tombstoneBytes,
+                        AtomicLong::get
+                )
+                .description("Physical bytes used by retirement tombstones")
                 .register(registry);
 
-        registerArchiveStore("projection", projectionArchive);
-        registerArchiveStore("vector", vectorArchive);
+        registerRetrievalStore("projection", projectionStore);
+        registerRetrievalStore("vector", vectorStore);
     }
 
     public void ingestion(
@@ -102,17 +128,27 @@ public class AkmaiMetrics {
         registry.counter("akmai.retention.lease.lost").increment();
     }
 
-    public void archiveBacklog(
+    public void retentionEconomicsBacklog(
             long pendingGenerations,
             long pendingChunks,
             long oldestAgeSeconds
     ) {
-        archivePendingGenerations.set(Math.max(0L, pendingGenerations));
-        archivePendingChunks.set(Math.max(0L, pendingChunks));
-        archiveOldestAgeSeconds.set(Math.max(0L, oldestAgeSeconds));
+        pendingVerificationGenerations.set(Math.max(0L, pendingGenerations));
+        pendingVerificationChunks.set(Math.max(0L, pendingChunks));
+        oldestVerificationAgeSeconds.set(Math.max(0L, oldestAgeSeconds));
     }
 
-    public void archiveStore(
+    public void retentionTombstones(
+            long pending,
+            long verified,
+            long bytes
+    ) {
+        pendingTombstones.set(Math.max(0L, pending));
+        verifiedTombstones.set(Math.max(0L, verified));
+        tombstoneBytes.set(Math.max(0L, bytes));
+    }
+
+    public void retrievalStore(
             String store,
             long estimatedLiveRows,
             long estimatedDeadRows,
@@ -123,19 +159,22 @@ public class AkmaiMetrics {
             long leafCount,
             long maxLeafBytes
     ) {
-        ArchiveStoreGauges gauges = archiveStoreGauges(store);
+        RetrievalStoreGauges gauges = retrievalStoreGauges(store);
         gauges.estimatedLiveRows.set(Math.max(0L, estimatedLiveRows));
         gauges.estimatedDeadRows.set(Math.max(0L, estimatedDeadRows));
         gauges.insertedRows.set(Math.max(0L, insertedRows));
         gauges.deletedRows.set(Math.max(0L, deletedRows));
         gauges.autovacuumRuns.set(Math.max(0L, autovacuumRuns));
         gauges.totalBytes.set(Math.max(0L, totalBytes));
-        gauges.leafCount.set(Math.max(0L, leafCount));
+        gauges.leaves.set(Math.max(0L, leafCount));
         gauges.maxLeafBytes.set(Math.max(0L, maxLeafBytes));
     }
 
-    public void archiveSample(String outcome, Duration duration) {
-        Timer.builder("akmai.archive.sample")
+    public void retentionEconomicsSample(
+            String outcome,
+            Duration duration
+    ) {
+        Timer.builder("akmai.retention.economics.sample")
                 .tag("outcome", outcome)
                 .register(registry)
                 .record(duration);
@@ -172,61 +211,61 @@ public class AkmaiMetrics {
         ).increment();
     }
 
-    private void registerArchiveStore(
+    private void registerRetrievalStore(
             String store,
-            ArchiveStoreGauges gauges
+            RetrievalStoreGauges gauges
     ) {
-        registerArchiveGauge(
-                "akmai.archive.store.live.rows.estimated",
-                "Estimated live rows in archive leaves",
+        registerRetrievalGauge(
+                "akmai.retrieval.store.live.rows.estimated",
+                "Estimated live rows in HOT retrieval leaves",
                 store,
                 gauges.estimatedLiveRows
         );
-        registerArchiveGauge(
-                "akmai.archive.store.dead.rows.estimated",
-                "Estimated dead rows in archive leaves",
+        registerRetrievalGauge(
+                "akmai.retrieval.store.dead.rows.estimated",
+                "Estimated dead rows in HOT retrieval leaves",
                 store,
                 gauges.estimatedDeadRows
         );
-        registerArchiveGauge(
-                "akmai.archive.store.inserted.rows",
-                "Rows inserted into archive leaves since statistics reset",
+        registerRetrievalGauge(
+                "akmai.retrieval.store.inserted.rows",
+                "Rows inserted into HOT retrieval leaves since statistics reset",
                 store,
                 gauges.insertedRows
         );
-        registerArchiveGauge(
-                "akmai.archive.store.deleted.rows",
-                "Rows deleted from archive leaves since statistics reset",
+        registerRetrievalGauge(
+                "akmai.retrieval.store.deleted.rows",
+                "Rows deleted from HOT retrieval leaves since statistics reset",
                 store,
                 gauges.deletedRows
         );
-        registerArchiveGauge(
-                "akmai.archive.store.autovacuum.runs",
-                "Autovacuum runs on archive leaves since statistics reset",
+        registerRetrievalGauge(
+                "akmai.retrieval.store.autovacuum.runs",
+                "Autovacuum runs on HOT retrieval leaves since statistics reset",
                 store,
                 gauges.autovacuumRuns
         );
-        registerArchiveGauge(
-                "akmai.archive.store.bytes",
-                "Physical bytes used by archive leaves and their indexes",
+        registerRetrievalGauge(
+                "akmai.retrieval.store.bytes",
+                "Physical bytes used by HOT retrieval leaves and indexes",
                 store,
                 gauges.totalBytes
         );
-        registerArchiveGauge(
-                "akmai.archive.store.leaves",
-                "Number of archive leaf partitions",
+        registerRetrievalGauge(
+                "akmai.retrieval.store.leaves",
+                "Number of HOT retrieval leaf partitions",
                 store,
-                gauges.leafCount
+                gauges.leaves
         );
-        registerArchiveGauge(
-                "akmai.archive.store.max.leaf.bytes",
-                "Physical bytes used by the largest archive leaf",
+        registerRetrievalGauge(
+                "akmai.retrieval.store.max.leaf.bytes",
+                "Physical bytes used by the largest HOT retrieval leaf",
                 store,
                 gauges.maxLeafBytes
         );
     }
 
-    private void registerArchiveGauge(
+    private void registerRetrievalGauge(
             String name,
             String description,
             String store,
@@ -238,24 +277,24 @@ public class AkmaiMetrics {
                 .register(registry);
     }
 
-    private ArchiveStoreGauges archiveStoreGauges(String store) {
+    private RetrievalStoreGauges retrievalStoreGauges(String store) {
         return switch (store) {
-            case "projection" -> projectionArchive;
-            case "vector" -> vectorArchive;
+            case "projection" -> projectionStore;
+            case "vector" -> vectorStore;
             default -> throw new IllegalArgumentException(
-                    "Unsupported archive store: " + store
+                    "Unsupported retrieval store: " + store
             );
         };
     }
 
-    private static final class ArchiveStoreGauges {
+    private static final class RetrievalStoreGauges {
         private final AtomicLong estimatedLiveRows = new AtomicLong();
         private final AtomicLong estimatedDeadRows = new AtomicLong();
         private final AtomicLong insertedRows = new AtomicLong();
         private final AtomicLong deletedRows = new AtomicLong();
         private final AtomicLong autovacuumRuns = new AtomicLong();
         private final AtomicLong totalBytes = new AtomicLong();
-        private final AtomicLong leafCount = new AtomicLong();
+        private final AtomicLong leaves = new AtomicLong();
         private final AtomicLong maxLeafBytes = new AtomicLong();
     }
 }

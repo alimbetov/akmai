@@ -7,25 +7,29 @@ import static org.mockito.Mockito.when;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
-import kz.alimbetov.akmai.config.ArchiveEconomicsProperties;
+import kz.alimbetov.akmai.config.RetentionEconomicsProperties;
 import kz.alimbetov.akmai.observability.AkmaiMetrics;
 import org.junit.jupiter.api.Test;
 
-class ArchiveEconomicsSamplerTest {
+class RetentionEconomicsSamplerTest {
 
     @Test
-    void publishesLowCardinalityArchiveMetrics() {
-        ArchiveEconomicsService service = mock(ArchiveEconomicsService.class);
-        when(service.snapshot()).thenReturn(new ArchiveEconomicsSnapshot(
+    void publishesLowCardinalityRetentionMetrics() {
+        RetentionEconomicsService service =
+                mock(RetentionEconomicsService.class);
+        when(service.snapshot()).thenReturn(new RetentionEconomicsSnapshot(
                 Instant.parse("2026-10-03T00:00:00Z"),
                 3,
                 90,
                 420,
-                new ArchiveEconomicsSnapshot.StoreFootprint(
+                2,
+                8,
+                64_000,
+                new RetentionEconomicsSnapshot.StoreFootprint(
                         60, 10, 100, 40, 2,
                         1_000_000, 12, 200_000
                 ),
-                new ArchiveEconomicsSnapshot.StoreFootprint(
+                new RetentionEconomicsSnapshot.StoreFootprint(
                         60, 5, 100, 40, 1,
                         2_000_000, 12, 400_000
                 )
@@ -33,9 +37,9 @@ class ArchiveEconomicsSamplerTest {
 
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
         AkmaiMetrics metrics = new AkmaiMetrics(registry);
-        ArchiveEconomicsSampler sampler = new ArchiveEconomicsSampler(
+        RetentionEconomicsSampler sampler = new RetentionEconomicsSampler(
                 service,
-                new ArchiveEconomicsProperties(
+                new RetentionEconomicsProperties(
                         true,
                         Duration.ofMinutes(15)
                 ),
@@ -44,15 +48,18 @@ class ArchiveEconomicsSamplerTest {
 
         sampler.sample();
 
-        assertThat(registry.get("akmai.archive.pending.generations")
-                .gauge().value()).isEqualTo(3.0);
-        assertThat(registry.get("akmai.archive.store.bytes")
+        assertThat(registry.get(
+                "akmai.retention.pending.verification.generations"
+        ).gauge().value()).isEqualTo(3.0);
+        assertThat(registry.get("akmai.retention.tombstones.bytes")
+                .gauge().value()).isEqualTo(64_000.0);
+        assertThat(registry.get("akmai.retrieval.store.bytes")
                 .tag("store", "projection")
                 .gauge().value()).isEqualTo(1_000_000.0);
-        assertThat(registry.get("akmai.archive.store.leaves")
+        assertThat(registry.get("akmai.retrieval.store.leaves")
                 .tag("store", "vector")
                 .gauge().value()).isEqualTo(12.0);
-        assertThat(registry.get("akmai.archive.sample")
+        assertThat(registry.get("akmai.retention.economics.sample")
                 .tag("outcome", "SUCCESS")
                 .timer().count()).isEqualTo(1);
     }

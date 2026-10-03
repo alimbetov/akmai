@@ -11,7 +11,6 @@ import java.util.UUID;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileStorageManager;
 import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
-import kz.alimbetov.akmai.knowledge.lifecycle.RetrievalStorageState;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -117,21 +116,7 @@ public class PostgresGenerationVectorRepository {
             GenerationIdentity identity,
             List<String> ids
     ) {
-        return deleteIds(
-                profile,
-                identity,
-                RetrievalStorageState.ACTIVE,
-                ids
-        );
-    }
-
-    public int deleteIds(
-            EmbeddingProfile profile,
-            GenerationIdentity identity,
-            RetrievalStorageState storageState,
-            List<String> ids
-    ) {
-        requireIdentityAndState(identity, storageState);
+        requireIdentity(identity);
         if (ids == null || ids.isEmpty()) {
             return 0;
         }
@@ -141,10 +126,8 @@ public class PostgresGenerationVectorRepository {
             deleted += jdbcTemplate.update(
                     "DELETE FROM " + table
                             + " WHERE access_level = ?"
-                            + " AND storage_state = ?"
                             + " AND id = ?",
                     identity.accessLevel(),
-                    storageState.code(),
                     UUID.fromString(id)
             );
         }
@@ -155,33 +138,19 @@ public class PostgresGenerationVectorRepository {
             EmbeddingProfile profile,
             GenerationIdentity identity
     ) {
-        return findIdsByGeneration(
-                profile,
-                identity,
-                RetrievalStorageState.ACTIVE
-        );
-    }
-
-    public List<String> findIdsByGeneration(
-            EmbeddingProfile profile,
-            GenerationIdentity identity,
-            RetrievalStorageState storageState
-    ) {
-        requireIdentityAndState(identity, storageState);
+        requireIdentity(identity);
         String table = storageManager.qualified(profile);
         return jdbcTemplate.queryForList(
                 """
                 SELECT id::text
                 FROM %s
                 WHERE access_level = ?
-                  AND storage_state = ?
                   AND document_id = ?
                   AND generation = ?
                 ORDER BY id
                 """.formatted(table),
                 String.class,
                 identity.accessLevel(),
-                storageState.code(),
                 identity.documentId(),
                 identity.generation()
         );
@@ -192,21 +161,7 @@ public class PostgresGenerationVectorRepository {
             GenerationIdentity identity,
             List<String> ids
     ) {
-        return countExisting(
-                profile,
-                identity,
-                RetrievalStorageState.ACTIVE,
-                ids
-        );
-    }
-
-    public int countExisting(
-            EmbeddingProfile profile,
-            GenerationIdentity identity,
-            RetrievalStorageState storageState,
-            List<String> ids
-    ) {
-        requireIdentityAndState(identity, storageState);
+        requireIdentity(identity);
         if (ids == null || ids.isEmpty()) {
             return 0;
         }
@@ -216,71 +171,39 @@ public class PostgresGenerationVectorRepository {
                 SELECT count(*)
                 FROM %s
                 WHERE access_level = ?
-                  AND storage_state = ?
                   AND id::text = ANY (?)
                 """.formatted(table),
                 ps -> {
                     ps.setLong(1, identity.accessLevel());
-                    ps.setShort(2, storageState.code());
                     ps.setArray(
-                            3,
+                            2,
                             ps.getConnection().createArrayOf(
                                     "varchar",
                                     ids.toArray()
                             )
                     );
                 },
-                rs -> {
-                    rs.next();
-                    return rs.getInt(1);
+                rs2 -> {
+                    rs2.next();
+                    return rs2.getInt(1);
                 }
-        );
-    }
-
-    public int archiveGeneration(
-            EmbeddingProfile profile,
-            GenerationIdentity identity
-    ) {
-        if (identity == null) {
-            throw new IllegalArgumentException(
-                    "identity must not be null"
-            );
-        }
-        String table = storageManager.qualified(profile);
-        return jdbcTemplate.update(
-                """
-                UPDATE %s
-                SET storage_state = ?
-                WHERE access_level = ?
-                  AND document_id = ?
-                  AND generation = ?
-                  AND storage_state = ?
-                """.formatted(table),
-                RetrievalStorageState.ARCHIVED.code(),
-                identity.accessLevel(),
-                identity.documentId(),
-                identity.generation(),
-                RetrievalStorageState.ACTIVE.code()
         );
     }
 
     public int deleteGeneration(
             EmbeddingProfile profile,
-            GenerationIdentity identity,
-            RetrievalStorageState storageState
+            GenerationIdentity identity
     ) {
-        requireIdentityAndState(identity, storageState);
+        requireIdentity(identity);
         String table = storageManager.qualified(profile);
         return jdbcTemplate.update(
                 """
                 DELETE FROM %s
                 WHERE access_level = ?
-                  AND storage_state = ?
                   AND document_id = ?
                   AND generation = ?
                 """.formatted(table),
                 identity.accessLevel(),
-                storageState.code(),
                 identity.documentId(),
                 identity.generation()
         );
@@ -288,41 +211,30 @@ public class PostgresGenerationVectorRepository {
 
     public int countGeneration(
             EmbeddingProfile profile,
-            GenerationIdentity identity,
-            RetrievalStorageState storageState
+            GenerationIdentity identity
     ) {
-        requireIdentityAndState(identity, storageState);
+        requireIdentity(identity);
         String table = storageManager.qualified(profile);
         Integer count = jdbcTemplate.queryForObject(
                 """
                 SELECT count(*)
                 FROM %s
                 WHERE access_level = ?
-                  AND storage_state = ?
                   AND document_id = ?
                   AND generation = ?
                 """.formatted(table),
                 Integer.class,
                 identity.accessLevel(),
-                storageState.code(),
                 identity.documentId(),
                 identity.generation()
         );
         return count == null ? 0 : count;
     }
 
-    private void requireIdentityAndState(
-            GenerationIdentity identity,
-            RetrievalStorageState storageState
-    ) {
+    private void requireIdentity(GenerationIdentity identity) {
         if (identity == null) {
             throw new IllegalArgumentException(
                     "identity must not be null"
-            );
-        }
-        if (storageState == null) {
-            throw new IllegalArgumentException(
-                    "storageState must not be null"
             );
         }
     }

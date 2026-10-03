@@ -24,5 +24,5 @@ public interface SearchProjectionRepository {
 
     void deleteGeneration(GenerationIdentity identity);
 
-    int archiveGeneration(GenerationIdentity identity);
+    int deleteGenerationCount(GenerationIdentity identity);
 }

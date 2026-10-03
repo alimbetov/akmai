@@ -72,8 +72,8 @@ CREATE INDEX idx_identifier_trgm
     USING GIN (normalized_value gin_trgm_ops);
 
 
---changeset akmai-greenfield:003-archive-economics-index
-CREATE INDEX idx_document_generation_archive_backlog
+--changeset akmai-greenfield:003-retention-verification-index
+CREATE INDEX idx_document_generation_retention_verify
     ON knowledge_document_generation(
         retired_at,
         document_id,

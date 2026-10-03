@@ -1,7 +1,8 @@
 package kz.alimbetov.akmai.knowledge.lifecycle;
 
-import java.util.List;
+import java.util.Map;
 import kz.alimbetov.akmai.config.ReconciliationProperties;
+import kz.alimbetov.akmai.knowledge.audit.AuditEventRepository;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileRepository;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
@@ -25,6 +26,7 @@ public class GenerationReconciliationService {
     private final DocumentIdentifierRepository identifiers;
     private final ReferenceGraphRepository references;
     private final ReconciliationProperties properties;
+    private final AuditEventRepository audit;
 
     public GenerationReconciliationService(
             JdbcTemplate jdbcTemplate,
@@ -36,7 +38,8 @@ public class GenerationReconciliationService {
             SearchProjectionRepository projections,
             DocumentIdentifierRepository identifiers,
             ReferenceGraphRepository references,
-            ReconciliationProperties properties
+            ReconciliationProperties properties,
+            AuditEventRepository audit
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactionTemplate = transactionTemplate;
@@ -47,17 +50,20 @@ public class GenerationReconciliationService {
         this.identifiers = identifiers;
         this.references = references;
         this.properties = properties;
+        this.audit = audit;
     }
 
     public int reconcileBatch() {
         if (!properties.enabled()) {
             return 0;
         }
-        List<GenerationKey> candidates = jdbcTemplate.query(
+
+        var candidates = jdbcTemplate.query(
                 """
                 SELECT g.document_id, g.generation, g.access_level
                 FROM knowledge_document_generation g
                 WHERE g.generation_status IN ('RETIRED', 'FAILED')
+                  AND g.cleanup_required
                   AND COALESCE(
                           g.retired_at,
                           g.failed_at,
@@ -92,6 +98,8 @@ public class GenerationReconciliationService {
                 cleaned++;
             }
         }
+
+        purgeExpiredTombstones();
         return cleaned;
     }
 
@@ -153,30 +161,65 @@ public class GenerationReconciliationService {
                         "Missing embedding profile " + row.profileId()
                 ));
 
-        RetrievalStorageState storageState =
-                "RETIRED".equals(row.status())
-                        ? RetrievalStorageState.ARCHIVED
-                        : RetrievalStorageState.ACTIVE;
+        ResidualCounts before = residualCounts(profile, identity);
+        if (before.total() > 0) {
+            repair(profile, identity);
+        }
 
-        vectors.deleteGeneration(
-                profile,
-                identity,
-                storageState
-        );
-        if (vectors.countGeneration(
-                profile,
-                identity,
-                storageState
-        ) != 0) {
+        ResidualCounts after = residualCounts(profile, identity);
+        if (after.total() != 0) {
+            if ("RETIRED".equals(row.status())) {
+                jdbcTemplate.update(
+                        """
+                        UPDATE knowledge_retired_generation
+                        SET cleanup_status = 'REPAIR_REQUIRED',
+                            cleanup_attempts = cleanup_attempts + 1,
+                            last_error = 'Residual retrieval rows remain'
+                        WHERE document_id = ?
+                          AND generation = ?
+                        """,
+                        key.documentId(),
+                        key.generation()
+                );
+            }
             throw new IllegalStateException(
-                    "Generation vectors remain after reconciliation"
+                    "Generation payload remains after reconciliation"
             );
         }
 
-        references.deleteGeneration(identity);
-        identifiers.deleteGeneration(identity);
-        projections.deleteGeneration(identity);
-        manifests.deleteGeneration(identity);
+        if ("RETIRED".equals(row.status())) {
+            int verified = jdbcTemplate.update(
+                    """
+                    UPDATE knowledge_retired_generation
+                    SET cleanup_status = 'VERIFIED',
+                        verified_at = clock_timestamp(),
+                        cleanup_attempts = cleanup_attempts + 1,
+                        last_error = NULL
+                    WHERE document_id = ?
+                      AND generation = ?
+                    """,
+                    key.documentId(),
+                    key.generation()
+            );
+            if (verified != 1) {
+                throw new IllegalStateException(
+                        "Retired generation tombstone is missing"
+                );
+            }
+        }
+
+        audit.append(
+                before.total() == 0
+                        ? "GENERATION_VERIFIED"
+                        : "GENERATION_REPAIRED",
+                identity,
+                null,
+                "generation-reconciler",
+                Map.of(
+                        "residualRowsBefore", before.total(),
+                        "generationStatus", row.status()
+                )
+        );
 
         return jdbcTemplate.update(
                 """
@@ -193,6 +236,90 @@ public class GenerationReconciliationService {
         ) == 1;
     }
 
+    private ResidualCounts residualCounts(
+            EmbeddingProfile profile,
+            GenerationIdentity identity
+    ) {
+        int vectorRows = vectors.countGeneration(profile, identity);
+        int projectionRows = count(
+                "knowledge_search_projection",
+                identity
+        );
+        int identifierRows = count(
+                "document_identifier",
+                identity
+        );
+        int referenceTargetRows = count(
+                "knowledge_reference_target",
+                identity
+        );
+        int referenceEdgeRows = count(
+                "knowledge_reference_edge",
+                identity
+        );
+        int manifestRows = count(
+                "knowledge_document_vector_generation",
+                identity
+        );
+        return new ResidualCounts(
+                vectorRows,
+                projectionRows,
+                identifierRows,
+                referenceTargetRows,
+                referenceEdgeRows,
+                manifestRows
+        );
+    }
+
+    private int count(String table, GenerationIdentity identity) {
+        Integer value = jdbcTemplate.queryForObject(
+                """
+                SELECT count(*)
+                FROM %s
+                WHERE access_level = ?
+                  AND document_id = ?
+                  AND generation = ?
+                """.formatted(table),
+                Integer.class,
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
+        );
+        return value == null ? 0 : value;
+    }
+
+    private void repair(
+            EmbeddingProfile profile,
+            GenerationIdentity identity
+    ) {
+        vectors.deleteGeneration(profile, identity);
+        references.deleteGeneration(identity);
+        identifiers.deleteGeneration(identity);
+        projections.deleteGeneration(identity);
+        manifests.deleteGeneration(identity);
+    }
+
+    private void purgeExpiredTombstones() {
+        jdbcTemplate.update(
+                """
+                WITH expired AS (
+                    SELECT document_id, generation
+                    FROM knowledge_retired_generation
+                    WHERE cleanup_status = 'VERIFIED'
+                      AND purge_after <= clock_timestamp()
+                    ORDER BY purge_after, document_id, generation
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT ?
+                )
+                DELETE FROM knowledge_retired_generation tombstone
+                USING expired
+                WHERE tombstone.document_id = expired.document_id
+                  AND tombstone.generation = expired.generation
+                """,
+                properties.batchSize()
+        );
+    }
+
     private record GenerationKey(
             String documentId,
             long generation,
@@ -201,5 +328,23 @@ public class GenerationReconciliationService {
     }
 
     private record GenerationRow(String status, String profileId) {
+    }
+
+    private record ResidualCounts(
+            int vectors,
+            int projections,
+            int identifiers,
+            int referenceTargets,
+            int referenceEdges,
+            int manifests
+    ) {
+        int total() {
+            return vectors
+                    + projections
+                    + identifiers
+                    + referenceTargets
+                    + referenceEdges
+                    + manifests;
+        }
     }
 }
