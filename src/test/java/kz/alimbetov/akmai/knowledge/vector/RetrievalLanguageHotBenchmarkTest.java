@@ -297,6 +297,8 @@ class RetrievalLanguageHotBenchmarkTest {
                     (
                         SELECT
                             id,
+                            document_id,
+                            generation,
                             embedding <=> ? AS distance
                         FROM bench_hot v
                         WHERE v.access_level = ?
@@ -389,7 +391,7 @@ class RetrievalLanguageHotBenchmarkTest {
         try {
             setSession();
             try (PreparedStatement ps =
-                    connection.prepareStatement(query.sql())) {
+                 connection.prepareStatement(query.sql())) {
                 bind(ps, query.parameters());
                 try (ResultSet rs = ps.executeQuery()) {
                     List<Long> ids = new ArrayList<>();
