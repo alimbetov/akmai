@@ -8,8 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.Statement;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -651,10 +649,7 @@ class RetrievalHotPurgeDecisionBenchmarkTest {
     }
 
     private static void flushStats() {
-        jdbc.queryForObject(
-                "SELECT pg_stat_force_next_flush()",
-                Object.class
-        );
+        jdbc.execute("SELECT pg_stat_force_next_flush()");
     }
 
     private static long walPosition() {
