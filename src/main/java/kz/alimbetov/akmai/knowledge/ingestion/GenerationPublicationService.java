@@ -243,11 +243,13 @@ public class GenerationPublicationService {
         vectorRepository.insertAll(profile, identity, vectors);
 
         if (previous != null && previous != generation) {
-            jdbcTemplate.update(
+            int retiring = jdbcTemplate.update(
                     """
                     UPDATE knowledge_document_generation
-                    SET generation_status = 'RETIRED',
-                        retired_at = clock_timestamp()
+                    SET generation_status = 'RETIRING',
+                        retired_at = clock_timestamp(),
+                        cleanup_required = true,
+                        last_error = NULL
                     WHERE document_id = ?
                       AND generation = ?
                       AND generation_status = 'PUBLISHED'
@@ -255,6 +257,11 @@ public class GenerationPublicationService {
                     documentId,
                     previous
             );
+            if (retiring != 1) {
+                throw new IllegalStateException(
+                        "Previous generation retirement fence failed"
+                );
+            }
         }
 
         int published = jdbcTemplate.update(
