@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import kz.alimbetov.akmai.knowledge.chunking.CrossReferenceExtractor;
+import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -92,6 +93,14 @@ public class ReferenceGraphRepository {
                     }
             );
         }
+    }
+
+    public void saveAll(
+            GenerationIdentity identity,
+            List<SearchProjection> projections
+    ) {
+        requireGenerationIdentity(identity, projections);
+        saveAll(projections);
     }
 
     public List<String> resolveSameDocumentTargets(
@@ -215,6 +224,32 @@ public class ReferenceGraphRepository {
     }
 
     public void cloneGeneration(
+            GenerationIdentity source,
+            GenerationIdentity target
+    ) {
+        if (source == null || target == null) {
+            throw new IllegalArgumentException(
+                    "source and target must not be null"
+            );
+        }
+        if (!source.documentId().equals(target.documentId())) {
+            throw new IllegalArgumentException(
+                    "Reference clone must stay within one document"
+            );
+        }
+        if (source.accessLevel() != target.accessLevel()) {
+            throw new IllegalArgumentException(
+                    "Reference clone cannot cross access levels"
+            );
+        }
+        cloneGeneration(
+                source.documentId(),
+                source.generation(),
+                target.generation()
+        );
+    }
+
+    public void cloneGeneration(
             String documentId,
             long sourceGeneration,
             long targetGeneration
@@ -274,6 +309,44 @@ public class ReferenceGraphRepository {
                 documentId,
                 generation
         );
+    }
+
+    public void deleteGeneration(GenerationIdentity identity) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        deleteGeneration(
+                identity.documentId(),
+                identity.generation()
+        );
+    }
+
+    private void requireGenerationIdentity(
+            GenerationIdentity identity,
+            List<SearchProjection> projections
+    ) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        if (projections == null || projections.isEmpty()) {
+            return;
+        }
+        boolean mismatch = projections.stream().anyMatch(
+                projection -> !identity.documentId().equals(
+                                projection.documentId()
+                        )
+                        || identity.generation()
+                                != projection.generation()
+        );
+        if (mismatch) {
+            throw new IllegalArgumentException(
+                    "All reference projections must belong to generation identity"
+            );
+        }
     }
 
     private record TargetRow(
