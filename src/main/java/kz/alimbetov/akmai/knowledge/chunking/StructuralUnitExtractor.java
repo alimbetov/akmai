@@ -59,8 +59,10 @@ public class StructuralUnitExtractor {
                 continue;
             }
 
-            Heading heading = heading(value, industry, language);
-            if (heading != null && value.length() < 220) {
+            Heading heading = value.length() < 220
+                    ? heading(value, industry, language)
+                    : null;
+            if (heading != null) {
                 while (!hierarchy.isEmpty()
                         && hierarchy.peekLast().level() >= heading.level()) {
                     hierarchy.removeLast();
