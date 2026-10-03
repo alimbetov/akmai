@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileStorageManager;
+import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -29,6 +30,19 @@ public class PostgresGenerationVectorRepository {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
         this.storageManager = storageManager;
+    }
+
+    public void insertAll(
+            EmbeddingProfile profile,
+            GenerationIdentity identity,
+            List<VectorRow> rows
+    ) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        insertAll(profile, rows);
     }
 
     public void insertAll(
@@ -68,6 +82,19 @@ public class PostgresGenerationVectorRepository {
                 return rows.size();
             }
         });
+    }
+
+    public int deleteIds(
+            EmbeddingProfile profile,
+            GenerationIdentity identity,
+            List<String> ids
+    ) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        return deleteIds(profile, ids);
     }
 
     public int deleteIds(EmbeddingProfile profile, List<String> ids) {
