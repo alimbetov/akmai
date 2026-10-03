@@ -2,21 +2,24 @@ package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import java.time.Instant;
 
-public record ArchiveEconomicsSnapshot(
+public record RetentionEconomicsSnapshot(
         Instant capturedAt,
         long pendingGenerations,
         long pendingChunks,
         long oldestRetiredAgeSeconds,
+        long pendingTombstones,
+        long verifiedTombstones,
+        long tombstoneBytes,
         StoreFootprint projection,
         StoreFootprint vector
 ) {
-    public ArchiveEconomicsSnapshot {
+    public RetentionEconomicsSnapshot {
         if (capturedAt == null) {
             throw new IllegalArgumentException("capturedAt must not be null");
         }
         if (projection == null || vector == null) {
             throw new IllegalArgumentException(
-                    "archive store footprints must not be null"
+                    "retrieval store footprints must not be null"
             );
         }
     }

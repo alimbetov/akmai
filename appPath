@@ -1,0 +1,140 @@
+spring:
+  application:
+    name: akmai
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/akmai}
+    username: ${DB_USERNAME:akmai}
+    password: ${DB_PASSWORD:akmai}
+
+  sql:
+    init:
+      mode: never
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  ai:
+    model:
+      embedding: ollama
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      embedding:
+        model: ${AKMAI_EMBEDDING_MODEL:qwen3-embedding:0.6b}
+      chat:
+        options:
+          model: ${AKMAI_CHAT_MODEL:qwen3:8b}
+          temperature: 0.1
+
+akmai:
+  model-budget:
+    chat-context-window: ${AKMAI_CHAT_CONTEXT_WINDOW:32768}
+    embedding-context-window: ${AKMAI_EMBEDDING_CONTEXT_WINDOW:8192}
+  api:
+    max-request-bytes: ${AKMAI_API_MAX_REQUEST_BYTES:2097152}
+    max-document-chars: ${AKMAI_API_MAX_DOCUMENT_CHARS:1000000}
+    max-question-chars: ${AKMAI_API_MAX_QUESTION_CHARS:20000}
+    max-metadata-bytes: ${AKMAI_API_MAX_METADATA_BYTES:65536}
+    max-metadata-entries: ${AKMAI_API_MAX_METADATA_ENTRIES:256}
+    max-metadata-depth: ${AKMAI_API_MAX_METADATA_DEPTH:8}
+    max-title-chars: ${AKMAI_API_MAX_TITLE_CHARS:1000}
+    max-source-chars: ${AKMAI_API_MAX_SOURCE_CHARS:1000}
+  idempotency:
+    lease-duration: ${AKMAI_IDEMPOTENCY_LEASE_DURATION:10m}
+  security:
+    enabled: ${AKMAI_SECURITY_ENABLED:false}
+    api-key: ${AKMAI_SECURITY_API_KEY:}
+    allow-unauthenticated-local: ${AKMAI_ALLOW_UNAUTH_LOCAL:true}
+    access-levels: ${AKMAI_SECURITY_ACCESS_LEVELS:1}
+  vector:
+    dimensions: ${AKMAI_VECTOR_DIMENSIONS:1024}
+    index-type: ${AKMAI_VECTOR_INDEX_TYPE:HNSW}
+    distance-type: ${AKMAI_VECTOR_DISTANCE_TYPE:COSINE_DISTANCE}
+    max-document-batch-size: ${AKMAI_VECTOR_BATCH_SIZE:64}
+    embedding-http-timeout: ${AKMAI_VECTOR_EMBEDDING_TIMEOUT:30s}
+    db-transaction-timeout: ${AKMAI_VECTOR_DB_TIMEOUT:30s}
+    tokenizer-profile: ${AKMAI_VECTOR_TOKENIZER_PROFILE:conservative-v1}
+  ingestion:
+    parallelism: ${AKMAI_INGESTION_PARALLELISM:8}
+    queue-capacity: ${AKMAI_INGESTION_QUEUE_CAPACITY:128}
+  retrieval:
+    parallelism: ${AKMAI_RETRIEVAL_PARALLELISM:8}
+    queue-capacity: ${AKMAI_RETRIEVAL_QUEUE_CAPACITY:64}
+    vector-top-k: ${AKMAI_RETRIEVAL_VECTOR_TOP_K:5}
+    vector-similarity-threshold: ${AKMAI_RETRIEVAL_VECTOR_THRESHOLD:0.65}
+    lexical-limit: ${AKMAI_RETRIEVAL_LEXICAL_LIMIT:10}
+    identifier-limit: ${AKMAI_RETRIEVAL_IDENTIFIER_LIMIT:10}
+    reference-limit: ${AKMAI_RETRIEVAL_REFERENCE_LIMIT:20}
+    rrf-k: ${AKMAI_RETRIEVAL_RRF_K:60}
+    expansion-seeds: ${AKMAI_RETRIEVAL_EXPANSION_SEEDS:5}
+    expansion-radius: ${AKMAI_RETRIEVAL_EXPANSION_RADIUS:1}
+    expansion-max: ${AKMAI_RETRIEVAL_EXPANSION_MAX:10}
+    context-max-tokens: ${AKMAI_RETRIEVAL_CONTEXT_MAX_TOKENS:6000}
+    context-max-chunks: ${AKMAI_RETRIEVAL_CONTEXT_MAX_CHUNKS:12}
+    context-max-chunks-per-document: ${AKMAI_RETRIEVAL_CONTEXT_MAX_CHUNKS_PER_DOCUMENT:4}
+    reranker-enabled: ${AKMAI_RERANKER_ENABLED:true}
+    reranker-candidates: ${AKMAI_RERANKER_CANDIDATES:20}
+    reranker-timeout: ${AKMAI_RERANKER_TIMEOUT:2s}
+    reranker-fused-weight: ${AKMAI_RERANKER_FUSED_WEIGHT:0.15}
+    request-timeout: ${AKMAI_RETRIEVAL_REQUEST_TIMEOUT:8s}
+    strategy-timeout: ${AKMAI_RETRIEVAL_STRATEGY_TIMEOUT:3s}
+    answer-timeout: ${AKMAI_RETRIEVAL_ANSWER_TIMEOUT:20s}
+    embedding-http-timeout: ${AKMAI_RETRIEVAL_EMBEDDING_TIMEOUT:3s}
+    context-expansion-max-chunks: ${AKMAI_CONTEXT_EXPANSION_MAX_CHUNKS:3}
+    answer-reserved-tokens: ${AKMAI_ANSWER_RESERVED_TOKENS:1024}
+  reembedding:
+    auto-migrate: ${AKMAI_REEMBEDDING_AUTO_MIGRATE:false}
+    drain-timeout: ${AKMAI_REEMBEDDING_DRAIN_TIMEOUT:2m}
+    poll-interval: ${AKMAI_REEMBEDDING_POLL_INTERVAL:250ms}
+  reconciliation:
+    enabled: ${AKMAI_RECONCILIATION_ENABLED:true}
+    batch-size: ${AKMAI_RECONCILIATION_BATCH_SIZE:100}
+    max-batches-per-run: ${AKMAI_RECONCILIATION_MAX_BATCHES:10}
+    grace-period: ${AKMAI_RECONCILIATION_GRACE_PERIOD:5m}
+    fixed-delay: ${AKMAI_RECONCILIATION_FIXED_DELAY:5m}
+  retention-economics:
+    enabled: ${AKMAI_RETENTION_ECONOMICS_ENABLED:true}
+    fixed-delay: ${AKMAI_RETENTION_ECONOMICS_FIXED_DELAY:15m}
+  audit:
+    partition-maintenance-cron: "${AKMAI_AUDIT_PARTITION_CRON:0 15 2 * * *}"
+    zone: ${AKMAI_AUDIT_ZONE:Asia/Almaty}
+  retention:
+    enabled: ${AKMAI_RETENTION_ENABLED:true}
+    cron: "${AKMAI_RETENTION_CRON:0 30 3 * * *}"
+    zone: ${AKMAI_RETENTION_ZONE:Asia/Almaty}
+    batch-size: ${AKMAI_RETENTION_BATCH_SIZE:100}
+    max-batches-per-run: ${AKMAI_RETENTION_MAX_BATCHES:10}
+    retry-limit: ${AKMAI_RETENTION_RETRY_LIMIT:5}
+    worker-parallelism: ${AKMAI_RETENTION_WORKER_PARALLELISM:2}
+    queue-capacity: ${AKMAI_RETENTION_QUEUE_CAPACITY:8}
+    lease-duration: ${AKMAI_RETENTION_LEASE_DURATION:10m}
+    cleanup-transaction-timeout: ${AKMAI_RETENTION_CLEANUP_TIMEOUT:2m}
+    default-policy: ${AKMAI_RETENTION_DEFAULT_POLICY:PERMANENT}
+    default-ttl: ${AKMAI_RETENTION_DEFAULT_TTL:90d}
+  chunking:
+    target-tokens: 750
+    soft-max-tokens: 1200
+    hard-max-tokens: 1800
+    min-tokens: 250
+
+server:
+  port: ${SERVER_PORT:8080}
+  max-http-request-header-size: ${AKMAI_MAX_REQUEST_HEADER_SIZE:32KB}
+  tomcat:
+    max-http-form-post-size: ${AKMAI_MAX_REQUEST_BODY_SIZE:2MB}
+    max-swallow-size: ${AKMAI_MAX_REQUEST_BODY_SIZE:2MB}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState,ping
+        readiness:
+          include: readinessState,db,embeddingProfile,pgvector,ollama

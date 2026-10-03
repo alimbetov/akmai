@@ -2,7 +2,7 @@ package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import java.time.Duration;
 import java.time.Instant;
-import kz.alimbetov.akmai.config.ArchiveEconomicsProperties;
+import kz.alimbetov.akmai.config.RetentionEconomicsProperties;
 import kz.alimbetov.akmai.observability.AkmaiMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,18 +10,18 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ArchiveEconomicsSampler {
+public class RetentionEconomicsSampler {
 
     private static final Logger LOGGER =
-            LoggerFactory.getLogger(ArchiveEconomicsSampler.class);
+            LoggerFactory.getLogger(RetentionEconomicsSampler.class);
 
-    private final ArchiveEconomicsService service;
-    private final ArchiveEconomicsProperties properties;
+    private final RetentionEconomicsService service;
+    private final RetentionEconomicsProperties properties;
     private final AkmaiMetrics metrics;
 
-    public ArchiveEconomicsSampler(
-            ArchiveEconomicsService service,
-            ArchiveEconomicsProperties properties,
+    public RetentionEconomicsSampler(
+            RetentionEconomicsService service,
+            RetentionEconomicsProperties properties,
             AkmaiMetrics metrics
     ) {
         this.service = service;
@@ -30,7 +30,8 @@ public class ArchiveEconomicsSampler {
     }
 
     @Scheduled(
-            fixedDelayString = "${akmai.archive-economics.fixed-delay:PT15M}"
+            fixedDelayString =
+                    "${akmai.retention-economics.fixed-delay:PT15M}"
     )
     public void sample() {
         if (!properties.enabled()) {
@@ -39,22 +40,30 @@ public class ArchiveEconomicsSampler {
 
         Instant started = Instant.now();
         try {
-            ArchiveEconomicsSnapshot snapshot = service.snapshot();
-            metrics.archiveBacklog(
+            RetentionEconomicsSnapshot snapshot = service.snapshot();
+            metrics.retentionEconomicsBacklog(
                     snapshot.pendingGenerations(),
                     snapshot.pendingChunks(),
                     snapshot.oldestRetiredAgeSeconds()
+            );
+            metrics.retentionTombstones(
+                    snapshot.pendingTombstones(),
+                    snapshot.verifiedTombstones(),
+                    snapshot.tombstoneBytes()
             );
             publishStore("projection", snapshot.projection());
             publishStore("vector", snapshot.vector());
 
             Duration duration = Duration.between(started, Instant.now());
-            metrics.archiveSample("SUCCESS", duration);
+            metrics.retentionEconomicsSample("SUCCESS", duration);
             LOGGER.info(
-                    "archive_economics event=sample pendingGenerations={} pendingChunks={} oldestAgeSeconds={} projectionLiveEstimated={} projectionDeadEstimated={} projectionBytes={} vectorLiveEstimated={} vectorDeadEstimated={} vectorBytes={} durationMs={}",
+                    "retention_economics event=sample pendingGenerations={} pendingChunks={} oldestAgeSeconds={} pendingTombstones={} verifiedTombstones={} tombstoneBytes={} projectionLiveEstimated={} projectionDeadEstimated={} projectionBytes={} vectorLiveEstimated={} vectorDeadEstimated={} vectorBytes={} durationMs={}",
                     snapshot.pendingGenerations(),
                     snapshot.pendingChunks(),
                     snapshot.oldestRetiredAgeSeconds(),
+                    snapshot.pendingTombstones(),
+                    snapshot.verifiedTombstones(),
+                    snapshot.tombstoneBytes(),
                     snapshot.projection().estimatedLiveRows(),
                     snapshot.projection().estimatedDeadRows(),
                     snapshot.projection().totalBytes(),
@@ -65,9 +74,9 @@ public class ArchiveEconomicsSampler {
             );
         } catch (RuntimeException exception) {
             Duration duration = Duration.between(started, Instant.now());
-            metrics.archiveSample("FAILED", duration);
+            metrics.retentionEconomicsSample("FAILED", duration);
             LOGGER.warn(
-                    "archive_economics event=failed errorType={} durationMs={}",
+                    "retention_economics event=failed errorType={} durationMs={}",
                     exception.getClass().getSimpleName(),
                     duration.toMillis()
             );
@@ -76,9 +85,9 @@ public class ArchiveEconomicsSampler {
 
     private void publishStore(
             String store,
-            ArchiveEconomicsSnapshot.StoreFootprint footprint
+            RetentionEconomicsSnapshot.StoreFootprint footprint
     ) {
-        metrics.archiveStore(
+        metrics.retrievalStore(
                 store,
                 footprint.estimatedLiveRows(),
                 footprint.estimatedDeadRows(),
