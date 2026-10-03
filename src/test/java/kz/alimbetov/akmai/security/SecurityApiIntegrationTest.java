@@ -17,7 +17,7 @@ class SecurityApiIntegrationTest {
             new ApiKeyAuthenticationFilter(
                     new SecurityProperties(
                             true,
-                            "secret-key",
+                            "0123456789abcdef0123456789abcdef",
                             false,
                             java.util.Set.of(1L, 2L)
                     ),
@@ -50,12 +50,51 @@ class SecurityApiIntegrationTest {
     }
 
     @Test
+    void rejectsMissingApiKeyForSensitiveManagementEndpoint()
+            throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET",
+                "/actuator/metrics/jvm.memory.used"
+        );
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(
+                request,
+                response,
+                new MockFilterChain()
+        );
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(response.getContentAsString())
+                .contains("\"code\":\"UNAUTHORIZED\"");
+    }
+
+    @Test
+    void healthProbeRemainsUnauthenticated() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET",
+                "/actuator/health/readiness"
+        );
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(
+                request,
+                response,
+                new MockFilterChain()
+        );
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(SecurityContextHolder.getContext().getAuthentication())
+                .isNull();
+    }
+
+    @Test
     void authenticatesValidApiKey() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest(
                 "POST",
                 "/api/knowledge/text"
         );
-        request.addHeader("X-AKMAI-API-Key", "secret-key");
+        request.addHeader("X-AKMAI-API-Key", "0123456789abcdef0123456789abcdef");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(
@@ -75,5 +114,28 @@ class SecurityApiIntegrationTest {
                         "akmai-api-key",
                         java.util.Set.of(1L, 2L)
                 ));
+    }
+
+    @Test
+    void authenticatesValidApiKeyForMetrics() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET",
+                "/actuator/metrics"
+        );
+        request.addHeader(
+                "X-AKMAI-API-Key",
+                "0123456789abcdef0123456789abcdef"
+        );
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(
+                request,
+                response,
+                new MockFilterChain()
+        );
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(SecurityContextHolder.getContext().getAuthentication())
+                .isNotNull();
     }
 }
