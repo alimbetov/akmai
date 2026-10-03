@@ -235,6 +235,130 @@ This changes graph growth from unbounded pair creation toward approximately:
 O(active_chunk_count * max_active_degree)
 ```
 
+## Banded degree budget
+
+A single global max-degree limit is not enough. Strong, medium and exploratory
+relations have different value and should not compete in one undifferentiated
+pool.
+
+Each source node therefore owns fixed per-band quotas.
+
+Example conceptual bands:
+
+```text
+HOT        weight >= hot_threshold
+WARM       weight >= warm_threshold
+CANDIDATE  weight >= candidate_threshold
+```
+
+Each band has its own capacity:
+
+```text
+HOT        max_hot_neighbors
+WARM       max_warm_neighbors
+CANDIDATE  max_candidate_neighbors
+```
+
+Within a band, rows are ordered by effective score and the lowest-value rows are
+evicted when the quota is exceeded.
+
+This keeps total degree bounded:
+
+```text
+max_degree =
+    max_hot_neighbors
+  + max_warm_neighbors
+  + max_candidate_neighbors
+```
+
+### Why not keep only the global highest weights
+
+Keeping only a single top-K list creates two risks:
+
+1. mature/popular relations permanently monopolize all slots;
+2. new potentially useful relations never survive long enough to collect
+   independent evidence.
+
+Therefore a small CANDIDATE budget is reserved for exploration.
+
+### Promotion and demotion
+
+Edges move between bands through hysteresis:
+
+```text
+CANDIDATE
+   -> WARM      when promotion threshold is exceeded
+WARM
+   -> HOT       when strong evidence threshold is exceeded
+HOT
+   -> WARM      after decay below a lower demotion threshold
+WARM
+   -> CANDIDATE after further decay
+CANDIDATE
+   -> PURGED    on TTL/quota eviction
+```
+
+Promotion and demotion thresholds must not be identical. A hysteresis gap
+prevents edges from oscillating between bands around one threshold.
+
+### Eviction ordering
+
+Eviction is deterministic and per source node.
+
+Suggested ordering from best to worst:
+
+```text
+effective_weight DESC
+distinct_query_support DESC
+citation_count DESC
+last_reinforced_at DESC
+target identity ASC
+```
+
+The final identity tie-breaker makes compaction reproducible.
+
+### Semantic diversity reservation
+
+A source chunk can have many nearly identical neighbours. Pure weight ranking may
+fill all HOT/WARM capacity with one semantic cluster.
+
+When ontology annotations are available, a small optional diversity reservation
+may keep at most N neighbours per dominant concept/subdomain before filling the
+remaining quota globally.
+
+This is a quality feature, not a security boundary. ACL routing is still applied
+first.
+
+### Runtime lookup
+
+Normal retrieval reads HOT first and optionally a small WARM allowance:
+
+```text
+seed chunk
+  -> HOT top-N
+  -> optional WARM top-M
+  -> semantic compatibility
+  -> reranker
+```
+
+CANDIDATE edges never enter normal production expansion. They exist only to
+collect evidence and compete for promotion.
+
+### Storage growth
+
+With per-band quotas, the asymptotic upper bound becomes:
+
+```text
+|E| <= active_nodes
+       * (hot_quota + warm_quota + candidate_quota)
+       * directed_projection_factor
+```
+
+For the physically symmetric representation, directed_projection_factor is 2.
+
+The quotas are calibrated from real measurements and retrieval budgets rather
+than permanently hard-coded.
+
 ## Edge scoring
 
 Do not use an ever-growing integer counter as the retrieval score.

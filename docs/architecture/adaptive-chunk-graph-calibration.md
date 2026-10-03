@@ -134,6 +134,73 @@ Calibration procedure:
 
 A temporary bootstrap threshold is allowed, but it is explicitly provisional.
 
+## Per-band degree calibration
+
+Adaptive degree is calibrated as a vector of quotas rather than one scalar K.
+
+```text
+K_total =
+    K_hot
+  + K_warm
+  + K_candidate
+```
+
+The total still respects the retrieval/storage budget, but each band serves a
+different purpose:
+
+- HOT: high-confidence exploitation;
+- WARM: useful but less-established associations;
+- CANDIDATE: bounded exploration and evidence collection.
+
+A calibration sweep should vary both the total and its allocation, for example:
+
+```text
+(4, 4, 8)
+(8, 4, 8)
+(8, 8, 8)
+(12, 8, 12)
+```
+
+These tuples are test points only, not defaults.
+
+Evaluate:
+
+- citation lift from HOT;
+- incremental recall from WARM;
+- promotion precision from CANDIDATE;
+- eviction rate;
+- band churn;
+- graph bytes per active chunk;
+- p95/p99 lookup and maintenance latency.
+
+The selected configuration should leave enough CANDIDATE capacity for new edges
+to prove themselves while preventing low-confidence storage from dominating.
+
+### Hysteresis calibration
+
+Promotion and demotion use different thresholds:
+
+```text
+promote_to_hot > demote_from_hot
+promote_to_warm > demote_from_warm
+```
+
+Measure oscillation rate around thresholds. Excessive HOT/WARM transitions mean
+the hysteresis gap is too small or decay is too aggressive.
+
+### Quota enforcement
+
+Maintenance enforces quota independently for each source and band.
+
+For each overfull band:
+
+1. rank edges by effective score and evidence;
+2. retain the configured quota;
+3. demote or purge overflow according to lifecycle rules;
+4. emit eviction/churn metrics.
+
+Quota enforcement must be idempotent and deterministic.
+
 ## Edge weight
 
 Do not use an unbounded counter.
