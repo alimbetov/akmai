@@ -109,15 +109,19 @@ class ChunkRetentionServiceTest {
 
         assertThat(result.status())
                 .isEqualTo(RetentionCleanupResult.Status.STALE_CLAIM);
-        verify(vectors, never()).archiveGeneration(
+        verify(vectors, never()).deleteGeneration(
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any()
         );
-        verify(projections, never()).archiveGeneration(
+        verify(projections, never()).deleteGenerationCount(
                 org.mockito.ArgumentMatchers.any()
         );
-        verify(identifiers, never()).deleteGeneration("doc-1", 7);
-        verify(manifests, never()).deleteGeneration("doc-1", 7);
+        verify(identifiers, never()).deleteGeneration(
+                org.mockito.ArgumentMatchers.any(GenerationIdentity.class)
+        );
+        verify(manifests, never()).deleteGeneration(
+                org.mockito.ArgumentMatchers.any(GenerationIdentity.class)
+        );
     }
 
     private void insertLifecycleWithDifferentClaim() {
