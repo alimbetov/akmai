@@ -302,25 +302,46 @@ class RetrievalLanguageStorageBenchmarkTest {
     }
 
     private static Query annQuery(String language) {
+        List<String> languages = language == null
+                ? LANGUAGES
+                : List.of(language);
+
         StringBuilder sql = new StringBuilder("""
-                SELECT id
-                FROM bench_lang
-                WHERE access_level = ?
-                  AND storage_state = 0
+                SELECT candidate.id
+                FROM (
                 """);
         List<Object> parameters = new ArrayList<>();
-        parameters.add(1L);
 
-        if (language != null) {
-            sql.append("  AND language = ?\n");
-            parameters.add(language);
+        for (int index = 0; index < languages.size(); index++) {
+            if (index > 0) {
+                sql.append("\nUNION ALL\n");
+            }
+
+            sql.append("""
+                    (
+                        SELECT
+                            id,
+                            embedding <=> ? AS distance
+                        FROM bench_lang
+                        WHERE access_level = ?
+                          AND language = ?
+                          AND storage_state = 0
+                        ORDER BY embedding <=> ?
+                        LIMIT ?
+                    )
+                    """);
+            parameters.add(new PGvector(queryVector));
+            parameters.add(1L);
+            parameters.add(languages.get(index));
+            parameters.add(new PGvector(queryVector));
+            parameters.add(TOP_K);
         }
 
         sql.append("""
-                ORDER BY embedding <=> ?
+                ) candidate
+                ORDER BY candidate.distance
                 LIMIT ?
                 """);
-        parameters.add(new PGvector(queryVector));
         parameters.add(TOP_K);
 
         return new Query(sql.toString(), List.copyOf(parameters));
