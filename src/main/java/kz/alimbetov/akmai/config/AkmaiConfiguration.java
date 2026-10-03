@@ -16,7 +16,8 @@ import org.springframework.context.annotation.Configuration;
     ReconciliationProperties.class,
     ModelBudgetProperties.class,
     ReembeddingProperties.class,
-    RetentionCleanupProperties.class
+    RetentionCleanupProperties.class,
+    ArchiveEconomicsProperties.class
 })
 public class AkmaiConfiguration {
 }
