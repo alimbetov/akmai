@@ -73,6 +73,7 @@ class RetrievalLanguageHotBenchmarkTest {
         createSchema();
         seed();
         createIndexes();
+        jdbc.execute("ANALYZE bench_hot_lifecycle");
         jdbc.execute("ANALYZE bench_hot");
     }
 
@@ -154,6 +155,15 @@ class RetrievalLanguageHotBenchmarkTest {
     private static void createSchema() {
         jdbc.execute("CREATE EXTENSION IF NOT EXISTS vector");
         jdbc.execute("""
+                CREATE TABLE bench_hot_lifecycle (
+                    document_id VARCHAR(100) PRIMARY KEY,
+                    published_generation BIGINT NOT NULL,
+                    access_level BIGINT NOT NULL,
+                    retention_status VARCHAR(32) NOT NULL
+                )
+                """);
+
+        jdbc.execute("""
                 CREATE TABLE bench_hot (
                     access_level BIGINT NOT NULL,
                     language VARCHAR(16) NOT NULL,
@@ -191,11 +201,15 @@ class RetrievalLanguageHotBenchmarkTest {
         List<Row> batch = new ArrayList<>(250);
 
         for (String language : LANGUAGES) {
+            Set<String> documents = new LinkedHashSet<>();
             for (int row = 0; row < config.rowsPerLanguage(); row++) {
+                String documentId =
+                        "hot-" + language + "-" + (row / 300);
+                documents.add(documentId);
                 batch.add(new Row(
                         id,
                         language,
-                        "hot-" + language + "-" + (row / 300),
+                        documentId,
                         embedding(id, config.dimensions())
                 ));
                 id++;
@@ -203,6 +217,20 @@ class RetrievalLanguageHotBenchmarkTest {
                     insertBatch(batch);
                     batch.clear();
                 }
+            }
+
+            for (String documentId : documents) {
+                jdbc.update(
+                        """
+                        INSERT INTO bench_hot_lifecycle (
+                            document_id,
+                            published_generation,
+                            access_level,
+                            retention_status
+                        ) VALUES (?, 1, 1, 'ACTIVE')
+                        """,
+                        documentId
+                );
             }
         }
 
@@ -270,10 +298,15 @@ class RetrievalLanguageHotBenchmarkTest {
                         SELECT
                             id,
                             embedding <=> ? AS distance
-                        FROM bench_hot
-                        WHERE access_level = ?
-                          AND language = ?
-                        ORDER BY embedding <=> ?
+                        FROM bench_hot v
+                        JOIN bench_hot_lifecycle l
+                          ON l.document_id = v.document_id
+                         AND l.published_generation = v.generation
+                         AND l.access_level = v.access_level
+                        WHERE v.access_level = ?
+                          AND v.language = ?
+                          AND l.retention_status = 'ACTIVE'
+                        ORDER BY v.embedding <=> ?
                         LIMIT ?
                     )
                     """);
@@ -297,14 +330,19 @@ class RetrievalLanguageHotBenchmarkTest {
     private static List<Long> exactGroundTruth(String language) {
         StringBuilder sql = new StringBuilder("""
                 WITH candidates AS MATERIALIZED (
-                    SELECT id, embedding
-                    FROM bench_hot
-                    WHERE access_level = 1
+                    SELECT v.id, v.embedding
+                    FROM bench_hot v
+                    JOIN bench_hot_lifecycle l
+                      ON l.document_id = v.document_id
+                     AND l.published_generation = v.generation
+                     AND l.access_level = v.access_level
+                    WHERE v.access_level = 1
+                      AND l.retention_status = 'ACTIVE'
                 """);
         List<Object> parameters = new ArrayList<>();
 
         if (language != null) {
-            sql.append("      AND language = ?\n");
+            sql.append("      AND v.language = ?\n");
             parameters.add(language);
         }
 
