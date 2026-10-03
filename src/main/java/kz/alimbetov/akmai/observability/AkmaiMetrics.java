@@ -18,6 +18,11 @@ public class AkmaiMetrics {
     private final AtomicLong pendingTombstones = new AtomicLong();
     private final AtomicLong verifiedTombstones = new AtomicLong();
     private final AtomicLong tombstoneBytes = new AtomicLong();
+    private final AtomicLong adaptiveGraphCandidateEdges = new AtomicLong();
+    private final AtomicLong adaptiveGraphWarmEdges = new AtomicLong();
+    private final AtomicLong adaptiveGraphHotEdges = new AtomicLong();
+    private final AtomicLong adaptiveGraphDecayedEdges = new AtomicLong();
+    private final AtomicLong adaptiveGraphMaintenanceBacklog = new AtomicLong();
     private final RetrievalStoreGauges projectionStore =
             new RetrievalStoreGauges();
     private final RetrievalStoreGauges vectorStore =
@@ -74,6 +79,34 @@ public class AkmaiMetrics {
                         AtomicLong::get
                 )
                 .description("Physical bytes used by retirement tombstones")
+                .register(registry);
+
+        registerAdaptiveGraphGauge(
+                "akmai.adaptive.graph.edges",
+                "candidate",
+                adaptiveGraphCandidateEdges
+        );
+        registerAdaptiveGraphGauge(
+                "akmai.adaptive.graph.edges",
+                "warm",
+                adaptiveGraphWarmEdges
+        );
+        registerAdaptiveGraphGauge(
+                "akmai.adaptive.graph.edges",
+                "hot",
+                adaptiveGraphHotEdges
+        );
+        registerAdaptiveGraphGauge(
+                "akmai.adaptive.graph.edges",
+                "decayed",
+                adaptiveGraphDecayedEdges
+        );
+        Gauge.builder(
+                        "akmai.adaptive.graph.maintenance.backlog",
+                        adaptiveGraphMaintenanceBacklog,
+                        AtomicLong::get
+                )
+                .description("Adaptive graph edges awaiting bounded maintenance")
                 .register(registry);
 
         registerRetrievalStore("projection", projectionStore);
@@ -148,6 +181,117 @@ public class AkmaiMetrics {
         tombstoneBytes.set(Math.max(0L, bytes));
     }
 
+
+    public void adaptiveGraphEdges(
+            long candidate,
+            long warm,
+            long hot,
+            long decayed
+    ) {
+        adaptiveGraphCandidateEdges.set(Math.max(0L, candidate));
+        adaptiveGraphWarmEdges.set(Math.max(0L, warm));
+        adaptiveGraphHotEdges.set(Math.max(0L, hot));
+        adaptiveGraphDecayedEdges.set(Math.max(0L, decayed));
+    }
+
+    public void adaptiveGraphMaintenanceBacklog(long count) {
+        adaptiveGraphMaintenanceBacklog.set(Math.max(0L, count));
+    }
+
+    public void adaptiveGraphLearning(
+            String signal,
+            String outcome,
+            int edges
+    ) {
+        if (edges <= 0) {
+            return;
+        }
+        registry.counter(
+                "akmai.adaptive.graph.learning",
+                "signal", requireGraphTag(signal),
+                "outcome", requireGraphTag(outcome)
+        ).increment(edges);
+    }
+
+    public void adaptiveGraphLookup(
+            String band,
+            Duration duration,
+            int candidates
+    ) {
+        Timer.builder("akmai.adaptive.graph.lookup")
+                .tag("band", requireGraphTag(band))
+                .register(registry)
+                .record(duration);
+        if (candidates > 0) {
+            registry.summary(
+                    "akmai.adaptive.graph.lookup.candidates",
+                    "band", requireGraphTag(band)
+            ).record(candidates);
+        }
+    }
+
+    public void adaptiveGraphExpansion(
+            String outcome,
+            int count
+    ) {
+        if (count <= 0) {
+            return;
+        }
+        registry.counter(
+                "akmai.adaptive.graph.expansion",
+                "outcome", requireGraphTag(outcome)
+        ).increment(count);
+    }
+
+    public void adaptiveGraphShadowSeeds(int count) {
+        if (count >= 0) {
+            registry.summary("akmai.adaptive.graph.shadow.seeds")
+                    .record(count);
+        }
+    }
+
+    public void adaptiveGraphShadowCandidateScore(double score) {
+        if (Double.isFinite(score) && score >= 0.0 && score <= 1.0) {
+            registry.summary("akmai.adaptive.graph.shadow.candidate.score")
+                    .record(score);
+        }
+    }
+
+    public void adaptiveGraphBandTransition(
+            String from,
+            String to,
+            int count
+    ) {
+        if (count <= 0) {
+            return;
+        }
+        registry.counter(
+                "akmai.adaptive.graph.band.transition",
+                "from", requireGraphTag(from),
+                "to", requireGraphTag(to)
+        ).increment(count);
+    }
+
+    public void adaptiveGraphMaintenance(
+            String outcome,
+            Duration duration,
+            int processed,
+            int evicted
+    ) {
+        Timer.builder("akmai.adaptive.graph.maintenance")
+                .tag("outcome", requireGraphTag(outcome))
+                .register(registry)
+                .record(duration);
+        if (processed > 0) {
+            registry.summary("akmai.adaptive.graph.maintenance.processed")
+                    .record(processed);
+        }
+        if (evicted > 0) {
+            registry.summary("akmai.adaptive.graph.maintenance.evicted")
+                    .record(evicted);
+        }
+    }
+
     public void retrievalStore(
             String store,
             long estimatedLiveRows,
@@ -209,6 +353,30 @@ public class AkmaiMetrics {
                 "akmai.ingestion.idempotency",
                 "outcome", outcome
         ).increment();
+    }
+
+
+    private void registerAdaptiveGraphGauge(
+            String name,
+            String band,
+            AtomicLong value
+    ) {
+        Gauge.builder(name, value, AtomicLong::get)
+                .tag("band", band)
+                .description("Adaptive graph edges by bounded weight band")
+                .register(registry);
+    }
+
+    private String requireGraphTag(String value) {
+        if (value == null
+                || value.isBlank()
+                || value.length() > 32
+                || !value.matches("[A-Za-z0-9_-]+")) {
+            throw new IllegalArgumentException(
+                    "Adaptive graph metric tag must be a bounded identifier"
+            );
+        }
+        return value.toLowerCase(java.util.Locale.ROOT);
     }
 
     private void registerRetrievalStore(

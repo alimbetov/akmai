@@ -2,6 +2,8 @@ package kz.alimbetov.akmai.rag.service;
 
 import java.util.List;
 import java.util.Set;
+import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphShadowExpansion;
+import kz.alimbetov.akmai.knowledge.graph.AssociationLearningRecorder;
 import kz.alimbetov.akmai.rag.api.RagResponse;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
@@ -34,6 +36,8 @@ public class RagQuestionService {
     private final ContextAssembler contextAssembler;
     private final CitationValidator citationValidator;
     private final AnswerGenerationService answerGenerationService;
+    private final AssociationLearningRecorder associationLearningRecorder;
+    private final AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion;
 
     public RagQuestionService(
             QueryChunker queryChunker,
@@ -45,7 +49,9 @@ public class RagQuestionService {
             ContextBudget contextBudget,
             ContextAssembler contextAssembler,
             CitationValidator citationValidator,
-            AnswerGenerationService answerGenerationService
+            AnswerGenerationService answerGenerationService,
+            AssociationLearningRecorder associationLearningRecorder,
+            AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion
     ) {
         this.queryChunker = queryChunker;
         this.retrievalPlanner = retrievalPlanner;
@@ -57,6 +63,8 @@ public class RagQuestionService {
         this.contextAssembler = contextAssembler;
         this.citationValidator = citationValidator;
         this.answerGenerationService = answerGenerationService;
+        this.associationLearningRecorder = associationLearningRecorder;
+        this.adaptiveGraphShadowExpansion = adaptiveGraphShadowExpansion;
     }
 
     public RagResponse ask(String question, Set<Long> accessLevels) {
@@ -78,6 +86,13 @@ public class RagQuestionService {
         List<RetrievalHit> fused = resultFusion.fuse(execution.hits(), accessLevels);
         List<RetrievalHit> ranked = reranker.rerank(fused, question);
         List<RetrievalHit> expanded = knowledgeExpansion.expand(ranked, accessLevels);
+
+        adaptiveGraphShadowExpansion.observe(
+                ranked,
+                expanded,
+                accessLevels
+        );
+
         List<RetrievalHit> bounded = contextBudget.apply(expanded, question);
 
         if (bounded.isEmpty()) {
@@ -94,6 +109,13 @@ public class RagQuestionService {
                 || validation.citedSources().isEmpty()) {
             return insufficientInformation();
         }
+
+        associationLearningRecorder.record(
+                queryChunks,
+                accessLevels,
+                bounded,
+                validation
+        );
 
         List<RagResponse.Source> sources = validation.citedSources().stream()
                 .map(source -> new RagResponse.Source(

@@ -137,7 +137,9 @@ public class Reranker {
         metadata.put("rerankScore", combined);
         return new RetrievalHit(
                 hit.type(),
+                hit.accessLevel(),
                 hit.documentId(),
+                hit.generation(),
                 hit.chunkId(),
                 hit.text(),
                 metadata,

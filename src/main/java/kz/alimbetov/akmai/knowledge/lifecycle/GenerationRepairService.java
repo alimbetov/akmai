@@ -72,6 +72,10 @@ public class GenerationRepairService {
                 identity,
                 batchSize
         );
+        deleted += deleteAssociationBatch(
+                identity,
+                batchSize
+        );
         deleted += deleteBatch(
                 "knowledge_reference_edge",
                 identity,
@@ -99,6 +103,85 @@ public class GenerationRepairService {
         );
 
         return deleted;
+    }
+
+    private int deleteAssociationBatch(
+            GenerationIdentity identity,
+            int batchSize
+    ) {
+        return jdbcTemplate.update(
+                """
+                WITH batch AS (
+                    SELECT access_level,
+                           source_document_id,
+                           source_generation,
+                           source_chunk_id,
+                           target_document_id,
+                           target_generation,
+                           target_chunk_id
+                    FROM knowledge_chunk_association
+                    WHERE access_level = ?
+                      AND (
+                          (
+                              source_document_id = ?
+                              AND source_generation = ?
+                          )
+                          OR
+                          (
+                              target_document_id = ?
+                              AND target_generation = ?
+                          )
+                      )
+                    ORDER BY source_document_id,
+                             source_generation,
+                             source_chunk_id,
+                             target_document_id,
+                             target_generation,
+                             target_chunk_id
+                    LIMIT ?
+                )
+                DELETE FROM knowledge_chunk_association target
+                USING batch
+                WHERE target.access_level = batch.access_level
+                  AND (
+                      (
+                          target.source_document_id =
+                              batch.source_document_id
+                          AND target.source_generation =
+                              batch.source_generation
+                          AND target.source_chunk_id =
+                              batch.source_chunk_id
+                          AND target.target_document_id =
+                              batch.target_document_id
+                          AND target.target_generation =
+                              batch.target_generation
+                          AND target.target_chunk_id =
+                              batch.target_chunk_id
+                      )
+                      OR
+                      (
+                          target.source_document_id =
+                              batch.target_document_id
+                          AND target.source_generation =
+                              batch.target_generation
+                          AND target.source_chunk_id =
+                              batch.target_chunk_id
+                          AND target.target_document_id =
+                              batch.source_document_id
+                          AND target.target_generation =
+                              batch.source_generation
+                          AND target.target_chunk_id =
+                              batch.source_chunk_id
+                      )
+                  )
+                """,
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation(),
+                identity.documentId(),
+                identity.generation(),
+                batchSize
+        );
     }
 
     private int deleteBatch(

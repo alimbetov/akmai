@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphShadowExpansion;
+import kz.alimbetov.akmai.knowledge.graph.AssociationLearningRecorder;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
 import kz.alimbetov.akmai.rag.retrieval.ContextAssembler;
@@ -40,6 +42,10 @@ class RagQuestionServiceTest {
         ContextAssembler assembler = mock(ContextAssembler.class);
         AnswerGenerationService generation =
                 mock(AnswerGenerationService.class);
+        AssociationLearningRecorder learning =
+                mock(AssociationLearningRecorder.class);
+        AdaptiveGraphShadowExpansion shadowExpansion =
+                mock(AdaptiveGraphShadowExpansion.class);
 
         QueryChunk query = new QueryChunk(
                 "q", 0, "question", "question", "question", "en", List.of()
@@ -88,7 +94,9 @@ class RagQuestionServiceTest {
                 budget,
                 assembler,
                 new CitationValidator(),
-                generation
+                generation,
+                learning,
+                shadowExpansion
         );
 
         var response = service.ask("question", scope);
