@@ -213,7 +213,6 @@ public class PostgresSearchProjectionRepository
                 """
                 DELETE FROM knowledge_search_projection
                 WHERE access_level = ?
-                  AND storage_state = 0
                   AND document_id = ?
                   AND generation = ?
                 """,
