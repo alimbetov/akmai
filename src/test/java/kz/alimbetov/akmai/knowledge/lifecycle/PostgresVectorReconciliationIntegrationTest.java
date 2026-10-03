@@ -229,12 +229,24 @@ class PostgresVectorReconciliationIntegrationTest {
                 )
         );
 
+        GenerationIdentity oldIdentity =
+                new GenerationIdentity("doc-1", 1L, 1L);
+        assertThat(projections.archiveGeneration(oldIdentity))
+                .isEqualTo(1);
+        assertThat(vectors.archiveGeneration(profile, oldIdentity))
+                .isEqualTo(1);
+        assertThat(vectors.countGeneration(
+                profile,
+                oldIdentity,
+                RetrievalStorageState.ARCHIVED
+        )).isEqualTo(1);
+
         assertThat(reconciliation.reconcileBatch()).isEqualTo(1);
 
-        assertThat(vectors.countExisting(
+        assertThat(vectors.countGeneration(
                 profile,
-                new GenerationIdentity("doc-1", 1L, 1L),
-                List.of(oldVectorId)
+                oldIdentity,
+                RetrievalStorageState.ARCHIVED
         )).isZero();
         assertThat(vectors.countExisting(
                 profile,
@@ -337,12 +349,17 @@ class PostgresVectorReconciliationIntegrationTest {
                 ))
         );
 
+        GenerationIdentity oldIdentity =
+                new GenerationIdentity("doc-missing", 1L, 1L);
+        assertThat(vectors.archiveGeneration(profile, oldIdentity))
+                .isEqualTo(1);
+
         assertThat(manifests.findVectorIds("doc-missing", 1L)).isEmpty();
         assertThat(reconciliation.reconcileBatch()).isEqualTo(1);
-        assertThat(vectors.countExisting(
+        assertThat(vectors.countGeneration(
                 profile,
-                new GenerationIdentity("doc-missing", 1L, 1L),
-                List.of(oldVectorId)
+                oldIdentity,
+                RetrievalStorageState.ARCHIVED
         )).isZero();
         assertThat(jdbc.queryForObject(
                 """
