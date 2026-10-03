@@ -116,6 +116,7 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
                     explain(benchmarkConnection, query)
             );
             assertAuthorizedPartitionsOnly(plan, scopeSize);
+            assertHnswCandidateBound(plan, TOP_K);
 
             scopeResults.add(new ScopeResult(
                     scopeSize,
@@ -732,6 +733,25 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
             statement.execute("RESET hnsw.ef_search");
             statement.execute("RESET hnsw.iterative_scan");
         }
+    }
+
+    private static void assertHnswCandidateBound(
+            PlanSummary plan,
+            int candidateLimit
+    ) {
+        assertThat(plan.indexNames())
+                .anySatisfy(index ->
+                        assertThat(index.toLowerCase())
+                                .contains("embedding")
+                );
+
+        plan.executedRelationRows().forEach((relation, rows) -> {
+            if (relation.startsWith("matrix_list_al_")) {
+                assertThat(rows)
+                        .as("%s must stay candidate-bounded", relation)
+                        .isLessThanOrEqualTo(candidateLimit);
+            }
+        });
     }
 
     private static void assertAuthorizedPartitionsOnly(
