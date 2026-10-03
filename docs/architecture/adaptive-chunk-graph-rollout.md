@@ -83,6 +83,12 @@ Graph still does not affect answers.
 
 Quality gate: stable storage growth under replay/load tests.
 
+## Phase 3.5 — Statistical replay gate
+
+Before shadow expansion influences a production decision, run the paired statistical protocol in `adaptive-memory-statistical-evaluation.md`.
+
+Required outputs include primary-metric delta, paired bootstrap confidence interval, Friedman omnibus result for multi-policy experiments, Holm-corrected Wilcoxon comparisons, paired effect size, slice regressions, and security/SLO gate results.
+
 ## Phase 4 — Shadow expansion
 
 For strong reranked seeds, query ACTIVE graph neighbours and compute candidate
