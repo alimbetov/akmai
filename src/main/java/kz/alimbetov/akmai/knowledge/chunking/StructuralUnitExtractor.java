@@ -20,17 +20,39 @@ public class StructuralUnitExtractor {
 
     private static final Pattern MARKDOWN_HEADING =
             Pattern.compile("^(#{1,6})\\s+(.+)$");
+
     private static final Pattern LEGAL_HEADING = Pattern.compile(
-            "^(LAW|ЗАКОН|ЗАҢ|法律|PART|ЧАСТЬ|БӨЛІМ|编|CHAPTER|ГЛАВА|ТАРАУ|章|SECTION|РАЗДЕЛ|БӨЛІК|节|ARTICLE|СТАТЬЯ|БАП|条|PARAGRAPH|ПАРАГРАФ|ТАРМАҚ|款|SUBPARAGRAPH|ПОДПАРАГРАФ|ТАРМАҚША|项)(?=\\s|$|[.:：]).*$",
+            "^(LAW|ЗАКОН|ЗАҢ|法律|GESETZ|LOI|LEY|LEI|LEGGE|KANUN|ΝΟΜΟΣ"
+                    + "|PART|ЧАСТЬ|БӨЛІМ|编|TEIL|PARTIE|PARTE|KISIM|ΜΕΡΟΣ"
+                    + "|CHAPTER|ГЛАВА|ТАРАУ|章|KAPITEL|CHAPITRE|CAPÍTULO"
+                    + "|CAPITULO|CAPITOLO|CAPO|BÖLÜM|ΚΕΦΑΛΑΙΟ"
+                    + "|SECTION|РАЗДЕЛ|БӨЛІК|节|ABSCHNITT|SECCIÓN|SECCION"
+                    + "|SEÇÃO|SECAO|SECÇÃO|SECCAO|SEZIONE|ΤΜΗΜΑ"
+                    + "|ARTICLE|СТАТЬЯ|БАП|条|ARTIKEL|ARTÍCULO|ARTICULO"
+                    + "|ARTIGO|ARTICOLO|MADDE|ΆΡΘΡΟ|ΑΡΘΡΟ"
+                    + "|PARAGRAPH|ПАРАГРАФ|ТАРМАҚ|款|ABSATZ|PARAGRAPHE"
+                    + "|PÁRRAFO|PARRAFO|PARÁGRAFO|PARAGRAFO|COMMA"
+                    + "|FIKRA|ΠΑΡΑΓΡΑΦΟΣ"
+                    + "|SUBPARAGRAPH|ПОДПАРАГРАФ|ТАРМАҚША|项|UNTERABSATZ"
+                    + "|ALINÉA|ALINEA|APARTADO|INCISO|ALÍNEA|BENT"
+                    + "|ΕΔΆΦΙΟ|ΕΔΑΦΙΟ)(?=\\s|$|[.:：]).*$",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
     );
-    private static final Pattern KAZAKH_NUMBERED_LEGAL_HEADING = Pattern.compile(
-            "^\\d+(?:\\.\\d+)*[-‑–—]?\\s*(БӨЛІМ|ТАРАУ|БӨЛІК|БАП|ТАРМАҚША|ТАРМАҚ)(?=\\s|$|[.:：]).*$",
-            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
-    );
-    private static final Pattern CHINESE_ORDINAL_LEGAL_HEADING = Pattern.compile(
-            "^第[一二三四五六七八九十百千万零〇两\\d]+(编|章|节|条|款|项).*$"
-    );
+
+    private static final Pattern KAZAKH_NUMBERED_LEGAL_HEADING =
+            Pattern.compile(
+                    "^\\d+(?:\\.\\d+)*[-‑–—]?\\s*"
+                            + "(БӨЛІМ|ТАРАУ|БӨЛІК|БАП|ТАРМАҚША|ТАРМАҚ)"
+                            + "(?=\\s|$|[.:：]).*$",
+                    Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
+            );
+
+    private static final Pattern CHINESE_ORDINAL_LEGAL_HEADING =
+            Pattern.compile(
+                    "^第[一二三四五六七八九十百千万零〇两\\d]+"
+                            + "(编|章|节|条|款|项).*$"
+            );
+
     private static final Pattern NUMBERED_LINE =
             Pattern.compile("^\\d+(?:\\.\\d+)*[.)]?\\s+.+$");
 
@@ -74,12 +96,16 @@ public class StructuralUnitExtractor {
                 continue;
             }
 
-            for (String paragraph : sentenceSplit(value)) {
+            for (String paragraph : MultilingualSentenceSplitter.split(
+                    value,
+                    document.language()
+            )) {
                 String text = paragraph.trim();
                 if (!text.isEmpty()) {
-                    StructuralRole role = NUMBERED_LINE.matcher(text).matches()
-                            ? StructuralRole.LIST_ITEM
-                            : StructuralRole.PARAGRAPH;
+                    StructuralRole role =
+                            NUMBERED_LINE.matcher(text).matches()
+                                    ? StructuralRole.LIST_ITEM
+                                    : StructuralRole.PARAGRAPH;
                     units.add(new SemanticUnit(
                             text,
                             currentSection,
@@ -94,13 +120,10 @@ public class StructuralUnitExtractor {
         return units;
     }
 
-    private String[] sentenceSplit(String value) {
-        return value.split(
-                "(?<=[。！？])|(?<=[.!?])\\s+(?=[\\p{L}\\p{N}#])"
-        );
-    }
-
-    private Heading heading(String value, KnowledgeDomain domain) {
+    private Heading heading(
+            String value,
+            KnowledgeDomain domain
+    ) {
         Matcher markdown = MARKDOWN_HEADING.matcher(value);
         if (markdown.matches()) {
             return new Heading(markdown.group(1).length(), value);
@@ -111,12 +134,14 @@ public class StructuralUnitExtractor {
             return new Heading(legalLevel(legal.group(1)), value);
         }
 
-        Matcher kazakh = KAZAKH_NUMBERED_LEGAL_HEADING.matcher(value);
+        Matcher kazakh =
+                KAZAKH_NUMBERED_LEGAL_HEADING.matcher(value);
         if (kazakh.matches()) {
             return new Heading(legalLevel(kazakh.group(1)), value);
         }
 
-        Matcher chinese = CHINESE_ORDINAL_LEGAL_HEADING.matcher(value);
+        Matcher chinese =
+                CHINESE_ORDINAL_LEGAL_HEADING.matcher(value);
         if (chinese.matches()) {
             return new Heading(legalLevel(chinese.group(1)), value);
         }
@@ -132,25 +157,52 @@ public class StructuralUnitExtractor {
     private int legalLevel(String token) {
         String upper = token.toUpperCase(Locale.ROOT);
         return switch (upper) {
-            case "LAW", "ЗАКОН", "ЗАҢ", "法律" -> 1;
-            case "PART", "ЧАСТЬ", "БӨЛІМ", "编" -> 2;
-            case "CHAPTER", "ГЛАВА", "ТАРАУ", "章" -> 3;
-            case "SECTION", "РАЗДЕЛ", "БӨЛІК", "节" -> 4;
-            case "ARTICLE", "СТАТЬЯ", "БАП", "条" -> 5;
-            case "SUBPARAGRAPH", "ПОДПАРАГРАФ", "ТАРМАҚША", "项" -> 7;
-            case "PARAGRAPH", "ПАРАГРАФ", "ТАРМАҚ", "款" -> 6;
+            case "LAW", "ЗАКОН", "ЗАҢ", "法律", "GESETZ", "LOI",
+                    "LEY", "LEI", "LEGGE", "KANUN", "ΝΟΜΟΣ" -> 1;
+
+            case "PART", "ЧАСТЬ", "БӨЛІМ", "编", "TEIL", "PARTIE",
+                    "PARTE", "KISIM", "ΜΕΡΟΣ" -> 2;
+
+            case "CHAPTER", "ГЛАВА", "ТАРАУ", "章", "KAPITEL",
+                    "CHAPITRE", "CAPÍTULO", "CAPITULO", "CAPITOLO",
+                    "CAPO", "BÖLÜM", "ΚΕΦΑΛΑΙΟ" -> 3;
+
+            case "SECTION", "РАЗДЕЛ", "БӨЛІК", "节", "ABSCHNITT",
+                    "SECCIÓN", "SECCION", "SEÇÃO", "SECAO", "SECÇÃO",
+                    "SECCAO", "SEZIONE", "ΤΜΗΜΑ" -> 4;
+
+            case "ARTICLE", "СТАТЬЯ", "БАП", "条", "ARTIKEL",
+                    "ARTÍCULO", "ARTICULO", "ARTIGO", "ARTICOLO",
+                    "MADDE", "ΆΡΘΡΟ", "ΑΡΘΡΟ" -> 5;
+
+            case "PARAGRAPH", "ПАРАГРАФ", "ТАРМАҚ", "款", "ABSATZ",
+                    "PARAGRAPHE", "PÁRRAFO", "PARRAFO", "PARÁGRAFO",
+                    "PARAGRAFO", "COMMA", "FIKRA", "ΠΑΡΑΓΡΑΦΟΣ" -> 6;
+
+            case "SUBPARAGRAPH", "ПОДПАРАГРАФ", "ТАРМАҚША", "项",
+                    "UNTERABSATZ", "ALINÉA", "ALINEA", "APARTADO",
+                    "INCISO", "ALÍNEA", "BENT", "ΕΔΆΦΙΟ",
+                    "ΕΔΑΦΙΟ" -> 7;
+
             default -> 7;
         };
     }
 
     private int numberedLevel(String value) {
-        String token = value.split("\\s+", 2)[0].replaceAll("[.)]+$", "");
+        String token = value.split("\\s+", 2)[0]
+                .replaceAll("[.)]+$", "");
         return Math.min(
                 7,
-                5 + Math.max(0, token.split("\\.").length - 1)
+                5 + Math.max(
+                        0,
+                        token.split("\\.").length - 1
+                )
         );
     }
 
-    private record Heading(int level, String text) {
+    private record Heading(
+            int level,
+            String text
+    ) {
     }
 }
