@@ -1,0 +1,44 @@
+industry: example
+wave: 1
+version: 1
+
+concepts:
+  - id: example_concept
+    semanticType: OTHER
+    weight: 1.0
+    expansion:
+      maxTerms: 2
+    terms:
+      kk:
+        preferred: мысал
+        aliases: []
+      ru:
+        preferred: пример
+        aliases: []
+      en:
+        preferred: example
+        aliases: []
+      zh:
+        preferred: 示例
+        aliases: []
+      de:
+        preferred: Beispiel
+        aliases: []
+      fr:
+        preferred: exemple
+        aliases: []
+      es:
+        preferred: ejemplo
+        aliases: []
+      pt:
+        preferred: exemplo
+        aliases: []
+      it:
+        preferred: esempio
+        aliases: []
+      tr:
+        preferred: örnek
+        aliases: []
+      el:
+        preferred: παράδειγμα
+        aliases: []
