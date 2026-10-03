@@ -14,11 +14,47 @@ public class VectorGenerationRepository {
     }
 
     public void save(
+            GenerationIdentity identity,
+            List<VectorGenerationEntry> entries
+    ) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        save(
+                identity.documentId(),
+                identity.generation(),
+                entries
+        );
+    }
+
+    public void save(
             String documentId,
             long generation,
             List<VectorGenerationEntry> entries
     ) {
         save(documentId, generation, null, (short) 2, entries);
+    }
+
+    public void save(
+            GenerationIdentity identity,
+            String embeddingProfileId,
+            short physicalIdVersion,
+            List<VectorGenerationEntry> entries
+    ) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        save(
+                identity.documentId(),
+                identity.generation(),
+                embeddingProfileId,
+                physicalIdVersion,
+                entries
+        );
     }
 
     public void save(
@@ -52,6 +88,18 @@ public class VectorGenerationRepository {
         );
     }
 
+    public List<String> findVectorIds(GenerationIdentity identity) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        return findVectorIds(
+                identity.documentId(),
+                identity.generation()
+        );
+    }
+
     public List<String> findVectorIds(String documentId, long generation) {
         return jdbcTemplate.queryForList(
                 """
@@ -64,6 +112,18 @@ public class VectorGenerationRepository {
                 String.class,
                 documentId,
                 generation
+        );
+    }
+
+    public String findEmbeddingProfileId(GenerationIdentity identity) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        return findEmbeddingProfileId(
+                identity.documentId(),
+                identity.generation()
         );
     }
 
@@ -81,6 +141,18 @@ public class VectorGenerationRepository {
                 documentId,
                 generation
         ).stream().findFirst().orElse(null);
+    }
+
+    public void deleteGeneration(GenerationIdentity identity) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        deleteGeneration(
+                identity.documentId(),
+                identity.generation()
+        );
     }
 
     public void deleteGeneration(String documentId, long generation) {
