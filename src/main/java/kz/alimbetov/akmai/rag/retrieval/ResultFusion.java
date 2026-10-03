@@ -41,8 +41,13 @@ public class ResultFusion {
         Map<String, Integer> ranks = new LinkedHashMap<>();
 
         for (RetrievalHit hit : hits) {
-            long generation = generation(hit);
-            if (generation <= 0
+            long generation = hit.generation();
+            long accessLevel = effectiveAccessLevel(
+                    hit,
+                    accessLevels
+            );
+            if (accessLevel <= 0
+                    || generation <= 0
                     || hit.documentId() == null
                     || hit.documentId().isBlank()
                     || hit.chunkId() == null
@@ -56,8 +61,12 @@ public class ResultFusion {
                     rawScore(hit)
             );
             accumulated.computeIfAbsent(
-                            key(hit, generation),
-                            ignored -> new Accumulator(hit, generation)
+                            key(hit, accessLevel, generation),
+                            ignored -> new Accumulator(
+                                    hit,
+                                    accessLevel,
+                                    generation
+                            )
                     )
                     .add(evidence, authorityTier(hit));
         }
@@ -67,8 +76,7 @@ public class ResultFusion {
         }
 
         Map<CanonicalKey, SearchProjection> canonical = canonicalProjections(
-                accumulated.values().stream().toList(),
-                accessLevels
+                accumulated.values().stream().toList()
         );
 
         return accumulated.entrySet().stream()
@@ -88,15 +96,18 @@ public class ResultFusion {
     }
 
     private Map<CanonicalKey, SearchProjection> canonicalProjections(
-            List<Accumulator> values,
-            Set<Long> accessLevels
+            List<Accumulator> values
     ) {
         LinkedHashMap<DocumentGeneration, List<String>> grouped =
                 new LinkedHashMap<>();
         for (Accumulator value : values) {
             RetrievalHit hit = value.representative;
             grouped.computeIfAbsent(
-                    new DocumentGeneration(hit.documentId(), value.generation),
+                    new DocumentGeneration(
+                            value.accessLevel,
+                            hit.documentId(),
+                            value.generation
+                    ),
                     ignored -> new ArrayList<>()
             ).add(hit.chunkId());
         }
@@ -108,11 +119,12 @@ public class ResultFusion {
                                 scope.documentId(),
                                 scope.generation(),
                                 chunkIds.stream().distinct().toList(),
-                                accessLevels
+                                Set.of(scope.accessLevel())
                         )
                         .forEach(projection ->
                                 result.put(
                                         new CanonicalKey(
+                                                projection.accessLevel(),
                                                 projection.documentId(),
                                                 projection.generation(),
                                                 projection.chunkId()
@@ -129,17 +141,31 @@ public class ResultFusion {
         return String.valueOf(queryChunkId) + "|" + hit.type();
     }
 
-    private CanonicalKey key(RetrievalHit hit, long generation) {
+    private CanonicalKey key(
+            RetrievalHit hit,
+            long accessLevel,
+            long generation
+    ) {
         return new CanonicalKey(
+                accessLevel,
                 hit.documentId(),
                 generation,
                 hit.chunkId()
         );
     }
 
-    private long generation(RetrievalHit hit) {
-        Object value = hit.metadata().get("generation");
-        return value instanceof Number number ? number.longValue() : -1L;
+    private long effectiveAccessLevel(
+            RetrievalHit hit,
+            Set<Long> allowed
+    ) {
+        if (hit.accessLevel() > 0) {
+            return allowed.contains(hit.accessLevel())
+                    ? hit.accessLevel()
+                    : 0L;
+        }
+        return allowed.size() == 1
+                ? allowed.iterator().next()
+                : 0L;
     }
 
     private Double rawScore(RetrievalHit hit) {
@@ -164,13 +190,19 @@ public class ResultFusion {
     private final class Accumulator {
 
         private final RetrievalHit representative;
+        private final long accessLevel;
         private final long generation;
         private final List<RetrievalEvidence> evidence = new ArrayList<>();
         private double fusedScore;
         private int authorityTier = Integer.MAX_VALUE;
 
-        private Accumulator(RetrievalHit representative, long generation) {
+        private Accumulator(
+                RetrievalHit representative,
+                long accessLevel,
+                long generation
+        ) {
             this.representative = representative;
+            this.accessLevel = accessLevel;
             this.generation = generation;
         }
 
@@ -189,7 +221,9 @@ public class ResultFusion {
             metadata.put("authorityTier", authorityTier);
             return new RetrievalHit(
                     source.type(),
+                    source.accessLevel(),
                     source.documentId(),
+                    source.generation(),
                     source.chunkId(),
                     source.text(),
                     metadata,
@@ -212,7 +246,9 @@ public class ResultFusion {
             metadata.put("chunkIndex", projection.chunkIndex());
             return new RetrievalHit(
                     representative.type(),
+                    projection.accessLevel(),
                     projection.documentId(),
+                    projection.generation(),
                     projection.chunkId(),
                     projection.text(),
                     metadata
@@ -221,12 +257,14 @@ public class ResultFusion {
     }
 
     private record DocumentGeneration(
+            long accessLevel,
             String documentId,
             long generation
     ) {
     }
 
     private record CanonicalKey(
+            long accessLevel,
             String documentId,
             long generation,
             String chunkId
