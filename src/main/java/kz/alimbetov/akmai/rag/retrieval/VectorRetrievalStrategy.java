@@ -32,6 +32,7 @@ public class VectorRetrievalStrategy implements RetrievalStrategy {
     ) {
         return repository.search(
                         queryChunk.semanticText(),
+                        queryChunk.language(),
                         List.copyOf(context.documentIds()),
                         context.accessLevels(),
                         properties.vectorTopK(),
