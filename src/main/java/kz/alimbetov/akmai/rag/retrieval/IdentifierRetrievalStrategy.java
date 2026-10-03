@@ -114,7 +114,9 @@ public class IdentifierRetrievalStrategy implements RetrievalStrategy {
 
         return new RetrievalHit(
                 RetrievalType.IDENTIFIER,
+                projection.accessLevel(),
                 projection.documentId(),
+                projection.generation(),
                 projection.chunkId(),
                 projection.text(),
                 metadata
