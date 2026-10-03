@@ -1,7 +1,7 @@
 # HOT-only retrieval plane and destructive lifecycle
 
 Date: 2026-10-03
-Status: implementation in progress
+Status: implementation under final review
 Prototype reference: `ab24b7e991280278622ce2fa887fe32f12573813`
 
 ## Decision
@@ -28,14 +28,19 @@ There is no retrieval `storage_state` and no `_s0/_s1` layer.
    `(document_id, generation)` B-tree. Projection language leaves own their
    local lexical indexes.
 4. Retention lock order is lifecycle first, generation second.
-5. A standalone retirement tombstone is inserted as `PURGING` before the
+5. Replacement publication moves the previous generation from `PUBLISHED`
+   to `RETIRING`; `RETIRING` is not a completed retirement state.
+6. A standalone retirement tombstone is committed as `PURGING` before the
    first destructive payload mutation. It is not FK-bound to generation or
    embedding-profile control rows.
-6. The generation can become `RETIRED` only after payload deletion is
-   verified and the tombstone becomes `PURGED`.
-7. Normal reconciliation is verification-first. Repair is a separate code
+7. The generation can become `RETIRED` only after every generation-owned
+   payload store is verified empty and the tombstone becomes `PURGED`.
+8. Global ANN applies the lifecycle publication fence inside each
+   language/ACL branch before branch-local `LIMIT`, so stale HOT vectors
+   cannot crowd out published candidates.
+9. Normal reconciliation is verification-first. Repair is a separate code
    path and does not modify historical tombstone facts.
-8. Tombstones and audit records never contain document text or embeddings.
+10. Tombstones and audit records never contain document text or embeddings.
 
 ## Recovery model
 
@@ -61,9 +66,18 @@ Production acceptance requires an integration test proving that retention and
 ingestion/re-ingestion publication cannot deadlock, delete a newly published
 generation, or cross ACL boundaries.
 
-## Acceptance gate
+## Acceptance gates
 
-The architecture is mergeable only when correctness and recall are preserved,
-retrieval has no material regression, retention is materially faster, WAL is
-materially lower, vacuum pressure is no worse, and the physical/catalog
-topology is simpler.
+This implementation phase requires:
+
+- correctness and ACL isolation preserved;
+- published-generation visibility preserved before candidate limits;
+- retrieval recall and latency benchmarks show no regression;
+- purge/tombstone state transitions and rollback safety are covered;
+- retention/publication lock ordering is deadlock-safe;
+- physical/catalog topology is simpler.
+
+The A-vs-D economics campaign is intentionally deferred to a separately
+approved measurement phase. That follow-up must quantify retention throughput,
+WAL, dead tuples/vacuum pressure and storage footprint before those economic
+advantages are claimed as measured production results.
