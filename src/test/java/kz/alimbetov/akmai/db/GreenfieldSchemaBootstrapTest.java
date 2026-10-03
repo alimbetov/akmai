@@ -79,11 +79,23 @@ class GreenfieldSchemaBootstrapTest {
                 String.class
         )).isEqualTo("LIST (language)");
 
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT pg_get_partkeydef(
+                    'knowledge_search_projection_al_1_lang_en'::regclass
+                )
+                """,
+                String.class
+        )).isEqualTo("LIST (storage_state)");
+
         assertThat(regclass(
-                "public.knowledge_search_projection_al_1_lang_en"
+                "public.knowledge_search_projection_al_1_lang_en_s0"
         )).isNotNull();
         assertThat(regclass(
-                "public.knowledge_search_projection_al_10_lang_el"
+                "public.knowledge_search_projection_al_1_lang_en_s1"
+        )).isNotNull();
+        assertThat(regclass(
+                "public.knowledge_search_projection_al_10_lang_el_s0"
         )).isNotNull();
 
         Integer languages = jdbc.queryForObject(
@@ -217,7 +229,7 @@ class GreenfieldSchemaBootstrapTest {
         );
         assertThat(physicalTable)
                 .isEqualTo(
-                        "knowledge_search_projection_al_1_lang_en"
+                        "knowledge_search_projection_al_1_lang_en_s0"
                 );
 
         assertThatThrownBy(() -> jdbc.update(
@@ -313,8 +325,19 @@ class GreenfieldSchemaBootstrapTest {
                 """,
                 String.class
         )).isEqualTo("LIST (language)");
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT pg_get_partkeydef(
+                    'akmai_vector.test_vec_al_1_lang_en'::regclass
+                )
+                """,
+                String.class
+        )).isEqualTo("LIST (storage_state)");
         assertThat(regclass(
-                "akmai_vector.test_vec_al_1_lang_en"
+                "akmai_vector.test_vec_al_1_lang_en_s0"
+        )).isNotNull();
+        assertThat(regclass(
+                "akmai_vector.test_vec_al_1_lang_en_s1"
         )).isNotNull();
 
         Integer hnswIndexes = jdbc.queryForObject(
@@ -322,12 +345,24 @@ class GreenfieldSchemaBootstrapTest {
                 SELECT count(*)
                 FROM pg_indexes
                 WHERE schemaname = 'akmai_vector'
-                  AND tablename = 'test_vec_al_1_lang_en'
+                  AND tablename = 'test_vec_al_1_lang_en_s0'
                   AND lower(indexdef) LIKE '%using hnsw%'
                 """,
                 Integer.class
         );
         assertThat(hnswIndexes).isEqualTo(1);
+
+        Integer archiveHnswIndexes = jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM pg_indexes
+                WHERE schemaname = 'akmai_vector'
+                  AND tablename = 'test_vec_al_1_lang_en_s1'
+                  AND lower(indexdef) LIKE '%using hnsw%'
+                """,
+                Integer.class
+        );
+        assertThat(archiveHnswIndexes).isZero();
 
         jdbc.update(
                 """
@@ -364,7 +399,31 @@ class GreenfieldSchemaBootstrapTest {
                 String.class
         );
         assertThat(physicalTable)
-                .isEqualTo("akmai_vector.test_vec_al_1_lang_en");
+                .isEqualTo(
+                        "akmai_vector.test_vec_al_1_lang_en_s0"
+                );
+
+        jdbc.update(
+                """
+                UPDATE akmai_vector.test_vec
+                SET storage_state = 1
+                WHERE access_level = 1
+                  AND document_id = 'doc-vector'
+                  AND generation = 1
+                """
+        );
+
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT tableoid::regclass::text
+                FROM akmai_vector.test_vec
+                WHERE id =
+                    '11111111-1111-1111-1111-111111111111'
+                """,
+                String.class
+        )).isEqualTo(
+                "akmai_vector.test_vec_al_1_lang_en_s1"
+        );
 
         assertThatThrownBy(() -> jdbc.update(
                 """
