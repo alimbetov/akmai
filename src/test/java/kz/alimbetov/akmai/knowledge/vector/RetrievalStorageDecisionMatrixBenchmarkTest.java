@@ -386,7 +386,12 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
                             v.access_level,
                             v.embedding <=> ? AS distance
                         FROM matrix_list v
+                        JOIN matrix_lifecycle l
+                          ON l.document_id = v.document_id
+                         AND l.published_generation = v.generation
+                         AND l.access_level = v.access_level
                         WHERE v.access_level = ?
+                          AND l.retention_status = 'ACTIVE'
                         ORDER BY v.embedding <=> ?
                         LIMIT ?
                     )
@@ -400,11 +405,6 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
 
         sql.append("""
                 ) candidate
-                JOIN matrix_lifecycle l
-                  ON l.document_id = candidate.document_id
-                 AND l.published_generation = candidate.generation
-                 AND l.access_level = candidate.access_level
-                WHERE l.retention_status = 'ACTIVE'
                 ORDER BY candidate.distance
                 LIMIT ?
                 """);
@@ -423,9 +423,14 @@ class RetrievalStorageDecisionMatrixBenchmarkTest {
         );
         String sql = """
                 WITH candidates AS MATERIALIZED (
-                    SELECT id, embedding
-                    FROM matrix_list
-                    WHERE access_level IN (%s)
+                    SELECT v.id, v.embedding
+                    FROM matrix_list v
+                    JOIN matrix_lifecycle l
+                      ON l.document_id = v.document_id
+                     AND l.published_generation = v.generation
+                     AND l.access_level = v.access_level
+                    WHERE v.access_level IN (%s)
+                      AND l.retention_status = 'ACTIVE'
                 )
                 SELECT id
                 FROM candidates
