@@ -1,7 +1,9 @@
 package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import kz.alimbetov.akmai.knowledge.audit.AuditEventRepository;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileRepository;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
@@ -30,6 +32,7 @@ public class ChunkRetentionService {
     private final PostgresGenerationVectorRepository vectorRepository;
     private final EmbeddingProfileRepository profileRepository;
     private AkmaiMetrics metrics;
+    private AuditEventRepository audit;
 
     public ChunkRetentionService(
             JdbcTemplate jdbcTemplate,
@@ -55,6 +58,11 @@ public class ChunkRetentionService {
     @Autowired(required = false)
     void setMetrics(AkmaiMetrics metrics) {
         this.metrics = metrics;
+    }
+
+    @Autowired(required = false)
+    void setAudit(AuditEventRepository audit) {
+        this.audit = audit;
     }
 
     public RetentionCleanupResult cleanup(RetentionClaim claim) {
@@ -126,36 +134,55 @@ public class ChunkRetentionService {
             throw new StaleClaimException();
         }
 
-        String profileId = jdbcTemplate.queryForObject(
+        GenerationDescriptor generation = jdbcTemplate.query(
                 """
-                SELECT embedding_profile_id
+                SELECT embedding_profile_id,
+                       content_fingerprint,
+                       physical_id_version,
+                       chunk_count
                 FROM knowledge_document_generation
                 WHERE document_id = ?
                   AND generation = ?
+                FOR UPDATE
                 """,
-                String.class,
+                (rs, rowNum) -> new GenerationDescriptor(
+                        rs.getString("embedding_profile_id"),
+                        rs.getString("content_fingerprint"),
+                        rs.getShort("physical_id_version"),
+                        (Integer) rs.getObject("chunk_count")
+                ),
                 claim.documentId(),
                 claim.generation()
+        ).stream().findFirst().orElseThrow(() ->
+                new IllegalStateException(
+                        "Generation does not exist for retention"
+                )
         );
-        if (profileId == null || profileId.isBlank()) {
+
+        if (generation.profileId() == null
+                || generation.profileId().isBlank()) {
             throw new IllegalStateException(
                     "Generation has no verifiable embedding profile"
             );
         }
-        EmbeddingProfile profile = profileRepository.findById(profileId)
+        EmbeddingProfile profile = profileRepository
+                .findById(generation.profileId())
                 .orElseThrow(() -> new IllegalStateException(
-                        "Embedding profile is missing: " + profileId
+                        "Embedding profile is missing: "
+                                + generation.profileId()
                 ));
 
         List<String> vectorIds =
                 vectorGenerationRepository.findVectorIds(identity);
-        if (vectorIds.isEmpty()) {
+        if (vectorIds.isEmpty()
+                && generation.chunkCount() != null
+                && generation.chunkCount() > 0) {
             throw new IllegalStateException(
                     "Vector manifest missing; reconciliation is required"
             );
         }
 
-        Integer chunkCount = jdbcTemplate.queryForObject(
+        Integer projectionCount = jdbcTemplate.queryForObject(
                 """
                 SELECT count(*)
                 FROM knowledge_search_projection
@@ -168,32 +195,29 @@ public class ChunkRetentionService {
                 identity.documentId(),
                 identity.generation()
         );
+        int expectedProjections =
+                projectionCount == null ? 0 : projectionCount;
 
-        int archivedVectors = vectorRepository.archiveGeneration(
+        int deletedVectors = vectorRepository.deleteGeneration(
                 profile,
                 identity
         );
-        if (archivedVectors != vectorIds.size()) {
+        if (deletedVectors != vectorIds.size()) {
             throw new IllegalStateException(
-                    "Vector archive count does not match generation manifest"
+                    "Vector delete count does not match generation manifest"
             );
         }
-        if (vectorRepository.countGeneration(
-                profile,
-                identity,
-                RetrievalStorageState.ACTIVE
-        ) != 0) {
+        if (vectorRepository.countGeneration(profile, identity) != 0) {
             throw new IllegalStateException(
-                    "Active vectors remain after generation archive"
+                    "Vectors remain after hot generation purge"
             );
         }
 
-        int archivedProjections =
-                projectionRepository.archiveGeneration(identity);
-        if (chunkCount != null
-                && archivedProjections != chunkCount) {
+        int deletedProjections =
+                projectionRepository.deleteGenerationCount(identity);
+        if (deletedProjections != expectedProjections) {
             throw new IllegalStateException(
-                    "Projection archive count does not match generation"
+                    "Projection delete count does not match generation"
             );
         }
 
@@ -220,12 +244,65 @@ public class ChunkRetentionService {
                 identity.generation()
         );
         identifierRepository.deleteGeneration(identity);
+        vectorGenerationRepository.deleteGeneration(identity);
 
         if (!finalFenceValid(claim)) {
             throw new StaleClaimException();
         }
 
-        jdbcTemplate.update(
+        int tombstone = jdbcTemplate.update(
+                """
+                INSERT INTO knowledge_retired_generation (
+                    document_id,
+                    generation,
+                    access_level,
+                    embedding_profile_id,
+                    projection_count,
+                    vector_count,
+                    content_fingerprint,
+                    physical_id_version,
+                    retention_policy,
+                    retired_at,
+                    purge_after,
+                    cleanup_status
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    clock_timestamp(),
+                    clock_timestamp() + interval '7 days',
+                    'PENDING_VERIFY'
+                )
+                ON CONFLICT (document_id, generation) DO NOTHING
+                """,
+                identity.documentId(),
+                identity.generation(),
+                identity.accessLevel(),
+                generation.profileId(),
+                deletedProjections,
+                deletedVectors,
+                generation.contentFingerprint(),
+                generation.physicalIdVersion(),
+                fence.lifecyclePolicy()
+        );
+        if (tombstone != 1) {
+            throw new IllegalStateException(
+                    "Retired generation tombstone already exists"
+            );
+        }
+
+        if (audit != null) {
+            audit.append(
+                    "HOT_PAYLOAD_PURGED",
+                    identity,
+                    claim.claimId(),
+                    "retention-worker",
+                    Map.of(
+                            "projectionCount", deletedProjections,
+                            "vectorCount", deletedVectors
+                    )
+            );
+        }
+
+        int retired = jdbcTemplate.update(
                 """
                 UPDATE knowledge_document_generation
                 SET generation_status = 'RETIRED',
@@ -233,11 +310,16 @@ public class ChunkRetentionService {
                     cleanup_required = true
                 WHERE document_id = ?
                   AND generation = ?
-                  AND generation_status IN ('PUBLISHED', 'RETIRED')
+                  AND generation_status = 'PUBLISHED'
                 """,
                 claim.documentId(),
                 claim.generation()
         );
+        if (retired != 1) {
+            throw new IllegalStateException(
+                    "Generation is no longer published during retention"
+            );
+        }
 
         int deleted = jdbcTemplate.update(
                 """
@@ -275,7 +357,7 @@ public class ChunkRetentionService {
         return new RetentionCleanupResult(
                 claim.documentId(),
                 claim.generation(),
-                chunkCount == null ? 0 : chunkCount,
+                deletedProjections,
                 RetentionCleanupResult.Status.DELETED
         );
     }
@@ -289,6 +371,7 @@ public class ChunkRetentionService {
                        published_generation,
                        retention_status,
                        access_level,
+                       lifecycle_policy,
                        lease_until > clock_timestamp() AS lease_valid
                 FROM knowledge_document_lifecycle
                 WHERE document_id = ?
@@ -308,10 +391,11 @@ public class ChunkRetentionService {
                                         rs.getString("retention_status")
                                 )
                                 && rs.getBoolean("lease_valid"),
-                        rs.getLong("access_level")
+                        rs.getLong("access_level"),
+                        rs.getString("lifecycle_policy")
                 ),
                 claim.documentId()
-        ).stream().findFirst().orElse(new ClaimFence(false, 0L));
+        ).stream().findFirst().orElse(new ClaimFence(false, 0L, "TTL"));
     }
 
     private boolean finalFenceValid(RetentionClaim claim) {
@@ -345,7 +429,7 @@ public class ChunkRetentionService {
             }
         }
         LOGGER.info(
-                "retention_archive event=result status={} generation={} archivedChunks={}",
+                "retention_hot_purge event=result status={} generation={} deletedChunks={}",
                 result.status(),
                 result.generation(),
                 result.deletedChunks()
@@ -371,7 +455,16 @@ public class ChunkRetentionService {
 
     private record ClaimFence(
             boolean valid,
-            long accessLevel
+            long accessLevel,
+            String lifecyclePolicy
+    ) {
+    }
+
+    private record GenerationDescriptor(
+            String profileId,
+            String contentFingerprint,
+            short physicalIdVersion,
+            Integer chunkCount
     ) {
     }
 
