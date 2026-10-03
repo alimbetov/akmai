@@ -109,12 +109,13 @@ class ChunkRetentionServiceTest {
 
         assertThat(result.status())
                 .isEqualTo(RetentionCleanupResult.Status.STALE_CLAIM);
-        verify(vectors, never()).deleteIds(
+        verify(vectors, never()).archiveGeneration(
                 org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.anyList()
+                org.mockito.ArgumentMatchers.any()
         );
-        verify(projections, never()).deleteGeneration("doc-1", 7);
+        verify(projections, never()).archiveGeneration(
+                org.mockito.ArgumentMatchers.any()
+        );
         verify(identifiers, never()).deleteGeneration("doc-1", 7);
         verify(manifests, never()).deleteGeneration("doc-1", 7);
     }
