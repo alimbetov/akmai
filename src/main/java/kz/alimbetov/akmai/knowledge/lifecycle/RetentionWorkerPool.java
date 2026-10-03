@@ -2,8 +2,8 @@ package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import jakarta.annotation.PreDestroy;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -43,7 +43,7 @@ public class RetentionWorkerPool {
                 properties.workerParallelism(),
                 0L,
                 TimeUnit.MILLISECONDS,
-                new SynchronousQueue<>(),
+                new ArrayBlockingQueue<>(properties.queueCapacity()),
                 new ThreadPoolExecutor.AbortPolicy()
         );
     }
