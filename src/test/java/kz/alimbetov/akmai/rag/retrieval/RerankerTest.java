@@ -49,6 +49,54 @@ class RerankerTest {
     }
 
     @Test
+    void rerankingPreservesExplicitAclAndGenerationIdentity() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            RetrievalHit first = new RetrievalHit(
+                    RetrievalType.VECTOR,
+                    7,
+                    "doc",
+                    3,
+                    "first",
+                    "first",
+                    Map.of(),
+                    List.of(),
+                    0.9
+            );
+            RetrievalHit second = new RetrievalHit(
+                    RetrievalType.VECTOR,
+                    7,
+                    "doc",
+                    3,
+                    "second",
+                    "second",
+                    Map.of(),
+                    List.of(),
+                    0.8
+            );
+            Reranker reranker = reranker(
+                    (question, hits) -> List.of(0.8, 0.7),
+                    executor,
+                    Duration.ofSeconds(1)
+            );
+
+            List<RetrievalHit> result = reranker.rerank(
+                    List.of(first, second),
+                    "question"
+            );
+
+            assertThat(result)
+                    .allSatisfy(hit -> {
+                        assertThat(hit.accessLevel()).isEqualTo(7);
+                        assertThat(hit.generation()).isEqualTo(3);
+                        assertThat(hit.hasRoutingIdentity()).isTrue();
+                    });
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
     void scorerFailureFallsBackToOriginalRrfOrdering() {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
