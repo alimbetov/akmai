@@ -18,6 +18,7 @@ import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyContext;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.DocumentGenerationRepository;
+import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionProperties;
 import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository.VectorGenerationEntry;
@@ -98,10 +99,16 @@ public class PersistenceCoordinator {
         );
         idempotencyRepository.attachGeneration(idempotency, generation);
 
+        GenerationIdentity identity = new GenerationIdentity(
+                documentId,
+                generation,
+                accessLevel
+        );
+
         long startedNanos = System.nanoTime();
         try {
             List<SearchProjection> projections = baseProjections.stream()
-                    .map(value -> value.withGeneration(generation))
+                    .map(value -> value.withIdentity(identity))
                     .toList();
             List<float[]> embeddings = embeddingService.embed(projections, profile);
             List<DocumentIdentifier> identifiers = identifiers(projections);
