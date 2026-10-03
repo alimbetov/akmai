@@ -61,7 +61,7 @@ public class ReferenceGraphRepository {
         List<EdgeRow> edges = new ArrayList<>();
 
         for (SearchProjection projection : projections) {
-            extractor.extractAnchor(projection.text()).ifPresent(anchor ->
+            extractor.extractAnchor(\n                    projection.text(),\n                    projection.language()\n            ).ifPresent(anchor ->
                     targets.add(new TargetRow(projection, anchor))
             );
             for (CrossReference reference
