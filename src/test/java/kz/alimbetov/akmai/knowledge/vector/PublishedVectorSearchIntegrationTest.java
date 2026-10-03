@@ -180,6 +180,79 @@ class PublishedVectorSearchIntegrationTest {
     }
 
     @Test
+    void sameLanguageSearchUsesLocalLeafThenFallsBackCrossLanguage() {
+        lifecycle("en-doc", 1L, 1L);
+        lifecycle("ru-doc", 1L, 1L);
+        generation("en-doc", 1L, "PUBLISHED");
+        generation("ru-doc", 1L, "PUBLISHED");
+
+        PostgresGenerationVectorRepository.VectorRow en =
+                new PostgresGenerationVectorRepository.VectorRow(
+                        VectorIdentity.physicalId(
+                                "en-doc",
+                                1L,
+                                "en-chunk"
+                        ),
+                        "en-chunk",
+                        "en",
+                        "en-content",
+                        Map.of(
+                                "akmaiMetadataVersion", 2,
+                                "akmaiDocumentId", "en-doc",
+                                "akmaiGeneration", 1L,
+                                "akmaiEmbeddingProfileId",
+                                profile.profileId(),
+                                "akmaiChunkId", "en-chunk",
+                                "language", "en"
+                        ),
+                        new float[] {1f, 0f, 0f}
+                );
+        PostgresGenerationVectorRepository.VectorRow ru =
+                new PostgresGenerationVectorRepository.VectorRow(
+                        VectorIdentity.physicalId(
+                                "ru-doc",
+                                1L,
+                                "ru-chunk"
+                        ),
+                        "ru-chunk",
+                        "ru",
+                        "ru-content",
+                        Map.of(
+                                "akmaiMetadataVersion", 2,
+                                "akmaiDocumentId", "ru-doc",
+                                "akmaiGeneration", 1L,
+                                "akmaiEmbeddingProfileId",
+                                profile.profileId(),
+                                "akmaiChunkId", "ru-chunk",
+                                "language", "ru"
+                        ),
+                        new float[] {1f, 0f, 0f}
+                );
+
+        vectors.insertAll(profile, List.of(en, ru));
+
+        assertThat(search.search(
+                "query",
+                "en",
+                List.of(),
+                Set.of(1L),
+                1,
+                0.8
+        )).extracting(VectorSearchMatch::documentId)
+                .containsExactly("en-doc");
+
+        assertThat(search.search(
+                "query",
+                "en",
+                List.of(),
+                Set.of(1L),
+                2,
+                0.8
+        )).extracting(VectorSearchMatch::documentId)
+                .containsExactlyInAnyOrder("en-doc", "ru-doc");
+    }
+
+    @Test
     void hnswIterativeScanFillsTopKUnderSelectiveAccessFilter() {
         jdbc.update(
                 """
@@ -332,12 +405,14 @@ class PublishedVectorSearchIntegrationTest {
         return new PostgresGenerationVectorRepository.VectorRow(
                 VectorIdentity.physicalId(documentId, generation, chunkId),
                 chunkId,
+                "en",
                 Map.of(
                         "akmaiMetadataVersion", 2,
                         "akmaiDocumentId", documentId,
                         "akmaiGeneration", generation,
                         "akmaiEmbeddingProfileId", profile.profileId(),
-                        "akmaiChunkId", chunkId
+                        "akmaiChunkId", chunkId,
+                        "language", "en"
                 ),
                 embedding
         );
