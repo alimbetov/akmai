@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Set;
+import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -50,6 +51,14 @@ public class DocumentIdentifierRepository {
                     ps.setTimestamp(9, Timestamp.from(value.createdAt()));
                 }
         );
+    }
+
+    public void saveAll(
+            GenerationIdentity identity,
+            List<DocumentIdentifier> identifiers
+    ) {
+        requireGenerationIdentity(identity, identifiers);
+        saveAll(identifiers);
     }
 
     public List<DocumentIdentifier> findExact(
@@ -128,6 +137,20 @@ public class DocumentIdentifierRepository {
         );
     }
 
+    public List<DocumentIdentifier> findGeneration(
+            GenerationIdentity identity
+    ) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        return findGeneration(
+                identity.documentId(),
+                identity.generation()
+        );
+    }
+
     public void deleteGeneration(String documentId, long generation) {
         jdbcTemplate.update(
                 """
@@ -140,11 +163,49 @@ public class DocumentIdentifierRepository {
         );
     }
 
+    public void deleteGeneration(GenerationIdentity identity) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        deleteGeneration(
+                identity.documentId(),
+                identity.generation()
+        );
+    }
+
     public void deleteDocument(String documentId) {
         jdbcTemplate.update(
                 "DELETE FROM document_identifier WHERE document_id = ?",
                 documentId
         );
+    }
+
+    private void requireGenerationIdentity(
+            GenerationIdentity identity,
+            List<DocumentIdentifier> identifiers
+    ) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        if (identifiers == null || identifiers.isEmpty()) {
+            return;
+        }
+        boolean mismatch = identifiers.stream().anyMatch(
+                identifier -> !identity.documentId().equals(
+                                identifier.documentId()
+                        )
+                        || identity.generation()
+                                != identifier.generation()
+        );
+        if (mismatch) {
+            throw new IllegalArgumentException(
+                    "All identifiers must belong to generation identity"
+            );
+        }
     }
 
     private List<DocumentIdentifier> findLikeScoped(
