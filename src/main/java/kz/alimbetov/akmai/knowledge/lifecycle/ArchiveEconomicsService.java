@@ -105,9 +105,10 @@ public class ArchiveEconomicsService {
                 FROM sized
                 GROUP BY store
                 """,
-                rs -> stores.put(
-                        rs.getString("store"),
-                        new ArchiveEconomicsSnapshot.StoreFootprint(
+                (org.springframework.jdbc.core.RowCallbackHandler) rs ->
+                        stores.put(
+                                rs.getString("store"),
+                                new ArchiveEconomicsSnapshot.StoreFootprint(
                                 rs.getLong("estimated_live_rows"),
                                 rs.getLong("estimated_dead_rows"),
                                 rs.getLong("inserted_rows"),
@@ -115,9 +116,9 @@ public class ArchiveEconomicsService {
                                 rs.getLong("autovacuum_runs"),
                                 rs.getLong("total_bytes"),
                                 rs.getLong("leaf_count"),
-                                rs.getLong("max_leaf_bytes")
+                                        rs.getLong("max_leaf_bytes")
+                                )
                         )
-                )
         );
 
         ArchiveBacklog resolved = backlog == null
