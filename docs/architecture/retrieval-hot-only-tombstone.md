@@ -35,9 +35,12 @@ There is no retrieval `storage_state` and no `_s0/_s1` layer.
    embedding-profile control rows.
 7. The generation can become `RETIRED` only after every generation-owned
    payload store is verified empty and the tombstone becomes `PURGED`.
-8. Global ANN applies the lifecycle publication fence inside each
-   language/ACL branch before branch-local `LIMIT`, so stale HOT vectors
-   cannot crowd out published candidates.
+8. Global ANN keeps HNSW candidate-first ordering. Each ACL/language branch
+   takes a bounded nearest-neighbor candidate set, then applies the lifecycle
+   publication fence. Branch health compares raw and published candidate
+   counts; a stale-crowded branch automatically retries with a larger bounded
+   candidate set. If the retry ceiling is reached, a lifecycle-fenced fallback
+   prioritizes correctness over latency.
 9. Normal reconciliation is verification-first. Repair is a separate code
    path and does not modify historical tombstone facts.
 10. Tombstones and audit records never contain document text or embeddings.
@@ -71,8 +74,9 @@ generation, or cross ACL boundaries.
 This implementation phase requires:
 
 - correctness and ACL isolation preserved;
-- published-generation visibility preserved before candidate limits;
-- retrieval recall and latency benchmarks show no regression;
+- published-generation visibility cannot be bypassed by candidate limits;
+- the normal ANN path remains HNSW-backed and avoids full leaf scans;
+- retrieval recall and latency benchmarks show no material regression;
 - purge/tombstone state transitions and rollback safety are covered;
 - retention/publication lock ordering is deadlock-safe;
 - physical/catalog topology is simpler.
