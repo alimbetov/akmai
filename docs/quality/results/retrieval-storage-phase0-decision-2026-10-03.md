@@ -1,206 +1,255 @@
-# Retrieval Storage Phase 0 — Physical Layout Decision
+# Retrieval Storage Phase 0 — Final Physical Architecture
 
 Date: 2026-10-03  
 Branch: `feature/retrieval-partitioning-architecture`  
 PostgreSQL: 17 + pgvector  
-Embedding dimensions tested: 1024
+Embedding profile benchmarked: 1024 dimensions
 
-## Decision
+## Final decision
 
-The first production retrieval schema will use:
+The greenfield retrieval data plane uses three routing dimensions for the two
+large corpus stores:
+
+```text
+LIST(access_level)
+  -> LIST(language)
+       -> LIST(storage_state)
+```
+
+Applied to:
+
+- `knowledge_search_projection`;
+- every dynamic `akmai_vector.<profile>` table.
+
+The smaller relational retrieval stores remain:
 
 ```text
 LIST(access_level)
 ```
 
-for all large retrieval/data-plane relations:
+for:
 
-- `knowledge_search_projection`;
 - `document_identifier`;
 - `knowledge_reference_target`;
 - `knowledge_reference_edge`;
-- `knowledge_document_vector_generation`;
-- every dynamic `akmai_vector.<profile>` table.
+- `knowledge_document_vector_generation`.
 
-Control-plane relations remain unpartitioned:
+Control-plane tables remain unpartitioned.
 
-- `knowledge_document_lifecycle`;
-- `knowledge_document_generation`;
-- embedding profile/runtime/migration journals;
-- ingestion idempotency state.
+## Routing dimensions
 
-This is now the final physical-layout decision for the greenfield baseline.
+### access_level
 
-## Why LIST is final
+`access_level` is the mandatory security and retrieval routing key.
 
-### 1. Typed columns are mandatory
+It is always a typed physical column and has no database default.
 
-The earlier A/B run showed that the current JSON-routed layout can fall to a full vector-table scan,
-while typed `access_level/document_id/generation/chunk_id` allows the intended ANN/index plans.
+Runtime retrieval uses scalar predicates per ACL branch. Array predicates on
+the ACL partition key are prohibited by architecture tests.
 
-Therefore JSONB remains metadata only. It is not a routing or generation identity mechanism.
+### language
 
-### 2. Partial HNSW is not stable enough under generic prepared plans
-
-Under an ordinary custom plan, partial-HNSW and LIST/local-HNSW were close.
-
-Under:
-
-```sql
-SET plan_cache_mode = force_generic_plan;
-```
-
-the parameterized predicate:
-
-```sql
-access_level = $1
-```
-
-could no longer prove a specific partial-index predicate such as:
-
-```sql
-WHERE access_level = 1
-```
-
-The partial HNSW graph disappeared from the plan.
-
-LIST retained:
+Supported routing codes:
 
 ```text
-execution-time partition pruning
--> one ACL child
--> child-local HNSW
+kk ru en zh de fr es pt it tr el unknown
 ```
 
-This plan stability is more important than a small custom-plan microbenchmark difference.
+The first eleven values are business languages. `unknown` is a technical
+fallback for mixed or low-confidence chunks.
 
-### 3. One partition topology serves every retrieval strategy
+The language detector belongs before persistence. A chunk is stored in exactly
+one language leaf. Future detection may retain the full language probability
+distribution in metadata, but physical routing remains single-valued.
 
-LIST gives the same routing model to:
+Ten access levels and twelve language values yield at most 120 language parents
+for projection and for each vector profile.
+
+### storage_state
+
+The storage state is modeled in Java as:
 
 ```text
-ANN
-FTS
-trigram
-identifier
-reference traversal
-canonical lookup
-adjacency
-retention/reconciliation cleanup
+RetrievalStorageState.ACTIVE   = 0
+RetrievalStorageState.ARCHIVED = 1
 ```
 
-A vector-only partial-index design does not provide this common data-plane topology.
+It is not a security attribute.
 
-## 1024-dimensional ACL matrix
+`ACTIVE` is the hot retrieval corpus. `ARCHIVED` is a cold generation that
+has been logically removed from retrieval and is waiting for delayed physical
+purge.
 
-The decision-matrix run used:
+## Physical leaves
+
+Example projection topology:
 
 ```text
-dimensions:          1024
-rows per ACL:        1200
-chunks/document:     300
-topK:                10
-warm cache
-concurrency sweep:   1 / 4 / 16
+knowledge_search_projection
+  al_1
+    lang_en
+      s0 ACTIVE
+      s1 ARCHIVED
 ```
 
-Each scalar ACL branch touched only its authorized LIST child and used that child's local HNSW.
-
-Baseline branch policy was:
+Example vector topology:
 
 ```text
-branch candidate limit = final K = 10
-hnsw.ef_search = 40
+akmai_vector.p_<profile>
+  al_1
+    lang_en
+      s0 ACTIVE
+      s1 ARCHIVED
 ```
 
-### Widest-scope baseline
+### ACTIVE projection leaf
 
-| Physical ACL count / scope | Recall@10 | p50 ms | p95 ms | C16 p99 ms |
-| ---: | ---: | ---: | ---: | ---: |
-| 1 | 1.0 | 1.93 | 2.05 | 25.22 |
-| 2 | 1.0 | 3.76 | 4.14 | 41.88 |
-| 4 | 0.8 | 6.06 | 6.14 | 78.61 |
-| 8 | 0.9 | 10.57 | 11.40 | 116.13 |
-| 16 | 0.8 | 12.03 | 12.53 | 126.56 |
+Indexes:
 
-These latency values are GitHub-hosted-runner measurements and are not production capacity claims.
+- `(document_id, generation, chunk_index)` B-tree;
+- generic simple FTS GIN;
+- text trigram GIN;
+- section-path trigram GIN;
+- RU FTS GIN only on RU active leaves;
+- EN FTS GIN only on EN active leaves.
 
-The important planner result is that multi-ACL cost grows with the number of ANN branches while
-partition routing remains correct.
+### ARCHIVED projection leaf
 
-## ANN quality finding
+Only a light `(document_id, generation)` B-tree is provisioned.
 
-The 1024d run exposed a query-strategy issue that is separate from partitioning:
+No FTS/trigram indexes are maintained.
+
+### ACTIVE vector leaf
+
+Indexes:
+
+- local HNSW using cosine operators;
+- `(document_id, generation)` B-tree.
+
+### ARCHIVED vector leaf
+
+Only `(document_id, generation)` B-tree.
+
+No HNSW graph is maintained.
+
+## Semantic retrieval policy
+
+Known query language:
 
 ```text
-one approximate local topK per ACL
--> UNION ALL
--> global topK
+access_level = scalar
+AND language = scalar
+AND storage_state = ACTIVE
+-> one language-local HNSW per ACL branch
 ```
 
-does not guarantee exact global Recall@K because each local HNSW result is approximate.
-
-At 4+ ACL scopes the baseline `K=10 / ef_search=40` lost exact ground-truth hits.
-
-The harness now tests:
+If the same-language result contains fewer than `topK` candidates after the
+similarity threshold, the same query embedding is reused for a cross-language
+fallback:
 
 ```text
-branch candidate multiplier: 1 / 2 / 4
-hnsw.ef_search:             40 / 80 / 120
+access_level = scalar
+AND storage_state = ACTIVE
+-> active language leaves in the allowed ACL
 ```
 
-and verifies Recall@10 against an exact materialized ground truth.
+Results are merged and deduplicated by physical vector id.
 
-Full Recall@10 was recoverable in the tested corpus.
+This preserves multilingual recall without paying the twelve-language ANN
+fan-out on the ordinary same-language path.
 
-## Important tuning caveat
+When query language is `unknown`, retrieval starts directly in the
+cross-language fallback mode.
 
-On the small 1200-row-per-ACL corpus, increasing branch candidate count or `ef_search` caused a
-large latency cliff.
+## Document-scoped semantic retrieval
 
-That result must not be turned into a production constant yet.
+When candidate documents are already known from identifier/reference retrieval,
+the vector path remains exact and bounded:
 
-The likely cause is a planner transition on the small child relation: once more candidates are
-requested, exact/scan-style work can become cheaper than the ANN path.
+```text
+ACL + ACTIVE + optional language
+-> (document_id, generation) candidates
+-> exact cosine sort
+```
 
-Therefore:
+It intentionally avoids HNSW when the candidate chunk count is small.
 
-- LIST is final;
-- branch oversampling is configurable;
-- `ef_search` is configurable;
-- the exact production fan-out policy still requires a larger per-partition corpus and plan
-  capture.
+## Lifecycle
 
-This does **not** block the greenfield DDL because it changes query policy, not physical identity or
-partition keys.
+Retention is deliberately two-phase.
 
-## Final storage invariants
+### Phase 1 — logical removal / archive
 
-The clean schema therefore adopts these invariants:
+The retention worker retains its existing claim/fencing protocol.
 
-1. `access_level` is a typed physical column on every retrieval row;
-2. `document_id`, `generation`, and `chunk_id` are typed vector columns;
-3. generation identity is protected by:
-   `UNIQUE(document_id, generation, access_level)`;
-4. retrieval rows reference that generation ACL identity by FK where practical;
-5. no retrieval parent has a DEFAULT partition;
-6. unknown/unprovisioned ACL writes fail closed;
-7. vector/profile child indexes are local HNSW indexes;
-8. downstream hits preserve exact ACL so fusion/reference/adjacency reads do not re-fan-out;
-9. document-scoped selective vector retrieval remains an exact B-tree candidate path;
-10. multi-ACL ANN uses scalar ACL branches, never array-valued routing predicates.
+For a claimed generation:
 
-## Liquibase consequence
+1. vector rows move from `storage_state=ACTIVE` to `ARCHIVED`;
+2. projection rows move from `ACTIVE` to `ARCHIVED`;
+3. small identifier/reference rows are deleted immediately;
+4. lifecycle becomes logically deleted and `published_generation` is cleared;
+5. the generation becomes `RETIRED` with `cleanup_required=true`.
 
-Because no database has been deployed, the project will not preserve the current historical ALTER
-chain.
+Because `storage_state` is a partition key, PostgreSQL physically routes the
+updated rows from the hot leaf to the cold leaf.
 
-A new executable greenfield changelog is being introduced under:
+The expensive HNSW/GIN indexes therefore shrink as soon as retention archives
+the generation.
 
-`db/changelog/greenfield/`
+### Phase 2 — delayed physical purge
 
-It creates the final schema directly.
+The existing generation reconciliation service is the purge mechanism.
 
-The existing master changelog remains temporarily active only until Java persistence/retrieval
-repositories are adapted to the new row identities. Once those changes are green, the master
-entrypoint can switch to the greenfield baseline without a data migration/cutover layer.
+After `reconciliation.grace-period`:
+
+- `RETIRED` generations are deleted from `ARCHIVED`;
+- failed staging generations are deleted from `ACTIVE`;
+- projection/vector manifest rows are removed;
+- generation status becomes `CLEANED`.
+
+This avoids maintaining a second purge scheduler and keeps cleanup inside the
+existing transaction/retry/observability model.
+
+## Why there is no archive time partition yet
+
+An `ARCHIVED` leaf can contain generations with different future deletion
+times, so truncating the whole leaf would be unsafe.
+
+A fourth `RANGE(purge_at)` level was deliberately not introduced in Phase 0:
+
+- archive residence is currently short and controlled by reconciliation grace;
+- an additional time dimension would multiply metadata and DDL complexity;
+- generation-scoped DELETE in a cold leaf has no HNSW/GIN maintenance cost;
+- no production data exists, so a later archive-range layer can still be added
+  if measured retention volume justifies it.
+
+`pg_partman` is therefore not used for the retrieval corpus. It remains a
+good fit for independent operational/time-series tables.
+
+## Integrity invariants
+
+1. `access_level`, `language`, `storage_state`, `document_id`,
+   `generation` and `chunk_id` are typed routing columns where applicable.
+2. `UNIQUE(document_id, generation, access_level)` protects generation ACL
+   identity.
+3. Retrieval rows reference generation ACL identity by foreign key where
+   practical.
+4. No DEFAULT ACL/language/state partition is created.
+5. Supported ACL/language topology is provisioned explicitly and idempotently.
+6. Published retrieval always requires `storage_state = ACTIVE`.
+7. HNSW and large lexical indexes exist only on ACTIVE leaves.
+8. Unknown/unprovisioned routing values fail closed at INSERT.
+9. Downstream retrieval preserves exact ACL/generation identity.
+10. Cross-language retrieval never scans ARCHIVED leaves.
+
+## Remaining merge gates
+
+Before this branch can leave draft state:
+
+1. exact-head clean Maven verify;
+2. 1024d ACL/concurrency decision matrix on the final SHA;
+3. 1024d language/storage benchmark on the final SHA;
+4. confirm same-language plan touches only one ACTIVE language leaf;
+5. confirm cross-language plan touches ACTIVE leaves only;
+6. confirm no HNSW exists on ARCHIVED vector leaves;
+7. update PR title/body to describe the production architecture.
