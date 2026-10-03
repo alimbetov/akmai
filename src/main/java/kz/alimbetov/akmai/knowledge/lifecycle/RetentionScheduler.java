@@ -55,16 +55,11 @@ public class RetentionScheduler {
         try {
             recovered = recoverAbandonedIngestions();
 
-            for (int batch = 0; batch < properties.maxBatchesPerRun(); batch++) {
-                if (workerPool.availableCapacity() == 0) {
-                    break;
-                }
-                int claimed = workerPool.claimAndSubmit(workerId);
-                submitted += claimed;
-                if (claimed == 0) {
-                    break;
-                }
-            }
+            int maxClaims = Math.multiplyExact(
+                    properties.batchSize(),
+                    properties.maxBatchesPerRun()
+            );
+            submitted = workerPool.drain(workerId, maxClaims);
         } catch (RuntimeException exception) {
             outcome = "FAILED";
             LOGGER.error(
