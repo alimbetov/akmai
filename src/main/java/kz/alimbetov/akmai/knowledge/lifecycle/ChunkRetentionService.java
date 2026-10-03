@@ -169,18 +169,31 @@ public class ChunkRetentionService {
                 identity.generation()
         );
 
-        vectorRepository.deleteIds(
+        int archivedVectors = vectorRepository.archiveGeneration(
                 profile,
-                identity,
-                vectorIds
+                identity
         );
-        if (vectorRepository.countExisting(
+        if (archivedVectors != vectorIds.size()) {
+            throw new IllegalStateException(
+                    "Vector archive count does not match generation manifest"
+            );
+        }
+        if (vectorRepository.countGeneration(
                 profile,
                 identity,
-                vectorIds
+                RetrievalStorageState.ACTIVE
         ) != 0) {
             throw new IllegalStateException(
-                    "Physical vectors remain after generation delete"
+                    "Active vectors remain after generation archive"
+            );
+        }
+
+        int archivedProjections =
+                projectionRepository.archiveGeneration(identity);
+        if (chunkCount != null
+                && archivedProjections != chunkCount) {
+            throw new IllegalStateException(
+                    "Projection archive count does not match generation"
             );
         }
 
@@ -207,8 +220,6 @@ public class ChunkRetentionService {
                 identity.generation()
         );
         identifierRepository.deleteGeneration(identity);
-        projectionRepository.deleteGeneration(identity);
-        vectorGenerationRepository.deleteGeneration(identity);
 
         if (!finalFenceValid(claim)) {
             throw new StaleClaimException();
@@ -217,13 +228,12 @@ public class ChunkRetentionService {
         jdbcTemplate.update(
                 """
                 UPDATE knowledge_document_generation
-                SET generation_status = 'CLEANED',
+                SET generation_status = 'RETIRED',
                     retired_at = COALESCE(retired_at, clock_timestamp()),
-                    cleaned_at = clock_timestamp(),
-                    cleanup_required = false
+                    cleanup_required = true
                 WHERE document_id = ?
                   AND generation = ?
-                  AND generation_status IN ('PUBLISHED', 'RETIRED', 'FAILED')
+                  AND generation_status IN ('PUBLISHED', 'RETIRED')
                 """,
                 claim.documentId(),
                 claim.generation()
@@ -335,7 +345,7 @@ public class ChunkRetentionService {
             }
         }
         LOGGER.info(
-                "retention_cleanup event=result status={} generation={} deletedChunks={}",
+                "retention_archive event=result status={} generation={} archivedChunks={}",
                 result.status(),
                 result.generation(),
                 result.deletedChunks()
