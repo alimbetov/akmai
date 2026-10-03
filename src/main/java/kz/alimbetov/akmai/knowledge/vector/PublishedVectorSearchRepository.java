@@ -75,6 +75,7 @@ public class PublishedVectorSearchRepository {
                 SELECT v.id::text AS vector_id,
                        v.content,
                        v.metadata::text AS metadata_json,
+                       l.access_level AS access_level,
                        v.metadata->>'akmaiDocumentId' AS document_id,
                        (v.metadata->>'akmaiGeneration')::bigint AS generation,
                        v.metadata->>'akmaiChunkId' AS chunk_id,
@@ -114,6 +115,7 @@ public class PublishedVectorSearchRepository {
                     ),
                     (rs, rowNum) -> new VectorSearchMatch(
                             rs.getString("vector_id"),
+                            rs.getLong("access_level"),
                             rs.getString("document_id"),
                             rs.getLong("generation"),
                             rs.getString("chunk_id"),
