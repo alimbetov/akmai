@@ -24,13 +24,17 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 @Testcontainers
 class ChunkRetentionServiceTest {
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>("postgres:17-alpine")
+            new PostgreSQLContainer<>(
+                    DockerImageName.parse("pgvector/pgvector:pg17")
+                            .asCompatibleSubstituteFor("postgres")
+            )
                     .withDatabaseName("akmai")
                     .withUsername("akmai")
                     .withPassword("akmai");
@@ -105,11 +109,13 @@ class ChunkRetentionServiceTest {
 
         assertThat(result.status())
                 .isEqualTo(RetentionCleanupResult.Status.STALE_CLAIM);
-        verify(vectors, never()).deleteIds(
+        verify(vectors, never()).archiveGeneration(
                 org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.anyList()
+                org.mockito.ArgumentMatchers.any()
         );
-        verify(projections, never()).deleteGeneration("doc-1", 7);
+        verify(projections, never()).archiveGeneration(
+                org.mockito.ArgumentMatchers.any()
+        );
         verify(identifiers, never()).deleteGeneration("doc-1", 7);
         verify(manifests, never()).deleteGeneration("doc-1", 7);
     }

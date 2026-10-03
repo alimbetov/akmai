@@ -202,6 +202,7 @@ class MultilingualRetrievalQualityRegressionTest {
 
             when(vectorRepository.search(
                     anyString(),
+                    anyString(),
                     anyList(),
                     anySet(),
                     anyInt(),

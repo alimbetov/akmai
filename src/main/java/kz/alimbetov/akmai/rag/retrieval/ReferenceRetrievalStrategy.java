@@ -39,8 +39,13 @@ public class ReferenceRetrievalStrategy implements RetrievalStrategy {
     ) {
         Map<DocumentGeneration, List<String>> seedIds = new LinkedHashMap<>();
         for (RetrievalHit hit : context.dependencyHits()) {
-            long generation = generation(hit);
-            if (generation <= 0
+            long generation = hit.generation();
+            long accessLevel = effectiveAccessLevel(
+                    hit,
+                    context.accessLevels()
+            );
+            if (accessLevel <= 0
+                    || generation <= 0
                     || hit.documentId() == null
                     || hit.documentId().isBlank()
                     || hit.chunkId() == null
@@ -48,7 +53,11 @@ public class ReferenceRetrievalStrategy implements RetrievalStrategy {
                 continue;
             }
             seedIds.computeIfAbsent(
-                    new DocumentGeneration(hit.documentId(), generation),
+                    new DocumentGeneration(
+                            accessLevel,
+                            hit.documentId(),
+                            generation
+                    ),
                     ignored -> new ArrayList<>()
             ).add(hit.chunkId());
         }
@@ -66,7 +75,7 @@ public class ReferenceRetrievalStrategy implements RetrievalStrategy {
                     scope.documentId(),
                     scope.generation(),
                     seeds,
-                    context.accessLevels(),
+                    java.util.Set.of(scope.accessLevel()),
                     remaining
             );
             List<SearchProjection> targets =
@@ -74,7 +83,7 @@ public class ReferenceRetrievalStrategy implements RetrievalStrategy {
                             scope.documentId(),
                             scope.generation(),
                             targetIds,
-                            context.accessLevels()
+                            java.util.Set.of(scope.accessLevel())
                     );
             for (SearchProjection target : targets) {
                 if (remaining-- <= 0) {
@@ -93,7 +102,9 @@ public class ReferenceRetrievalStrategy implements RetrievalStrategy {
                 metadata.put("expansion", "reference");
                 result.add(new RetrievalHit(
                         RetrievalType.REFERENCE,
+                        target.accessLevel(),
                         target.documentId(),
+                        target.generation(),
                         target.chunkId(),
                         target.text(),
                         metadata
@@ -103,12 +114,22 @@ public class ReferenceRetrievalStrategy implements RetrievalStrategy {
         return List.copyOf(result);
     }
 
-    private long generation(RetrievalHit hit) {
-        Object value = hit.metadata().get("generation");
-        return value instanceof Number number ? number.longValue() : -1L;
+    private long effectiveAccessLevel(
+            RetrievalHit hit,
+            java.util.Set<Long> allowed
+    ) {
+        if (hit.accessLevel() > 0) {
+            return allowed.contains(hit.accessLevel())
+                    ? hit.accessLevel()
+                    : 0L;
+        }
+        return allowed.size() == 1
+                ? allowed.iterator().next()
+                : 0L;
     }
 
     private record DocumentGeneration(
+            long accessLevel,
             String documentId,
             long generation
     ) {

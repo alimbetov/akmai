@@ -139,7 +139,6 @@ class PostgresVectorReconciliationIntegrationTest {
         jdbc.update("DELETE FROM knowledge_document_vector_generation");
         jdbc.update("DELETE FROM knowledge_document_generation");
         jdbc.update("DELETE FROM knowledge_document_lifecycle");
-        jdbc.update("DELETE FROM knowledge_legacy_reconciliation");
     }
 
     @Test
@@ -230,14 +229,28 @@ class PostgresVectorReconciliationIntegrationTest {
                 )
         );
 
+        GenerationIdentity oldIdentity =
+                new GenerationIdentity("doc-1", 1L, 1L);
+        assertThat(projections.archiveGeneration(oldIdentity))
+                .isEqualTo(1);
+        assertThat(vectors.archiveGeneration(profile, oldIdentity))
+                .isEqualTo(1);
+        assertThat(vectors.countGeneration(
+                profile,
+                oldIdentity,
+                RetrievalStorageState.ARCHIVED
+        )).isEqualTo(1);
+
         assertThat(reconciliation.reconcileBatch()).isEqualTo(1);
 
-        assertThat(vectors.countExisting(
+        assertThat(vectors.countGeneration(
                 profile,
-                List.of(oldVectorId)
+                oldIdentity,
+                RetrievalStorageState.ARCHIVED
         )).isZero();
         assertThat(vectors.countExisting(
                 profile,
+                new GenerationIdentity("doc-1", 2L, 1L),
                 List.of(newVectorId)
         )).isEqualTo(1);
 
@@ -329,15 +342,25 @@ class PostgresVectorReconciliationIntegrationTest {
                                 "akmaiDocumentId", "doc-missing",
                                 "akmaiGeneration", 1L,
                                 "akmaiEmbeddingProfileId", profile.profileId(),
-                                "akmaiChunkId", "old-missing"
+                                "akmaiChunkId", "old-missing",
+                                "language", "en"
                         ),
                         new float[] {1f, 0f, 0f}
                 ))
         );
 
+        GenerationIdentity oldIdentity =
+                new GenerationIdentity("doc-missing", 1L, 1L);
+        assertThat(vectors.archiveGeneration(profile, oldIdentity))
+                .isEqualTo(1);
+
         assertThat(manifests.findVectorIds("doc-missing", 1L)).isEmpty();
         assertThat(reconciliation.reconcileBatch()).isEqualTo(1);
-        assertThat(vectors.countExisting(profile, List.of(oldVectorId))).isZero();
+        assertThat(vectors.countGeneration(
+                profile,
+                oldIdentity,
+                RetrievalStorageState.ARCHIVED
+        )).isZero();
         assertThat(jdbc.queryForObject(
                 """
                 SELECT generation_status
@@ -392,7 +415,8 @@ class PostgresVectorReconciliationIntegrationTest {
                         "akmaiDocumentId", "doc-1",
                         "akmaiGeneration", generation,
                         "akmaiEmbeddingProfileId", profile.profileId(),
-                        "akmaiChunkId", chunkId
+                        "akmaiChunkId", chunkId,
+                        "language", "en"
                 ),
                 new float[] {1f, 0f, 0f}
         );

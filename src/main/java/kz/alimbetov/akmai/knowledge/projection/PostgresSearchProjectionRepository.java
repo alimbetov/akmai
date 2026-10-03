@@ -10,7 +10,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import kz.alimbetov.akmai.knowledge.identifier.DetectedIdentifier;
+import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
+import kz.alimbetov.akmai.knowledge.model.RetrievalLanguageCatalog;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -34,14 +36,69 @@ public class PostgresSearchProjectionRepository
         if (projections == null || projections.isEmpty()) {
             return;
         }
+
+        Map<GenerationKey, List<SearchProjection>> grouped =
+                projections.stream().collect(
+                        java.util.stream.Collectors.groupingBy(
+                                value -> new GenerationKey(
+                                        value.documentId(),
+                                        value.generation()
+                                ),
+                                java.util.LinkedHashMap::new,
+                                java.util.stream.Collectors.toList()
+                        )
+                );
+        grouped.forEach((key, values) ->
+                saveAll(
+                        identityFor(
+                                key.documentId(),
+                                key.generation()
+                        ),
+                        values
+                )
+        );
+    }
+
+    @Override
+    public void saveAll(
+            GenerationIdentity identity,
+            List<SearchProjection> projections
+    ) {
+        requireGenerationIdentity(identity, projections);
+        if (projections == null || projections.isEmpty()) {
+            return;
+        }
+
         jdbcTemplate.batchUpdate(
                 """
                 INSERT INTO knowledge_search_projection (
-                    chunk_id, document_id, generation, parent_chunk_id, chunk_index,
-                    text_content, embedding_text, language, domain, section_path,
-                    identifiers_json, references_json, metadata_json, projection_version
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?)
-                ON CONFLICT (document_id, generation, chunk_id) DO UPDATE SET
+                    access_level,
+                    chunk_id,
+                    document_id,
+                    generation,
+                    parent_chunk_id,
+                    chunk_index,
+                    text_content,
+                    embedding_text,
+                    language,
+                    domain,
+                    section_path,
+                    identifiers_json,
+                    references_json,
+                    metadata_json,
+                    projection_version
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?::jsonb, ?::jsonb, ?::jsonb, ?
+                )
+                ON CONFLICT (
+                    access_level,
+                    language,
+                    storage_state,
+                    document_id,
+                    generation,
+                    chunk_id
+                ) DO UPDATE SET
                     parent_chunk_id = EXCLUDED.parent_chunk_id,
                     chunk_index = EXCLUDED.chunk_index,
                     text_content = EXCLUDED.text_content,
@@ -57,38 +114,43 @@ public class PostgresSearchProjectionRepository
                 """,
                 projections,
                 100,
-                (ps, p) -> {
-                    ps.setString(1, p.chunkId());
-                    ps.setString(2, p.documentId());
-                    ps.setLong(3, p.generation());
-                    ps.setString(4, p.parentChunkId());
-                    ps.setInt(5, p.chunkIndex());
-                    ps.setString(6, p.text());
-                    ps.setString(7, p.embeddingText());
-                    ps.setString(8, p.language());
-                    ps.setString(9, p.domain().name());
-                    ps.setString(10, p.sectionPath());
-                    ps.setString(11, writeJson(p.identifiers()));
-                    ps.setString(12, writeJson(p.references()));
-                    ps.setString(13, writeJson(p.metadata()));
-                    ps.setInt(14, p.projectionVersion());
+                (ps, projection) -> {
+                    ps.setLong(1, identity.accessLevel());
+                    ps.setString(2, projection.chunkId());
+                    ps.setString(3, identity.documentId());
+                    ps.setLong(4, identity.generation());
+                    ps.setString(5, projection.parentChunkId());
+                    ps.setInt(6, projection.chunkIndex());
+                    ps.setString(7, projection.text());
+                    ps.setString(8, projection.embeddingText());
+                    ps.setString(9, projection.language());
+                    ps.setString(10, projection.domain().name());
+                    ps.setString(11, projection.sectionPath());
+                    ps.setString(12, writeJson(projection.identifiers()));
+                    ps.setString(13, writeJson(projection.references()));
+                    ps.setString(14, writeJson(projection.metadata()));
+                    ps.setInt(15, projection.projectionVersion());
                 }
         );
     }
 
     @Override
     public List<String> findChunkIds(String documentId, long generation) {
+        GenerationIdentity identity = identityFor(documentId, generation);
         return jdbcTemplate.queryForList(
                 """
                 SELECT chunk_id
                 FROM knowledge_search_projection
-                WHERE document_id = ?
+                WHERE access_level = ?
+                  AND storage_state = 0
+                  AND document_id = ?
                   AND generation = ?
                 ORDER BY chunk_index
                 """,
                 String.class,
-                documentId,
-                generation
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
         );
     }
 
@@ -97,17 +159,34 @@ public class PostgresSearchProjectionRepository
             String documentId,
             long generation
     ) {
+        return findGeneration(
+                identityFor(documentId, generation)
+        );
+    }
+
+    @Override
+    public List<SearchProjection> findGeneration(
+            GenerationIdentity identity
+    ) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
         return jdbcTemplate.query(
                 """
                 SELECT *
                 FROM knowledge_search_projection
-                WHERE document_id = ?
+                WHERE access_level = ?
+                  AND storage_state = 0
+                  AND document_id = ?
                   AND generation = ?
                 ORDER BY chunk_index
                 """,
                 this::map,
-                documentId,
-                generation
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
         );
     }
 
@@ -121,14 +200,49 @@ public class PostgresSearchProjectionRepository
 
     @Override
     public void deleteGeneration(String documentId, long generation) {
+        deleteGeneration(identityFor(documentId, generation));
+    }
+
+    @Override
+    public void deleteGeneration(GenerationIdentity identity) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
         jdbcTemplate.update(
                 """
                 DELETE FROM knowledge_search_projection
-                WHERE document_id = ?
+                WHERE access_level = ?
+                  AND document_id = ?
                   AND generation = ?
                 """,
-                documentId,
-                generation
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
+        );
+    }
+
+    @Override
+    public int archiveGeneration(GenerationIdentity identity) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        return jdbcTemplate.update(
+                """
+                UPDATE knowledge_search_projection
+                SET storage_state = 1,
+                    updated_at = clock_timestamp()
+                WHERE access_level = ?
+                  AND document_id = ?
+                  AND generation = ?
+                  AND storage_state = 0
+                """,
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
         );
     }
 
@@ -138,30 +252,41 @@ public class PostgresSearchProjectionRepository
             List<String> chunkIds,
             Set<Long> accessLevels
     ) {
-        requireAccessLevels(accessLevels);
         if (chunkIds == null || chunkIds.isEmpty()) {
             return List.of();
         }
-        return jdbcTemplate.query(
-                """
-                SELECT p.*
-                FROM knowledge_search_projection p
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = p.document_id
-                 AND l.published_generation = p.generation
-                WHERE p.document_id = ?
-                  AND p.chunk_id = ANY (?)
-                  AND l.retention_status = 'ACTIVE'
-                  AND l.access_level = ANY (?)
-                ORDER BY p.chunk_index
-                """,
-                ps -> {
-                    ps.setString(1, documentId);
-                    bindArray(ps, 2, chunkIds);
-                    bindLongArray(ps, 3, accessLevels);
-                },
-                this::map
-        );
+
+        List<SearchProjection> result = new java.util.ArrayList<>();
+        for (long accessLevel : routedAccessLevels(accessLevels)) {
+            result.addAll(jdbcTemplate.query(
+                    """
+                    SELECT p.*
+                    FROM knowledge_search_projection p
+                    JOIN knowledge_document_lifecycle l
+                      ON l.document_id = p.document_id
+                     AND l.published_generation = p.generation
+                     AND l.access_level = p.access_level
+                    WHERE p.access_level = ?
+                      AND p.storage_state = 0
+                      AND p.document_id = ?
+                      AND p.chunk_id = ANY (?)
+                      AND l.retention_status = 'ACTIVE'
+                    ORDER BY p.chunk_index
+                    """,
+                    ps -> {
+                        ps.setLong(1, accessLevel);
+                        ps.setString(2, documentId);
+                        bindArray(ps, 3, chunkIds);
+                    },
+                    this::map
+            ));
+        }
+
+        return result.stream()
+                .sorted(java.util.Comparator.comparingInt(
+                        SearchProjection::chunkIndex
+                ))
+                .toList();
     }
 
     @Override
@@ -171,32 +296,45 @@ public class PostgresSearchProjectionRepository
             List<String> chunkIds,
             Set<Long> accessLevels
     ) {
-        requireAccessLevels(accessLevels);
-        if (generation <= 0 || chunkIds == null || chunkIds.isEmpty()) {
+        if (generation <= 0
+                || chunkIds == null
+                || chunkIds.isEmpty()) {
             return List.of();
         }
-        return jdbcTemplate.query(
-                """
-                SELECT p.*
-                FROM knowledge_search_projection p
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = p.document_id
-                 AND l.published_generation = p.generation
-                WHERE p.document_id = ?
-                  AND p.generation = ?
-                  AND p.chunk_id = ANY (?)
-                  AND l.retention_status = 'ACTIVE'
-                  AND l.access_level = ANY (?)
-                ORDER BY p.chunk_index
-                """,
-                ps -> {
-                    ps.setString(1, documentId);
-                    ps.setLong(2, generation);
-                    bindArray(ps, 3, chunkIds);
-                    bindLongArray(ps, 4, accessLevels);
-                },
-                this::map
-        );
+
+        List<SearchProjection> result = new java.util.ArrayList<>();
+        for (long accessLevel : routedAccessLevels(accessLevels)) {
+            result.addAll(jdbcTemplate.query(
+                    """
+                    SELECT p.*
+                    FROM knowledge_search_projection p
+                    JOIN knowledge_document_lifecycle l
+                      ON l.document_id = p.document_id
+                     AND l.published_generation = p.generation
+                     AND l.access_level = p.access_level
+                    WHERE p.access_level = ?
+                      AND p.storage_state = 0
+                      AND p.document_id = ?
+                      AND p.generation = ?
+                      AND p.chunk_id = ANY (?)
+                      AND l.retention_status = 'ACTIVE'
+                    ORDER BY p.chunk_index
+                    """,
+                    ps -> {
+                        ps.setLong(1, accessLevel);
+                        ps.setString(2, documentId);
+                        ps.setLong(3, generation);
+                        bindArray(ps, 4, chunkIds);
+                    },
+                    this::map
+            ));
+        }
+
+        return result.stream()
+                .sorted(java.util.Comparator.comparingInt(
+                        SearchProjection::chunkIndex
+                ))
+                .toList();
     }
 
     @Override
@@ -207,33 +345,45 @@ public class PostgresSearchProjectionRepository
             int radius,
             Set<Long> accessLevels
     ) {
-        requireAccessLevels(accessLevels);
         if (generation <= 0) {
             return List.of();
         }
-        return jdbcTemplate.query(
-                """
-                SELECT p.*
-                FROM knowledge_search_projection p
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = p.document_id
-                 AND l.published_generation = p.generation
-                WHERE p.document_id = ?
-                  AND p.generation = ?
-                  AND l.retention_status = 'ACTIVE'
-                  AND l.access_level = ANY (?)
-                  AND p.chunk_index BETWEEN ? AND ?
-                ORDER BY p.chunk_index
-                """,
-                ps -> {
-                    ps.setString(1, documentId);
-                    ps.setLong(2, generation);
-                    bindLongArray(ps, 3, accessLevels);
-                    ps.setInt(4, Math.max(0, chunkIndex - radius));
-                    ps.setInt(5, chunkIndex + radius);
-                },
-                this::map
-        );
+
+        List<SearchProjection> result = new java.util.ArrayList<>();
+        int from = Math.max(0, chunkIndex - radius);
+        int to = chunkIndex + radius;
+
+        for (long accessLevel : routedAccessLevels(accessLevels)) {
+            result.addAll(jdbcTemplate.query(
+                    """
+                    SELECT p.*
+                    FROM knowledge_search_projection p
+                    JOIN knowledge_document_lifecycle l
+                      ON l.document_id = p.document_id
+                     AND l.published_generation = p.generation
+                     AND l.access_level = p.access_level
+                    WHERE p.access_level = ?
+                      AND p.storage_state = 0
+                      AND p.document_id = ?
+                      AND p.generation = ?
+                      AND l.retention_status = 'ACTIVE'
+                      AND p.chunk_index BETWEEN ? AND ?
+                    ORDER BY p.chunk_index
+                    """,
+                    this::map,
+                    accessLevel,
+                    documentId,
+                    generation,
+                    from,
+                    to
+            ));
+        }
+
+        return result.stream()
+                .sorted(java.util.Comparator.comparingInt(
+                        SearchProjection::chunkIndex
+                ))
+                .toList();
     }
 
     @Override
@@ -250,6 +400,8 @@ public class PostgresSearchProjectionRepository
         }
         LexicalSearchLanguage searchLanguage =
                 LexicalSearchLanguage.from(language);
+        String routedLanguage =
+                RetrievalLanguageCatalog.normalizeOrUnknown(language);
         return switch (searchLanguage) {
             case RU -> searchFtsWithLanguageFallback(
                     query,
@@ -285,6 +437,9 @@ public class PostgresSearchProjectionRepository
             );
             case UNKNOWN -> searchSimple(
                     query,
+                    RetrievalLanguageCatalog.UNKNOWN.equals(routedLanguage)
+                            ? null
+                            : routedLanguage,
                     documentIds,
                     accessLevels,
                     limit
@@ -344,6 +499,7 @@ public class PostgresSearchProjectionRepository
             return List.of();
         }
 
+        List<Long> routed = routedAccessLevels(accessLevels);
         String score = terms.stream()
                 .map(ignored -> """
                         greatest(
@@ -368,43 +524,52 @@ public class PostgresSearchProjectionRepository
                         """.strip())
                 .collect(java.util.stream.Collectors.joining(" AND "));
 
-        String sql = """
-                SELECT p.*,
-                       (%s) / %d AS lexical_rank
-                FROM knowledge_search_projection p
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = p.document_id
-                 AND l.published_generation = p.generation
-                WHERE l.retention_status = 'ACTIVE'
-                  AND l.access_level = ANY (?)
-                  AND p.language = ?
-                  AND (%s)
+        String branch = """
+                (
+                    SELECT p.*,
+                           (%s) / %d AS lexical_rank
+                    FROM knowledge_search_projection p
+                    JOIN knowledge_document_lifecycle l
+                      ON l.document_id = p.document_id
+                     AND l.published_generation = p.generation
+                     AND l.access_level = p.access_level
+                    WHERE p.access_level = ?
+                      AND p.storage_state = 0
+                      AND l.retention_status = 'ACTIVE'
+                      AND p.language = ?
+                      AND (%s)
                 """.formatted(score, terms.size(), predicate)
                 + documentFilter(documentIds)
                 + """
-                ORDER BY lexical_rank DESC, p.document_id, p.chunk_id
-                LIMIT ?
+                    ORDER BY lexical_rank DESC,
+                             p.document_id,
+                             p.chunk_id
+                    LIMIT ?
+                )
                 """;
 
-        return jdbcTemplate.query(
-                sql,
-                ps -> {
-                    int i = 1;
-                    for (String term : terms) {
-                        ps.setString(i++, term);
-                        ps.setString(i++, term);
-                    }
-                    bindLongArray(ps, i++, accessLevels);
-                    ps.setString(i++, language);
-                    for (String term : terms) {
-                        ps.setString(i++, term);
-                        ps.setString(i++, term);
-                    }
-                    i = bindDocumentIds(ps, i, documentIds);
-                    ps.setInt(i, limit);
-                },
-                this::map
-        );
+        String sql = lexicalUnionSql(branch, routed.size());
+        List<Object> parameters = new java.util.ArrayList<>();
+
+        for (long accessLevel : routed) {
+            for (String term : terms) {
+                parameters.add(term);
+                parameters.add(term);
+            }
+            parameters.add(accessLevel);
+            parameters.add(language);
+            for (String term : terms) {
+                parameters.add(term);
+                parameters.add(term);
+            }
+            if (documentIds != null && !documentIds.isEmpty()) {
+                parameters.add(documentIds);
+            }
+            parameters.add(limit);
+        }
+        parameters.add(limit);
+
+        return queryLexical(sql, parameters);
     }
 
     private List<SearchProjection> searchFts(
@@ -416,36 +581,56 @@ public class PostgresSearchProjectionRepository
             String vectorColumn,
             String configuration
     ) {
-        String sql = """
-                SELECT p.*,
-                       ts_rank(p.%s, websearch_to_tsquery('%s', ?)) AS lexical_rank
-                FROM knowledge_search_projection p
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = p.document_id
-                 AND l.published_generation = p.generation
-                WHERE l.retention_status = 'ACTIVE'
-                  AND l.access_level = ANY (?)
-                  AND p.language = ?
-                  AND p.%s @@ websearch_to_tsquery('%s', ?)
-                """.formatted(vectorColumn, configuration, vectorColumn, configuration)
+        List<Long> routed = routedAccessLevels(accessLevels);
+        String branch = """
+                (
+                    SELECT p.*,
+                           ts_rank(
+                               p.%s,
+                               websearch_to_tsquery('%s', ?)
+                           ) AS lexical_rank
+                    FROM knowledge_search_projection p
+                    JOIN knowledge_document_lifecycle l
+                      ON l.document_id = p.document_id
+                     AND l.published_generation = p.generation
+                     AND l.access_level = p.access_level
+                    WHERE p.access_level = ?
+                      AND p.storage_state = 0
+                      AND l.retention_status = 'ACTIVE'
+                      AND p.language = ?
+                      AND p.%s
+                          @@ websearch_to_tsquery('%s', ?)
+                """.formatted(
+                        vectorColumn,
+                        configuration,
+                        vectorColumn,
+                        configuration
+                )
                 + documentFilter(documentIds)
                 + """
-                ORDER BY lexical_rank DESC, p.document_id, p.chunk_id
-                LIMIT ?
+                    ORDER BY lexical_rank DESC,
+                             p.document_id,
+                             p.chunk_id
+                    LIMIT ?
+                )
                 """;
-        return jdbcTemplate.query(
-                sql,
-                ps -> {
-                    int i = 1;
-                    ps.setString(i++, query);
-                    bindLongArray(ps, i++, accessLevels);
-                    ps.setString(i++, language);
-                    ps.setString(i++, query);
-                    i = bindDocumentIds(ps, i, documentIds);
-                    ps.setInt(i, limit);
-                },
-                this::map
-        );
+
+        String sql = lexicalUnionSql(branch, routed.size());
+        List<Object> parameters = new java.util.ArrayList<>();
+
+        for (long accessLevel : routed) {
+            parameters.add(query);
+            parameters.add(accessLevel);
+            parameters.add(language);
+            parameters.add(query);
+            if (documentIds != null && !documentIds.isEmpty()) {
+                parameters.add(documentIds);
+            }
+            parameters.add(limit);
+        }
+        parameters.add(limit);
+
+        return queryLexical(sql, parameters);
     }
 
     private List<SearchProjection> searchTrigram(
@@ -455,76 +640,166 @@ public class PostgresSearchProjectionRepository
             Set<Long> accessLevels,
             int limit
     ) {
+        List<Long> routed = routedAccessLevels(accessLevels);
         String escaped = escapeLikeLiteral(query);
-        String sql = """
-                SELECT p.*,
-                       greatest(
-                           similarity(lower(p.text_content), lower(?)),
-                           similarity(lower(coalesce(p.section_path, '')), lower(?))
-                       ) AS lexical_rank
-                FROM knowledge_search_projection p
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = p.document_id
-                 AND l.published_generation = p.generation
-                WHERE l.retention_status = 'ACTIVE'
-                  AND l.access_level = ANY (?)
-                  AND p.language = ?
-                  AND (
-                      lower(p.text_content) % lower(?)
-                      OR lower(coalesce(p.section_path, '')) % lower(?)
-                      OR lower(p.text_content) LIKE ('%' || lower(?) || '%') ESCAPE '\\'
-                  )
+
+        String branch = """
+                (
+                    SELECT p.*,
+                           greatest(
+                               similarity(
+                                   lower(p.text_content),
+                                   lower(?)
+                               ),
+                               similarity(
+                                   lower(coalesce(p.section_path, '')),
+                                   lower(?)
+                               )
+                           ) AS lexical_rank
+                    FROM knowledge_search_projection p
+                    JOIN knowledge_document_lifecycle l
+                      ON l.document_id = p.document_id
+                     AND l.published_generation = p.generation
+                     AND l.access_level = p.access_level
+                    WHERE p.access_level = ?
+                      AND p.storage_state = 0
+                      AND l.retention_status = 'ACTIVE'
+                      AND p.language = ?
+                      AND (
+                          lower(p.text_content) % lower(?)
+                          OR lower(coalesce(p.section_path, '')) % lower(?)
+                          OR lower(p.text_content)
+                              LIKE ('%' || lower(?) || '%') ESCAPE '\\'
+                      )
                 """ + documentFilter(documentIds) + """
-                ORDER BY lexical_rank DESC, p.document_id, p.chunk_id
-                LIMIT ?
+                    ORDER BY lexical_rank DESC,
+                             p.document_id,
+                             p.chunk_id
+                    LIMIT ?
+                )
                 """;
-        return jdbcTemplate.query(
-                sql,
-                ps -> {
-                    int i = 1;
-                    ps.setString(i++, query);
-                    ps.setString(i++, query);
-                    bindLongArray(ps, i++, accessLevels);
-                    ps.setString(i++, language);
-                    ps.setString(i++, query);
-                    ps.setString(i++, query);
-                    ps.setString(i++, escaped);
-                    i = bindDocumentIds(ps, i, documentIds);
-                    ps.setInt(i, limit);
-                },
-                this::map
-        );
+
+        String sql = lexicalUnionSql(branch, routed.size());
+        List<Object> parameters = new java.util.ArrayList<>();
+
+        for (long accessLevel : routed) {
+            parameters.add(query);
+            parameters.add(query);
+            parameters.add(accessLevel);
+            parameters.add(language);
+            parameters.add(query);
+            parameters.add(query);
+            parameters.add(escaped);
+            if (documentIds != null && !documentIds.isEmpty()) {
+                parameters.add(documentIds);
+            }
+            parameters.add(limit);
+        }
+        parameters.add(limit);
+
+        return queryLexical(sql, parameters);
     }
 
     private List<SearchProjection> searchSimple(
             String query,
+            String language,
             List<String> documentIds,
             Set<Long> accessLevels,
             int limit
     ) {
-        String sql = """
-                SELECT p.*,
-                       ts_rank(p.search_vector, websearch_to_tsquery('simple', ?)) AS lexical_rank
-                FROM knowledge_search_projection p
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = p.document_id
-                 AND l.published_generation = p.generation
-                WHERE l.retention_status = 'ACTIVE'
-                  AND l.access_level = ANY (?)
-                  AND p.search_vector @@ websearch_to_tsquery('simple', ?)
+        List<Long> routed = routedAccessLevels(accessLevels);
+        String languageFilter = language == null
+                ? ""
+                : "      AND p.language = ?\n";
+        String branch = """
+                (
+                    SELECT p.*,
+                           ts_rank(
+                               p.search_vector,
+                               websearch_to_tsquery('simple', ?)
+                           ) AS lexical_rank
+                    FROM knowledge_search_projection p
+                    JOIN knowledge_document_lifecycle l
+                      ON l.document_id = p.document_id
+                     AND l.published_generation = p.generation
+                     AND l.access_level = p.access_level
+                    WHERE p.access_level = ?
+                      AND p.storage_state = 0
+                      AND l.retention_status = 'ACTIVE'
+                """ + languageFilter + """
+                      AND p.search_vector
+                          @@ websearch_to_tsquery('simple', ?)
                 """ + documentFilter(documentIds) + """
-                ORDER BY lexical_rank DESC, p.document_id, p.chunk_id
+                    ORDER BY lexical_rank DESC,
+                             p.document_id,
+                             p.chunk_id
+                    LIMIT ?
+                )
+                """;
+
+        String sql = lexicalUnionSql(branch, routed.size());
+        List<Object> parameters = new java.util.ArrayList<>();
+
+        for (long accessLevel : routed) {
+            parameters.add(query);
+            parameters.add(accessLevel);
+            if (language != null) {
+                parameters.add(language);
+            }
+            parameters.add(query);
+            if (documentIds != null && !documentIds.isEmpty()) {
+                parameters.add(documentIds);
+            }
+            parameters.add(limit);
+        }
+        parameters.add(limit);
+
+        return queryLexical(sql, parameters);
+    }
+
+    private String lexicalUnionSql(
+            String branch,
+            int branchCount
+    ) {
+        String branches = String.join(
+                "\nUNION ALL\n",
+                java.util.Collections.nCopies(branchCount, branch)
+        );
+        return """
+                SELECT *
+                FROM (
+                """ + branches + """
+                ) lexical
+                ORDER BY lexical_rank DESC,
+                         document_id,
+                         chunk_id
                 LIMIT ?
                 """;
+    }
+
+    private List<SearchProjection> queryLexical(
+            String sql,
+            List<Object> parameters
+    ) {
         return jdbcTemplate.query(
                 sql,
                 ps -> {
-                    int i = 1;
-                    ps.setString(i++, query);
-                    bindLongArray(ps, i++, accessLevels);
-                    ps.setString(i++, query);
-                    i = bindDocumentIds(ps, i, documentIds);
-                    ps.setInt(i, limit);
+                    for (int index = 0;
+                            index < parameters.size();
+                            index++) {
+                        Object value = parameters.get(index);
+                        if (value instanceof List<?> list) {
+                            ps.setArray(
+                                    index + 1,
+                                    ps.getConnection().createArrayOf(
+                                            "varchar",
+                                            list.toArray()
+                                    )
+                            );
+                        } else {
+                            ps.setObject(index + 1, value);
+                        }
+                    }
                 },
                 this::map
         );
@@ -547,26 +822,88 @@ public class PostgresSearchProjectionRepository
         return index;
     }
 
+    private GenerationIdentity identityFor(
+            String documentId,
+            long generation
+    ) {
+        return jdbcTemplate.query(
+                """
+                SELECT access_level
+                FROM knowledge_document_generation
+                WHERE document_id = ?
+                  AND generation = ?
+                """,
+                (rs, rowNum) -> new GenerationIdentity(
+                        documentId,
+                        generation,
+                        rs.getLong("access_level")
+                ),
+                documentId,
+                generation
+        ).stream().findFirst().orElseThrow(() ->
+                new IllegalStateException(
+                        "Generation identity does not exist: "
+                                + documentId
+                                + "/"
+                                + generation
+                )
+        );
+    }
+
+    private void requireGenerationIdentity(
+            GenerationIdentity identity,
+            List<SearchProjection> projections
+    ) {
+        if (identity == null) {
+            throw new IllegalArgumentException(
+                    "identity must not be null"
+            );
+        }
+        if (projections == null || projections.isEmpty()) {
+            return;
+        }
+        boolean mismatch = projections.stream().anyMatch(
+                projection -> !identity.documentId().equals(
+                                projection.documentId()
+                        )
+                        || identity.generation()
+                                != projection.generation()
+                        || (
+                            projection.accessLevel() > 0
+                            && identity.accessLevel()
+                                    != projection.accessLevel()
+                        )
+        );
+        if (mismatch) {
+            throw new IllegalArgumentException(
+                    "All projections must belong to generation identity"
+            );
+        }
+    }
+
+    private List<Long> routedAccessLevels(
+            Set<Long> accessLevels
+    ) {
+        requireAccessLevels(accessLevels);
+        return accessLevels.stream()
+                .peek(value -> {
+                    if (value == null || value <= 0) {
+                        throw new IllegalArgumentException(
+                                "accessLevels must contain positive values"
+                        );
+                    }
+                })
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
     private void requireAccessLevels(Set<Long> accessLevels) {
         if (accessLevels == null || accessLevels.isEmpty()) {
             throw new IllegalArgumentException(
                     "accessLevels must not be empty"
             );
         }
-    }
-
-    private void bindLongArray(
-            PreparedStatement ps,
-            int index,
-            Set<Long> values
-    ) throws SQLException {
-        ps.setArray(
-                index,
-                ps.getConnection().createArrayOf(
-                        "bigint",
-                        values.toArray()
-                )
-        );
     }
 
     private void bindArray(
@@ -578,6 +915,12 @@ public class PostgresSearchProjectionRepository
                 index,
                 ps.getConnection().createArrayOf("varchar", values.toArray())
         );
+    }
+
+    private record GenerationKey(
+            String documentId,
+            long generation
+    ) {
     }
 
     private String escapeLikeLiteral(String value) {
@@ -592,6 +935,7 @@ public class PostgresSearchProjectionRepository
                 rs.getString("chunk_id"),
                 rs.getString("document_id"),
                 rs.getLong("generation"),
+                rs.getLong("access_level"),
                 rs.getString("parent_chunk_id"),
                 rs.getInt("chunk_index"),
                 rs.getString("text_content"),

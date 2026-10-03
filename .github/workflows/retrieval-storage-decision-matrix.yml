@@ -1,0 +1,138 @@
+name: Retrieval Storage Final Benchmark
+
+on:
+  pull_request:
+    paths:
+      - "src/main/java/kz/alimbetov/akmai/knowledge/vector/**"
+      - "src/main/java/kz/alimbetov/akmai/knowledge/projection/**"
+      - "src/main/java/kz/alimbetov/akmai/knowledge/lifecycle/**"
+      - "src/main/resources/db/changelog/greenfield/**"
+      - "src/test/java/kz/alimbetov/akmai/knowledge/vector/RetrievalStorageDecisionMatrixBenchmarkTest.java"
+      - "src/test/java/kz/alimbetov/akmai/knowledge/vector/RetrievalLanguageStorageBenchmarkTest.java"
+      - ".github/workflows/retrieval-storage-decision-matrix.yml"
+  workflow_dispatch:
+    inputs:
+      dimensions:
+        description: Vector dimensions
+        required: true
+        default: "1024"
+      rows_per_acl:
+        description: Rows/vectors per ACL partition
+        required: true
+        default: "2000"
+      chunks_per_document:
+        description: Chunks per document
+        required: true
+        default: "300"
+      warmups:
+        description: Warmup iterations
+        required: true
+        default: "3"
+      iterations:
+        description: Measured single-thread iterations
+        required: true
+        default: "10"
+      concurrent_iterations:
+        description: Measured iterations per concurrent worker
+        required: true
+        default: "10"
+      concurrency:
+        description: Comma-separated concurrency levels
+        required: true
+        default: "1,4,16"
+      active_rows_per_language:
+        description: Active rows per language leaf
+        required: true
+        default: "1200"
+      archived_rows_per_language:
+        description: Archived rows per language leaf
+        required: true
+        default: "150"
+
+jobs:
+  acl-matrix:
+    name: ACL ${{ matrix.access_levels }} / 1024d
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        access_levels: [1, 2, 4, 8, 16]
+
+    env:
+      AKMAI_RUN_RETRIEVAL_DECISION_MATRIX: "true"
+      AKMAI_MATRIX_DIMENSIONS: ${{ inputs.dimensions || '1024' }}
+      AKMAI_MATRIX_ACCESS_LEVELS: ${{ matrix.access_levels }}
+      AKMAI_MATRIX_ROWS_PER_ACL: ${{ inputs.rows_per_acl || '1200' }}
+      AKMAI_MATRIX_CHUNKS_PER_DOCUMENT: ${{ inputs.chunks_per_document || '300' }}
+      AKMAI_MATRIX_WARMUPS: ${{ inputs.warmups || '2' }}
+      AKMAI_MATRIX_ITERATIONS: ${{ inputs.iterations || '6' }}
+      AKMAI_MATRIX_CONCURRENT_ITERATIONS: ${{ inputs.concurrent_iterations || '6' }}
+      AKMAI_MATRIX_CONCURRENCY: ${{ inputs.concurrency || '1,4,16' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Formatting
+        run: mvn -B spotless:check
+
+      - name: Run ACL decision matrix
+        run: >
+          mvn -B
+          -Dtest=RetrievalStorageDecisionMatrixBenchmarkTest
+          test
+
+      - name: Upload ACL report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrieval-decision-acl-${{ matrix.access_levels }}-${{ github.run_id }}
+          path: target/retrieval-benchmark/decision-matrix-acl-*.json
+          if-no-files-found: error
+          retention-days: 30
+
+  language-storage:
+    name: Language + storage state / 1024d
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      AKMAI_RUN_LANGUAGE_STORAGE_BENCHMARK: "true"
+      AKMAI_LANGUAGE_BENCH_DIMENSIONS: ${{ inputs.dimensions || '1024' }}
+      AKMAI_LANGUAGE_BENCH_ACTIVE_ROWS: ${{ inputs.active_rows_per_language || '800' }}
+      AKMAI_LANGUAGE_BENCH_ARCHIVED_ROWS: ${{ inputs.archived_rows_per_language || '100' }}
+      AKMAI_LANGUAGE_BENCH_WARMUPS: ${{ inputs.warmups || '2' }}
+      AKMAI_LANGUAGE_BENCH_ITERATIONS: ${{ inputs.iterations || '6' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Formatting
+        run: mvn -B spotless:check
+
+      - name: Run language storage benchmark
+        run: >
+          mvn -B
+          -Dtest=RetrievalLanguageStorageBenchmarkTest
+          test
+
+      - name: Upload language storage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrieval-language-storage-${{ github.run_id }}
+          path: target/retrieval-benchmark/language-storage.json
+          if-no-files-found: error
+          retention-days: 30

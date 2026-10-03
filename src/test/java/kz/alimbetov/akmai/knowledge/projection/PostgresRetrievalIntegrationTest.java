@@ -25,13 +25,17 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 @Testcontainers
 class PostgresRetrievalIntegrationTest {
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>("postgres:17-alpine")
+            new PostgreSQLContainer<>(
+                    DockerImageName.parse("pgvector/pgvector:pg17")
+                            .asCompatibleSubstituteFor("postgres")
+            )
                     .withDatabaseName("akmai")
                     .withUsername("akmai")
                     .withPassword("akmai");
@@ -56,6 +60,7 @@ class PostgresRetrievalIntegrationTest {
         liquibase.afterPropertiesSet();
 
         jdbc = new JdbcTemplate(dataSource);
+        jdbc.execute("SELECT akmai_admin.ensure_access_level(2)");
         projections = new PostgresSearchProjectionRepository(
                 jdbc,
                 new ObjectMapper()
@@ -299,8 +304,12 @@ class PostgresRetrievalIntegrationTest {
                 "agreement"
         );
 
-        assertThat(ruPlan).contains("idx_knowledge_search_fts_ru");
-        assertThat(enPlan).contains("idx_knowledge_search_fts_en");
+        assertThat(ruPlan)
+                .contains("Bitmap Index Scan")
+                .contains("ksp_1_ru_act_ru");
+        assertThat(enPlan)
+                .contains("Bitmap Index Scan")
+                .contains("ksp_1_en_act_en");
     }
 
     @Test
@@ -371,6 +380,42 @@ class PostgresRetrievalIntegrationTest {
     }
 
     @Test
+    void genericLanguageFtsStaysInsideRequestedLanguageLeaf() {
+        long generation = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-generic-language",
+                1L
+        );
+        projections.saveAll(List.of(
+                projection(
+                        "de-generic",
+                        generation,
+                        "sharedtoken vertrag regelung",
+                        "de"
+                ),
+                projection(
+                        "fr-generic",
+                        generation,
+                        "sharedtoken contrat regle",
+                        "fr"
+                )
+        ));
+        publish("doc", generation);
+
+        assertThat(projections.searchLexical(
+                "sharedtoken",
+                "de",
+                List.of("doc"),
+                Set.of(1L),
+                10
+        )).extracting(SearchProjection::chunkId)
+                .containsExactly("de-generic");
+    }
+
+    @Test
     void escapedWildcardLikeQueryCanUseTrigramIndex() {
         long generation = generations.allocate(
                 "doc",
@@ -433,7 +478,9 @@ class PostgresRetrievalIntegrationTest {
                         }
         );
 
-        assertThat(plan).contains("idx_knowledge_search_text_trgm");
+        assertThat(plan)
+                .contains("Bitmap Index Scan")
+                .contains("knowledge_search_projection_al_1");
     }
 
 
@@ -551,14 +598,19 @@ class PostgresRetrievalIntegrationTest {
                             try (var setting = connection.createStatement()) {
                                 setting.execute("SET enable_seqscan = off");
                             }
+                            String language =
+                                    "russian".equals(configuration)
+                                            ? "ru"
+                                            : "en";
                             try (var statement = connection.prepareStatement(
                                     """
                                     EXPLAIN (COSTS OFF)
                                     SELECT chunk_id
-                                    FROM knowledge_search_projection
+                                    FROM knowledge_search_projection_al_1_lang_%s_s0
                                     WHERE %s
                                           @@ websearch_to_tsquery('%s', ?)
                                     """.formatted(
+                                            language,
                                             vectorColumn,
                                             configuration
                                     )

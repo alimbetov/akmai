@@ -32,6 +32,7 @@ public class VectorRetrievalStrategy implements RetrievalStrategy {
     ) {
         return repository.search(
                         queryChunk.semanticText(),
+                        queryChunk.language(),
                         List.copyOf(context.documentIds()),
                         context.accessLevels(),
                         properties.vectorTopK(),
@@ -44,7 +45,9 @@ public class VectorRetrievalStrategy implements RetrievalStrategy {
                     metadata.put("generation", match.generation());
                     return new RetrievalHit(
                             RetrievalType.VECTOR,
+                            match.accessLevel(),
                             match.documentId(),
+                            match.generation(),
                             match.chunkId(),
                             match.content(),
                             metadata

@@ -8,6 +8,7 @@ import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyContext;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyRepository;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
+import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
 import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository.VectorGenerationEntry;
@@ -224,17 +225,22 @@ public class GenerationPublicationService {
             return PublicationResult.SUPERSEDED;
         }
 
-        projectionRepository.saveAll(projections);
-        identifierRepository.saveAll(identifiers);
-        referenceGraphRepository.saveAll(projections);
-        vectorGenerationRepository.save(
+        GenerationIdentity identity = new GenerationIdentity(
                 documentId,
                 generation,
+                generationState.accessLevel()
+        );
+
+        projectionRepository.saveAll(identity, projections);
+        identifierRepository.saveAll(identity, identifiers);
+        referenceGraphRepository.saveAll(identity, projections);
+        vectorGenerationRepository.save(
+                identity,
                 profile.profileId(),
                 VectorIdentity.VERSION,
                 manifest
         );
-        vectorRepository.insertAll(profile, vectors);
+        vectorRepository.insertAll(profile, identity, vectors);
 
         if (previous != null && previous != generation) {
             jdbcTemplate.update(
@@ -256,12 +262,14 @@ public class GenerationPublicationService {
                 UPDATE knowledge_document_generation
                 SET generation_status = 'PUBLISHED',
                     published_at = clock_timestamp(),
+                    chunk_count = ?,
                     failure_code = NULL,
                     last_error = NULL
                 WHERE document_id = ?
                   AND generation = ?
                   AND generation_status = 'STAGING'
                 """,
+                projections.size(),
                 documentId,
                 generation
         );

@@ -36,7 +36,7 @@ public class EmbeddingProfileResolver {
         );
         String fingerprint = sha256(canonical);
         String profileId = "ep_" + fingerprint;
-        String table = "p_" + fingerprint.substring(0, 32);
+        String table = "p_" + fingerprint.substring(0, 30);
         return new EmbeddingProfile(
                 profileId,
                 "ollama",
@@ -48,7 +48,7 @@ public class EmbeddingProfileResolver {
                 "akmai_vector",
                 table,
                 vectorProperties.indexType().toUpperCase(),
-                (short) 1,
+                (short) 2,
                 Instant.now()
         );
     }

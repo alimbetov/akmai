@@ -15,6 +15,7 @@ import kz.alimbetov.akmai.config.ReembeddingProperties;
 import kz.alimbetov.akmai.knowledge.chunking.CrossReferenceExtractor;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
 import kz.alimbetov.akmai.knowledge.ingestion.GenerationVectorAssembler;
+import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
 import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.PostgresSearchProjectionRepository;
@@ -162,8 +163,9 @@ class ReembeddingIntegrationTest {
                 String.class
         )).isEqualTo("PUBLISHED");
 
-        assertThat(vectors.findIdsByGenerationMetadata(
-                target, "doc-1", 2L
+        assertThat(vectors.findIdsByGeneration(
+                target,
+                new GenerationIdentity("doc-1", 2L, 1L)
         )).hasSize(1);
         assertThat(projections.findGeneration("doc-1", 2L))
                 .extracting(SearchProjection::chunkId)

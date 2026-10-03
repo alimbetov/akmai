@@ -96,6 +96,11 @@ public class ChunkRetentionService {
         if (!fence.valid()) {
             throw new StaleClaimException();
         }
+        GenerationIdentity identity = new GenerationIdentity(
+                claim.documentId(),
+                claim.generation(),
+                fence.accessLevel()
+        );
 
         int marked = jdbcTemplate.update(
                 """
@@ -142,10 +147,8 @@ public class ChunkRetentionService {
                         "Embedding profile is missing: " + profileId
                 ));
 
-        List<String> vectorIds = vectorGenerationRepository.findVectorIds(
-                claim.documentId(),
-                claim.generation()
-        );
+        List<String> vectorIds =
+                vectorGenerationRepository.findVectorIds(identity);
         if (vectorIds.isEmpty()) {
             throw new IllegalStateException(
                     "Vector manifest missing; reconciliation is required"
@@ -156,51 +159,67 @@ public class ChunkRetentionService {
                 """
                 SELECT count(*)
                 FROM knowledge_search_projection
-                WHERE document_id = ?
+                WHERE access_level = ?
+                  AND document_id = ?
                   AND generation = ?
                 """,
                 Integer.class,
-                claim.documentId(),
-                claim.generation()
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
         );
 
-        vectorRepository.deleteIds(profile, vectorIds);
-        if (vectorRepository.countExisting(profile, vectorIds) != 0) {
+        int archivedVectors = vectorRepository.archiveGeneration(
+                profile,
+                identity
+        );
+        if (archivedVectors != vectorIds.size()) {
             throw new IllegalStateException(
-                    "Physical vectors remain after generation delete"
+                    "Vector archive count does not match generation manifest"
+            );
+        }
+        if (vectorRepository.countGeneration(
+                profile,
+                identity,
+                RetrievalStorageState.ACTIVE
+        ) != 0) {
+            throw new IllegalStateException(
+                    "Active vectors remain after generation archive"
+            );
+        }
+
+        int archivedProjections =
+                projectionRepository.archiveGeneration(identity);
+        if (chunkCount != null
+                && archivedProjections != chunkCount) {
+            throw new IllegalStateException(
+                    "Projection archive count does not match generation"
             );
         }
 
         jdbcTemplate.update(
                 """
                 DELETE FROM knowledge_reference_edge
-                WHERE document_id = ?
+                WHERE access_level = ?
+                  AND document_id = ?
                   AND generation = ?
                 """,
-                claim.documentId(),
-                claim.generation()
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
         );
         jdbcTemplate.update(
                 """
                 DELETE FROM knowledge_reference_target
-                WHERE document_id = ?
+                WHERE access_level = ?
+                  AND document_id = ?
                   AND generation = ?
                 """,
-                claim.documentId(),
-                claim.generation()
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
         );
-        identifierRepository.deleteGeneration(
-                claim.documentId(),
-                claim.generation()
-        );
-        projectionRepository.deleteGeneration(
-                claim.documentId(),
-                claim.generation()
-        );
-        vectorGenerationRepository.deleteGeneration(
-                claim.documentId(),
-                claim.generation()
-        );
+        identifierRepository.deleteGeneration(identity);
 
         if (!finalFenceValid(claim)) {
             throw new StaleClaimException();
@@ -209,13 +228,12 @@ public class ChunkRetentionService {
         jdbcTemplate.update(
                 """
                 UPDATE knowledge_document_generation
-                SET generation_status = 'CLEANED',
+                SET generation_status = 'RETIRED',
                     retired_at = COALESCE(retired_at, clock_timestamp()),
-                    cleaned_at = clock_timestamp(),
-                    cleanup_required = false
+                    cleanup_required = true
                 WHERE document_id = ?
                   AND generation = ?
-                  AND generation_status IN ('PUBLISHED', 'RETIRED', 'FAILED')
+                  AND generation_status IN ('PUBLISHED', 'RETIRED')
                 """,
                 claim.documentId(),
                 claim.generation()
@@ -270,6 +288,7 @@ public class ChunkRetentionService {
                        claimed_by,
                        published_generation,
                        retention_status,
+                       access_level,
                        lease_until > clock_timestamp() AS lease_valid
                 FROM knowledge_document_lifecycle
                 WHERE document_id = ?
@@ -288,10 +307,11 @@ public class ChunkRetentionService {
                                 && "DELETE_PENDING".equals(
                                         rs.getString("retention_status")
                                 )
-                                && rs.getBoolean("lease_valid")
+                                && rs.getBoolean("lease_valid"),
+                        rs.getLong("access_level")
                 ),
                 claim.documentId()
-        ).stream().findFirst().orElse(new ClaimFence(false));
+        ).stream().findFirst().orElse(new ClaimFence(false, 0L));
     }
 
     private boolean finalFenceValid(RetentionClaim claim) {
@@ -325,7 +345,7 @@ public class ChunkRetentionService {
             }
         }
         LOGGER.info(
-                "retention_cleanup event=result status={} generation={} deletedChunks={}",
+                "retention_archive event=result status={} generation={} archivedChunks={}",
                 result.status(),
                 result.generation(),
                 result.deletedChunks()
@@ -349,7 +369,10 @@ public class ChunkRetentionService {
         return value.length() <= 1000 ? value : value.substring(0, 1000);
     }
 
-    private record ClaimFence(boolean valid) {
+    private record ClaimFence(
+            boolean valid,
+            long accessLevel
+    ) {
     }
 
     private static final class StaleClaimException extends RuntimeException {

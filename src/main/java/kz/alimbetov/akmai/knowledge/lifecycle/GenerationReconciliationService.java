@@ -55,11 +55,15 @@ public class GenerationReconciliationService {
         }
         List<GenerationKey> candidates = jdbcTemplate.query(
                 """
-                SELECT g.document_id, g.generation
+                SELECT g.document_id, g.generation, g.access_level
                 FROM knowledge_document_generation g
                 WHERE g.generation_status IN ('RETIRED', 'FAILED')
-                  AND g.started_at <
-                      clock_timestamp() - (? * interval '1 millisecond')
+                  AND COALESCE(
+                          g.retired_at,
+                          g.failed_at,
+                          g.started_at
+                      ) < clock_timestamp()
+                          - (? * interval '1 millisecond')
                   AND NOT EXISTS (
                       SELECT 1
                       FROM knowledge_document_lifecycle l
@@ -72,7 +76,8 @@ public class GenerationReconciliationService {
                 """,
                 (rs, rowNum) -> new GenerationKey(
                         rs.getString("document_id"),
-                        rs.getLong("generation")
+                        rs.getLong("generation"),
+                        rs.getLong("access_level")
                 ),
                 properties.gracePeriod().toMillis(),
                 properties.batchSize()
@@ -128,48 +133,50 @@ public class GenerationReconciliationService {
             return false;
         }
 
-        List<String> vectorIds = manifests.findVectorIds(
+        GenerationIdentity identity = new GenerationIdentity(
                 key.documentId(),
-                key.generation()
+                key.generation(),
+                key.accessLevel()
         );
 
-        if (row.profileId() != null) {
-            EmbeddingProfile profile = profiles.findById(row.profileId())
-                    .orElseThrow(() -> new IllegalStateException(
-                            "Missing embedding profile " + row.profileId()
-                    ));
-            if (vectorIds.isEmpty()) {
-                vectorIds = vectors.findIdsByGenerationMetadata(
-                        profile,
-                        key.documentId(),
-                        key.generation()
-                );
-            }
-            vectors.deleteIds(profile, vectorIds);
-            if (vectors.countExisting(profile, vectorIds) != 0) {
-                throw new IllegalStateException(
-                        "Generation vectors remain after reconciliation"
-                );
-            }
-        } else if (hasRelationalState(key)) {
-            queueLegacyReconciliation(key);
-            jdbcTemplate.update(
-                    """
-                    UPDATE knowledge_document_generation
-                    SET cleanup_required = true
-                    WHERE document_id = ?
-                      AND generation = ?
-                    """,
-                    key.documentId(),
-                    key.generation()
+        if (row.profileId() == null || row.profileId().isBlank()) {
+            throw new IllegalStateException(
+                    "Generation has no embedding profile: "
+                            + key.documentId()
+                            + "/"
+                            + key.generation()
             );
-            return false;
         }
 
-        references.deleteGeneration(key.documentId(), key.generation());
-        identifiers.deleteGeneration(key.documentId(), key.generation());
-        projections.deleteGeneration(key.documentId(), key.generation());
-        manifests.deleteGeneration(key.documentId(), key.generation());
+        EmbeddingProfile profile = profiles.findById(row.profileId())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Missing embedding profile " + row.profileId()
+                ));
+
+        RetrievalStorageState storageState =
+                "RETIRED".equals(row.status())
+                        ? RetrievalStorageState.ARCHIVED
+                        : RetrievalStorageState.ACTIVE;
+
+        vectors.deleteGeneration(
+                profile,
+                identity,
+                storageState
+        );
+        if (vectors.countGeneration(
+                profile,
+                identity,
+                storageState
+        ) != 0) {
+            throw new IllegalStateException(
+                    "Generation vectors remain after reconciliation"
+            );
+        }
+
+        references.deleteGeneration(identity);
+        identifiers.deleteGeneration(identity);
+        projections.deleteGeneration(identity);
+        manifests.deleteGeneration(identity);
 
         return jdbcTemplate.update(
                 """
@@ -186,65 +193,11 @@ public class GenerationReconciliationService {
         ) == 1;
     }
 
-    private boolean hasRelationalState(GenerationKey key) {
-        Integer count = jdbcTemplate.queryForObject(
-                """
-                SELECT
-                    (SELECT count(*) FROM knowledge_search_projection
-                      WHERE document_id = ? AND generation = ?)
-                  + (SELECT count(*) FROM document_identifier
-                      WHERE document_id = ? AND generation = ?)
-                  + (SELECT count(*) FROM knowledge_document_vector_generation
-                      WHERE document_id = ? AND generation = ?)
-                  + (SELECT count(*) FROM knowledge_reference_edge
-                      WHERE document_id = ? AND generation = ?)
-                  + (SELECT count(*) FROM knowledge_reference_target
-                      WHERE document_id = ? AND generation = ?)
-                """,
-                Integer.class,
-                key.documentId(),
-                key.generation(),
-                key.documentId(),
-                key.generation(),
-                key.documentId(),
-                key.generation(),
-                key.documentId(),
-                key.generation(),
-                key.documentId(),
-                key.generation()
-        );
-        return count != null && count > 0;
-    }
-
-    private void queueLegacyReconciliation(GenerationKey key) {
-        jdbcTemplate.update(
-                """
-                INSERT INTO knowledge_legacy_reconciliation (
-                    entity_type, entity_key, payload, reason
-                )
-                SELECT 'GENERATION',
-                       ?,
-                       jsonb_build_object(
-                           'documentId', ?,
-                           'generation', ?
-                       ),
-                       'GENERATION_WITHOUT_EMBEDDING_PROFILE'
-                WHERE NOT EXISTS (
-                    SELECT 1
-                    FROM knowledge_legacy_reconciliation
-                    WHERE entity_type = 'GENERATION'
-                      AND entity_key = ?
-                      AND resolved_at IS NULL
-                )
-                """,
-                key.documentId() + ":" + key.generation(),
-                key.documentId(),
-                key.generation(),
-                key.documentId() + ":" + key.generation()
-        );
-    }
-
-    private record GenerationKey(String documentId, long generation) {
+    private record GenerationKey(
+            String documentId,
+            long generation,
+            long accessLevel
+    ) {
     }
 
     private record GenerationRow(String status, String profileId) {

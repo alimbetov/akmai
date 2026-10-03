@@ -8,6 +8,7 @@ import kz.alimbetov.akmai.config.ReembeddingProperties;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
 import kz.alimbetov.akmai.knowledge.ingestion.GenerationVectorAssembler;
+import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
 import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
@@ -293,11 +294,17 @@ public class ReembeddingService {
         );
 
         try {
+            GenerationIdentity sourceIdentity = generationIdentity(
+                    snapshot.documentId(),
+                    snapshot.sourceGeneration()
+            );
+            GenerationIdentity targetIdentity = generationIdentity(
+                    snapshot.documentId(),
+                    candidate
+            );
+
             List<SearchProjection> sourceProjections =
-                    projections.findGeneration(
-                            snapshot.documentId(),
-                            snapshot.sourceGeneration()
-                    );
+                    projections.findGeneration(sourceIdentity);
             if (sourceProjections.isEmpty()) {
                 throw new IllegalStateException(
                         "Published source generation has no projections"
@@ -305,13 +312,10 @@ public class ReembeddingService {
             }
 
             List<SearchProjection> cloned = sourceProjections.stream()
-                    .map(value -> value.withGeneration(candidate))
+                    .map(value -> value.withIdentity(targetIdentity))
                     .toList();
             List<DocumentIdentifier> clonedIdentifiers =
-                    identifiers.findGeneration(
-                                    snapshot.documentId(),
-                                    snapshot.sourceGeneration()
-                            ).stream()
+                    identifiers.findGeneration(sourceIdentity).stream()
                             .map(value -> value.withGeneration(candidate))
                             .toList();
 
@@ -347,21 +351,26 @@ public class ReembeddingService {
                     );
                 }
 
-                projections.saveAll(cloned);
-                identifiers.saveAll(clonedIdentifiers);
+                projections.saveAll(targetIdentity, cloned);
+                identifiers.saveAll(
+                        targetIdentity,
+                        clonedIdentifiers
+                );
                 references.cloneGeneration(
-                        snapshot.documentId(),
-                        snapshot.sourceGeneration(),
-                        candidate
+                        sourceIdentity,
+                        targetIdentity
                 );
                 manifests.save(
-                        snapshot.documentId(),
-                        candidate,
+                        targetIdentity,
                         target.profileId(),
                         (short) 2,
                         assembly.manifest()
                 );
-                vectors.insertAll(target, assembly.vectors());
+                vectors.insertAll(
+                        target,
+                        targetIdentity,
+                        assembly.vectors()
+                );
 
                 jdbcTemplate.update(
                         """
@@ -510,6 +519,34 @@ public class ReembeddingService {
             );
             return candidate;
         });
+    }
+
+    private GenerationIdentity generationIdentity(
+            String documentId,
+            long generation
+    ) {
+        return jdbcTemplate.query(
+                """
+                SELECT access_level
+                FROM knowledge_document_generation
+                WHERE document_id = ?
+                  AND generation = ?
+                """,
+                (rs, rowNum) -> new GenerationIdentity(
+                        documentId,
+                        generation,
+                        rs.getLong("access_level")
+                ),
+                documentId,
+                generation
+        ).stream().findFirst().orElseThrow(() ->
+                new IllegalStateException(
+                        "Generation identity does not exist: "
+                                + documentId
+                                + "/"
+                                + generation
+                )
+        );
     }
 
     private void readyToCutover(UUID migrationId) {

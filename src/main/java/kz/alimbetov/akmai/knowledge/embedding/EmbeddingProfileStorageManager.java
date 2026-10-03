@@ -21,6 +21,22 @@ public class EmbeddingProfileStorageManager {
         jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS vector");
         jdbcTemplate.execute("CREATE SCHEMA IF NOT EXISTS akmai_vector");
 
+        if (hasGreenfieldProvisioner()) {
+            jdbcTemplate.query(
+                    """
+                    SELECT akmai_admin.ensure_vector_profile_storage(
+                        ?,
+                        ?
+                    )
+                    """,
+                    rs -> {
+                    },
+                    profile.vectorTable(),
+                    profile.dimensions()
+            );
+            return;
+        }
+
         String table = qualified(profile);
         jdbcTemplate.execute(
                 """
@@ -42,6 +58,18 @@ public class EmbeddingProfileStorageManager {
                     """.formatted(index, table)
             );
         }
+    }
+
+    private boolean hasGreenfieldProvisioner() {
+        Boolean result = jdbcTemplate.queryForObject(
+                """
+                SELECT to_regprocedure(
+                    'akmai_admin.ensure_vector_profile_storage(text,integer)'
+                ) IS NOT NULL
+                """,
+                Boolean.class
+        );
+        return Boolean.TRUE.equals(result);
     }
 
     public String qualified(EmbeddingProfile profile) {
