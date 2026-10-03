@@ -299,13 +299,8 @@ class RetrievalLanguageHotBenchmarkTest {
                             id,
                             embedding <=> ? AS distance
                         FROM bench_hot v
-                        JOIN bench_hot_lifecycle l
-                          ON l.document_id = v.document_id
-                         AND l.published_generation = v.generation
-                         AND l.access_level = v.access_level
                         WHERE v.access_level = ?
                           AND v.language = ?
-                          AND l.retention_status = 'ACTIVE'
                         ORDER BY v.embedding <=> ?
                         LIMIT ?
                     )
@@ -319,6 +314,11 @@ class RetrievalLanguageHotBenchmarkTest {
 
         sql.append("""
                 ) candidate
+                JOIN bench_hot_lifecycle l
+                  ON l.document_id = candidate.document_id
+                 AND l.published_generation = candidate.generation
+                 AND l.access_level = 1
+                WHERE l.retention_status = 'ACTIVE'
                 ORDER BY candidate.distance
                 LIMIT ?
                 """);
