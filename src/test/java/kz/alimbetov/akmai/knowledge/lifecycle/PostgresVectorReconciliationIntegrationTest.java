@@ -292,6 +292,168 @@ class PostgresVectorReconciliationIntegrationTest {
     }
 
     @Test
+    void retiringGenerationPurgesBeforeRetiredAndThenVerifies() {
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_lifecycle (
+                    document_id, lifecycle_policy, lifecycle_status,
+                    generation, attempt_count, row_version,
+                    created_at, updated_at, retention_status,
+                    published_generation, next_generation, access_level
+                ) VALUES (
+                    'doc-retiring', 'PERMANENT', 'READY',
+                    2, 0, 0,
+                    clock_timestamp(), clock_timestamp(), 'ACTIVE',
+                    2, 3, 1
+                )
+                """
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_generation (
+                    document_id, generation, generation_status,
+                    generation_kind, embedding_profile_id,
+                    content_fingerprint, physical_id_version,
+                    cleanup_required, started_at, retired_at, access_level,
+                    chunk_count
+                ) VALUES (
+                    'doc-retiring', 1, 'RETIRING',
+                    'INGESTION', ?, 'fp-old', 2,
+                    true, clock_timestamp() - interval '1 hour',
+                    clock_timestamp() - interval '30 minutes', 1, 1
+                )
+                """,
+                profile.profileId()
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_generation (
+                    document_id, generation, generation_status,
+                    generation_kind, embedding_profile_id,
+                    content_fingerprint, physical_id_version,
+                    cleanup_required, started_at, published_at, access_level,
+                    chunk_count
+                ) VALUES (
+                    'doc-retiring', 2, 'PUBLISHED',
+                    'INGESTION', ?, 'fp-new', 2,
+                    false, clock_timestamp() - interval '20 minutes',
+                    clock_timestamp() - interval '10 minutes', 1, 0
+                )
+                """,
+                profile.profileId()
+        );
+
+        GenerationIdentity oldIdentity =
+                new GenerationIdentity("doc-retiring", 1L, 1L);
+        projections.saveAll(
+                oldIdentity,
+                List.of(new SearchProjection(
+                        "old-chunk",
+                        "doc-retiring",
+                        1L,
+                        1L,
+                        null,
+                        0,
+                        "old text",
+                        "old text",
+                        "en",
+                        KnowledgeDomain.GENERAL,
+                        "section",
+                        List.of(),
+                        List.of(),
+                        Map.of("source", "retiring-test"),
+                        2
+                ))
+        );
+
+        String vectorId = VectorIdentity.physicalId(
+                "doc-retiring",
+                1L,
+                "old-chunk"
+        );
+        manifests.save(
+                oldIdentity,
+                profile.profileId(),
+                VectorIdentity.VERSION,
+                List.of(new VectorGenerationRepository.VectorGenerationEntry(
+                        vectorId,
+                        "old-chunk"
+                ))
+        );
+        vectors.insertAll(
+                profile,
+                oldIdentity,
+                List.of(new PostgresGenerationVectorRepository.VectorRow(
+                        vectorId,
+                        "old-chunk",
+                        "en",
+                        "old text",
+                        Map.of(
+                                "akmaiDocumentId", "doc-retiring",
+                                "akmaiGeneration", 1L,
+                                "akmaiChunkId", "old-chunk",
+                                "language", "en"
+                        ),
+                        new float[] {1f, 0f, 0f}
+                ))
+        );
+
+        assertThat(reconciliation.reconcileBatch()).isZero();
+
+        assertThat(vectors.countGeneration(profile, oldIdentity)).isZero();
+        assertThat(projections.findGeneration(oldIdentity)).isEmpty();
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT generation_status
+                FROM knowledge_document_generation
+                WHERE document_id = 'doc-retiring'
+                  AND generation = 1
+                """,
+                String.class
+        )).isEqualTo("RETIRED");
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT cleanup_status
+                FROM knowledge_retired_generation
+                WHERE document_id = 'doc-retiring'
+                  AND generation = 1
+                  AND access_level = 1
+                """,
+                String.class
+        )).isEqualTo("PURGED");
+
+        assertThat(reconciliation.reconcileBatch()).isEqualTo(1);
+
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT generation_status
+                FROM knowledge_document_generation
+                WHERE document_id = 'doc-retiring'
+                  AND generation = 1
+                """,
+                String.class
+        )).isEqualTo("CLEANED");
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT cleanup_status
+                FROM knowledge_retired_generation
+                WHERE document_id = 'doc-retiring'
+                  AND generation = 1
+                  AND access_level = 1
+                """,
+                String.class
+        )).isEqualTo("VERIFIED");
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT published_generation
+                FROM knowledge_document_lifecycle
+                WHERE document_id = 'doc-retiring'
+                """,
+                Long.class
+        )).isEqualTo(2L);
+    }
+
+    @Test
     void missingManifestUsesVerifiedGenerationMetadataBeforeMarkingCleaned() {
         jdbc.update(
                 """
