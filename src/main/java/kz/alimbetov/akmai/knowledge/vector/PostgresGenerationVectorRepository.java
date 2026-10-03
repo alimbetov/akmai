@@ -45,11 +45,6 @@ public class PostgresGenerationVectorRepository {
         if (rows == null || rows.isEmpty()) {
             return;
         }
-        if (!hasTypedRouting(profile)) {
-            insertLegacy(profile, rows);
-            return;
-        }
-
         String table = storageManager.qualified(profile);
         String sql = """
                 INSERT INTO %s (
@@ -96,57 +91,22 @@ public class PostgresGenerationVectorRepository {
         if (rows == null || rows.isEmpty()) {
             return;
         }
-        if (hasTypedRouting(profile)) {
-            rows.stream()
-                    .collect(java.util.stream.Collectors.groupingBy(
-                            this::generationKey,
-                            java.util.LinkedHashMap::new,
-                            java.util.stream.Collectors.toList()
-                    ))
-                    .forEach((key, values) ->
-                            insertAll(
-                                    profile,
-                                    identityFor(
-                                            key.documentId(),
-                                            key.generation()
-                                    ),
-                                    values
-                            )
-                    );
-            return;
-        }
-        insertLegacy(profile, rows);
-    }
-
-    private void insertLegacy(
-            EmbeddingProfile profile,
-            List<VectorRow> rows
-    ) {
-        String table = storageManager.qualified(profile);
-        String sql = """
-                INSERT INTO %s (id, content, metadata, embedding)
-                VALUES (?, ?, ?::jsonb, ?)
-                """.formatted(table);
-
-        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(
-                    PreparedStatement ps,
-                    int index
-            ) throws SQLException {
-                VectorRow row = rows.get(index);
-                validateEmbedding(row, profile);
-                ps.setObject(1, UUID.fromString(row.vectorId()));
-                ps.setString(2, row.content());
-                ps.setString(3, json(row.metadata()));
-                ps.setObject(4, new PGvector(row.embedding()));
-            }
-
-            @Override
-            public int getBatchSize() {
-                return rows.size();
-            }
-        });
+        rows.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        this::generationKey,
+                        java.util.LinkedHashMap::new,
+                        java.util.stream.Collectors.toList()
+                ))
+                .forEach((key, values) ->
+                        insertAll(
+                                profile,
+                                identityFor(
+                                        key.documentId(),
+                                        key.generation()
+                                ),
+                                values
+                        )
+                );
     }
 
     public int deleteIds(
@@ -158,9 +118,6 @@ public class PostgresGenerationVectorRepository {
             throw new IllegalArgumentException(
                     "identity must not be null"
             );
-        }
-        if (!hasTypedRouting(profile)) {
-            return deleteIds(profile, ids);
         }
         if (ids == null || ids.isEmpty()) {
             return 0;
@@ -178,21 +135,6 @@ public class PostgresGenerationVectorRepository {
         return deleted;
     }
 
-    public int deleteIds(EmbeddingProfile profile, List<String> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return 0;
-        }
-        String table = storageManager.qualified(profile);
-        int deleted = 0;
-        for (String id : ids) {
-            deleted += jdbcTemplate.update(
-                    "DELETE FROM " + table + " WHERE id = ?",
-                    UUID.fromString(id)
-            );
-        }
-        return deleted;
-    }
-
     public List<String> findIdsByGeneration(
             EmbeddingProfile profile,
             GenerationIdentity identity
@@ -200,13 +142,6 @@ public class PostgresGenerationVectorRepository {
         if (identity == null) {
             throw new IllegalArgumentException(
                     "identity must not be null"
-            );
-        }
-        if (!hasTypedRouting(profile)) {
-            return findIdsByGenerationMetadata(
-                    profile,
-                    identity.documentId(),
-                    identity.generation()
             );
         }
         String table = storageManager.qualified(profile);
@@ -226,28 +161,6 @@ public class PostgresGenerationVectorRepository {
         );
     }
 
-    public List<String> findIdsByGenerationMetadata(
-            EmbeddingProfile profile,
-            String documentId,
-            long generation
-    ) {
-        String table = storageManager.qualified(profile);
-        return jdbcTemplate.query(
-                """
-                SELECT id::text
-                FROM %s
-                WHERE metadata->>'akmaiDocumentId' = ?
-                  AND (metadata->>'akmaiGeneration')::bigint = ?
-                  AND metadata->>'akmaiEmbeddingProfileId' = ?
-                ORDER BY id
-                """.formatted(table),
-                (rs, rowNum) -> rs.getString(1),
-                documentId,
-                generation,
-                profile.profileId()
-        );
-    }
-
     public int countExisting(
             EmbeddingProfile profile,
             GenerationIdentity identity,
@@ -257,9 +170,6 @@ public class PostgresGenerationVectorRepository {
             throw new IllegalArgumentException(
                     "identity must not be null"
             );
-        }
-        if (!hasTypedRouting(profile)) {
-            return countExisting(profile, ids);
         }
         if (ids == null || ids.isEmpty()) {
             return 0;
@@ -289,24 +199,6 @@ public class PostgresGenerationVectorRepository {
         );
     }
 
-    public int countExisting(EmbeddingProfile profile, List<String> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return 0;
-        }
-        String table = storageManager.qualified(profile);
-        return jdbcTemplate.query(
-                "SELECT count(*) FROM " + table + " WHERE id::text = ANY (?)",
-                ps -> ps.setArray(
-                        1,
-                        ps.getConnection().createArrayOf("varchar", ids.toArray())
-                ),
-                rs -> {
-                    rs.next();
-                    return rs.getInt(1);
-                }
-        );
-    }
-
     private void validateEmbedding(
             VectorRow row,
             EmbeddingProfile profile
@@ -321,24 +213,6 @@ public class PostgresGenerationVectorRepository {
                 );
             }
         }
-    }
-
-    private boolean hasTypedRouting(EmbeddingProfile profile) {
-        Boolean result = jdbcTemplate.queryForObject(
-                """
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM information_schema.columns
-                    WHERE table_schema = ?
-                      AND table_name = ?
-                      AND column_name = 'access_level'
-                )
-                """,
-                Boolean.class,
-                profile.vectorSchema(),
-                profile.vectorTable()
-        );
-        return Boolean.TRUE.equals(result);
     }
 
     private GenerationKey generationKey(VectorRow row) {
