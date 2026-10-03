@@ -60,6 +60,10 @@ public class IdentifierRetrievalStrategy implements RetrievalStrategy {
         identifiers.values().stream()
                 .collect(java.util.stream.Collectors.groupingBy(
                         value -> new DocumentGeneration(
+                                effectiveAccessLevel(
+                                        value,
+                                        context.accessLevels()
+                                ),
                                 value.documentId(),
                                 value.generation()
                         ),
@@ -81,8 +85,8 @@ public class IdentifierRetrievalStrategy implements RetrievalStrategy {
                                                 key(projection),
                                                 projection
                                         )
-                                )
-                );
+                                );
+                });
 
         return identifiers.values().stream()
                 .map(identifier -> canonicalHit(
@@ -125,6 +129,7 @@ public class IdentifierRetrievalStrategy implements RetrievalStrategy {
 
     private ProjectionKey key(DocumentIdentifier value) {
         return new ProjectionKey(
+                value.accessLevel(),
                 value.documentId(),
                 value.generation(),
                 value.chunkId()
@@ -133,19 +138,36 @@ public class IdentifierRetrievalStrategy implements RetrievalStrategy {
 
     private ProjectionKey key(SearchProjection value) {
         return new ProjectionKey(
+                value.accessLevel(),
                 value.documentId(),
                 value.generation(),
                 value.chunkId()
         );
     }
 
+    private long effectiveAccessLevel(
+            DocumentIdentifier identifier,
+            java.util.Set<Long> allowed
+    ) {
+        if (identifier.accessLevel() > 0) {
+            return allowed.contains(identifier.accessLevel())
+                    ? identifier.accessLevel()
+                    : 0L;
+        }
+        return allowed.size() == 1
+                ? allowed.iterator().next()
+                : 0L;
+    }
+
     private record DocumentGeneration(
+            long accessLevel,
             String documentId,
             long generation
     ) {
     }
 
     private record ProjectionKey(
+            long accessLevel,
             String documentId,
             long generation,
             String chunkId
