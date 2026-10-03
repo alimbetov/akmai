@@ -47,7 +47,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String supplied = request.getHeader("X-AKMAI-API-Key");
+        String supplied = suppliedCredential(request);
         if (!matches(supplied, properties.apiKey())) {
             unauthorized(request, response);
             return;
@@ -64,6 +64,28 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
                 )
         );
         filterChain.doFilter(request, response);
+    }
+
+    private String suppliedCredential(
+            HttpServletRequest request
+    ) {
+        String apiKey = request.getHeader("X-AKMAI-API-Key");
+        if (apiKey != null && !apiKey.isBlank()) {
+            return apiKey;
+        }
+
+        String authorization = request.getHeader("Authorization");
+        if (authorization != null
+                && authorization.regionMatches(
+                        true,
+                        0,
+                        "Bearer ",
+                        0,
+                        7
+                )) {
+            return authorization.substring(7).trim();
+        }
+        return null;
     }
 
     private boolean requiresApiKey(String requestUri) {
