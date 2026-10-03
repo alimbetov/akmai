@@ -679,8 +679,11 @@ public class PostgresSearchProjectionRepository
                         )
                         || identity.generation()
                                 != projection.generation()
-                        || identity.accessLevel()
-                                != projection.accessLevel()
+                        || (
+                            projection.accessLevel() > 0
+                            && identity.accessLevel()
+                                    != projection.accessLevel()
+                        )
         );
         if (mismatch) {
             throw new IllegalArgumentException(
