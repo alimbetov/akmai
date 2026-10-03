@@ -42,7 +42,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         RequestIdSupport.requestId(request);
 
         if (!properties.enabled()
-                || !request.getRequestURI().startsWith("/api/")) {
+                || !requiresApiKey(request.getRequestURI())) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -64,6 +64,17 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
                 )
         );
         filterChain.doFilter(request, response);
+    }
+
+    private boolean requiresApiKey(String requestUri) {
+        if (requestUri == null) {
+            return false;
+        }
+        return requestUri.startsWith("/api/")
+                || requestUri.equals("/actuator/metrics")
+                || requestUri.startsWith("/actuator/metrics/")
+                || requestUri.equals("/actuator/info")
+                || requestUri.startsWith("/actuator/info/");
     }
 
     private boolean matches(String supplied, String configured) {

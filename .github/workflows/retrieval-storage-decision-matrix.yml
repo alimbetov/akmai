@@ -2,14 +2,6 @@ name: Retrieval Storage Final Benchmark
 
 on:
   pull_request:
-    paths:
-      - "src/main/java/kz/alimbetov/akmai/knowledge/vector/**"
-      - "src/main/java/kz/alimbetov/akmai/knowledge/projection/**"
-      - "src/main/java/kz/alimbetov/akmai/knowledge/lifecycle/**"
-      - "src/main/resources/db/changelog/greenfield/**"
-      - "src/test/java/kz/alimbetov/akmai/knowledge/vector/RetrievalStorageDecisionMatrixBenchmarkTest.java"
-      - "src/test/java/kz/alimbetov/akmai/knowledge/vector/RetrievalLanguageHotBenchmarkTest.java"
-      - ".github/workflows/retrieval-storage-decision-matrix.yml"
   workflow_dispatch:
     inputs:
       dimensions:
@@ -46,8 +38,41 @@ on:
         default: "1200"
 
 jobs:
+  changes:
+    name: Detect retrieval-sensitive changes
+    runs-on: ubuntu-latest
+    outputs:
+      retrieval_sensitive: ${{ steps.filter.outputs.retrieval_sensitive }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: filter
+        name: Classify change set
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "retrieval_sensitive=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git fetch origin             "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"             --force
+
+          files="$(git diff --name-only             "origin/${{ github.base_ref }}"...HEAD)"
+
+          pattern='^(src/main/java/kz/alimbetov/akmai/knowledge/(vector|projection|lifecycle)/|src/main/java/kz/alimbetov/akmai/rag/(query|retrieval|access)/|src/main/java/kz/alimbetov/akmai/knowledge/model/(RetrievalLanguageCatalog|KnowledgeLanguage)\.java$|src/main/resources/db/changelog/greenfield/|src/test/java/kz/alimbetov/akmai/(knowledge/vector|rag/quality)/|\.github/workflows/retrieval-storage-decision-matrix\.yml$)'
+
+          if grep -Eq "$pattern" <<< "$files"; then
+            echo "retrieval_sensitive=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "retrieval_sensitive=false" >> "$GITHUB_OUTPUT"
+          fi
+
   acl-matrix:
     name: ACL ${{ matrix.access_levels }} / 1024d
+    needs: changes
+    if: needs.changes.outputs.retrieval_sensitive == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -95,6 +120,8 @@ jobs:
 
   language-storage:
     name: Language HOT-only / 1024d
+    needs: changes
+    if: needs.changes.outputs.retrieval_sensitive == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -132,3 +159,26 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  retrieval-gate:
+    name: Required retrieval benchmark gate
+    if: always()
+    needs:
+      - changes
+      - acl-matrix
+      - language-storage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce retrieval benchmark result
+        env:
+          SENSITIVE: ${{ needs.changes.outputs.retrieval_sensitive }}
+          ACL_RESULT: ${{ needs.acl-matrix.result }}
+          LANGUAGE_RESULT: ${{ needs.language-storage.result }}
+        shell: bash
+        run: |
+          if [[ "$SENSITIVE" != "true" ]]; then
+            echo "No retrieval-sensitive changes; benchmark gate is satisfied."
+            exit 0
+          fi
+
+          test "$ACL_RESULT" = "success"
+          test "$LANGUAGE_RESULT" = "success"

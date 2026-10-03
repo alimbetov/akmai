@@ -32,11 +32,23 @@ public class SecurityStartupValidator implements ApplicationRunner {
                     "Production profile requires API-key security"
             );
         }
+        if (production && properties.allowUnauthenticatedLocal()) {
+            throw new IllegalStateException(
+                    "Production profile forbids unauthenticated local mode"
+            );
+        }
         if (properties.enabled()
                 && (properties.apiKey() == null
                 || properties.apiKey().isBlank())) {
             throw new IllegalStateException(
                     "AKMAI security is enabled but API key is missing"
+            );
+        }
+        if (production
+                && properties.apiKey() != null
+                && properties.apiKey().length() < 32) {
+            throw new IllegalStateException(
+                    "Production API key must contain at least 32 characters"
             );
         }
         if (properties.accessLevels().isEmpty()
