@@ -279,37 +279,15 @@ public class DocumentIdentifierRepository {
             Set<Long> accessLevels,
             int limit
     ) {
-        requireAccessLevels(accessLevels);
-        return jdbcTemplate.query(
+        return queryPublishedScoped(
                 """
-                SELECT i.document_id, i.generation, i.chunk_id, i.page_number,
-                       i.identifier_type, i.raw_value, i.normalized_value,
-                       i.context_text, i.created_at
-                FROM document_identifier i
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = i.document_id
-                 AND l.published_generation = i.generation
-                 AND l.access_level = i.access_level
-                WHERE l.retention_status = 'ACTIVE'
-                  AND i.access_level = ANY (?)
-                  AND i.identifier_type = ?
-                  AND i.normalized_value LIKE ? ESCAPE '\\'
-                ORDER BY i.created_at DESC
-                LIMIT ?
+                 AND i.identifier_type = ?
+                 AND i.normalized_value LIKE ? ESCAPE '\\'
                 """,
-                ps -> {
-                    ps.setArray(
-                            1,
-                            ps.getConnection().createArrayOf(
-                                    "bigint",
-                                    accessLevels.toArray()
-                            )
-                    );
-                    ps.setString(2, type.name());
-                    ps.setString(3, pattern);
-                    ps.setInt(4, limit);
-                },
-                this::map
+                accessLevels,
+                limit,
+                type.name(),
+                pattern
         );
     }
 
@@ -319,47 +297,88 @@ public class DocumentIdentifierRepository {
             int limit,
             String... arguments
     ) {
-        requireAccessLevels(accessLevels);
-        return jdbcTemplate.query(
-                """
-                SELECT i.document_id, i.generation, i.chunk_id, i.page_number,
-                       i.identifier_type, i.raw_value, i.normalized_value,
-                       i.context_text, i.created_at
-                FROM document_identifier i
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = i.document_id
-                 AND l.published_generation = i.generation
-                 AND l.access_level = i.access_level
-                WHERE l.retention_status = 'ACTIVE'
-                  AND i.access_level = ANY (?)
-                """ + predicate + """
-                ORDER BY i.created_at DESC
+        List<Long> routed = routedAccessLevels(accessLevels);
+        if (limit <= 0) {
+            return List.of();
+        }
+
+        StringBuilder sql = new StringBuilder();
+        List<Object> parameters = new java.util.ArrayList<>();
+
+        for (int branch = 0; branch < routed.size(); branch++) {
+            if (branch > 0) {
+                sql.append("\nUNION ALL\n");
+            }
+
+            sql.append("""
+                    (
+                        SELECT i.document_id,
+                               i.generation,
+                               i.chunk_id,
+                               i.page_number,
+                               i.identifier_type,
+                               i.raw_value,
+                               i.normalized_value,
+                               i.context_text,
+                               i.created_at
+                        FROM document_identifier i
+                        JOIN knowledge_document_lifecycle l
+                          ON l.document_id = i.document_id
+                         AND l.published_generation = i.generation
+                         AND l.access_level = i.access_level
+                        WHERE l.retention_status = 'ACTIVE'
+                          AND i.access_level = ?
+                    """);
+            sql.append(predicate);
+            sql.append("""
+                        ORDER BY i.created_at DESC
+                        LIMIT ?
+                    )
+                    """);
+
+            parameters.add(routed.get(branch));
+            java.util.Collections.addAll(parameters, arguments);
+            parameters.add(limit);
+        }
+
+        sql.insert(0, "SELECT * FROM (\n");
+        sql.append("""
+                ) scoped
+                ORDER BY created_at DESC
                 LIMIT ?
-                """,
+                """);
+        parameters.add(limit);
+
+        return jdbcTemplate.query(
+                sql.toString(),
                 ps -> {
-                    int index = 1;
-                    ps.setArray(
-                            index++,
-                            ps.getConnection().createArrayOf(
-                                    "bigint",
-                                    accessLevels.toArray()
-                            )
-                    );
-                    for (String argument : arguments) {
-                        ps.setString(index++, argument);
+                    for (int index = 0;
+                            index < parameters.size();
+                            index++) {
+                        ps.setObject(index + 1, parameters.get(index));
                     }
-                    ps.setInt(index, limit);
                 },
                 this::map
         );
     }
 
-    private void requireAccessLevels(Set<Long> accessLevels) {
+    private List<Long> routedAccessLevels(Set<Long> accessLevels) {
         if (accessLevels == null || accessLevels.isEmpty()) {
             throw new IllegalArgumentException(
                     "accessLevels must not be empty"
             );
         }
+        return accessLevels.stream()
+                .peek(value -> {
+                    if (value == null || value <= 0) {
+                        throw new IllegalArgumentException(
+                                "accessLevels must contain positive values"
+                        );
+                    }
+                })
+                .distinct()
+                .sorted()
+                .toList();
     }
 
     private DocumentIdentifier map(ResultSet rs, int rowNum) throws SQLException {
