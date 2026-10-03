@@ -224,30 +224,40 @@ public class PostgresSearchProjectionRepository
             List<String> chunkIds,
             Set<Long> accessLevels
     ) {
-        requireAccessLevels(accessLevels);
         if (chunkIds == null || chunkIds.isEmpty()) {
             return List.of();
         }
-        return jdbcTemplate.query(
-                """
-                SELECT p.*, l.access_level AS resolved_access_level
-                FROM knowledge_search_projection p
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = p.document_id
-                 AND l.published_generation = p.generation
-                WHERE p.document_id = ?
-                  AND p.chunk_id = ANY (?)
-                  AND l.retention_status = 'ACTIVE'
-                  AND l.access_level = ANY (?)
-                ORDER BY p.chunk_index
-                """,
-                ps -> {
-                    ps.setString(1, documentId);
-                    bindArray(ps, 2, chunkIds);
-                    bindLongArray(ps, 3, accessLevels);
-                },
-                this::map
-        );
+
+        List<SearchProjection> result = new java.util.ArrayList<>();
+        for (long accessLevel : routedAccessLevels(accessLevels)) {
+            result.addAll(jdbcTemplate.query(
+                    """
+                    SELECT p.*
+                    FROM knowledge_search_projection p
+                    JOIN knowledge_document_lifecycle l
+                      ON l.document_id = p.document_id
+                     AND l.published_generation = p.generation
+                     AND l.access_level = p.access_level
+                    WHERE p.access_level = ?
+                      AND p.document_id = ?
+                      AND p.chunk_id = ANY (?)
+                      AND l.retention_status = 'ACTIVE'
+                    ORDER BY p.chunk_index
+                    """,
+                    ps -> {
+                        ps.setLong(1, accessLevel);
+                        ps.setString(2, documentId);
+                        bindArray(ps, 3, chunkIds);
+                    },
+                    this::map
+            ));
+        }
+
+        return result.stream()
+                .sorted(java.util.Comparator.comparingInt(
+                        SearchProjection::chunkIndex
+                ))
+                .toList();
     }
 
     @Override
@@ -257,32 +267,44 @@ public class PostgresSearchProjectionRepository
             List<String> chunkIds,
             Set<Long> accessLevels
     ) {
-        requireAccessLevels(accessLevels);
-        if (generation <= 0 || chunkIds == null || chunkIds.isEmpty()) {
+        if (generation <= 0
+                || chunkIds == null
+                || chunkIds.isEmpty()) {
             return List.of();
         }
-        return jdbcTemplate.query(
-                """
-                SELECT p.*, l.access_level AS resolved_access_level
-                FROM knowledge_search_projection p
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = p.document_id
-                 AND l.published_generation = p.generation
-                WHERE p.document_id = ?
-                  AND p.generation = ?
-                  AND p.chunk_id = ANY (?)
-                  AND l.retention_status = 'ACTIVE'
-                  AND l.access_level = ANY (?)
-                ORDER BY p.chunk_index
-                """,
-                ps -> {
-                    ps.setString(1, documentId);
-                    ps.setLong(2, generation);
-                    bindArray(ps, 3, chunkIds);
-                    bindLongArray(ps, 4, accessLevels);
-                },
-                this::map
-        );
+
+        List<SearchProjection> result = new java.util.ArrayList<>();
+        for (long accessLevel : routedAccessLevels(accessLevels)) {
+            result.addAll(jdbcTemplate.query(
+                    """
+                    SELECT p.*
+                    FROM knowledge_search_projection p
+                    JOIN knowledge_document_lifecycle l
+                      ON l.document_id = p.document_id
+                     AND l.published_generation = p.generation
+                     AND l.access_level = p.access_level
+                    WHERE p.access_level = ?
+                      AND p.document_id = ?
+                      AND p.generation = ?
+                      AND p.chunk_id = ANY (?)
+                      AND l.retention_status = 'ACTIVE'
+                    ORDER BY p.chunk_index
+                    """,
+                    ps -> {
+                        ps.setLong(1, accessLevel);
+                        ps.setString(2, documentId);
+                        ps.setLong(3, generation);
+                        bindArray(ps, 4, chunkIds);
+                    },
+                    this::map
+            ));
+        }
+
+        return result.stream()
+                .sorted(java.util.Comparator.comparingInt(
+                        SearchProjection::chunkIndex
+                ))
+                .toList();
     }
 
     @Override
@@ -293,33 +315,44 @@ public class PostgresSearchProjectionRepository
             int radius,
             Set<Long> accessLevels
     ) {
-        requireAccessLevels(accessLevels);
         if (generation <= 0) {
             return List.of();
         }
-        return jdbcTemplate.query(
-                """
-                SELECT p.*, l.access_level AS resolved_access_level
-                FROM knowledge_search_projection p
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = p.document_id
-                 AND l.published_generation = p.generation
-                WHERE p.document_id = ?
-                  AND p.generation = ?
-                  AND l.retention_status = 'ACTIVE'
-                  AND l.access_level = ANY (?)
-                  AND p.chunk_index BETWEEN ? AND ?
-                ORDER BY p.chunk_index
-                """,
-                ps -> {
-                    ps.setString(1, documentId);
-                    ps.setLong(2, generation);
-                    bindLongArray(ps, 3, accessLevels);
-                    ps.setInt(4, Math.max(0, chunkIndex - radius));
-                    ps.setInt(5, chunkIndex + radius);
-                },
-                this::map
-        );
+
+        List<SearchProjection> result = new java.util.ArrayList<>();
+        int from = Math.max(0, chunkIndex - radius);
+        int to = chunkIndex + radius;
+
+        for (long accessLevel : routedAccessLevels(accessLevels)) {
+            result.addAll(jdbcTemplate.query(
+                    """
+                    SELECT p.*
+                    FROM knowledge_search_projection p
+                    JOIN knowledge_document_lifecycle l
+                      ON l.document_id = p.document_id
+                     AND l.published_generation = p.generation
+                     AND l.access_level = p.access_level
+                    WHERE p.access_level = ?
+                      AND p.document_id = ?
+                      AND p.generation = ?
+                      AND l.retention_status = 'ACTIVE'
+                      AND p.chunk_index BETWEEN ? AND ?
+                    ORDER BY p.chunk_index
+                    """,
+                    this::map,
+                    accessLevel,
+                    documentId,
+                    generation,
+                    from,
+                    to
+            ));
+        }
+
+        return result.stream()
+                .sorted(java.util.Comparator.comparingInt(
+                        SearchProjection::chunkIndex
+                ))
+                .toList();
     }
 
     @Override
@@ -690,6 +723,23 @@ public class PostgresSearchProjectionRepository
                     "All projections must belong to generation identity"
             );
         }
+    }
+
+    private List<Long> routedAccessLevels(
+            Set<Long> accessLevels
+    ) {
+        requireAccessLevels(accessLevels);
+        return accessLevels.stream()
+                .peek(value -> {
+                    if (value == null || value <= 0) {
+                        throw new IllegalArgumentException(
+                                "accessLevels must contain positive values"
+                        );
+                    }
+                })
+                .distinct()
+                .sorted()
+                .toList();
     }
 
     private void requireAccessLevels(Set<Long> accessLevels) {
