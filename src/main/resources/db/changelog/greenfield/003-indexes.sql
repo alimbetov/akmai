@@ -55,16 +55,6 @@ CREATE INDEX idx_projection_document_generation_chunk_index
         chunk_index
     );
 
-CREATE INDEX idx_projection_fts_ru
-    ON knowledge_search_projection
-    USING GIN (search_vector_ru)
-    WHERE language = 'ru';
-
-CREATE INDEX idx_projection_fts_en
-    ON knowledge_search_projection
-    USING GIN (search_vector_en)
-    WHERE language = 'en';
-
 CREATE INDEX idx_projection_fts_simple
     ON knowledge_search_projection
     USING GIN (search_vector);
