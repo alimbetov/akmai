@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/greenfield/001-platform-control.sql
+  - include:
+      file: db/changelog/greenfield/002-retrieval-parents.sql
+  - include:
+      file: db/changelog/greenfield/003-indexes.sql
+  - include:
+      file: db/changelog/greenfield/004-provisioning.sql
+  - include:
+      file: db/changelog/greenfield/005-operational.sql
+  - include:
+      file: db/changelog/greenfield/006-runtime-seed.sql
