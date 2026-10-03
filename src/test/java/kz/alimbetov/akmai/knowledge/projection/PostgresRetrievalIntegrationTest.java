@@ -306,10 +306,10 @@ class PostgresRetrievalIntegrationTest {
 
         assertThat(ruPlan)
                 .contains("Bitmap Index Scan")
-                .contains("knowledge_search_projection_al_1_lang_ru_fts_ru");
+                .contains("ksp_1_ru_act_ru");
         assertThat(enPlan)
                 .contains("Bitmap Index Scan")
-                .contains("knowledge_search_projection_al_1_lang_en_fts_en");
+                .contains("ksp_1_en_act_en");
     }
 
     @Test
@@ -570,7 +570,7 @@ class PostgresRetrievalIntegrationTest {
                                     """
                                     EXPLAIN (COSTS OFF)
                                     SELECT chunk_id
-                                    FROM knowledge_search_projection_al_1_lang_%s
+                                    FROM knowledge_search_projection_al_1_lang_%s_s0
                                     WHERE %s
                                           @@ websearch_to_tsquery('%s', ?)
                                     """.formatted(
