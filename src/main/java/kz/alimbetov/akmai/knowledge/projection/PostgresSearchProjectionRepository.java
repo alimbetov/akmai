@@ -35,14 +35,67 @@ public class PostgresSearchProjectionRepository
         if (projections == null || projections.isEmpty()) {
             return;
         }
+
+        Map<GenerationKey, List<SearchProjection>> grouped =
+                projections.stream().collect(
+                        java.util.stream.Collectors.groupingBy(
+                                value -> new GenerationKey(
+                                        value.documentId(),
+                                        value.generation()
+                                ),
+                                java.util.LinkedHashMap::new,
+                                java.util.stream.Collectors.toList()
+                        )
+                );
+        grouped.forEach((key, values) ->
+                saveAll(
+                        identityFor(
+                                key.documentId(),
+                                key.generation()
+                        ),
+                        values
+                )
+        );
+    }
+
+    @Override
+    public void saveAll(
+            GenerationIdentity identity,
+            List<SearchProjection> projections
+    ) {
+        requireGenerationIdentity(identity, projections);
+        if (projections == null || projections.isEmpty()) {
+            return;
+        }
+
         jdbcTemplate.batchUpdate(
                 """
                 INSERT INTO knowledge_search_projection (
-                    chunk_id, document_id, generation, parent_chunk_id, chunk_index,
-                    text_content, embedding_text, language, domain, section_path,
-                    identifiers_json, references_json, metadata_json, projection_version
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?)
-                ON CONFLICT (document_id, generation, chunk_id) DO UPDATE SET
+                    access_level,
+                    chunk_id,
+                    document_id,
+                    generation,
+                    parent_chunk_id,
+                    chunk_index,
+                    text_content,
+                    embedding_text,
+                    language,
+                    domain,
+                    section_path,
+                    identifiers_json,
+                    references_json,
+                    metadata_json,
+                    projection_version
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?::jsonb, ?::jsonb, ?::jsonb, ?
+                )
+                ON CONFLICT (
+                    access_level,
+                    document_id,
+                    generation,
+                    chunk_id
+                ) DO UPDATE SET
                     parent_chunk_id = EXCLUDED.parent_chunk_id,
                     chunk_index = EXCLUDED.chunk_index,
                     text_content = EXCLUDED.text_content,
@@ -58,47 +111,42 @@ public class PostgresSearchProjectionRepository
                 """,
                 projections,
                 100,
-                (ps, p) -> {
-                    ps.setString(1, p.chunkId());
-                    ps.setString(2, p.documentId());
-                    ps.setLong(3, p.generation());
-                    ps.setString(4, p.parentChunkId());
-                    ps.setInt(5, p.chunkIndex());
-                    ps.setString(6, p.text());
-                    ps.setString(7, p.embeddingText());
-                    ps.setString(8, p.language());
-                    ps.setString(9, p.domain().name());
-                    ps.setString(10, p.sectionPath());
-                    ps.setString(11, writeJson(p.identifiers()));
-                    ps.setString(12, writeJson(p.references()));
-                    ps.setString(13, writeJson(p.metadata()));
-                    ps.setInt(14, p.projectionVersion());
+                (ps, projection) -> {
+                    ps.setLong(1, identity.accessLevel());
+                    ps.setString(2, projection.chunkId());
+                    ps.setString(3, identity.documentId());
+                    ps.setLong(4, identity.generation());
+                    ps.setString(5, projection.parentChunkId());
+                    ps.setInt(6, projection.chunkIndex());
+                    ps.setString(7, projection.text());
+                    ps.setString(8, projection.embeddingText());
+                    ps.setString(9, projection.language());
+                    ps.setString(10, projection.domain().name());
+                    ps.setString(11, projection.sectionPath());
+                    ps.setString(12, writeJson(projection.identifiers()));
+                    ps.setString(13, writeJson(projection.references()));
+                    ps.setString(14, writeJson(projection.metadata()));
+                    ps.setInt(15, projection.projectionVersion());
                 }
         );
     }
 
     @Override
-    public void saveAll(
-            GenerationIdentity identity,
-            List<SearchProjection> projections
-    ) {
-        requireGenerationIdentity(identity, projections);
-        saveAll(projections);
-    }
-
-    @Override
     public List<String> findChunkIds(String documentId, long generation) {
+        GenerationIdentity identity = identityFor(documentId, generation);
         return jdbcTemplate.queryForList(
                 """
                 SELECT chunk_id
                 FROM knowledge_search_projection
-                WHERE document_id = ?
+                WHERE access_level = ?
+                  AND document_id = ?
                   AND generation = ?
                 ORDER BY chunk_index
                 """,
                 String.class,
-                documentId,
-                generation
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
         );
     }
 
@@ -107,17 +155,8 @@ public class PostgresSearchProjectionRepository
             String documentId,
             long generation
     ) {
-        return jdbcTemplate.query(
-                """
-                SELECT *
-                FROM knowledge_search_projection
-                WHERE document_id = ?
-                  AND generation = ?
-                ORDER BY chunk_index
-                """,
-                this::map,
-                documentId,
-                generation
+        return findGeneration(
+                identityFor(documentId, generation)
         );
     }
 
@@ -130,7 +169,17 @@ public class PostgresSearchProjectionRepository
                     "identity must not be null"
             );
         }
-        return findGeneration(
+        return jdbcTemplate.query(
+                """
+                SELECT *
+                FROM knowledge_search_projection
+                WHERE access_level = ?
+                  AND document_id = ?
+                  AND generation = ?
+                ORDER BY chunk_index
+                """,
+                this::map,
+                identity.accessLevel(),
                 identity.documentId(),
                 identity.generation()
         );
@@ -146,15 +195,7 @@ public class PostgresSearchProjectionRepository
 
     @Override
     public void deleteGeneration(String documentId, long generation) {
-        jdbcTemplate.update(
-                """
-                DELETE FROM knowledge_search_projection
-                WHERE document_id = ?
-                  AND generation = ?
-                """,
-                documentId,
-                generation
-        );
+        deleteGeneration(identityFor(documentId, generation));
     }
 
     @Override
@@ -164,7 +205,14 @@ public class PostgresSearchProjectionRepository
                     "identity must not be null"
             );
         }
-        deleteGeneration(
+        jdbcTemplate.update(
+                """
+                DELETE FROM knowledge_search_projection
+                WHERE access_level = ?
+                  AND document_id = ?
+                  AND generation = ?
+                """,
+                identity.accessLevel(),
                 identity.documentId(),
                 identity.generation()
         );
@@ -585,6 +633,34 @@ public class PostgresSearchProjectionRepository
         return index;
     }
 
+    private GenerationIdentity identityFor(
+            String documentId,
+            long generation
+    ) {
+        return jdbcTemplate.query(
+                """
+                SELECT access_level
+                FROM knowledge_document_generation
+                WHERE document_id = ?
+                  AND generation = ?
+                """,
+                (rs, rowNum) -> new GenerationIdentity(
+                        documentId,
+                        generation,
+                        rs.getLong("access_level")
+                ),
+                documentId,
+                generation
+        ).stream().findFirst().orElseThrow(() ->
+                new IllegalStateException(
+                        "Generation identity does not exist: "
+                                + documentId
+                                + "/"
+                                + generation
+                )
+        );
+    }
+
     private void requireGenerationIdentity(
             GenerationIdentity identity,
             List<SearchProjection> projections
@@ -644,6 +720,12 @@ public class PostgresSearchProjectionRepository
                 index,
                 ps.getConnection().createArrayOf("varchar", values.toArray())
         );
+    }
+
+    private record GenerationKey(
+            String documentId,
+            long generation
+    ) {
     }
 
     private String escapeLikeLiteral(String value) {
