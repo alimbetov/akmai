@@ -276,6 +276,7 @@ public class PersistenceCoordinator {
             result.add(new VectorRow(
                     vectorId,
                     projection.chunkId(),
+                    projection.language(),
                     projection.embeddingText(),
                     vectorMetadata(projection, profile, generation),
                     embeddings.get(i)
