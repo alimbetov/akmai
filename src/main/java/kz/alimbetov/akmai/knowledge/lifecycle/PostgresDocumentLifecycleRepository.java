@@ -47,9 +47,12 @@ public class PostgresDocumentLifecycleRepository
                     generation, claim_generation, claim_id, claimed_by,
                     claimed_at, lease_until, expires_at, delete_started_at,
                     deleted_at, attempt_count, last_error, row_version,
-                    ingestion_started_at, created_at, updated_at, access_level
+                    ingestion_started_at, retention_status,
+                    published_generation, next_generation,
+                    created_at, updated_at, access_level
                 ) VALUES (?, ?, 'INGESTING', 1, NULL, NULL, NULL,
-                          NULL, NULL, ?, NULL, NULL, 0, NULL, 0, now(), now(), now(), ?)
+                          NULL, NULL, ?, NULL, NULL, 0, NULL, 0,
+                          now(), 'ACTIVE', NULL, 2, now(), now(), ?)
                 ON CONFLICT (document_id) DO UPDATE SET
                     lifecycle_policy = EXCLUDED.lifecycle_policy,
                     lifecycle_status = 'INGESTING',
@@ -65,6 +68,9 @@ public class PostgresDocumentLifecycleRepository
                     attempt_count = 0,
                     last_error = NULL,
                     ingestion_started_at = now(),
+                    retention_status = 'ACTIVE',
+                    next_generation =
+                        knowledge_document_lifecycle.generation + 2,
                     row_version = knowledge_document_lifecycle.row_version + 1,
                     updated_at = now()
                 WHERE knowledge_document_lifecycle.access_level = EXCLUDED.access_level
@@ -96,6 +102,8 @@ public class PostgresDocumentLifecycleRepository
                 """
                 UPDATE knowledge_document_lifecycle
                 SET lifecycle_status = 'READY',
+                    retention_status = 'ACTIVE',
+                    published_generation = generation,
                     ingestion_started_at = NULL,
                     row_version = row_version + 1,
                     updated_at = ?
