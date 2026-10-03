@@ -41,14 +41,17 @@ class HotRetentionArchitectureTest {
                 "src/main/java/kz/alimbetov/akmai/knowledge/lifecycle/"
                         + "ChunkRetentionService.java"
         );
-        int cleanupLifecycle = cleanup.indexOf(
-                "from knowledge_document_lifecycle"
+        int lifecycleFence = cleanup.indexOf(
+                "claimfence fence = lockfence(claim)"
         );
         int cleanupGeneration = cleanup.indexOf(
                 "from knowledge_document_generation"
         );
-        assertThat(cleanupLifecycle).isGreaterThanOrEqualTo(0);
-        assertThat(cleanupGeneration).isGreaterThan(cleanupLifecycle);
+        assertThat(lifecycleFence).isGreaterThanOrEqualTo(0);
+        assertThat(cleanup)
+                .contains("from knowledge_document_lifecycle")
+                .contains("for update");
+        assertThat(cleanupGeneration).isGreaterThan(lifecycleFence);
 
         String publication = normalized(
                 "src/main/java/kz/alimbetov/akmai/knowledge/ingestion/"
