@@ -60,6 +60,7 @@ class PostgresRetrievalIntegrationTest {
         liquibase.afterPropertiesSet();
 
         jdbc = new JdbcTemplate(dataSource);
+        jdbc.execute("SELECT akmai_admin.ensure_access_level(2)");
         projections = new PostgresSearchProjectionRepository(
                 jdbc,
                 new ObjectMapper()
@@ -303,8 +304,12 @@ class PostgresRetrievalIntegrationTest {
                 "agreement"
         );
 
-        assertThat(ruPlan).contains("idx_knowledge_search_fts_ru");
-        assertThat(enPlan).contains("idx_knowledge_search_fts_en");
+        assertThat(ruPlan)
+                .contains("Bitmap Index Scan")
+                .contains("knowledge_search_projection_al_1");
+        assertThat(enPlan)
+                .contains("Bitmap Index Scan")
+                .contains("knowledge_search_projection_al_1");
     }
 
     @Test
@@ -437,7 +442,9 @@ class PostgresRetrievalIntegrationTest {
                         }
         );
 
-        assertThat(plan).contains("idx_knowledge_search_text_trgm");
+        assertThat(plan)
+                .contains("Bitmap Index Scan")
+                .contains("knowledge_search_projection_al_1");
     }
 
 
@@ -560,14 +567,22 @@ class PostgresRetrievalIntegrationTest {
                                     EXPLAIN (COSTS OFF)
                                     SELECT chunk_id
                                     FROM knowledge_search_projection
-                                    WHERE %s
+                                    WHERE access_level = 1
+                                      AND language = ?
+                                      AND %s
                                           @@ websearch_to_tsquery('%s', ?)
                                     """.formatted(
                                             vectorColumn,
                                             configuration
                                     )
                             )) {
-                                statement.setString(1, query);
+                                statement.setString(
+                                        1,
+                                        "russian".equals(configuration)
+                                                ? "ru"
+                                                : "en"
+                                );
+                                statement.setString(2, query);
                                 try (var resultSet = statement.executeQuery()) {
                                     StringBuilder plan = new StringBuilder();
                                     while (resultSet.next()) {
