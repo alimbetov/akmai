@@ -172,11 +172,13 @@ public class GenerationReconciliationService {
                     physical_id_version,
                     retention_policy,
                     purge_started_at,
-                    cleanup_status
+                    cleanup_status,
+                    cleanup_attempts
                 ) VALUES (
                     ?, ?, ?, ?, ?, ?, ?, ?, ?,
                     clock_timestamp(),
-                    'PURGING'
+                    'PURGING',
+                    1
                 )
                 ON CONFLICT (
                     document_id,
@@ -196,20 +198,34 @@ public class GenerationReconciliationService {
         );
 
         if (inserted == 0) {
-            String status = jdbcTemplate.queryForObject(
+            int retry = jdbcTemplate.update(
                     """
-                    SELECT cleanup_status
-                    FROM knowledge_retired_generation
+                    UPDATE knowledge_retired_generation
+                    SET cleanup_attempts = cleanup_attempts + 1,
+                        last_error = NULL
                     WHERE document_id = ?
                       AND generation = ?
                       AND access_level = ?
+                      AND cleanup_status = 'PURGING'
                     """,
-                    String.class,
                     key.documentId(),
                     key.generation(),
                     key.accessLevel()
             );
-            if (!"PURGING".equals(status)) {
+            if (retry != 1) {
+                String status = jdbcTemplate.queryForObject(
+                        """
+                        SELECT cleanup_status
+                        FROM knowledge_retired_generation
+                        WHERE document_id = ?
+                          AND generation = ?
+                          AND access_level = ?
+                        """,
+                        String.class,
+                        key.documentId(),
+                        key.generation(),
+                        key.accessLevel()
+                );
                 throw new IllegalStateException(
                         "Retiring generation has incompatible tombstone state: "
                                 + status
@@ -254,6 +270,9 @@ public class GenerationReconciliationService {
         ResidualCounts after = residualCounts(profile, identity);
 
         if (after.total() != 0) {
+            String error = "Generation purge deferred after "
+                    + purge.batches()
+                    + " bounded batches";
             jdbcTemplate.update(
                     """
                     UPDATE knowledge_document_generation
@@ -262,11 +281,23 @@ public class GenerationReconciliationService {
                       AND generation = ?
                       AND generation_status = 'RETIRING'
                     """,
-                    "Generation purge deferred after "
-                            + purge.batches()
-                            + " bounded batches",
+                    error,
                     key.documentId(),
                     key.generation()
+            );
+            jdbcTemplate.update(
+                    """
+                    UPDATE knowledge_retired_generation
+                    SET last_error = ?
+                    WHERE document_id = ?
+                      AND generation = ?
+                      AND access_level = ?
+                      AND cleanup_status = 'PURGING'
+                    """,
+                    error,
+                    key.documentId(),
+                    key.generation(),
+                    key.accessLevel()
             );
             audit.append(
                     "GENERATION_PURGE_DEFERRED",
@@ -290,7 +321,6 @@ public class GenerationReconciliationService {
                 SET cleanup_status = 'PURGED',
                     retired_at = clock_timestamp(),
                     purge_after = clock_timestamp() + interval '7 days',
-                    cleanup_attempts = cleanup_attempts + 1,
                     last_error = NULL
                 WHERE document_id = ?
                   AND generation = ?
