@@ -1,27 +1,19 @@
 package kz.alimbetov.akmai.knowledge.model;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
 public final class RetrievalLanguageCatalog {
 
-    public static final String UNKNOWN = "unknown";
+    public static final String UNKNOWN = KnowledgeLanguage.UNKNOWN.code();
 
-    private static final List<String> CODES = List.of(
-            "kk",
-            "ru",
-            "en",
-            "zh",
-            "de",
-            "fr",
-            "es",
-            "pt",
-            "it",
-            "tr",
-            "el",
-            UNKNOWN
-    );
+    private static final List<String> CODES = Arrays.stream(
+                    KnowledgeLanguage.values()
+            )
+            .map(KnowledgeLanguage::code)
+            .toList();
 
     private static final Set<String> CODE_SET = Set.copyOf(CODES);
 
