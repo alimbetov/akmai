@@ -11,6 +11,7 @@ CREATE TABLE knowledge_search_projection (
     text_content       TEXT NOT NULL,
     embedding_text     TEXT NOT NULL,
     language           VARCHAR(16) NOT NULL,
+    storage_state      SMALLINT NOT NULL DEFAULT 0,
     domain             VARCHAR(50) NOT NULL,
     section_path       TEXT,
     identifiers_json   JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -44,6 +45,7 @@ CREATE TABLE knowledge_search_projection (
     PRIMARY KEY (
         access_level,
         language,
+        storage_state,
         document_id,
         generation,
         chunk_id
@@ -52,6 +54,7 @@ CREATE TABLE knowledge_search_projection (
     UNIQUE (
         access_level,
         language,
+        storage_state,
         document_id,
         generation,
         chunk_index
@@ -78,6 +81,8 @@ CREATE TABLE knowledge_search_projection (
             language = lower(language)
             AND language ~ '^[a-z]{2,8}$'
         ),
+    CONSTRAINT ck_projection_storage_state
+        CHECK (storage_state IN (0, 1)),
     CONSTRAINT ck_projection_chunk_index
         CHECK (chunk_index >= 0)
 )
