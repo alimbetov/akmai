@@ -94,7 +94,6 @@ public class PostgresSearchProjectionRepository
                 ON CONFLICT (
                     access_level,
                     language,
-                    storage_state,
                     document_id,
                     generation,
                     chunk_id
@@ -142,7 +141,6 @@ public class PostgresSearchProjectionRepository
                 SELECT chunk_id
                 FROM knowledge_search_projection
                 WHERE access_level = ?
-                  AND storage_state = 0
                   AND document_id = ?
                   AND generation = ?
                 ORDER BY chunk_index
@@ -178,7 +176,6 @@ public class PostgresSearchProjectionRepository
                 SELECT *
                 FROM knowledge_search_projection
                 WHERE access_level = ?
-                  AND storage_state = 0
                   AND document_id = ?
                   AND generation = ?
                 ORDER BY chunk_index
@@ -224,29 +221,6 @@ public class PostgresSearchProjectionRepository
     }
 
     @Override
-    public int archiveGeneration(GenerationIdentity identity) {
-        if (identity == null) {
-            throw new IllegalArgumentException(
-                    "identity must not be null"
-            );
-        }
-        return jdbcTemplate.update(
-                """
-                UPDATE knowledge_search_projection
-                SET storage_state = 1,
-                    updated_at = clock_timestamp()
-                WHERE access_level = ?
-                  AND document_id = ?
-                  AND generation = ?
-                  AND storage_state = 0
-                """,
-                identity.accessLevel(),
-                identity.documentId(),
-                identity.generation()
-        );
-    }
-
-    @Override
     public List<SearchProjection> findByDocumentAndChunkIds(
             String documentId,
             List<String> chunkIds,
@@ -267,7 +241,6 @@ public class PostgresSearchProjectionRepository
                      AND l.published_generation = p.generation
                      AND l.access_level = p.access_level
                     WHERE p.access_level = ?
-                      AND p.storage_state = 0
                       AND p.document_id = ?
                       AND p.chunk_id = ANY (?)
                       AND l.retention_status = 'ACTIVE'
@@ -313,7 +286,6 @@ public class PostgresSearchProjectionRepository
                      AND l.published_generation = p.generation
                      AND l.access_level = p.access_level
                     WHERE p.access_level = ?
-                      AND p.storage_state = 0
                       AND p.document_id = ?
                       AND p.generation = ?
                       AND p.chunk_id = ANY (?)
@@ -363,7 +335,6 @@ public class PostgresSearchProjectionRepository
                      AND l.published_generation = p.generation
                      AND l.access_level = p.access_level
                     WHERE p.access_level = ?
-                      AND p.storage_state = 0
                       AND p.document_id = ?
                       AND p.generation = ?
                       AND l.retention_status = 'ACTIVE'
@@ -534,7 +505,6 @@ public class PostgresSearchProjectionRepository
                      AND l.published_generation = p.generation
                      AND l.access_level = p.access_level
                     WHERE p.access_level = ?
-                      AND p.storage_state = 0
                       AND l.retention_status = 'ACTIVE'
                       AND p.language = ?
                       AND (%s)
@@ -595,7 +565,6 @@ public class PostgresSearchProjectionRepository
                      AND l.published_generation = p.generation
                      AND l.access_level = p.access_level
                     WHERE p.access_level = ?
-                      AND p.storage_state = 0
                       AND l.retention_status = 'ACTIVE'
                       AND p.language = ?
                       AND p.%s
@@ -662,7 +631,6 @@ public class PostgresSearchProjectionRepository
                      AND l.published_generation = p.generation
                      AND l.access_level = p.access_level
                     WHERE p.access_level = ?
-                      AND p.storage_state = 0
                       AND l.retention_status = 'ACTIVE'
                       AND p.language = ?
                       AND (
@@ -724,7 +692,6 @@ public class PostgresSearchProjectionRepository
                      AND l.published_generation = p.generation
                      AND l.access_level = p.access_level
                     WHERE p.access_level = ?
-                      AND p.storage_state = 0
                       AND l.retention_status = 'ACTIVE'
                 """ + languageFilter + """
                       AND p.search_vector
