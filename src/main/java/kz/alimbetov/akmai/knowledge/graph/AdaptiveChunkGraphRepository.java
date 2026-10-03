@@ -358,6 +358,9 @@ public class AdaptiveChunkGraphRepository {
                     updated_at = clock_timestamp()
                 """;
 
+        ChunkGraphNode first = left.compareTo(right) <= 0 ? left : right;
+        ChunkGraphNode second = first == left ? right : left;
+
         jdbcTemplate.update(
                 sql,
                 ps -> {
@@ -365,16 +368,16 @@ public class AdaptiveChunkGraphRepository {
                     index = bindDirection(
                             ps,
                             index,
-                            left,
-                            right,
+                            first,
+                            second,
                             band,
                             evidence
                     );
                     bindDirection(
                             ps,
                             index,
-                            right,
-                            left,
+                            second,
+                            first,
                             band,
                             evidence
                     );

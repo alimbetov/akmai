@@ -334,7 +334,9 @@ public class AdaptiveGraphMaintenanceService {
         return jdbcTemplate.query(
                 """
                 WITH ranked AS (
-                    SELECT target_document_id,
+                    SELECT tableoid,
+                           ctid,
+                           target_document_id,
                            target_generation,
                            target_chunk_id,
                            band,
@@ -354,19 +356,27 @@ public class AdaptiveGraphMaintenanceService {
                       AND source_generation = ?
                       AND source_chunk_id = ?
                       AND band IN ('CANDIDATE', 'WARM', 'HOT')
+                ),
+                overflow AS (
+                    SELECT *
+                    FROM ranked
+                    WHERE (band = 'HOT' AND position > ?)
+                       OR (band = 'WARM' AND position > ?)
+                       OR (band = 'CANDIDATE' AND position > ?)
                 )
-                SELECT target_document_id,
-                       target_generation,
-                       target_chunk_id
-                FROM ranked
-                WHERE (band = 'HOT' AND position > ?)
-                   OR (band = 'WARM' AND position > ?)
-                   OR (band = 'CANDIDATE' AND position > ?)
-                ORDER BY band,
-                         position DESC,
-                         target_document_id,
-                         target_generation,
-                         target_chunk_id
+                SELECT edge.target_document_id,
+                       edge.target_generation,
+                       edge.target_chunk_id
+                FROM knowledge_chunk_association edge
+                JOIN overflow
+                  ON edge.tableoid = overflow.tableoid
+                 AND edge.ctid = overflow.ctid
+                ORDER BY overflow.band,
+                         overflow.position DESC,
+                         edge.target_document_id,
+                         edge.target_generation,
+                         edge.target_chunk_id
+                FOR UPDATE OF edge SKIP LOCKED
                 LIMIT ?
                 """,
                 (rs, rowNum) -> new ChunkGraphNode(
