@@ -62,7 +62,7 @@ public class AdaptiveGraphShadowExpansion {
                     "adaptive_graph_shadow_expansion event=failed errorType={}",
                     exception.getClass().getSimpleName()
             );
-            return ShadowExpansionReport.failed();
+            return ShadowExpansionReport.failure();
         }
     }
 
@@ -522,7 +522,7 @@ public class AdaptiveGraphShadowExpansion {
             );
         }
 
-        static ShadowExpansionReport failed() {
+        static ShadowExpansionReport failure() {
             return new ShadowExpansionReport(
                     0, 0, 0, 0, 0, 0, List.of(), true
             );
