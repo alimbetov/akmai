@@ -8,7 +8,7 @@ on:
       - "src/main/java/kz/alimbetov/akmai/knowledge/lifecycle/**"
       - "src/main/resources/db/changelog/greenfield/**"
       - "src/test/java/kz/alimbetov/akmai/knowledge/vector/RetrievalStorageDecisionMatrixBenchmarkTest.java"
-      - "src/test/java/kz/alimbetov/akmai/knowledge/vector/RetrievalLanguageStorageBenchmarkTest.java"
+      - "src/test/java/kz/alimbetov/akmai/knowledge/vector/RetrievalLanguageHotBenchmarkTest.java"
       - ".github/workflows/retrieval-storage-decision-matrix.yml"
   workflow_dispatch:
     inputs:
@@ -98,15 +98,14 @@ jobs:
           retention-days: 30
 
   language-storage:
-    name: Language + storage state / 1024d
+    name: Language HOT-only / 1024d
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
     env:
-      AKMAI_RUN_LANGUAGE_STORAGE_BENCHMARK: "true"
+      AKMAI_RUN_LANGUAGE_HOT_BENCHMARK: "true"
       AKMAI_LANGUAGE_BENCH_DIMENSIONS: ${{ inputs.dimensions || '1024' }}
-      AKMAI_LANGUAGE_BENCH_ACTIVE_ROWS: ${{ inputs.active_rows_per_language || '800' }}
-      AKMAI_LANGUAGE_BENCH_ARCHIVED_ROWS: ${{ inputs.archived_rows_per_language || '100' }}
+      AKMAI_LANGUAGE_BENCH_ROWS: ${{ inputs.active_rows_per_language || '800' }}
       AKMAI_LANGUAGE_BENCH_WARMUPS: ${{ inputs.warmups || '2' }}
       AKMAI_LANGUAGE_BENCH_ITERATIONS: ${{ inputs.iterations || '6' }}
 
@@ -125,14 +124,14 @@ jobs:
       - name: Run language storage benchmark
         run: >
           mvn -B
-          -Dtest=RetrievalLanguageStorageBenchmarkTest
+          -Dtest=RetrievalLanguageHotBenchmarkTest
           test
 
       - name: Upload language storage report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: retrieval-language-storage-${{ github.run_id }}
-          path: target/retrieval-benchmark/language-storage.json
+          name: retrieval-language-hot-${{ github.run_id }}
+          path: target/retrieval-benchmark/language-hot.json
           if-no-files-found: error
           retention-days: 30
