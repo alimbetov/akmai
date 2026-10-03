@@ -1,8 +1,6 @@
 package kz.alimbetov.akmai.knowledge.graph;
 
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
