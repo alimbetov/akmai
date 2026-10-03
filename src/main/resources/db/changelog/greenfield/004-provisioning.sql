@@ -1,5 +1,122 @@
 --liquibase formatted sql
 
+--changeset akmai-greenfield:004-projection-language-partition splitStatements:false
+CREATE OR REPLACE FUNCTION akmai_admin.ensure_projection_language_partition(
+    p_access_level BIGINT,
+    p_language TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, akmai_admin
+AS $$
+DECLARE
+    v_access_child TEXT;
+    v_language_child TEXT;
+BEGIN
+    IF p_access_level IS NULL OR p_access_level <= 0 THEN
+        RAISE EXCEPTION 'access_level must be positive';
+    END IF;
+
+    IF p_language IS NULL
+       OR p_language !~ '^[a-z]{2,8}$' THEN
+        RAISE EXCEPTION 'invalid language code: %', p_language;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM public.akmai_supported_language
+        WHERE language_code = p_language
+          AND enabled
+    ) THEN
+        RAISE EXCEPTION 'unsupported language code: %', p_language;
+    END IF;
+
+    v_access_child :=
+        'knowledge_search_projection_al_' || p_access_level::TEXT;
+    v_language_child :=
+        v_access_child || '_lang_' || p_language;
+
+    IF to_regclass(format('public.%I', v_access_child)) IS NULL THEN
+        RAISE EXCEPTION
+            'projection access partition does not exist: %',
+            v_access_child;
+    END IF;
+
+    EXECUTE format(
+        'CREATE TABLE IF NOT EXISTS public.%I
+         PARTITION OF public.%I
+         FOR VALUES IN (%L)',
+        v_language_child,
+        v_access_child,
+        p_language
+    );
+END;
+$$;
+
+--changeset akmai-greenfield:004-vector-language-partition splitStatements:false
+CREATE OR REPLACE FUNCTION akmai_admin.ensure_vector_language_partition(
+    p_vector_table TEXT,
+    p_access_level BIGINT,
+    p_language TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, akmai_vector, akmai_admin
+AS $$
+DECLARE
+    v_access_child TEXT;
+    v_language_child TEXT;
+BEGIN
+    IF p_access_level IS NULL OR p_access_level <= 0 THEN
+        RAISE EXCEPTION 'access_level must be positive';
+    END IF;
+
+    IF p_vector_table IS NULL
+       OR p_vector_table !~ '^[a-z_][a-z0-9_]*$'
+       OR length(p_vector_table) > 32 THEN
+        RAISE EXCEPTION 'invalid vector table name: %', p_vector_table;
+    END IF;
+
+    IF p_language IS NULL
+       OR p_language !~ '^[a-z]{2,8}$' THEN
+        RAISE EXCEPTION 'invalid language code: %', p_language;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM public.akmai_supported_language
+        WHERE language_code = p_language
+          AND enabled
+    ) THEN
+        RAISE EXCEPTION 'unsupported language code: %', p_language;
+    END IF;
+
+    v_access_child :=
+        p_vector_table || '_al_' || p_access_level::TEXT;
+    v_language_child :=
+        v_access_child || '_lang_' || p_language;
+
+    IF to_regclass(
+        format('akmai_vector.%I', v_access_child)
+    ) IS NULL THEN
+        RAISE EXCEPTION
+            'vector access partition does not exist: %',
+            v_access_child;
+    END IF;
+
+    EXECUTE format(
+        'CREATE TABLE IF NOT EXISTS akmai_vector.%I
+         PARTITION OF akmai_vector.%I
+         FOR VALUES IN (%L)',
+        v_language_child,
+        v_access_child,
+        p_language
+    );
+END;
+$$;
+
 --changeset akmai-greenfield:004-vector-access-partition splitStatements:false
 CREATE OR REPLACE FUNCTION akmai_admin.ensure_vector_access_partition(
     p_vector_table TEXT,
@@ -13,6 +130,7 @@ AS $$
 DECLARE
     v_child_name TEXT;
     v_parent REGCLASS;
+    v_language RECORD;
 BEGIN
     IF p_access_level IS NULL OR p_access_level <= 0 THEN
         RAISE EXCEPTION 'access_level must be positive';
@@ -36,11 +154,25 @@ BEGIN
     EXECUTE format(
         'CREATE TABLE IF NOT EXISTS akmai_vector.%I
          PARTITION OF akmai_vector.%I
-         FOR VALUES IN (%L)',
+         FOR VALUES IN (%L)
+         PARTITION BY LIST (language)',
         v_child_name,
         p_vector_table,
         p_access_level
     );
+
+    FOR v_language IN
+        SELECT language_code
+        FROM public.akmai_supported_language
+        WHERE enabled
+        ORDER BY language_code
+    LOOP
+        PERFORM akmai_admin.ensure_vector_language_partition(
+            p_vector_table,
+            p_access_level,
+            v_language.language_code
+        );
+    END LOOP;
 END;
 $$;
 
@@ -81,6 +213,7 @@ BEGIN
     EXECUTE format(
         'CREATE TABLE IF NOT EXISTS akmai_vector.%I (
             access_level BIGINT NOT NULL,
+            language VARCHAR(16) NOT NULL,
             document_id VARCHAR(100) NOT NULL,
             generation BIGINT NOT NULL,
             chunk_id VARCHAR(100) NOT NULL,
@@ -89,10 +222,11 @@ BEGIN
             metadata JSONB NOT NULL DEFAULT ''{}''::jsonb,
             embedding VECTOR(%s) NOT NULL,
 
-            PRIMARY KEY (access_level, id),
+            PRIMARY KEY (access_level, language, id),
 
             UNIQUE (
                 access_level,
+                language,
                 document_id,
                 generation,
                 chunk_id
@@ -110,7 +244,11 @@ BEGIN
             ),
 
             CHECK (access_level > 0),
-            CHECK (generation > 0)
+            CHECK (generation > 0),
+            CHECK (
+                language = lower(language)
+                AND language ~ ''^[a-z]{2,8}$''
+            )
         )
         PARTITION BY LIST (access_level)',
         p_vector_table,
@@ -152,6 +290,7 @@ AS $$
 DECLARE
     v_child_name TEXT;
     v_profile RECORD;
+    v_language RECORD;
 BEGIN
     IF p_access_level IS NULL OR p_access_level <= 0 THEN
         RAISE EXCEPTION 'access_level must be positive';
@@ -175,10 +314,23 @@ BEGIN
     EXECUTE format(
         'CREATE TABLE IF NOT EXISTS public.%I
          PARTITION OF public.knowledge_search_projection
-         FOR VALUES IN (%L)',
+         FOR VALUES IN (%L)
+         PARTITION BY LIST (language)',
         v_child_name,
         p_access_level
     );
+
+    FOR v_language IN
+        SELECT language_code
+        FROM public.akmai_supported_language
+        WHERE enabled
+        ORDER BY language_code
+    LOOP
+        PERFORM akmai_admin.ensure_projection_language_partition(
+            p_access_level,
+            v_language.language_code
+        );
+    END LOOP;
 
     v_child_name :=
         'document_identifier_al_' || p_access_level::TEXT;
