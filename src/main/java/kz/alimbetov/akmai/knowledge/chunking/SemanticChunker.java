@@ -27,6 +27,7 @@ public class SemanticChunker {
     private final OversizedUnitSplitter oversizedUnitSplitter;
     private final ChunkIdentity chunkIdentity;
     private EmbeddingTokenBudgetService embeddingTokenBudgetService;
+    private IndustryProfileRegistry industryProfileRegistry;
 
     public SemanticChunker(
             TextNormalizer normalizer,
@@ -59,8 +60,20 @@ public class SemanticChunker {
         this.embeddingTokenBudgetService = embeddingTokenBudgetService;
     }
 
+    @Autowired(required = false)
+    void setIndustryProfileRegistry(
+            IndustryProfileRegistry industryProfileRegistry
+    ) {
+        this.industryProfileRegistry = industryProfileRegistry;
+    }
+
     public List<KnowledgeChunk> chunk(KnowledgeDocument document) {
         String normalized = normalizer.normalize(document.rawText());
+        LanguageProfile languageProfile =
+                LanguageProfiles.forCode(document.language());
+        IndustryProfile industryProfile = industryProfileRegistry == null
+                ? IndustryProfiles.defaultFor(document.domain())
+                : industryProfileRegistry.forDocument(document);
 
         List<SemanticUnit> classified = unitExtractor.extract(document, normalized)
                 .stream()
@@ -69,10 +82,13 @@ public class SemanticChunker {
                         unit.sectionPath(),
                         unit.type() == SemanticUnitType.HEADING
                                 ? SemanticUnitType.HEADING
-                                : classifier.classify(
+                                : industryProfile.classifyType(
+                                        unit.text(),
+                                        languageProfile
+                                ).orElseGet(() -> classifier.classify(
                                         unit.text(),
                                         document.domain()
-                                ),
+                                )),
                         unit.protectedAtom(),
                         unit.structuralRole()
                 ))
@@ -119,6 +135,7 @@ public class SemanticChunker {
             metadata.put("chunkIndex", i);
             metadata.put("language", document.language());
             metadata.put("domain", document.domain().name());
+            metadata.put("industryProfile", industryProfile.code().id());
             metadata.put("sectionPath", sectionPath);
 
             chunks.add(new KnowledgeChunk(
