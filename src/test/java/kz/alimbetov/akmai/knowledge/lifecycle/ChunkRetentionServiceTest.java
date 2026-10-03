@@ -111,6 +111,7 @@ class ChunkRetentionServiceTest {
                 .isEqualTo(RetentionCleanupResult.Status.STALE_CLAIM);
         verify(vectors, never()).deleteIds(
                 org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.anyList()
         );
         verify(projections, never()).deleteGeneration("doc-1", 7);
