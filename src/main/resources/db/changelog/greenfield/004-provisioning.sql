@@ -51,8 +51,26 @@ BEGIN
         v_access_child,
         p_language
     );
+
+    IF p_language = 'ru' THEN
+        EXECUTE format(
+            'CREATE INDEX IF NOT EXISTS %I
+             ON public.%I
+             USING GIN (search_vector_ru)',
+            v_language_child || '_fts_ru',
+            v_language_child
+        );
+    ELSIF p_language = 'en' THEN
+        EXECUTE format(
+            'CREATE INDEX IF NOT EXISTS %I
+             ON public.%I
+             USING GIN (search_vector_en)',
+            v_language_child || '_fts_en',
+            v_language_child
+        );
+    END IF;
 END;
-$$;
+$;
 
 --changeset akmai-greenfield:004-vector-language-partition splitStatements:false
 CREATE OR REPLACE FUNCTION akmai_admin.ensure_vector_language_partition(
