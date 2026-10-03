@@ -249,8 +249,13 @@ public class PublishedVectorSearchRepository {
                                 v.metadata,
                                 v.embedding <=> ? AS distance
                             FROM %s v
+                            JOIN knowledge_document_lifecycle l
+                              ON l.document_id = v.document_id
+                             AND l.published_generation = v.generation
+                             AND l.access_level = v.access_level
                             WHERE v.access_level = ?
                               AND v.language = ?
+                              AND l.retention_status = 'ACTIVE'
                             ORDER BY v.embedding <=> ?
                             LIMIT ?
                         )
@@ -266,12 +271,7 @@ public class PublishedVectorSearchRepository {
 
         sql.append("""
                 ) candidate
-                JOIN knowledge_document_lifecycle l
-                  ON l.document_id = candidate.document_id
-                 AND l.published_generation = candidate.generation
-                 AND l.access_level = candidate.access_level
-                WHERE l.retention_status = 'ACTIVE'
-                  AND candidate.distance <= ?
+                WHERE candidate.distance <= ?
                 ORDER BY candidate.distance
                 LIMIT ?
                 """);
