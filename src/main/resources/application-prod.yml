@@ -1,0 +1,15 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+akmai:
+  security:
+    enabled: true
+    api-key: ${AKMAI_SECURITY_API_KEY}
+    allow-unauthenticated-local: false
+
+management:
+  endpoint:
+    health:
+      show-details: never
