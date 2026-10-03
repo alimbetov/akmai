@@ -371,7 +371,8 @@ class PostgresVectorPublicationIntegrationTest {
                                             "akmaiGeneration", generation,
                                             "akmaiEmbeddingProfileId",
                                             profile.profileId(),
-                                            "akmaiChunkId", "pool-chunk"
+                                            "akmaiChunkId", "pool-chunk",
+                                            "language", "en"
                                     ),
                                     new float[] {1f, 0f, 0f}
                             ))
@@ -532,7 +533,8 @@ class PostgresVectorPublicationIntegrationTest {
                                 "akmaiDocumentId", documentId,
                                 "akmaiGeneration", generation,
                                 "akmaiEmbeddingProfileId", profile.profileId(),
-                                "akmaiChunkId", chunkId
+                                "akmaiChunkId", chunkId,
+                                "language", "en"
                         ),
                         new float[] {1f, 0f, 0f}
                 ))
