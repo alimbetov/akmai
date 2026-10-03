@@ -46,7 +46,8 @@ public class AdaptiveGraphShadowExpansion {
             List<RetrievalHit> existingCandidates,
             Set<Long> allowedAccessLevels
     ) {
-        if (!properties.shadowExpansionEnabled()) {
+        if (!properties.shadowExpansionEnabled()
+                && !properties.expansionEnabled()) {
             return ShadowExpansionReport.disabled();
         }
 
@@ -267,6 +268,7 @@ public class AdaptiveGraphShadowExpansion {
         List<ChunkAssociation> associations = graphRepository.findRelated(
                 allowedAccessLevels,
                 seed.node(),
+                properties.graphVersion(),
                 Set.of(band),
                 minimumWeight,
                 limit

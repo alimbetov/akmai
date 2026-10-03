@@ -2,6 +2,7 @@ package kz.alimbetov.akmai.rag.service;
 
 import java.util.List;
 import java.util.Set;
+import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphOnlineExpansion;
 import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphShadowExpansion;
 import kz.alimbetov.akmai.knowledge.graph.AssociationLearningRecorder;
 import kz.alimbetov.akmai.rag.api.RagResponse;
@@ -38,6 +39,7 @@ public class RagQuestionService {
     private final AnswerGenerationService answerGenerationService;
     private final AssociationLearningRecorder associationLearningRecorder;
     private final AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion;
+    private final AdaptiveGraphOnlineExpansion adaptiveGraphOnlineExpansion;
 
     public RagQuestionService(
             QueryChunker queryChunker,
@@ -51,7 +53,8 @@ public class RagQuestionService {
             CitationValidator citationValidator,
             AnswerGenerationService answerGenerationService,
             AssociationLearningRecorder associationLearningRecorder,
-            AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion
+            AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion,
+            AdaptiveGraphOnlineExpansion adaptiveGraphOnlineExpansion
     ) {
         this.queryChunker = queryChunker;
         this.retrievalPlanner = retrievalPlanner;
@@ -65,6 +68,7 @@ public class RagQuestionService {
         this.answerGenerationService = answerGenerationService;
         this.associationLearningRecorder = associationLearningRecorder;
         this.adaptiveGraphShadowExpansion = adaptiveGraphShadowExpansion;
+        this.adaptiveGraphOnlineExpansion = adaptiveGraphOnlineExpansion;
     }
 
     public RagResponse ask(String question, Set<Long> accessLevels) {
@@ -87,13 +91,20 @@ public class RagQuestionService {
         List<RetrievalHit> ranked = reranker.rerank(fused, question);
         List<RetrievalHit> expanded = knowledgeExpansion.expand(ranked, accessLevels);
 
-        adaptiveGraphShadowExpansion.observe(
-                ranked,
+        AdaptiveGraphShadowExpansion.ShadowExpansionReport graphReport =
+                adaptiveGraphShadowExpansion.observe(
+                        ranked,
+                        expanded,
+                        accessLevels
+                );
+        List<RetrievalHit> graphExpanded = adaptiveGraphOnlineExpansion.expand(
                 expanded,
+                graphReport,
                 accessLevels
         );
 
-        List<RetrievalHit> bounded = contextBudget.apply(expanded, question);
+        List<RetrievalHit> bounded =
+                contextBudget.apply(graphExpanded, question);
 
         if (bounded.isEmpty()) {
             return insufficientInformation();

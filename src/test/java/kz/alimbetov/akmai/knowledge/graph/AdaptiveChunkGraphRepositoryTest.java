@@ -127,6 +127,7 @@ class AdaptiveChunkGraphRepositoryTest {
         List<ChunkAssociation> related = repository.findRelated(
                 Set.of(1L),
                 left,
+                1,
                 Set.of(AssociationBand.HOT),
                 0.5,
                 10
@@ -138,6 +139,7 @@ class AdaptiveChunkGraphRepositoryTest {
         assertThat(repository.findRelated(
                 Set.of(2L),
                 left,
+                1,
                 Set.of(AssociationBand.HOT),
                 0.5,
                 10
@@ -302,6 +304,7 @@ class AdaptiveChunkGraphRepositoryTest {
         List<ChunkAssociation> once = repository.findRelated(
                 Set.of(1L),
                 left,
+                1,
                 Set.of(AssociationBand.CANDIDATE),
                 0.0,
                 10
@@ -323,6 +326,7 @@ class AdaptiveChunkGraphRepositoryTest {
         List<ChunkAssociation> twice = repository.findRelated(
                 Set.of(1L),
                 left,
+                1,
                 Set.of(AssociationBand.CANDIDATE),
                 0.0,
                 10
@@ -331,6 +335,60 @@ class AdaptiveChunkGraphRepositoryTest {
         assertThat(twice.getFirst().contextCount()).isEqualTo(2);
         assertThat(twice.getFirst().citationCount()).isEqualTo(1);
         assertThat(twice.getFirst().distinctQuerySupport()).isEqualTo(2);
+    }
+
+    @Test
+    void isolatesEvidenceByGraphVersion() {
+        insertGeneration("doc-a", 1, 1);
+        insertGeneration("doc-b", 1, 1);
+
+        ChunkGraphNode left = new ChunkGraphNode(1, "doc-a", 1, "chunk-a");
+        ChunkGraphNode right = new ChunkGraphNode(1, "doc-b", 1, "chunk-b");
+
+        repository.reinforceSymmetric(
+                left,
+                right,
+                AssociationBand.HOT,
+                new AssociationEvidence(
+                        0.91, 1, 1, 1, 17, Instant.now(), 1
+                )
+        );
+        repository.reinforceSymmetric(
+                left,
+                right,
+                AssociationBand.WARM,
+                new AssociationEvidence(
+                        0.42, 1, 1, 0, 18, Instant.now(), 2
+                )
+        );
+
+        List<ChunkAssociation> v1 = repository.findRelated(
+                Set.of(1L),
+                left,
+                1,
+                Set.of(AssociationBand.HOT),
+                0.0,
+                10
+        );
+        List<ChunkAssociation> v2 = repository.findRelated(
+                Set.of(1L),
+                left,
+                2,
+                Set.of(AssociationBand.WARM),
+                0.0,
+                10
+        );
+
+        assertThat(v1).hasSize(1);
+        assertThat(v1.getFirst().graphVersion()).isEqualTo(1);
+        assertThat(v1.getFirst().weight()).isEqualTo(0.91);
+        assertThat(v2).hasSize(1);
+        assertThat(v2.getFirst().graphVersion()).isEqualTo(2);
+        assertThat(v2.getFirst().weight()).isEqualTo(0.42);
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM knowledge_chunk_association",
+                Integer.class
+        )).isEqualTo(4);
     }
 
     @Test
@@ -364,6 +422,7 @@ class AdaptiveChunkGraphRepositoryTest {
                           AND source_document_id = 'doc-a'
                           AND source_generation = 1
                           AND source_chunk_id = 'chunk-a'
+                          AND graph_version = 1
                           AND band = 'HOT'
                         ORDER BY weight DESC
                         LIMIT 5

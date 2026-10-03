@@ -18,6 +18,11 @@ public interface PublishedSearchProjectionReader {
             Set<Long> accessLevels
     );
 
+    List<SearchProjection> findPublishedByKeys(
+            List<ProjectionKey> keys,
+            Set<Long> accessLevels
+    );
+
     List<SearchProjection> findAdjacent(
             String documentId,
             long generation,
@@ -33,4 +38,27 @@ public interface PublishedSearchProjectionReader {
             Set<Long> accessLevels,
             int limit
     );
+
+    record ProjectionKey(
+            long accessLevel,
+            String documentId,
+            long generation,
+            String chunkId
+    ) {
+        public ProjectionKey {
+            if (accessLevel <= 0 || generation <= 0) {
+                throw new IllegalArgumentException(
+                        "projection routing identity must be positive"
+                );
+            }
+            if (documentId == null
+                    || documentId.isBlank()
+                    || chunkId == null
+                    || chunkId.isBlank()) {
+                throw new IllegalArgumentException(
+                        "projection routing identity must be complete"
+                );
+            }
+        }
+    }
 }

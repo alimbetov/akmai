@@ -127,6 +127,7 @@ public class AdaptiveGraphMaintenanceService {
                        last_reinforced_at
                 FROM knowledge_chunk_association
                 WHERE band IN ('CANDIDATE', 'WARM', 'HOT')
+                  AND graph_version = ?
                   AND (
                       last_scored_at IS NULL
                       OR last_scored_at <= ?
@@ -153,8 +154,9 @@ public class AdaptiveGraphMaintenanceService {
                 LIMIT ?
                 """,
                 ps -> {
-                    ps.setTimestamp(1, Timestamp.from(cutoff));
-                    ps.setInt(2, limit);
+                    ps.setInt(1, properties.graphVersion());
+                    ps.setTimestamp(2, Timestamp.from(cutoff));
+                    ps.setInt(3, limit);
                 },
                 (rs, rowNum) -> {
                     long accessLevel = rs.getLong("access_level");
@@ -205,6 +207,7 @@ public class AdaptiveGraphMaintenanceService {
                     compaction_required = ?,
                     updated_at = clock_timestamp()
                 WHERE access_level = ?
+                  AND graph_version = ?
                   AND (
                       (
                           source_document_id = ?
@@ -234,6 +237,7 @@ public class AdaptiveGraphMaintenanceService {
                 decayed ? Timestamp.from(now) : null,
                 !decayed,
                 edge.source().accessLevel(),
+                properties.graphVersion(),
                 edge.source().documentId(),
                 edge.source().generation(),
                 edge.source().chunkId(),
@@ -263,6 +267,7 @@ public class AdaptiveGraphMaintenanceService {
                        source_chunk_id
                 FROM knowledge_chunk_association
                 WHERE compaction_required
+                  AND graph_version = ?
                   AND band IN ('CANDIDATE', 'WARM', 'HOT')
                 ORDER BY updated_at,
                          access_level,
@@ -278,6 +283,7 @@ public class AdaptiveGraphMaintenanceService {
                         rs.getLong("source_generation"),
                         rs.getString("source_chunk_id")
                 ),
+                properties.graphVersion(),
                 limit
         );
         return new LinkedHashSet<>(claimed);
@@ -311,12 +317,14 @@ public class AdaptiveGraphMaintenanceService {
                         UPDATE knowledge_chunk_association
                         SET compaction_required = FALSE
                         WHERE access_level = ?
+                          AND graph_version = ?
                           AND source_document_id = ?
                           AND source_generation = ?
                           AND source_chunk_id = ?
                           AND updated_at <= ?
                         """,
                         source.accessLevel(),
+                        properties.graphVersion(),
                         source.documentId(),
                         source.generation(),
                         source.chunkId(),
@@ -353,6 +361,7 @@ public class AdaptiveGraphMaintenanceService {
                            ) AS position
                     FROM knowledge_chunk_association
                     WHERE access_level = ?
+                      AND graph_version = ?
                       AND source_document_id = ?
                       AND source_generation = ?
                       AND source_chunk_id = ?
@@ -392,6 +401,7 @@ public class AdaptiveGraphMaintenanceService {
                         rs.getString("target_chunk_id")
                 ),
                 source.accessLevel(),
+                properties.graphVersion(),
                 source.documentId(),
                 source.generation(),
                 source.chunkId(),
@@ -413,6 +423,7 @@ public class AdaptiveGraphMaintenanceService {
                                count(*) AS edge_count
                         FROM knowledge_chunk_association
                         WHERE access_level = ?
+                          AND graph_version = ?
                           AND source_document_id = ?
                           AND source_generation = ?
                           AND source_chunk_id = ?
@@ -426,6 +437,7 @@ public class AdaptiveGraphMaintenanceService {
                 """,
                 Boolean.class,
                 source.accessLevel(),
+                properties.graphVersion(),
                 source.documentId(),
                 source.generation(),
                 source.chunkId(),
@@ -448,6 +460,7 @@ public class AdaptiveGraphMaintenanceService {
                        target_chunk_id
                 FROM knowledge_chunk_association
                 WHERE band = 'DECAYED'
+                  AND graph_version = ?
                   AND decayed_at <= ?
                   AND ROW(
                       source_document_id,
@@ -470,8 +483,9 @@ public class AdaptiveGraphMaintenanceService {
                 LIMIT ?
                 """,
                 ps -> {
-                    ps.setTimestamp(1, Timestamp.from(cutoff));
-                    ps.setInt(2, limit);
+                    ps.setInt(1, properties.graphVersion());
+                    ps.setTimestamp(2, Timestamp.from(cutoff));
+                    ps.setInt(3, limit);
                 },
                 (rs, rowNum) -> {
                     long accessLevel = rs.getLong("access_level");
@@ -509,6 +523,7 @@ public class AdaptiveGraphMaintenanceService {
                 """
                 DELETE FROM knowledge_chunk_association
                 WHERE access_level = ?
+                  AND graph_version = ?
                   AND (
                       (
                           source_document_id = ?
@@ -530,6 +545,7 @@ public class AdaptiveGraphMaintenanceService {
                   )
                 """,
                 left.accessLevel(),
+                properties.graphVersion(),
                 left.documentId(),
                 left.generation(),
                 left.chunkId(),

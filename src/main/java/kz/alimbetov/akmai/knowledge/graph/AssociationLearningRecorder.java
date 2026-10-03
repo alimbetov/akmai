@@ -12,6 +12,7 @@ import kz.alimbetov.akmai.observability.AkmaiMetrics;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -159,6 +160,9 @@ public class AssociationLearningRecorder {
                         citedNumbers.contains(number)
                 ))
                 .filter(indexed -> indexed.hit().hasRoutingIdentity())
+                .filter(indexed ->
+                        indexed.hit().type() != RetrievalType.GRAPH
+                )
                 .filter(indexed ->
                         allowedAccessLevels.contains(
                                 indexed.hit().accessLevel()

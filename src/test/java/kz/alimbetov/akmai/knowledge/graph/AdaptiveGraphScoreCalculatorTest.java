@@ -65,6 +65,35 @@ class AdaptiveGraphScoreCalculatorTest {
     }
 
     @Test
+    void contextCountDoesNotDoubleCountDistinctQueryEvidence() {
+        AdaptiveGraphScoreCalculator calculator =
+                new AdaptiveGraphScoreCalculator(properties());
+        Instant now = Instant.parse("2026-10-03T00:00:00Z");
+
+        AdaptiveGraphScoreCalculator.ScoreDecision withoutContext =
+                calculator.evaluate(
+                        AssociationBand.CANDIDATE,
+                        4,
+                        0,
+                        1,
+                        now,
+                        now
+                );
+        AdaptiveGraphScoreCalculator.ScoreDecision withLargeContext =
+                calculator.evaluate(
+                        AssociationBand.CANDIDATE,
+                        4,
+                        100,
+                        1,
+                        now,
+                        now
+                );
+
+        assertThat(withLargeContext.effectiveWeight())
+                .isEqualTo(withoutContext.effectiveWeight());
+    }
+
+    @Test
     void decaysOldUnprovenCandidate() {
         AdaptiveGraphScoreCalculator calculator =
                 new AdaptiveGraphScoreCalculator(properties());

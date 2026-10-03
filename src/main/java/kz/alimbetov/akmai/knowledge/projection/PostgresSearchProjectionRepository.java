@@ -315,6 +315,68 @@ public class PostgresSearchProjectionRepository
     }
 
     @Override
+    public List<SearchProjection> findPublishedByKeys(
+            List<PublishedSearchProjectionReader.ProjectionKey> keys,
+            Set<Long> accessLevels
+    ) {
+        requireAccessLevels(accessLevels);
+        if (keys == null || keys.isEmpty()) {
+            return List.of();
+        }
+
+        List<PublishedSearchProjectionReader.ProjectionKey> routed =
+                keys.stream()
+                        .filter(java.util.Objects::nonNull)
+                        .filter(key ->
+                                accessLevels.contains(key.accessLevel())
+                        )
+                        .distinct()
+                        .toList();
+        if (routed.isEmpty()) {
+            return List.of();
+        }
+
+        String branch = """
+                SELECT p.*
+                FROM knowledge_search_projection p
+                JOIN knowledge_document_lifecycle l
+                  ON l.document_id = p.document_id
+                 AND l.published_generation = p.generation
+                 AND l.access_level = p.access_level
+                WHERE p.access_level = ?
+                  AND p.document_id = ?
+                  AND p.generation = ?
+                  AND p.chunk_id = ?
+                  AND l.retention_status = 'ACTIVE'
+                """;
+        String sql = String.join(
+                "\nUNION ALL\n",
+                java.util.Collections.nCopies(routed.size(), branch)
+        ) + """
+
+                ORDER BY access_level,
+                         document_id,
+                         generation,
+                         chunk_index
+                """;
+
+        return jdbcTemplate.query(
+                sql,
+                ps -> {
+                    int index = 1;
+                    for (PublishedSearchProjectionReader.ProjectionKey key
+                            : routed) {
+                        ps.setLong(index++, key.accessLevel());
+                        ps.setString(index++, key.documentId());
+                        ps.setLong(index++, key.generation());
+                        ps.setString(index++, key.chunkId());
+                    }
+                },
+                this::map
+        );
+    }
+
+    @Override
     public List<SearchProjection> findAdjacent(
             String documentId,
             long generation,

@@ -26,6 +26,58 @@ class ContextBudgetTest {
         assertThat(budget.apply(hits)).hasSize(4);
     }
     @Test
+    void capsAdaptiveGraphContextAtTwoChunks() {
+        List<RetrievalHit> hits = List.of(
+                new RetrievalHit(
+                        RetrievalType.LEXICAL,
+                        "base-a",
+                        "base-a",
+                        "base text",
+                        Map.of()
+                ),
+                new RetrievalHit(
+                        RetrievalType.VECTOR,
+                        "base-b",
+                        "base-b",
+                        "base text",
+                        Map.of()
+                ),
+                new RetrievalHit(
+                        RetrievalType.GRAPH,
+                        "graph-a",
+                        "graph-a",
+                        "graph text",
+                        Map.of()
+                ),
+                new RetrievalHit(
+                        RetrievalType.GRAPH,
+                        "graph-b",
+                        "graph-b",
+                        "graph text",
+                        Map.of()
+                ),
+                new RetrievalHit(
+                        RetrievalType.GRAPH,
+                        "graph-c",
+                        "graph-c",
+                        "graph text",
+                        Map.of()
+                )
+        );
+
+        List<RetrievalHit> selected = budget.apply(hits);
+
+        assertThat(selected)
+                .extracting(RetrievalHit::type)
+                .containsExactly(
+                        RetrievalType.LEXICAL,
+                        RetrievalType.VECTOR,
+                        RetrievalType.GRAPH,
+                        RetrievalType.GRAPH
+                );
+    }
+
+    @Test
     void rejectsOversizedFirstChunk() {
         String oversized = "word ".repeat(30000);
         RetrievalHit hit = new RetrievalHit(
