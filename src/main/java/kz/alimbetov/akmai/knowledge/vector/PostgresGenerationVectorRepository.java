@@ -49,6 +49,7 @@ public class PostgresGenerationVectorRepository {
         String sql = """
                 INSERT INTO %s (
                     access_level,
+                    language,
                     document_id,
                     generation,
                     chunk_id,
@@ -56,7 +57,7 @@ public class PostgresGenerationVectorRepository {
                     content,
                     metadata,
                     embedding
-                ) VALUES (?, ?, ?, ?, ?, ?, ?::jsonb, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?)
                 """.formatted(table);
 
         jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
@@ -68,13 +69,14 @@ public class PostgresGenerationVectorRepository {
                 VectorRow row = rows.get(index);
                 validateEmbedding(row, profile);
                 ps.setLong(1, identity.accessLevel());
-                ps.setString(2, identity.documentId());
-                ps.setLong(3, identity.generation());
-                ps.setString(4, row.chunkId());
-                ps.setObject(5, UUID.fromString(row.vectorId()));
-                ps.setString(6, row.content());
-                ps.setString(7, json(row.metadata()));
-                ps.setObject(8, new PGvector(row.embedding()));
+                ps.setString(2, row.language());
+                ps.setString(3, identity.documentId());
+                ps.setLong(4, identity.generation());
+                ps.setString(5, row.chunkId());
+                ps.setObject(6, UUID.fromString(row.vectorId()));
+                ps.setString(7, row.content());
+                ps.setString(8, json(row.metadata()));
+                ps.setObject(9, new PGvector(row.embedding()));
             }
 
             @Override
@@ -301,6 +303,7 @@ public class PostgresGenerationVectorRepository {
     public record VectorRow(
             String vectorId,
             String chunkId,
+            String language,
             String content,
             Map<String, Object> metadata,
             float[] embedding
@@ -311,8 +314,31 @@ public class PostgresGenerationVectorRepository {
                         "chunkId must not be blank"
                 );
             }
+            if (language == null
+                    || !language.matches("[a-z]{2,8}")) {
+                throw new IllegalArgumentException(
+                        "language must be a normalized code"
+                );
+            }
             metadata = Map.copyOf(metadata);
             embedding = embedding.clone();
+        }
+
+        public VectorRow(
+                String vectorId,
+                String chunkId,
+                String content,
+                Map<String, Object> metadata,
+                float[] embedding
+        ) {
+            this(
+                    vectorId,
+                    chunkId,
+                    languageMetadata(metadata),
+                    content,
+                    metadata,
+                    embedding
+            );
         }
 
         public VectorRow(
@@ -324,9 +350,27 @@ public class PostgresGenerationVectorRepository {
             this(
                     vectorId,
                     String.valueOf(metadata.get("akmaiChunkId")),
+                    languageMetadata(metadata),
                     content,
                     metadata,
                     embedding
+            );
+        }
+
+        private static String languageMetadata(
+                Map<String, Object> metadata
+        ) {
+            Object value = metadata == null
+                    ? null
+                    : metadata.get("language");
+            if (!(value instanceof String language)
+                    || language.isBlank()) {
+                throw new IllegalArgumentException(
+                        "Vector row requires language"
+                );
+            }
+            return language.toLowerCase(
+                    java.util.Locale.ROOT
             );
         }
 
