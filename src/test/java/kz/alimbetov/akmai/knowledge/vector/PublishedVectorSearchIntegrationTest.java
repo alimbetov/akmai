@@ -57,6 +57,8 @@ class PublishedVectorSearchIntegrationTest {
         liquibase.afterPropertiesSet();
 
         jdbc = new JdbcTemplate(ds);
+        jdbc.execute("SELECT akmai_admin.ensure_access_level(2)");
+        jdbc.execute("SELECT akmai_admin.ensure_access_level(3)");
         ObjectMapper mapper = new ObjectMapper();
         EmbeddingProfileStorageManager storage =
                 new EmbeddingProfileStorageManager(jdbc);
@@ -282,21 +284,45 @@ class PublishedVectorSearchIntegrationTest {
         );
     }
 
-    private void generation(String documentId, long generation, String status) {
+    private void generation(
+            String documentId,
+            long generation,
+            String status
+    ) {
+        Long accessLevel = jdbc.queryForObject(
+                """
+                SELECT access_level
+                FROM knowledge_document_lifecycle
+                WHERE document_id = ?
+                """,
+                Long.class,
+                documentId
+        );
         jdbc.update(
                 """
                 INSERT INTO knowledge_document_generation (
-                    document_id, generation, generation_status, generation_kind,
-                    embedding_profile_id, content_fingerprint,
-                    physical_id_version, cleanup_required, started_at,
-                    published_at, retired_at, access_level
-                ) VALUES (?, ?, ?, 'INGESTION', ?, 'fp', 2, false,
-                          clock_timestamp() - interval '1 hour',
-                          CASE WHEN ? = 'PUBLISHED' THEN clock_timestamp() ELSE NULL END,
-                          CASE WHEN ? = 'RETIRED' THEN clock_timestamp() ELSE NULL END,
-                          1)
+                    document_id, generation, generation_status,
+                    generation_kind, embedding_profile_id,
+                    content_fingerprint, physical_id_version,
+                    cleanup_required, started_at, published_at,
+                    retired_at, access_level
+                ) VALUES (
+                    ?, ?, ?, 'INGESTION', ?, 'fp', 2, false,
+                    clock_timestamp() - interval '1 hour',
+                    CASE WHEN ? = 'PUBLISHED'
+                        THEN clock_timestamp() ELSE NULL END,
+                    CASE WHEN ? = 'RETIRED'
+                        THEN clock_timestamp() ELSE NULL END,
+                    ?
+                )
                 """,
-                documentId, generation, status, profile.profileId(), status, status
+                documentId,
+                generation,
+                status,
+                profile.profileId(),
+                status,
+                status,
+                accessLevel
         );
     }
 
