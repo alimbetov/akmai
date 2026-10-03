@@ -58,8 +58,12 @@ public class GenerationReconciliationService {
                 SELECT g.document_id, g.generation, g.access_level
                 FROM knowledge_document_generation g
                 WHERE g.generation_status IN ('RETIRED', 'FAILED')
-                  AND g.started_at <
-                      clock_timestamp() - (? * interval '1 millisecond')
+                  AND COALESCE(
+                          g.retired_at,
+                          g.failed_at,
+                          g.started_at
+                      ) < clock_timestamp()
+                          - (? * interval '1 millisecond')
                   AND NOT EXISTS (
                       SELECT 1
                       FROM knowledge_document_lifecycle l
@@ -149,19 +153,20 @@ public class GenerationReconciliationService {
                         "Missing embedding profile " + row.profileId()
                 ));
 
-        List<String> vectorIds = manifests.findVectorIds(identity);
-        if (vectorIds.isEmpty()) {
-            vectorIds = vectors.findIdsByGeneration(
-                    profile,
-                    identity
-            );
-        }
+        RetrievalStorageState storageState =
+                "RETIRED".equals(row.status())
+                        ? RetrievalStorageState.ARCHIVED
+                        : RetrievalStorageState.ACTIVE;
 
-        vectors.deleteIds(profile, identity, vectorIds);
-        if (vectors.countExisting(
+        vectors.deleteGeneration(
                 profile,
                 identity,
-                vectorIds
+                storageState
+        );
+        if (vectors.countGeneration(
+                profile,
+                identity,
+                storageState
         ) != 0) {
             throw new IllegalStateException(
                     "Generation vectors remain after reconciliation"
