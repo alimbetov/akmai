@@ -401,18 +401,52 @@ class PostgresRetrievalIntegrationTest {
                         generation,
                         "sharedtoken contrat regle",
                         "fr"
+                ),
+                projection(
+                        "es-generic",
+                        generation,
+                        "sharedtoken contrato regla",
+                        "es"
+                ),
+                projection(
+                        "pt-generic",
+                        generation,
+                        "sharedtoken contrato regra",
+                        "pt"
+                ),
+                projection(
+                        "it-generic",
+                        generation,
+                        "sharedtoken contratto regola",
+                        "it"
+                ),
+                projection(
+                        "tr-generic",
+                        generation,
+                        "sharedtoken sözleşme kural",
+                        "tr"
+                ),
+                projection(
+                        "el-generic",
+                        generation,
+                        "sharedtoken σύμβαση κανόνας",
+                        "el"
                 )
         ));
         publish("doc", generation);
 
-        assertThat(projections.searchLexical(
-                "sharedtoken",
-                "de",
-                List.of("doc"),
-                Set.of(1L),
-                10
-        )).extracting(SearchProjection::chunkId)
-                .containsExactly("de-generic");
+        for (String language : List.of(
+                "de", "fr", "es", "pt", "it", "tr", "el"
+        )) {
+            assertThat(projections.searchLexical(
+                    "sharedtoken",
+                    language,
+                    List.of("doc"),
+                    Set.of(1L),
+                    10
+            )).extracting(SearchProjection::language)
+                    .containsOnly(language);
+        }
     }
 
     @Test
