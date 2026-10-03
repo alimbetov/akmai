@@ -451,6 +451,11 @@ public class ReferenceGraphRepository {
                         )
                         || identity.generation()
                                 != projection.generation()
+                        || (
+                            projection.accessLevel() > 0
+                            && identity.accessLevel()
+                                    != projection.accessLevel()
+                        )
         );
         if (mismatch) {
             throw new IllegalArgumentException(
