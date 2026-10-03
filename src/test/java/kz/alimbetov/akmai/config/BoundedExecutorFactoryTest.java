@@ -9,6 +9,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
 class BoundedExecutorFactoryTest {
@@ -45,6 +46,40 @@ class BoundedExecutorFactoryTest {
                     executor.execute(() -> callerRan.set(true))
             ).isInstanceOf(RejectedExecutionException.class);
             assertThat(callerRan).isFalse();
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void monitoredExecutorCountsRejectedWork() throws Exception {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        var executor = BoundedExecutorFactory.createMonitored(
+                1,
+                1,
+                registry,
+                "test"
+        );
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        try {
+            executor.execute(() -> {
+                started.countDown();
+                await(release);
+            });
+            assertThat(started.await(1, TimeUnit.SECONDS)).isTrue();
+            executor.execute(() -> await(release));
+
+            assertThatThrownBy(() ->
+                    executor.execute(() -> {
+                    })
+            ).isInstanceOf(RejectedExecutionException.class);
+
+            assertThat(registry.get("akmai.executor.rejected")
+                    .tag("role", "test")
+                    .counter()
+                    .count()).isEqualTo(1.0);
         } finally {
             release.countDown();
             executor.shutdownNow();
