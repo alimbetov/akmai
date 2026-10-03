@@ -59,13 +59,46 @@ public class RetentionWorkerPool {
     }
 
     public int claimAndSubmit(String workerId) {
-        if (!accepting.get()) {
+        return claimAndSubmit(workerId, properties.workerParallelism());
+    }
+
+    public int drain(String workerId, int maxClaims) {
+        if (maxClaims <= 0 || !accepting.get()) {
+            return 0;
+        }
+
+        int submitted = 0;
+        while (accepting.get() && submitted < maxClaims) {
+            int claimed = claimAndSubmit(
+                    workerId,
+                    maxClaims - submitted
+            );
+            if (claimed > 0) {
+                submitted += claimed;
+                continue;
+            }
+
+            if (availableCapacity() > 0) {
+                break;
+            }
+            if (!awaitWorkerCapacity()) {
+                break;
+            }
+        }
+        return submitted;
+    }
+
+    private int claimAndSubmit(String workerId, int remainingClaims) {
+        if (!accepting.get() || remainingClaims <= 0) {
             return 0;
         }
 
         int requested = Math.min(
-                properties.batchSize(),
-                properties.workerParallelism()
+                Math.min(
+                        properties.batchSize(),
+                        properties.workerParallelism()
+                ),
+                remainingClaims
         );
         int acquired = acquireUpTo(requested);
         if (acquired == 0) {
@@ -117,6 +150,21 @@ public class RetentionWorkerPool {
         return submitted;
     }
 
+    private boolean awaitWorkerCapacity() {
+        synchronized (permits) {
+            while (accepting.get()
+                    && permits.availablePermits() == 0) {
+                try {
+                    permits.wait();
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    return false;
+                }
+            }
+        }
+        return accepting.get();
+    }
+
     private int acquireUpTo(int requested) {
         int acquired = 0;
         while (acquired < requested && accepting.get() && permits.tryAcquire()) {
@@ -135,7 +183,10 @@ public class RetentionWorkerPool {
                     result.deletedChunks()
             );
         } finally {
-            permits.release();
+            synchronized (permits) {
+                permits.release();
+                permits.notifyAll();
+            }
         }
     }
 
