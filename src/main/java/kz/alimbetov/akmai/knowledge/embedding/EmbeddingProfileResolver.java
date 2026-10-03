@@ -48,7 +48,7 @@ public class EmbeddingProfileResolver {
                 "akmai_vector",
                 table,
                 vectorProperties.indexType().toUpperCase(),
-                (short) 1,
+                (short) 2,
                 Instant.now()
         );
     }
