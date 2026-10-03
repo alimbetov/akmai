@@ -92,6 +92,9 @@ akmai:
     max-batches-per-run: ${AKMAI_RECONCILIATION_MAX_BATCHES:10}
     grace-period: ${AKMAI_RECONCILIATION_GRACE_PERIOD:5m}
     fixed-delay: ${AKMAI_RECONCILIATION_FIXED_DELAY:5m}
+  archive-economics:
+    enabled: ${AKMAI_ARCHIVE_ECONOMICS_ENABLED:true}
+    fixed-delay: ${AKMAI_ARCHIVE_ECONOMICS_FIXED_DELAY:15m}
   retention:
     enabled: ${AKMAI_RETENTION_ENABLED:true}
     cron: "${AKMAI_RETENTION_CRON:0 30 3 * * *}"

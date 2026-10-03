@@ -70,3 +70,15 @@ CREATE INDEX idx_identifier_type_prefix
 CREATE INDEX idx_identifier_trgm
     ON document_identifier
     USING GIN (normalized_value gin_trgm_ops);
+
+
+--changeset akmai-greenfield:003-archive-economics-index
+CREATE INDEX idx_document_generation_archive_backlog
+    ON knowledge_document_generation(
+        retired_at,
+        document_id,
+        generation
+    )
+    INCLUDE (chunk_count)
+    WHERE cleanup_required
+      AND generation_status = 'RETIRED';
