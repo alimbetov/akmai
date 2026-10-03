@@ -353,7 +353,7 @@ public class PostgresSearchProjectionRepository
                 "\nUNION ALL\n",
                 java.util.Collections.nCopies(routed.size(), branch)
         ) + """
-                
+
                 ORDER BY access_level,
                          document_id,
                          generation,
