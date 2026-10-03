@@ -1,10 +1,6 @@
 name: Retrieval Storage Decision Matrix
 
 on:
-  pull_request:
-    paths:
-      - "src/test/java/kz/alimbetov/akmai/knowledge/vector/RetrievalStorageDecisionMatrixBenchmarkTest.java"
-      - ".github/workflows/retrieval-storage-decision-matrix.yml"
   workflow_dispatch:
     inputs:
       dimensions:
