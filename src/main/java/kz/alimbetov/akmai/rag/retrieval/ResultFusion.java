@@ -124,7 +124,9 @@ public class ResultFusion {
                         .forEach(projection ->
                                 result.put(
                                         new CanonicalKey(
-                                                projection.accessLevel(),
+                                                projection.accessLevel() > 0
+                                                        ? projection.accessLevel()
+                                                        : scope.accessLevel(),
                                                 projection.documentId(),
                                                 projection.generation(),
                                                 projection.chunkId()
@@ -246,7 +248,9 @@ public class ResultFusion {
             metadata.put("chunkIndex", projection.chunkIndex());
             return new RetrievalHit(
                     representative.type(),
-                    projection.accessLevel(),
+                    projection.accessLevel() > 0
+                            ? projection.accessLevel()
+                            : accessLevel,
                     projection.documentId(),
                     projection.generation(),
                     projection.chunkId(),
