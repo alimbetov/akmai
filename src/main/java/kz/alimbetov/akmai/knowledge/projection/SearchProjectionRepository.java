@@ -23,4 +23,6 @@ public interface SearchProjectionRepository {
     void deleteGeneration(String documentId, long generation);
 
     void deleteGeneration(GenerationIdentity identity);
+
+    int archiveGeneration(GenerationIdentity identity);
 }
