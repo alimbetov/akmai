@@ -295,6 +295,14 @@ public class ChunkRetentionService {
         identifierRepository.deleteGeneration(identity);
         vectorGenerationRepository.deleteGeneration(identity);
 
+        ResidualCounts residual = residualCounts(profile, identity);
+        if (residual.total() != 0) {
+            throw new IllegalStateException(
+                    "Generation payload remains after hot purge: "
+                            + residual
+            );
+        }
+
         if (!finalFenceValid(claim)) {
             throw new StaleClaimException();
         }
@@ -429,6 +437,43 @@ public class ChunkRetentionService {
         ).stream().findFirst().orElse(new ClaimFence(false, 0L, "TTL"));
     }
 
+    private ResidualCounts residualCounts(
+            EmbeddingProfile profile,
+            GenerationIdentity identity
+    ) {
+        return new ResidualCounts(
+                vectorRepository.countGeneration(profile, identity),
+                countPayload("knowledge_search_projection", identity),
+                countPayload("document_identifier", identity),
+                countPayload("knowledge_reference_target", identity),
+                countPayload("knowledge_reference_edge", identity),
+                countPayload(
+                        "knowledge_document_vector_generation",
+                        identity
+                )
+        );
+    }
+
+    private int countPayload(
+            String table,
+            GenerationIdentity identity
+    ) {
+        Integer value = jdbcTemplate.queryForObject(
+                """
+                SELECT count(*)
+                FROM %s
+                WHERE access_level = ?
+                  AND document_id = ?
+                  AND generation = ?
+                """.formatted(table),
+                Integer.class,
+                identity.accessLevel(),
+                identity.documentId(),
+                identity.generation()
+        );
+        return value == null ? 0 : value;
+    }
+
     private boolean finalFenceValid(RetentionClaim claim) {
         Boolean valid = jdbcTemplate.queryForObject(
                 """
@@ -497,6 +542,24 @@ public class ChunkRetentionService {
             short physicalIdVersion,
             Integer chunkCount
     ) {
+    }
+
+    private record ResidualCounts(
+            int vectors,
+            int projections,
+            int identifiers,
+            int referenceTargets,
+            int referenceEdges,
+            int manifests
+    ) {
+        int total() {
+            return vectors
+                    + projections
+                    + identifiers
+                    + referenceTargets
+                    + referenceEdges
+                    + manifests;
+        }
     }
 
     private static final class StaleClaimException extends RuntimeException {
