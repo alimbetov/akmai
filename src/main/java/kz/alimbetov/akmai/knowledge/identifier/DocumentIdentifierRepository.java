@@ -173,7 +173,7 @@ public class DocumentIdentifierRepository {
         }
         return jdbcTemplate.query(
                 """
-                SELECT document_id, generation, chunk_id, page_number,
+                SELECT access_level, document_id, generation, chunk_id, page_number,
                        identifier_type, raw_value, normalized_value,
                        context_text, created_at
                 FROM document_identifier
@@ -265,6 +265,11 @@ public class DocumentIdentifierRepository {
                         )
                         || identity.generation()
                                 != identifier.generation()
+                        || (
+                            identifier.accessLevel() > 0
+                            && identity.accessLevel()
+                                    != identifier.accessLevel()
+                        )
         );
         if (mismatch) {
             throw new IllegalArgumentException(
@@ -312,7 +317,8 @@ public class DocumentIdentifierRepository {
 
             sql.append("""
                     (
-                        SELECT i.document_id,
+                        SELECT i.access_level,
+                               i.document_id,
                                i.generation,
                                i.chunk_id,
                                i.page_number,
@@ -385,6 +391,7 @@ public class DocumentIdentifierRepository {
         return new DocumentIdentifier(
                 rs.getString("document_id"),
                 rs.getLong("generation"),
+                rs.getLong("access_level"),
                 rs.getString("chunk_id"),
                 rs.getInt("page_number"),
                 IdentifierType.valueOf(rs.getString("identifier_type")),
