@@ -47,26 +47,33 @@ public class ArchiveEconomicsService {
                 WITH archive_leaf AS (
                     SELECT
                         CASE
-                            WHEN schemaname = 'public'
+                            WHEN namespace.nspname = 'public'
                                 THEN 'projection'
                             ELSE 'vector'
                         END AS store,
-                        relid,
-                        n_live_tup,
-                        n_dead_tup,
-                        n_tup_ins,
-                        n_tup_del,
-                        autovacuum_count
-                    FROM pg_stat_user_tables
-                    WHERE (
-                        schemaname = 'public'
-                        AND relname ~
-                            '^knowledge_search_projection_al_[0-9]+_lang_[a-z]{2,8}_s1$'
-                    ) OR (
-                        schemaname = 'akmai_vector'
-                        AND relname ~
-                            '^[a-z_][a-z0-9_]*_al_[0-9]+_lang_[a-z]{2,8}_s1$'
-                    )
+                        relation.oid AS relid,
+                        COALESCE(stats.n_live_tup, 0) AS n_live_tup,
+                        COALESCE(stats.n_dead_tup, 0) AS n_dead_tup,
+                        COALESCE(stats.n_tup_ins, 0) AS n_tup_ins,
+                        COALESCE(stats.n_tup_del, 0) AS n_tup_del,
+                        COALESCE(stats.autovacuum_count, 0)
+                            AS autovacuum_count
+                    FROM pg_class relation
+                    JOIN pg_namespace namespace
+                      ON namespace.oid = relation.relnamespace
+                    LEFT JOIN pg_stat_user_tables stats
+                      ON stats.relid = relation.oid
+                    WHERE relation.relkind = 'r'
+                      AND relation.relispartition
+                      AND right(relation.relname, 3) = '_s1'
+                      AND (
+                          (
+                              namespace.nspname = 'public'
+                              AND relation.relname LIKE
+                                  'knowledge_search_projection_al_%'
+                          )
+                          OR namespace.nspname = 'akmai_vector'
+                      )
                 ), sized AS (
                     SELECT
                         store,
