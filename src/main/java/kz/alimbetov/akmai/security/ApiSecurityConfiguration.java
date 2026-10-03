@@ -23,11 +23,23 @@ public class ApiSecurityConfiguration {
         );
         http.authorizeHttpRequests(auth -> {
             auth.requestMatchers("/actuator/health/**").permitAll();
+
+            String[] protectedEndpoints = {
+                    "/api/**",
+                    "/actuator/metrics",
+                    "/actuator/metrics/**",
+                    "/actuator/info",
+                    "/actuator/info/**"
+            };
             if (properties.enabled()) {
-                auth.requestMatchers("/api/**").hasRole("API");
+                auth.requestMatchers(protectedEndpoints)
+                        .hasRole("API");
             } else {
-                auth.requestMatchers("/api/**").permitAll();
+                auth.requestMatchers(protectedEndpoints)
+                        .permitAll();
             }
+
+            auth.requestMatchers("/actuator/**").denyAll();
             auth.anyRequest().permitAll();
         });
         http.addFilterBefore(
