@@ -679,7 +679,8 @@ class PostgresVectorPublicationIntegrationTest {
                 "akmaiDocumentId", documentId,
                 "akmaiGeneration", generation,
                 "akmaiEmbeddingProfileId", profile.profileId(),
-                "akmaiChunkId", chunkId
+                "akmaiChunkId", chunkId,
+                "language", "en"
         );
     }
 
