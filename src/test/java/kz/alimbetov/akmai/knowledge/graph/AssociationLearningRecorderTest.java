@@ -124,6 +124,12 @@ class AssociationLearningRecorderTest {
                         32,
                         enabled ? SECRET : ""
                 ),
+                AdaptiveGraphTestProperties.create(
+                        new AdaptiveGraphProperties.BandQuotas(8, 8, 16)
+                ).scoring(),
+                AdaptiveGraphTestProperties.create(
+                        new AdaptiveGraphProperties.BandQuotas(8, 8, 16)
+                ).maintenance(),
                 new AdaptiveGraphProperties.BandQuotas(8, 8, 16),
                 new AdaptiveGraphProperties.Storage(32)
         );

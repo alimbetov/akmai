@@ -22,6 +22,12 @@ class PrivacySafeQueryFingerprintTest {
                         32,
                         "0123456789abcdef0123456789abcdef"
                 ),
+                AdaptiveGraphTestProperties.create(
+                        new AdaptiveGraphProperties.BandQuotas(8, 8, 16)
+                ).scoring(),
+                AdaptiveGraphTestProperties.create(
+                        new AdaptiveGraphProperties.BandQuotas(8, 8, 16)
+                ).maintenance(),
                 new AdaptiveGraphProperties.BandQuotas(8, 8, 16),
                 new AdaptiveGraphProperties.Storage(32)
         );

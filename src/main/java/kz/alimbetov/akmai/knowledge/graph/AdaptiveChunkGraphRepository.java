@@ -353,6 +353,8 @@ public class AdaptiveChunkGraphRepository {
                         )
                         ELSE knowledge_chunk_association.last_reinforced_at
                     END,
+                    decayed_at = NULL,
+                    compaction_required = TRUE,
                     updated_at = clock_timestamp()
                 """;
 

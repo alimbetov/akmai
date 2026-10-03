@@ -56,6 +56,25 @@ akmai:
       max-context-chunks: ${AKMAI_ADAPTIVE_GRAPH_LEARNING_MAX_CONTEXT_CHUNKS:8}
       max-pairs-per-request: ${AKMAI_ADAPTIVE_GRAPH_LEARNING_MAX_PAIRS:32}
       fingerprint-secret: ${AKMAI_ADAPTIVE_GRAPH_FINGERPRINT_SECRET:}
+    scoring:
+      distinct-query-weight: ${AKMAI_ADAPTIVE_GRAPH_DISTINCT_QUERY_WEIGHT:0.45}
+      context-weight: ${AKMAI_ADAPTIVE_GRAPH_CONTEXT_WEIGHT:0.20}
+      citation-weight: ${AKMAI_ADAPTIVE_GRAPH_CITATION_WEIGHT:0.35}
+      distinct-query-scale: ${AKMAI_ADAPTIVE_GRAPH_DISTINCT_QUERY_SCALE:4.0}
+      context-scale: ${AKMAI_ADAPTIVE_GRAPH_CONTEXT_SCALE:4.0}
+      citation-scale: ${AKMAI_ADAPTIVE_GRAPH_CITATION_SCALE:2.0}
+      half-life: ${AKMAI_ADAPTIVE_GRAPH_HALF_LIFE:30d}
+      rescore-interval: ${AKMAI_ADAPTIVE_GRAPH_RESCORE_INTERVAL:1h}
+      candidate-ttl: ${AKMAI_ADAPTIVE_GRAPH_CANDIDATE_TTL:30d}
+      decayed-ttl: ${AKMAI_ADAPTIVE_GRAPH_DECAYED_TTL:14d}
+      promote-warm: ${AKMAI_ADAPTIVE_GRAPH_PROMOTE_WARM:0.35}
+      demote-warm: ${AKMAI_ADAPTIVE_GRAPH_DEMOTE_WARM:0.20}
+      promote-hot: ${AKMAI_ADAPTIVE_GRAPH_PROMOTE_HOT:0.65}
+      demote-hot: ${AKMAI_ADAPTIVE_GRAPH_DEMOTE_HOT:0.50}
+    maintenance:
+      batch-size: ${AKMAI_ADAPTIVE_GRAPH_MAINTENANCE_BATCH_SIZE:100}
+      max-batches-per-run: ${AKMAI_ADAPTIVE_GRAPH_MAINTENANCE_MAX_BATCHES:10}
+      fixed-delay: ${AKMAI_ADAPTIVE_GRAPH_MAINTENANCE_FIXED_DELAY:5m}
     quotas:
       hot: ${AKMAI_ADAPTIVE_GRAPH_HOT_QUOTA:8}
       warm: ${AKMAI_ADAPTIVE_GRAPH_WARM_QUOTA:8}

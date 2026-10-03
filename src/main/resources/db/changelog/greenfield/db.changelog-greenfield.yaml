@@ -17,3 +17,5 @@ databaseChangeLog:
       file: db/changelog/greenfield/008-adaptive-association-graph.sql
   - include:
       file: db/changelog/greenfield/009-adaptive-shadow-learning.sql
+  - include:
+      file: db/changelog/greenfield/010-adaptive-bounded-maintenance.sql

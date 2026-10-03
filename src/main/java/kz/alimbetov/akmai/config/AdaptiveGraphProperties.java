@@ -1,5 +1,6 @@
 package kz.alimbetov.akmai.config;
 
+import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.validation.annotation.Validated;
@@ -13,6 +14,8 @@ public record AdaptiveGraphProperties(
         boolean expansionEnabled,
         int graphVersion,
         Learning learning,
+        Scoring scoring,
+        Maintenance maintenance,
         BandQuotas quotas,
         Storage storage
 ) {
@@ -37,6 +40,16 @@ public record AdaptiveGraphProperties(
             throw new IllegalArgumentException(
                     "adaptive-graph learning requires a fingerprint secret "
                             + "of at least 32 characters"
+            );
+        }
+        if (scoring == null) {
+            throw new IllegalArgumentException(
+                    "adaptive-graph scoring must not be null"
+            );
+        }
+        if (maintenance == null) {
+            throw new IllegalArgumentException(
+                    "adaptive-graph maintenance must not be null"
             );
         }
         if (quotas == null) {
@@ -93,6 +106,121 @@ public record AdaptiveGraphProperties(
         }
     }
 
+    public record Scoring(
+            double distinctQueryWeight,
+            double contextWeight,
+            double citationWeight,
+            double distinctQueryScale,
+            double contextScale,
+            double citationScale,
+            Duration halfLife,
+            Duration rescoreInterval,
+            Duration candidateTtl,
+            Duration decayedTtl,
+            double promoteWarm,
+            double demoteWarm,
+            double promoteHot,
+            double demoteHot
+    ) {
+        public Scoring {
+            positiveFinite("distinctQueryWeight", distinctQueryWeight);
+            positiveFinite("contextWeight", contextWeight);
+            positiveFinite("citationWeight", citationWeight);
+            positiveFinite("distinctQueryScale", distinctQueryScale);
+            positiveFinite("contextScale", contextScale);
+            positiveFinite("citationScale", citationScale);
+            positiveDuration("halfLife", halfLife);
+            positiveDuration("rescoreInterval", rescoreInterval);
+            positiveDuration("candidateTtl", candidateTtl);
+            positiveDuration("decayedTtl", decayedTtl);
+
+            bounded("demoteWarm", demoteWarm);
+            bounded("promoteWarm", promoteWarm);
+            bounded("demoteHot", demoteHot);
+            bounded("promoteHot", promoteHot);
+
+            if (!(demoteWarm < promoteWarm
+                    && promoteWarm < demoteHot
+                    && demoteHot < promoteHot)) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph hysteresis must satisfy "
+                                + "demoteWarm < promoteWarm < "
+                                + "demoteHot < promoteHot"
+                );
+            }
+        }
+
+        public double totalEvidenceWeight() {
+            return distinctQueryWeight
+                    + contextWeight
+                    + citationWeight;
+        }
+
+        private static void positiveFinite(
+                String name,
+                double value
+        ) {
+            if (!Double.isFinite(value) || value <= 0) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph "
+                                + name
+                                + " must be finite and positive"
+                );
+            }
+        }
+
+        private static void bounded(String name, double value) {
+            if (!Double.isFinite(value) || value < 0 || value > 1) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph "
+                                + name
+                                + " must be in [0, 1]"
+                );
+            }
+        }
+
+        private static void positiveDuration(
+                String name,
+                Duration value
+        ) {
+            if (value == null
+                    || value.isZero()
+                    || value.isNegative()) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph "
+                                + name
+                                + " must be positive"
+                );
+            }
+        }
+    }
+
+    public record Maintenance(
+            int batchSize,
+            int maxBatchesPerRun,
+            Duration fixedDelay
+    ) {
+        public Maintenance {
+            if (batchSize < 1 || batchSize > 1000) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph batchSize must be in [1, 1000]"
+                );
+            }
+            if (maxBatchesPerRun < 1 || maxBatchesPerRun > 100) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph maxBatchesPerRun must be in [1, 100]"
+                );
+            }
+            if (fixedDelay == null
+                    || fixedDelay.isZero()
+                    || fixedDelay.isNegative()) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph fixedDelay must be positive"
+                );
+            }
+        }
+    }
+
     public record BandQuotas(
             int hot,
             int warm,
@@ -106,6 +234,15 @@ public record AdaptiveGraphProperties(
 
         public int total() {
             return hot + warm + candidate;
+        }
+
+        public int forBand(kz.alimbetov.akmai.knowledge.graph.AssociationBand band) {
+            return switch (band) {
+                case HOT -> hot;
+                case WARM -> warm;
+                case CANDIDATE -> candidate;
+                case DECAYED -> 0;
+            };
         }
 
         private static void validate(String name, int value) {

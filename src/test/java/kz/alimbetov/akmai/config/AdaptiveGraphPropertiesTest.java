@@ -3,20 +3,15 @@ package kz.alimbetov.akmai.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 class AdaptiveGraphPropertiesTest {
 
     @Test
     void acceptsBoundedBandQuotasAndFixedStorageShape() {
-        AdaptiveGraphProperties properties = new AdaptiveGraphProperties(
+        AdaptiveGraphProperties properties = properties(
                 false,
-                false,
-                false,
-                false,
-                1,
-                new AdaptiveGraphProperties.Learning(8, 32, ""),
-                new AdaptiveGraphProperties.BandQuotas(8, 8, 16),
                 new AdaptiveGraphProperties.Storage(32)
         );
 
@@ -41,6 +36,8 @@ class AdaptiveGraphPropertiesTest {
                                 32,
                                 "too-short"
                         ),
+                        scoring(),
+                        maintenance(),
                         new AdaptiveGraphProperties.BandQuotas(8, 8, 16),
                         new AdaptiveGraphProperties.Storage(32)
                 ))
@@ -49,19 +46,87 @@ class AdaptiveGraphPropertiesTest {
     }
 
     @Test
+    void rejectsInvalidHysteresisOrdering() {
+        assertThatThrownBy(() ->
+                new AdaptiveGraphProperties.Scoring(
+                        0.45,
+                        0.20,
+                        0.35,
+                        4.0,
+                        4.0,
+                        2.0,
+                        Duration.ofDays(30),
+                        Duration.ofHours(1),
+                        Duration.ofDays(30),
+                        Duration.ofDays(14),
+                        0.35,
+                        0.20,
+                        0.45,
+                        0.50
+                ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("hysteresis");
+    }
+
+    @Test
     void rejectsStorageShapeThatDoesNotMatchSchemaVersion() {
         assertThatThrownBy(() ->
-                new AdaptiveGraphProperties(
+                properties(
                         false,
-                        false,
-                        false,
-                        false,
-                        1,
-                        new AdaptiveGraphProperties.Learning(8, 32, ""),
-                        new AdaptiveGraphProperties.BandQuotas(8, 8, 16),
                         new AdaptiveGraphProperties.Storage(64)
                 ))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("exactly 32");
+    }
+
+    private AdaptiveGraphProperties properties(
+            boolean learning,
+            AdaptiveGraphProperties.Storage storage
+    ) {
+        return new AdaptiveGraphProperties(
+                learning,
+                false,
+                false,
+                false,
+                1,
+                new AdaptiveGraphProperties.Learning(
+                        8,
+                        32,
+                        learning
+                                ? "0123456789abcdef0123456789abcdef"
+                                : ""
+                ),
+                scoring(),
+                maintenance(),
+                new AdaptiveGraphProperties.BandQuotas(8, 8, 16),
+                storage
+        );
+    }
+
+    private AdaptiveGraphProperties.Scoring scoring() {
+        return new AdaptiveGraphProperties.Scoring(
+                0.45,
+                0.20,
+                0.35,
+                4.0,
+                4.0,
+                2.0,
+                Duration.ofDays(30),
+                Duration.ofHours(1),
+                Duration.ofDays(30),
+                Duration.ofDays(14),
+                0.35,
+                0.20,
+                0.65,
+                0.50
+        );
+    }
+
+    private AdaptiveGraphProperties.Maintenance maintenance() {
+        return new AdaptiveGraphProperties.Maintenance(
+                100,
+                10,
+                Duration.ofMinutes(5)
+        );
     }
 }
