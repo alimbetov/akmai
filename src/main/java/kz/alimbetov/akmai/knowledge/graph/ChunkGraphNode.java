@@ -38,6 +38,18 @@ public record ChunkGraphNode(
 
     @Override
     public int compareTo(ChunkGraphNode other) {
-        return lockKey().compareTo(other.lockKey());
+        int access = Long.compare(accessLevel, other.accessLevel);
+        if (access != 0) {
+            return access;
+        }
+        int document = documentId.compareTo(other.documentId);
+        if (document != 0) {
+            return document;
+        }
+        int generationOrder = Long.compare(generation, other.generation);
+        if (generationOrder != 0) {
+            return generationOrder;
+        }
+        return chunkId.compareTo(other.chunkId);
     }
 }
