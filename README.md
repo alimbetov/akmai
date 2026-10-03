@@ -326,15 +326,15 @@ A future persistence layer should store canonical documents, chunks, relations a
 
 ## Next milestones
 
-1. canonical PostgreSQL document/chunk tables
-2. embedding model/version registry
-3. re-embedding job
-4. parent-child chunk hierarchy
-5. reference expansion during retrieval
-6. PDF/DOCX/Markdown parsers
-7. multilingual KK/RU/EN/ZH retrieval benchmark
-8. hybrid search and reranking
-9. retrieval evaluation
+The core ingestion/retrieval architecture is already in place. The current production-readiness work focuses on:
+
+1. complete the production operations hardening branch;
+2. close alert delivery and centralized logging;
+3. run 100k / 1M / 5M vector capacity benchmarks at 1024 dimensions;
+4. run concurrent ingestion + retrieval + retention tests;
+5. run live Ollama end-to-end capacity tests;
+6. execute and record a canonical-source disaster-recovery rehearsal;
+7. derive production SLOs, saturation thresholds and measured RTO from benchmark evidence.
 
 
 ## Business identifier index
@@ -419,4 +419,4 @@ Target mixed-query flow:
 
 The same `IdentifierExtractor` and `IdentifierParser[]` rules are shared by WRITE and READ. Document chunks are enriched concurrently before persistence; questions are decomposed into independent query chunks and applicable retrieval strategies are executed concurrently. Both executors use bounded configurable thread pools rather than unbounded `parallelStream()`.
 
-Current implementations cover identifier and vector retrieval. Lexical/reference retrieval, a learned reranker and a local search index are explicit extension points rather than being coupled to `RagQuestionService`.
+The production retrieval path combines vector, lexical, identifier and reference strategies, then applies result fusion, reranking, bounded context expansion and token budgeting before local answer generation. These stages remain separated behind dedicated components so storage, ranking and model implementations can evolve without coupling them directly to `RagQuestionService`.
