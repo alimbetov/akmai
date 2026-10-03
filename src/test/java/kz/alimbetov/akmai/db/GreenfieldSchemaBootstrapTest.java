@@ -86,16 +86,19 @@ class GreenfieldSchemaBootstrapTest {
                 )
                 """,
                 String.class
-        )).isEqualTo("LIST (storage_state)");
+        )).isNull();
 
         assertThat(regclass(
-                "public.knowledge_search_projection_al_1_lang_en_s0"
+                "public.knowledge_search_projection_al_1_lang_en"
         )).isNotNull();
+        assertThat(regclass(
+                "public.knowledge_search_projection_al_1_lang_en_s0"
+        )).isNull();
         assertThat(regclass(
                 "public.knowledge_search_projection_al_1_lang_en_s1"
-        )).isNotNull();
+        )).isNull();
         assertThat(regclass(
-                "public.knowledge_search_projection_al_10_lang_el_s0"
+                "public.knowledge_search_projection_al_10_lang_el"
         )).isNotNull();
 
         Integer languages = jdbc.queryForObject(
@@ -229,7 +232,7 @@ class GreenfieldSchemaBootstrapTest {
         );
         assertThat(physicalTable)
                 .isEqualTo(
-                        "knowledge_search_projection_al_1_lang_en_s0"
+                        "knowledge_search_projection_al_1_lang_en"
                 );
 
         assertThatThrownBy(() -> jdbc.update(
@@ -332,37 +335,28 @@ class GreenfieldSchemaBootstrapTest {
                 )
                 """,
                 String.class
-        )).isEqualTo("LIST (storage_state)");
+        )).isNull();
+        assertThat(regclass(
+                "akmai_vector.test_vec_al_1_lang_en"
+        )).isNotNull();
         assertThat(regclass(
                 "akmai_vector.test_vec_al_1_lang_en_s0"
-        )).isNotNull();
+        )).isNull();
         assertThat(regclass(
                 "akmai_vector.test_vec_al_1_lang_en_s1"
-        )).isNotNull();
+        )).isNull();
 
         Integer hnswIndexes = jdbc.queryForObject(
                 """
                 SELECT count(*)
                 FROM pg_indexes
                 WHERE schemaname = 'akmai_vector'
-                  AND tablename = 'test_vec_al_1_lang_en_s0'
+                  AND tablename = 'test_vec_al_1_lang_en'
                   AND lower(indexdef) LIKE '%using hnsw%'
                 """,
                 Integer.class
         );
         assertThat(hnswIndexes).isEqualTo(1);
-
-        Integer archiveHnswIndexes = jdbc.queryForObject(
-                """
-                SELECT count(*)
-                FROM pg_indexes
-                WHERE schemaname = 'akmai_vector'
-                  AND tablename = 'test_vec_al_1_lang_en_s1'
-                  AND lower(indexdef) LIKE '%using hnsw%'
-                """,
-                Integer.class
-        );
-        assertThat(archiveHnswIndexes).isZero();
 
         jdbc.update(
                 """
@@ -400,30 +394,8 @@ class GreenfieldSchemaBootstrapTest {
         );
         assertThat(physicalTable)
                 .isEqualTo(
-                        "akmai_vector.test_vec_al_1_lang_en_s0"
+                        "akmai_vector.test_vec_al_1_lang_en"
                 );
-
-        jdbc.update(
-                """
-                UPDATE akmai_vector.test_vec
-                SET storage_state = 1
-                WHERE access_level = 1
-                  AND document_id = 'doc-vector'
-                  AND generation = 1
-                """
-        );
-
-        assertThat(jdbc.queryForObject(
-                """
-                SELECT tableoid::regclass::text
-                FROM akmai_vector.test_vec
-                WHERE id =
-                    '11111111-1111-1111-1111-111111111111'
-                """,
-                String.class
-        )).isEqualTo(
-                "akmai_vector.test_vec_al_1_lang_en_s1"
-        );
 
         assertThatThrownBy(() -> jdbc.update(
                 """

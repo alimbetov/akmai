@@ -11,21 +11,16 @@ CREATE TABLE knowledge_retired_generation (
     content_fingerprint  VARCHAR(64),
     physical_id_version  SMALLINT NOT NULL,
     retention_policy     VARCHAR(32) NOT NULL,
-    retired_at           TIMESTAMPTZ NOT NULL,
-    purge_after          TIMESTAMPTZ NOT NULL,
+    purge_started_at     TIMESTAMPTZ NOT NULL,
+    retired_at           TIMESTAMPTZ,
+    purge_after          TIMESTAMPTZ,
     verified_at          TIMESTAMPTZ,
-    cleanup_status       VARCHAR(32) NOT NULL DEFAULT 'PENDING_VERIFY',
+    cleanup_status       VARCHAR(32) NOT NULL DEFAULT 'PURGING',
     cleanup_attempts     INTEGER NOT NULL DEFAULT 0,
     last_error           VARCHAR(1000),
 
-    PRIMARY KEY (document_id, generation),
+    PRIMARY KEY (document_id, generation, access_level),
 
-    CONSTRAINT fk_retired_generation
-        FOREIGN KEY (document_id, generation)
-        REFERENCES knowledge_document_generation(document_id, generation),
-    CONSTRAINT fk_retired_generation_profile
-        FOREIGN KEY (embedding_profile_id)
-        REFERENCES knowledge_embedding_profile(profile_id),
     CONSTRAINT ck_retired_generation_access
         CHECK (access_level > 0),
     CONSTRAINT ck_retired_generation_counts
@@ -34,30 +29,49 @@ CREATE TABLE knowledge_retired_generation (
         CHECK (retention_policy IN ('PERMANENT', 'TTL')),
     CONSTRAINT ck_retired_generation_status
         CHECK (cleanup_status IN (
-            'PENDING_VERIFY',
+            'PURGING',
+            'PURGED',
             'VERIFIED',
             'REPAIR_REQUIRED'
         )),
-    CONSTRAINT ck_retired_generation_purge
-        CHECK (purge_after > retired_at),
+    CONSTRAINT ck_retired_generation_timestamps
+        CHECK (
+            (
+                cleanup_status = 'PURGING'
+                AND retired_at IS NULL
+                AND purge_after IS NULL
+            )
+            OR
+            (
+                cleanup_status IN (
+                    'PURGED',
+                    'VERIFIED',
+                    'REPAIR_REQUIRED'
+                )
+                AND retired_at IS NOT NULL
+                AND purge_after IS NOT NULL
+                AND purge_after > retired_at
+            )
+        ),
     CONSTRAINT ck_retired_generation_attempts
         CHECK (cleanup_attempts >= 0)
 );
 
 CREATE INDEX idx_retired_generation_verify
     ON knowledge_retired_generation(
-        cleanup_status,
         retired_at,
         document_id,
-        generation
+        generation,
+        access_level
     )
-    WHERE cleanup_status <> 'VERIFIED';
+    WHERE cleanup_status = 'PURGED';
 
 CREATE INDEX idx_retired_generation_purge
     ON knowledge_retired_generation(
         purge_after,
         document_id,
-        generation
+        generation,
+        access_level
     )
     WHERE cleanup_status = 'VERIFIED';
 
@@ -176,3 +190,4 @@ END;
 $$;
 
 SELECT akmai_admin.maintain_audit_partitions();
+

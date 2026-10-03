@@ -227,7 +227,7 @@ class AccessLevelArchitectureTest {
     }
 
     @Test
-    void publishedRetrievalIsPinnedToActiveStorageState()
+    void publishedRetrievalIsPinnedToLifecyclePublicationFence()
             throws Exception {
         for (String source : List.of(
                 "src/main/java/kz/alimbetov/akmai/knowledge/vector/"
@@ -240,8 +240,10 @@ class AccessLevelArchitectureTest {
                     .toLowerCase();
 
             assertThat(text)
-                    .as("%s must prune archived retrieval storage", source)
-                    .contains("storage_state = 0");
+                    .as("%s must enforce published lifecycle visibility", source)
+                    .contains("published_generation")
+                    .contains("retention_status = 'active'")
+                    .doesNotContain("storage_state");
         }
     }
 

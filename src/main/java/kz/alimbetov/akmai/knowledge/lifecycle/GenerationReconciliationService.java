@@ -25,6 +25,7 @@ public class GenerationReconciliationService {
     private final SearchProjectionRepository projections;
     private final DocumentIdentifierRepository identifiers;
     private final ReferenceGraphRepository references;
+    private final GenerationRepairService repairService;
     private final ReconciliationProperties properties;
     private final AuditEventRepository audit;
 
@@ -38,6 +39,7 @@ public class GenerationReconciliationService {
             SearchProjectionRepository projections,
             DocumentIdentifierRepository identifiers,
             ReferenceGraphRepository references,
+            GenerationRepairService repairService,
             ReconciliationProperties properties,
             AuditEventRepository audit
     ) {
@@ -49,6 +51,7 @@ public class GenerationReconciliationService {
         this.projections = projections;
         this.identifiers = identifiers;
         this.references = references;
+        this.repairService = repairService;
         this.properties = properties;
         this.audit = audit;
     }
@@ -104,6 +107,21 @@ public class GenerationReconciliationService {
     }
 
     private boolean reconcileOne(GenerationKey key) {
+        Long publishedGeneration = jdbcTemplate.query(
+                """
+                SELECT published_generation
+                FROM knowledge_document_lifecycle
+                WHERE document_id = ?
+                FOR UPDATE
+                """,
+                (rs, rowNum) -> (Long) rs.getObject("published_generation"),
+                key.documentId()
+        ).stream().findFirst().orElse(null);
+        if (publishedGeneration != null
+                && publishedGeneration == key.generation()) {
+            return false;
+        }
+
         GenerationRow row = jdbcTemplate.query(
                 """
                 SELECT generation_status, embedding_profile_id
@@ -123,21 +141,6 @@ public class GenerationReconciliationService {
         if (row == null
                 || (!"RETIRED".equals(row.status())
                 && !"FAILED".equals(row.status()))) {
-            return false;
-        }
-
-        Integer published = jdbcTemplate.queryForObject(
-                """
-                SELECT count(*)
-                FROM knowledge_document_lifecycle
-                WHERE document_id = ?
-                  AND published_generation = ?
-                """,
-                Integer.class,
-                key.documentId(),
-                key.generation()
-        );
-        if (published != null && published > 0) {
             return false;
         }
 
@@ -163,25 +166,24 @@ public class GenerationReconciliationService {
 
         ResidualCounts before = residualCounts(profile, identity);
         if (before.total() > 0) {
-            repair(profile, identity);
+            repairService.repair(profile, identity);
         }
 
         ResidualCounts after = residualCounts(profile, identity);
         if (after.total() != 0) {
-            if ("RETIRED".equals(row.status())) {
-                jdbcTemplate.update(
-                        """
-                        UPDATE knowledge_retired_generation
-                        SET cleanup_status = 'REPAIR_REQUIRED',
-                            cleanup_attempts = cleanup_attempts + 1,
-                            last_error = 'Residual retrieval rows remain'
-                        WHERE document_id = ?
-                          AND generation = ?
-                        """,
-                        key.documentId(),
-                        key.generation()
-                );
-            }
+            jdbcTemplate.update(
+                    """
+                    UPDATE knowledge_document_generation
+                    SET last_error = 'Residual retrieval rows remain'
+                    WHERE document_id = ?
+                      AND generation = ?
+                      AND access_level = ?
+                      AND cleanup_status = 'PURGED'
+                    """,
+                    key.documentId(),
+                    key.generation(),
+                    key.accessLevel()
+            );
             throw new IllegalStateException(
                     "Generation payload remains after reconciliation"
             );
@@ -288,22 +290,11 @@ public class GenerationReconciliationService {
         return value == null ? 0 : value;
     }
 
-    private void repair(
-            EmbeddingProfile profile,
-            GenerationIdentity identity
-    ) {
-        vectors.deleteGeneration(profile, identity);
-        references.deleteGeneration(identity);
-        identifiers.deleteGeneration(identity);
-        projections.deleteGeneration(identity);
-        manifests.deleteGeneration(identity);
-    }
-
     private void purgeExpiredTombstones() {
         jdbcTemplate.update(
                 """
                 WITH expired AS (
-                    SELECT document_id, generation
+                    SELECT document_id, generation, access_level
                     FROM knowledge_retired_generation
                     WHERE cleanup_status = 'VERIFIED'
                       AND purge_after <= clock_timestamp()
@@ -315,6 +306,7 @@ public class GenerationReconciliationService {
                 USING expired
                 WHERE tombstone.document_id = expired.document_id
                   AND tombstone.generation = expired.generation
+                  AND tombstone.access_level = expired.access_level
                 """,
                 properties.batchSize()
         );

@@ -206,6 +206,47 @@ public class ChunkRetentionService {
             );
         }
 
+        int tombstone = jdbcTemplate.update(
+                """
+                INSERT INTO knowledge_retired_generation (
+                    document_id,
+                    generation,
+                    access_level,
+                    embedding_profile_id,
+                    projection_count,
+                    vector_count,
+                    content_fingerprint,
+                    physical_id_version,
+                    retention_policy,
+                    purge_started_at,
+                    cleanup_status
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    clock_timestamp(),
+                    'PURGING'
+                )
+                ON CONFLICT (
+                    document_id,
+                    generation,
+                    access_level
+                ) DO NOTHING
+                """,
+                identity.documentId(),
+                identity.generation(),
+                identity.accessLevel(),
+                generation.profileId(),
+                expectedProjections,
+                vectorIds.size(),
+                generation.contentFingerprint(),
+                generation.physicalIdVersion(),
+                fence.lifecyclePolicy()
+        );
+        if (tombstone != 1) {
+            throw new IllegalStateException(
+                    "Retired generation tombstone already exists"
+            );
+        }
+
         int deletedVectors = vectorRepository.deleteGeneration(
                 profile,
                 identity
@@ -258,42 +299,26 @@ public class ChunkRetentionService {
             throw new StaleClaimException();
         }
 
-        int tombstone = jdbcTemplate.update(
+        int purged = jdbcTemplate.update(
                 """
-                INSERT INTO knowledge_retired_generation (
-                    document_id,
-                    generation,
-                    access_level,
-                    embedding_profile_id,
-                    projection_count,
-                    vector_count,
-                    content_fingerprint,
-                    physical_id_version,
-                    retention_policy,
-                    retired_at,
-                    purge_after,
-                    cleanup_status
-                ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    clock_timestamp(),
-                    clock_timestamp() + interval '7 days',
-                    'PENDING_VERIFY'
-                )
-                ON CONFLICT (document_id, generation) DO NOTHING
+                UPDATE knowledge_retired_generation
+                SET cleanup_status = 'PURGED',
+                    retired_at = clock_timestamp(),
+                    purge_after = clock_timestamp() + interval '7 days',
+                    cleanup_attempts = cleanup_attempts + 1,
+                    last_error = NULL
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND access_level = ?
+                  AND cleanup_status = 'PURGING'
                 """,
                 identity.documentId(),
                 identity.generation(),
-                identity.accessLevel(),
-                generation.profileId(),
-                deletedProjections,
-                deletedVectors,
-                generation.contentFingerprint(),
-                generation.physicalIdVersion(),
-                fence.lifecyclePolicy()
+                identity.accessLevel()
         );
-        if (tombstone != 1) {
+        if (purged != 1) {
             throw new IllegalStateException(
-                    "Retired generation tombstone already exists"
+                    "Retired generation tombstone cannot be finalized"
             );
         }
 
