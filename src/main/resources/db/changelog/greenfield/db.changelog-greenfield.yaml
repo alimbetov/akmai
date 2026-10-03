@@ -11,3 +11,5 @@ databaseChangeLog:
       file: db/changelog/greenfield/005-operational.sql
   - include:
       file: db/changelog/greenfield/006-runtime-seed.sql
+  - include:
+      file: db/changelog/greenfield/007-hot-retention-audit.sql
