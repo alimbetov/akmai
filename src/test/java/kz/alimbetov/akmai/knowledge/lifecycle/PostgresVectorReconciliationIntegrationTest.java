@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.config.ReconciliationProperties;
+import kz.alimbetov.akmai.knowledge.audit.AuditEventRepository;
 import kz.alimbetov.akmai.knowledge.chunking.CrossReferenceExtractor;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileRepository;
@@ -125,12 +126,15 @@ class PostgresVectorReconciliationIntegrationTest {
                         1,
                         Duration.ZERO,
                         Duration.ofMinutes(5)
-                )
+                ),
+                new AuditEventRepository(jdbc, mapper)
         );
     }
 
     @BeforeEach
     void clean() {
+        jdbc.update("DELETE FROM knowledge_audit_event");
+        jdbc.update("DELETE FROM knowledge_retired_generation");
         jdbc.update("DELETE FROM akmai_vector.p_reconcile");
         jdbc.update("DELETE FROM knowledge_reference_edge");
         jdbc.update("DELETE FROM knowledge_reference_target");

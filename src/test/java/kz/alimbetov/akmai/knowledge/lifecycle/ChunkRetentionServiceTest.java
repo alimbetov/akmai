@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
+import kz.alimbetov.akmai.knowledge.audit.AuditEventRepository;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileRepository;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
 import kz.alimbetov.akmai.knowledge.projection.PostgresSearchProjectionRepository;
@@ -83,6 +84,7 @@ class ChunkRetentionServiceTest {
                 mock(PostgresGenerationVectorRepository.class);
         EmbeddingProfileRepository profiles =
                 mock(EmbeddingProfileRepository.class);
+        AuditEventRepository audit = mock(AuditEventRepository.class);
 
         ChunkRetentionService service = new ChunkRetentionService(
                 jdbc,
@@ -92,7 +94,8 @@ class ChunkRetentionServiceTest {
                 identifiers,
                 manifests,
                 vectors,
-                profiles
+                profiles,
+                audit
         );
 
         RetentionClaim stale = new RetentionClaim(

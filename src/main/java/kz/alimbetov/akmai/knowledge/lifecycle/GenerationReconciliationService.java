@@ -9,7 +9,6 @@ import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -27,7 +26,7 @@ public class GenerationReconciliationService {
     private final DocumentIdentifierRepository identifiers;
     private final ReferenceGraphRepository references;
     private final ReconciliationProperties properties;
-    private AuditEventRepository audit;
+    private final AuditEventRepository audit;
 
     public GenerationReconciliationService(
             JdbcTemplate jdbcTemplate,
@@ -39,7 +38,8 @@ public class GenerationReconciliationService {
             SearchProjectionRepository projections,
             DocumentIdentifierRepository identifiers,
             ReferenceGraphRepository references,
-            ReconciliationProperties properties
+            ReconciliationProperties properties,
+            AuditEventRepository audit
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactionTemplate = transactionTemplate;
@@ -50,10 +50,6 @@ public class GenerationReconciliationService {
         this.identifiers = identifiers;
         this.references = references;
         this.properties = properties;
-    }
-
-    @Autowired(required = false)
-    void setAudit(AuditEventRepository audit) {
         this.audit = audit;
     }
 
@@ -212,20 +208,18 @@ public class GenerationReconciliationService {
             }
         }
 
-        if (audit != null) {
-            audit.append(
-                    before.total() == 0
-                            ? "GENERATION_VERIFIED"
-                            : "GENERATION_REPAIRED",
-                    identity,
-                    null,
-                    "generation-reconciler",
-                    Map.of(
-                            "residualRowsBefore", before.total(),
-                            "generationStatus", row.status()
-                    )
-            );
-        }
+        audit.append(
+                before.total() == 0
+                        ? "GENERATION_VERIFIED"
+                        : "GENERATION_REPAIRED",
+                identity,
+                null,
+                "generation-reconciler",
+                Map.of(
+                        "residualRowsBefore", before.total(),
+                        "generationStatus", row.status()
+                )
+        );
 
         return jdbcTemplate.update(
                 """

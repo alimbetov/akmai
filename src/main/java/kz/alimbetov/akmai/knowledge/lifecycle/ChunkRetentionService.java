@@ -31,8 +31,8 @@ public class ChunkRetentionService {
     private final VectorGenerationRepository vectorGenerationRepository;
     private final PostgresGenerationVectorRepository vectorRepository;
     private final EmbeddingProfileRepository profileRepository;
+    private final AuditEventRepository audit;
     private AkmaiMetrics metrics;
-    private AuditEventRepository audit;
 
     public ChunkRetentionService(
             JdbcTemplate jdbcTemplate,
@@ -43,7 +43,8 @@ public class ChunkRetentionService {
             DocumentIdentifierRepository identifierRepository,
             VectorGenerationRepository vectorGenerationRepository,
             PostgresGenerationVectorRepository vectorRepository,
-            EmbeddingProfileRepository profileRepository
+            EmbeddingProfileRepository profileRepository,
+            AuditEventRepository audit
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactionTemplate = transactionTemplate;
@@ -53,16 +54,12 @@ public class ChunkRetentionService {
         this.vectorGenerationRepository = vectorGenerationRepository;
         this.vectorRepository = vectorRepository;
         this.profileRepository = profileRepository;
+        this.audit = audit;
     }
 
     @Autowired(required = false)
     void setMetrics(AkmaiMetrics metrics) {
         this.metrics = metrics;
-    }
-
-    @Autowired(required = false)
-    void setAudit(AuditEventRepository audit) {
-        this.audit = audit;
     }
 
     public RetentionCleanupResult cleanup(RetentionClaim claim) {
@@ -197,6 +194,17 @@ public class ChunkRetentionService {
         );
         int expectedProjections =
                 projectionCount == null ? 0 : projectionCount;
+        if (generation.chunkCount() != null
+                && generation.chunkCount() != expectedProjections) {
+            throw new IllegalStateException(
+                    "Projection count does not match generation chunk_count"
+            );
+        }
+        if (vectorIds.size() != expectedProjections) {
+            throw new IllegalStateException(
+                    "Vector manifest count does not match projection count"
+            );
+        }
 
         int deletedVectors = vectorRepository.deleteGeneration(
                 profile,
@@ -289,18 +297,16 @@ public class ChunkRetentionService {
             );
         }
 
-        if (audit != null) {
-            audit.append(
-                    "HOT_PAYLOAD_PURGED",
-                    identity,
-                    claim.claimId(),
-                    "retention-worker",
-                    Map.of(
-                            "projectionCount", deletedProjections,
-                            "vectorCount", deletedVectors
-                    )
-            );
-        }
+        audit.append(
+                "HOT_PAYLOAD_PURGED",
+                identity,
+                claim.claimId(),
+                "retention-worker",
+                Map.of(
+                        "projectionCount", deletedProjections,
+                        "vectorCount", deletedVectors
+                )
+        );
 
         int retired = jdbcTemplate.update(
                 """
