@@ -30,7 +30,7 @@ public class RetentionEconomicsService {
                            0
                        ) AS oldest_age_seconds
                 FROM knowledge_document_generation
-                WHERE generation_status = 'RETIRED'
+                WHERE generation_status IN ('RETIRING', 'RETIRED')
                   AND cleanup_required
                 """,
                 (rs, rowNum) -> new Backlog(
