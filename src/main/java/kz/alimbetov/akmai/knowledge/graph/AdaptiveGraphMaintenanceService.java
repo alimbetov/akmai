@@ -2,7 +2,6 @@ package kz.alimbetov.akmai.knowledge.graph;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
