@@ -202,12 +202,17 @@ public class PostgresSearchProjectionRepository
 
     @Override
     public void deleteGeneration(GenerationIdentity identity) {
+        deleteGenerationCount(identity);
+    }
+
+    @Override
+    public int deleteGenerationCount(GenerationIdentity identity) {
         if (identity == null) {
             throw new IllegalArgumentException(
                     "identity must not be null"
             );
         }
-        jdbcTemplate.update(
+        return jdbcTemplate.update(
                 """
                 DELETE FROM knowledge_search_projection
                 WHERE access_level = ?
