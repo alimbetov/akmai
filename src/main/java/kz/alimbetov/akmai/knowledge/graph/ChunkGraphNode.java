@@ -24,11 +24,15 @@ public record ChunkGraphNode(
 
     public String lockKey() {
         return accessLevel
-                + "\u0000"
+                + ":"
+                + documentId.length()
+                + ":"
                 + documentId
-                + "\u0000"
+                + ":"
                 + generation
-                + "\u0000"
+                + ":"
+                + chunkId.length()
+                + ":"
                 + chunkId;
     }
 
