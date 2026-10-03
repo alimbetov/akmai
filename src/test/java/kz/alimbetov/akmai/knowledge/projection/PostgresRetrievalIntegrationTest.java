@@ -306,10 +306,10 @@ class PostgresRetrievalIntegrationTest {
 
         assertThat(ruPlan)
                 .contains("Bitmap Index Scan")
-                .contains("knowledge_search_projection_al_1");
+                .contains("knowledge_search_projection_al_1_lang_ru_fts_ru");
         assertThat(enPlan)
                 .contains("Bitmap Index Scan")
-                .contains("knowledge_search_projection_al_1");
+                .contains("knowledge_search_projection_al_1_lang_en_fts_en");
     }
 
     @Test
@@ -562,26 +562,24 @@ class PostgresRetrievalIntegrationTest {
                             try (var setting = connection.createStatement()) {
                                 setting.execute("SET enable_seqscan = off");
                             }
+                            String language =
+                                    "russian".equals(configuration)
+                                            ? "ru"
+                                            : "en";
                             try (var statement = connection.prepareStatement(
                                     """
                                     EXPLAIN (COSTS OFF)
                                     SELECT chunk_id
-                                    FROM knowledge_search_projection_al_1
-                                    WHERE language = ?
-                                      AND %s
+                                    FROM knowledge_search_projection_al_1_lang_%s
+                                    WHERE %s
                                           @@ websearch_to_tsquery('%s', ?)
                                     """.formatted(
+                                            language,
                                             vectorColumn,
                                             configuration
                                     )
                             )) {
-                                statement.setString(
-                                        1,
-                                        "russian".equals(configuration)
-                                                ? "ru"
-                                                : "en"
-                                );
-                                statement.setString(2, query);
+                                statement.setString(1, query);
                                 try (var resultSet = statement.executeQuery()) {
                                     StringBuilder plan = new StringBuilder();
                                     while (resultSet.next()) {
