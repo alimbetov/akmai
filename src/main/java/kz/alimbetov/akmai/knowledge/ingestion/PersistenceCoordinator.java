@@ -227,6 +227,7 @@ public class PersistenceCoordinator {
                         .map(identifier -> new DocumentIdentifier(
                                 projection.documentId(),
                                 projection.generation(),
+                                projection.accessLevel(),
                                 projection.chunkId(),
                                 pageNumber(projection),
                                 identifier.type(),
