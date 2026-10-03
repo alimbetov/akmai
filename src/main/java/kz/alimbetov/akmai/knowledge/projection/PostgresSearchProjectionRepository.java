@@ -710,7 +710,7 @@ public class PostgresSearchProjectionRepository
         List<Long> routed = routedAccessLevels(accessLevels);
         String languageFilter = language == null
                 ? ""
-                : "      AND p.language = ?\\n";
+                : "      AND p.language = ?\n";
         String branch = """
                 (
                     SELECT p.*,
