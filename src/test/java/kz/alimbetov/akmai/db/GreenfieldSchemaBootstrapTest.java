@@ -69,6 +69,35 @@ class GreenfieldSchemaBootstrapTest {
     }
 
     @Test
+    void projectionAccessChildrenAreListPartitionedByLanguage() {
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT pg_get_partkeydef(
+                    'knowledge_search_projection_al_1'::regclass
+                )
+                """,
+                String.class
+        )).isEqualTo("LIST (language)");
+
+        assertThat(regclass(
+                "public.knowledge_search_projection_al_1_lang_en"
+        )).isNotNull();
+        assertThat(regclass(
+                "public.knowledge_search_projection_al_10_lang_el"
+        )).isNotNull();
+
+        Integer languages = jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM akmai_supported_language
+                WHERE enabled
+                """,
+                Integer.class
+        );
+        assertThat(languages).isEqualTo(12);
+    }
+
+    @Test
     void accessLevelHasNoImplicitDefault() {
         for (String table : List.of(
                 "knowledge_document_lifecycle",
@@ -187,7 +216,9 @@ class GreenfieldSchemaBootstrapTest {
                 String.class
         );
         assertThat(physicalTable)
-                .isEqualTo("knowledge_search_projection_al_1");
+                .isEqualTo(
+                        "knowledge_search_projection_al_1_lang_en"
+                );
 
         assertThatThrownBy(() -> jdbc.update(
                 """
@@ -274,13 +305,24 @@ class GreenfieldSchemaBootstrapTest {
                 .isNotNull();
         assertThat(regclass("akmai_vector.test_vec_al_2"))
                 .isNotNull();
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT pg_get_partkeydef(
+                    'akmai_vector.test_vec_al_1'::regclass
+                )
+                """,
+                String.class
+        )).isEqualTo("LIST (language)");
+        assertThat(regclass(
+                "akmai_vector.test_vec_al_1_lang_en"
+        )).isNotNull();
 
         Integer hnswIndexes = jdbc.queryForObject(
                 """
                 SELECT count(*)
                 FROM pg_indexes
                 WHERE schemaname = 'akmai_vector'
-                  AND tablename = 'test_vec_al_1'
+                  AND tablename = 'test_vec_al_1_lang_en'
                   AND lower(indexdef) LIKE '%using hnsw%'
                 """,
                 Integer.class
@@ -291,6 +333,7 @@ class GreenfieldSchemaBootstrapTest {
                 """
                 INSERT INTO akmai_vector.test_vec (
                     access_level,
+                    language,
                     document_id,
                     generation,
                     chunk_id,
@@ -300,6 +343,7 @@ class GreenfieldSchemaBootstrapTest {
                     embedding
                 ) VALUES (
                     1,
+                    'en',
                     'doc-vector',
                     1,
                     'chunk-1',
@@ -320,12 +364,13 @@ class GreenfieldSchemaBootstrapTest {
                 String.class
         );
         assertThat(physicalTable)
-                .isEqualTo("akmai_vector.test_vec_al_1");
+                .isEqualTo("akmai_vector.test_vec_al_1_lang_en");
 
         assertThatThrownBy(() -> jdbc.update(
                 """
                 INSERT INTO akmai_vector.test_vec (
                     access_level,
+                    language,
                     document_id,
                     generation,
                     chunk_id,
@@ -335,6 +380,7 @@ class GreenfieldSchemaBootstrapTest {
                     embedding
                 ) VALUES (
                     2,
+                    'en',
                     'doc-vector',
                     1,
                     'chunk-wrong-acl',
