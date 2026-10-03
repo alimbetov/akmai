@@ -202,6 +202,30 @@ class AdaptiveGraphMaintenanceServiceTest {
     private void insertGeneration(String documentId) {
         jdbc.update(
                 """
+                INSERT INTO knowledge_document_lifecycle (
+                    document_id,
+                    lifecycle_policy,
+                    lifecycle_status,
+                    generation,
+                    attempt_count,
+                    row_version,
+                    created_at,
+                    updated_at,
+                    retention_status,
+                    published_generation,
+                    next_generation,
+                    access_level
+                ) VALUES (
+                    ?, 'PERMANENT', 'READY',
+                    1, 0, 0,
+                    clock_timestamp(), clock_timestamp(), 'ACTIVE',
+                    1, 2, 1
+                )
+                """,
+                documentId
+        );
+        jdbc.update(
+                """
                 INSERT INTO knowledge_document_generation (
                     document_id,
                     generation,
