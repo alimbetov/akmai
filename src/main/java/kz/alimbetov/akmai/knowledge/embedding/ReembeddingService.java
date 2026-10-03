@@ -657,11 +657,32 @@ public class ReembeddingService {
 
             int expected = documentCount == null ? 0 : documentCount;
 
-            int retired = jdbcTemplate.update(
+            List<String> lockedDocuments = jdbcTemplate.queryForList(
+                    """
+                    SELECT l.document_id
+                    FROM knowledge_embedding_migration_document d
+                    JOIN knowledge_document_lifecycle l
+                      ON l.document_id = d.document_id
+                    WHERE d.migration_id = ?
+                    ORDER BY l.document_id
+                    FOR UPDATE OF l
+                    """,
+                    String.class,
+                    migrationId
+            );
+            if (lockedDocuments.size() != expected) {
+                throw new IllegalStateException(
+                        "Embedding cutover could not lock every lifecycle row"
+                );
+            }
+
+            int retiring = jdbcTemplate.update(
                     """
                     UPDATE knowledge_document_generation source
-                    SET generation_status = 'RETIRED',
-                        retired_at = clock_timestamp()
+                    SET generation_status = 'RETIRING',
+                        retired_at = clock_timestamp(),
+                        cleanup_required = true,
+                        last_error = NULL
                     FROM knowledge_embedding_migration_document d
                     WHERE d.migration_id = ?
                       AND source.document_id = d.document_id
@@ -703,14 +724,14 @@ public class ReembeddingService {
                     migrationId
             );
 
-            if (retired != expected
+            if (retiring != expected
                     || published != expected
                     || switched != expected) {
                 throw new IllegalStateException(
                         "Embedding cutover affected unexpected row counts: expected="
                                 + expected
-                                + ", retired="
-                                + retired
+                                + ", retiring="
+                                + retiring
                                 + ", published="
                                 + published
                                 + ", switched="
