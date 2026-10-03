@@ -389,6 +389,78 @@ class ChunkRetentionServiceIntegrationTest {
                 ))
         );
 
+        jdbc.update(
+                """
+                INSERT INTO document_identifier (
+                    access_level,
+                    document_id,
+                    generation,
+                    chunk_id,
+                    page_number,
+                    identifier_type,
+                    raw_value,
+                    normalized_value
+                ) VALUES (
+                    1,
+                    'doc-retention',
+                    1,
+                    'chunk-1',
+                    0,
+                    'TEST',
+                    'R-1',
+                    'r-1'
+                )
+                """
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_reference_target (
+                    access_level,
+                    document_id,
+                    generation,
+                    chunk_id,
+                    reference_type,
+                    canonical_value,
+                    raw_value,
+                    language
+                ) VALUES (
+                    1,
+                    'doc-retention',
+                    1,
+                    'chunk-1',
+                    'TEST',
+                    'ref-1',
+                    'ref-1',
+                    'en'
+                )
+                """
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_reference_edge (
+                    access_level,
+                    document_id,
+                    generation,
+                    source_chunk_id,
+                    reference_type,
+                    canonical_value,
+                    raw_value,
+                    language,
+                    target_scope
+                ) VALUES (
+                    1,
+                    'doc-retention',
+                    1,
+                    'chunk-1',
+                    'TEST',
+                    'ref-1',
+                    'ref-1',
+                    'en',
+                    'SAME_DOCUMENT'
+                )
+                """
+        );
+
         String vectorId = VectorIdentity.physicalId(
                 "doc-retention",
                 1L,
