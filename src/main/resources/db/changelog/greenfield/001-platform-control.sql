@@ -181,3 +181,8 @@ CREATE TABLE akmai_supported_language (
 
         )
 );
+        )
+);
+
+        )
+);
