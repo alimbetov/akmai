@@ -92,6 +92,7 @@ public class PostgresSearchProjectionRepository
                 )
                 ON CONFLICT (
                     access_level,
+                    language,
                     document_id,
                     generation,
                     chunk_id
