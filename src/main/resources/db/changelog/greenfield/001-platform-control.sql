@@ -176,6 +176,8 @@ CREATE TABLE akmai_supported_language (
     CONSTRAINT ck_supported_language_code
         CHECK (
             language_code = lower(language_code)
-            AND language_code ~ '^[a-z]{2,8}
+            AND language_code ~ '^[a-z]{2,8}        )
+);
+
         )
 );
