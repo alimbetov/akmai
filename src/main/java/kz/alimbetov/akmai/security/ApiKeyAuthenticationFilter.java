@@ -74,7 +74,9 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
                 || requestUri.equals("/actuator/metrics")
                 || requestUri.startsWith("/actuator/metrics/")
                 || requestUri.equals("/actuator/info")
-                || requestUri.startsWith("/actuator/info/");
+                || requestUri.startsWith("/actuator/info/")
+                || requestUri.equals("/actuator/prometheus")
+                || requestUri.startsWith("/actuator/prometheus/");
     }
 
     private boolean matches(String supplied, String configured) {
