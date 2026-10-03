@@ -210,6 +210,62 @@ class AdaptiveChunkGraphRepositoryTest {
     }
 
     @Test
+    void rejectsReinforcementOutsidePublishedGenerationFence() {
+        insertGeneration("doc-a", 1, 1);
+        insertGeneration("doc-b", 1, 1);
+
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_generation (
+                    document_id,
+                    generation,
+                    generation_status,
+                    generation_kind,
+                    access_level
+                ) VALUES ('doc-b', 2, 'PUBLISHED', 'INGESTION', 1)
+                """
+        );
+        jdbc.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET generation = 2,
+                    published_generation = 2,
+                    next_generation = 3,
+                    updated_at = clock_timestamp()
+                WHERE document_id = 'doc-b'
+                """
+        );
+
+        ChunkGraphNode left =
+                new ChunkGraphNode(1, "doc-a", 1, "chunk-a");
+        ChunkGraphNode stale =
+                new ChunkGraphNode(1, "doc-b", 1, "chunk-b");
+
+        assertThatThrownBy(() ->
+                repository.reinforceSymmetric(
+                        left,
+                        stale,
+                        AssociationBand.CANDIDATE,
+                        new AssociationEvidence(
+                                0.0,
+                                1,
+                                1,
+                                1,
+                                9,
+                                Instant.now(),
+                                1
+                        )
+                ))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("ACTIVE/PUBLISHED");
+
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM knowledge_chunk_association",
+                Integer.class
+        )).isZero();
+    }
+
+    @Test
     void repeatedQueryBucketDoesNotInflateEvidenceCounters() {
         insertGeneration("doc-a", 1, 1);
         insertGeneration("doc-b", 1, 1);
@@ -316,6 +372,34 @@ class AdaptiveChunkGraphRepositoryTest {
             long generation,
             long accessLevel
     ) {
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_lifecycle (
+                    document_id,
+                    lifecycle_policy,
+                    lifecycle_status,
+                    generation,
+                    attempt_count,
+                    row_version,
+                    created_at,
+                    updated_at,
+                    retention_status,
+                    published_generation,
+                    next_generation,
+                    access_level
+                ) VALUES (
+                    ?, 'PERMANENT', 'READY',
+                    ?, 0, 0,
+                    clock_timestamp(), clock_timestamp(), 'ACTIVE',
+                    ?, ?, ?
+                )
+                """,
+                documentId,
+                generation,
+                generation,
+                generation + 1,
+                accessLevel
+        );
         jdbc.update(
                 """
                 INSERT INTO knowledge_document_generation (
