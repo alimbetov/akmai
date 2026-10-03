@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.rag.query;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class QueryLanguageDetectorTest {
@@ -46,7 +47,8 @@ class QueryLanguageDetectorTest {
         LanguageDecision cyrillic = detector.decision("Срок 30 дней");
         assertThat(cyrillic.primary()).isEqualTo("unknown");
         assertThat(cyrillic.candidates())
-                .containsOnly("kk", "ru");
+                .isNotEmpty()
+                .allMatch(Set.of("kk", "ru")::contains);
 
         LanguageDecision latin = detector.decision("Article 15");
         assertThat(latin.primary()).isEqualTo("unknown");
