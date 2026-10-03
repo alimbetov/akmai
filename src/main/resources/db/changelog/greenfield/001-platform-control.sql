@@ -168,3 +168,14 @@ CREATE TABLE akmai_retrieval_partition_registry (
     CONSTRAINT ck_retrieval_partition_access
         CHECK (access_level > 0)
 );
+
+CREATE TABLE akmai_supported_language (
+    language_code VARCHAR(16) PRIMARY KEY,
+    enabled       BOOLEAN NOT NULL DEFAULT true,
+    provisioned_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+    CONSTRAINT ck_supported_language_code
+        CHECK (
+            language_code = lower(language_code)
+            AND language_code ~ '^[a-z]{2,8}
+        )
+);
