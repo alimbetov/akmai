@@ -31,10 +31,8 @@ import org.springframework.transaction.TransactionException;
 @Service
 public class RagQuestionService {
 
-    private static final String INSUFFICIENT_INFORMATION =
-            "В базе знаний недостаточно информации.";
-
     private final QueryChunker queryChunker;
+    private final RagFallbackMessages fallbackMessages;
     private final RetrievalPlanner retrievalPlanner;
     private final ParallelRetrievalExecutor retrievalExecutor;
     private final ResultFusion resultFusion;
@@ -55,6 +53,7 @@ public class RagQuestionService {
 
     public RagQuestionService(
             QueryChunker queryChunker,
+            RagFallbackMessages fallbackMessages,
             RetrievalPlanner retrievalPlanner,
             ParallelRetrievalExecutor retrievalExecutor,
             ResultFusion resultFusion,
@@ -74,6 +73,7 @@ public class RagQuestionService {
             AdaptiveGraphUtilityRecorder adaptiveGraphUtilityRecorder
     ) {
         this.queryChunker = queryChunker;
+        this.fallbackMessages = fallbackMessages;
         this.retrievalPlanner = retrievalPlanner;
         this.retrievalExecutor = retrievalExecutor;
         this.resultFusion = resultFusion;
@@ -198,7 +198,10 @@ public class RagQuestionService {
         return new RagResponse(validation.answer(), sources);
     }
 
-    private RagResponse insufficientInformation() {
-        return new RagResponse(INSUFFICIENT_INFORMATION, List.of());
+    private RagResponse insufficientInformation(String question) {
+        return new RagResponse(
+                fallbackMessages.insufficientInformation(question),
+                List.of()
+        );
     }
 }
