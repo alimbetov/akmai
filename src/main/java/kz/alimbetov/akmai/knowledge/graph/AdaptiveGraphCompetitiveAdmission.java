@@ -56,8 +56,17 @@ public class AdaptiveGraphCompetitiveAdmission {
                 .filter(hit -> hit.type() == RetrievalType.GRAPH)
                 .toList();
 
+        int highAuthorityPrefix = 0;
+        for (int index = 0; index < base.size(); index++) {
+            if (authorityTier(base.get(index)) <= 1) {
+                highAuthorityPrefix = index + 1;
+            }
+        }
         int protectedPrefix = Math.min(
-                properties.protectedBasePrefix(),
+                Math.max(
+                        properties.protectedBasePrefix(),
+                        highAuthorityPrefix
+                ),
                 base.size()
         );
         int promotionCapacity = Math.min(
@@ -121,6 +130,18 @@ public class AdaptiveGraphCompetitiveAdmission {
                 promoted.size()
         );
         return List.copyOf(result);
+    }
+
+    private int authorityTier(RetrievalHit hit) {
+        Object value = hit.metadata().get("authorityTier");
+        if (value instanceof Number number) {
+            return Math.max(0, number.intValue());
+        }
+        if (hit.type() == RetrievalType.IDENTIFIER
+                || hit.type() == RetrievalType.REFERENCE) {
+            return 0;
+        }
+        return 2;
     }
 
     private boolean eligible(RetrievalHit hit) {

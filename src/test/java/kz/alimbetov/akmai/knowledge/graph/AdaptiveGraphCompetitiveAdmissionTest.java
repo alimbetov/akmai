@@ -82,6 +82,39 @@ class AdaptiveGraphCompetitiveAdmissionTest {
     }
 
     @Test
+    void neverPromotesGraphAheadOfHighAuthorityBaseCandidates() {
+        AkmaiMetrics metrics = mock(AkmaiMetrics.class);
+        AdaptiveGraphCompetitiveAdmission admission =
+                new AdaptiveGraphCompetitiveAdmission(
+                        properties(true),
+                        metrics
+                );
+        List<RetrievalHit> candidates = List.of(
+                exact("exact-1"),
+                exact("exact-2"),
+                exact("exact-3"),
+                exact("exact-4"),
+                exact("exact-5"),
+                exact("exact-6"),
+                base("base-7"),
+                graph("graph-1", "HOT", 0.95, 3)
+        );
+
+        assertThat(admission.admit(candidates))
+                .extracting(RetrievalHit::chunkId)
+                .containsExactly(
+                        "exact-1",
+                        "exact-2",
+                        "exact-3",
+                        "exact-4",
+                        "exact-5",
+                        "exact-6",
+                        "graph-1",
+                        "base-7"
+                );
+    }
+
+    @Test
     void doesNotCompeteWhenAllBaseCandidatesAreProtected() {
         AkmaiMetrics metrics = mock(AkmaiMetrics.class);
         AdaptiveGraphCompetitiveAdmission admission =
@@ -108,6 +141,20 @@ class AdaptiveGraphCompetitiveAdmissionTest {
                 2,
                 4,
                 0.70
+        );
+    }
+
+    private RetrievalHit exact(String chunkId) {
+        return new RetrievalHit(
+                RetrievalType.IDENTIFIER,
+                1,
+                "exact-doc-" + chunkId,
+                1,
+                chunkId,
+                "exact",
+                Map.of("authorityTier", 0),
+                List.of(),
+                1.0
         );
     }
 
