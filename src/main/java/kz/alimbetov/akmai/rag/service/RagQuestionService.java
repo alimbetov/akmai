@@ -22,7 +22,9 @@ import kz.alimbetov.akmai.rag.retrieval.RetrievalExecutionResult;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlanner;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionException;
 
 @Service
 public class RagQuestionService {
@@ -100,31 +102,44 @@ public class RagQuestionService {
             );
         }
 
-        List<RetrievalHit> fused = resultFusion.fuse(execution.hits(), accessLevels);
-        List<RetrievalHit> ranked = reranker.rerank(fused, question);
-        List<RetrievalHit> expanded = knowledgeExpansion.expand(ranked, accessLevels);
+        List<RetrievalHit> finalContext;
+        try {
+            List<RetrievalHit> fused =
+                    resultFusion.fuse(execution.hits(), accessLevels);
+            List<RetrievalHit> ranked =
+                    reranker.rerank(fused, question);
+            List<RetrievalHit> expanded =
+                    knowledgeExpansion.expand(ranked, accessLevels);
 
-        AdaptiveGraphShadowExpansion.ShadowExpansionReport graphReport =
-                adaptiveGraphShadowExpansion.observe(
-                        ranked,
-                        expanded,
-                        accessLevels
-                );
-        List<RetrievalHit> graphExpanded = adaptiveGraphOnlineExpansion.expand(
-                expanded,
-                graphReport,
-                accessLevels
-        );
-        List<RetrievalHit> competitive =
-                adaptiveGraphCompetitiveAdmission.admit(graphExpanded);
+            AdaptiveGraphShadowExpansion.ShadowExpansionReport graphReport =
+                    adaptiveGraphShadowExpansion.observe(
+                            ranked,
+                            expanded,
+                            accessLevels
+                    );
+            List<RetrievalHit> graphExpanded =
+                    adaptiveGraphOnlineExpansion.expand(
+                            expanded,
+                            graphReport,
+                            accessLevels
+                    );
+            List<RetrievalHit> competitive =
+                    adaptiveGraphCompetitiveAdmission.admit(
+                            graphExpanded
+                    );
 
-        List<RetrievalHit> bounded =
-                contextBudget.apply(competitive, question);
-        List<RetrievalHit> finalContext =
-                contextRevalidator.revalidate(
-                        bounded,
-                        accessLevels
-                );
+            List<RetrievalHit> bounded =
+                    contextBudget.apply(competitive, question);
+            finalContext = contextRevalidator.revalidate(
+                    bounded,
+                    accessLevels
+            );
+        } catch (DataAccessException | TransactionException exception) {
+            throw new RetrievalUnavailableException(
+                    "Knowledge retrieval is temporarily unavailable",
+                    exception
+            );
+        }
 
         if (finalContext.isEmpty()) {
             return insufficientInformation();
