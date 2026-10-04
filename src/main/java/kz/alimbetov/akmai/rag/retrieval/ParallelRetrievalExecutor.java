@@ -252,7 +252,9 @@ public class ParallelRetrievalExecutor {
             return null;
         }
 
-        if (step.type() == RetrievalType.VECTOR || step.type() == RetrievalType.LEXICAL) {
+        if (step.type() == RetrievalType.VECTOR
+                || step.type() == RetrievalType.LEXICAL
+                || step.type() == RetrievalType.CONCEPT) {
             RetrievalStepOutcome identifier = dependencies.stream()
                     .filter(value -> value.type() == RetrievalType.IDENTIFIER)
                     .findFirst()
