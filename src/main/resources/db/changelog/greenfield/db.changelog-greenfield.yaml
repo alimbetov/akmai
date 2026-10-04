@@ -23,3 +23,5 @@ databaseChangeLog:
       file: db/changelog/greenfield/011-adaptive-graph-version-isolation.sql
   - include:
       file: db/changelog/greenfield/012-runtime-app-parameters.sql
+  - include:
+      file: db/changelog/greenfield/013-semantic-concept-retrieval.sql
