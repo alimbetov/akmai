@@ -91,6 +91,9 @@ public class EnglishSemanticMorphologyNormalizer
         if (token.endsWith("ation") && token.length() > 7) {
             return token.substring(0, token.length() - 5);
         }
+        if (token.endsWith("tion") && token.length() > 6) {
+            return token.substring(0, token.length() - 3);
+        }
         if (token.endsWith("ment") && token.length() > 6) {
             return token.substring(0, token.length() - 4);
         }
