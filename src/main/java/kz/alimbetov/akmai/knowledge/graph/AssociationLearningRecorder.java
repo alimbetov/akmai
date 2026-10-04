@@ -180,6 +180,9 @@ public class AssociationLearningRecorder {
                         != second.hit().accessLevel()) {
                     continue;
                 }
+                if (!first.cited() && !second.cited()) {
+                    continue;
+                }
                 result.add(new PairCandidate(
                         first,
                         second,
