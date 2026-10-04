@@ -32,16 +32,20 @@ Example:
 finance_banking.risk_capital.capital_adequacy_ratio
 ```
 
-English is only the first surface layer:
+English defines the canonical phrase identity, while every production
+language provides recognition surfaces for the same concept IDs:
 
 ```text
 canonical concept
   -> en preferred phrase
-  -> future ru surface forms
-  -> future kk surface forms
-  -> future zh surface forms
-  -> ...
+  -> ru / kk / zh surfaces
+  -> de / fr / es / pt / it surfaces
+  -> tr / el surfaces
 ```
+
+All 11 production languages currently provide one preferred surface for every
+canonical concept. With 384 canonical concepts this yields 4,224 preferred
+language-specific surfaces.
 
 Translations must reuse the same canonical ID rather than creating new concepts.
 
@@ -127,25 +131,20 @@ Concept matches also contribute to soft semantic-domain scores.
 
 They do not hard-filter retrieval.
 
-## Translation rollout
+## Multilingual surface status
 
-Translation should happen only after the canonical English hierarchy stabilizes.
-
-Recommended sequence:
+The translation rollout is complete for the current production language set:
 
 ```text
-1. EN canonical phrases
-2. EN retrieval/annotation quality
-3. RU + KK
-4. ZH
-5. DE + FR + ES + PT + IT
-6. TR + EL
+en ru kk zh de fr es pt it tr el
 ```
 
-For every new language, add surface forms and aliases mapped onto the existing
-canonical concept IDs.
+Every language pack is required to cover the exact same 384 canonical concept
+IDs. Language-specific surface text may change in a future version, but
+canonical IDs are never translated or duplicated.
 
-Do not translate IDs.
+The quality gate round-trips all 4,224 preferred surfaces through the production
+matcher and requires each surface to resolve back to its canonical concept.
 
 ## Next ontology depth
 
