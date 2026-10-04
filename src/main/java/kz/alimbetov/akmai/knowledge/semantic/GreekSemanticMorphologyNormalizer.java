@@ -13,33 +13,19 @@ public class GreekSemanticMorphologyNormalizer
     private static final Locale GREEK = Locale.forLanguageTag("el");
 
     private static final List<String> INFLECTIONAL_SUFFIXES =
-            List.of(
-                            "ων", "ους", "ους", "εις", "εων", "ιας",
-                            "ιων", "ικων", "ικες", "ικα",
-                            "ος", "ου", "οι", "ες", "ας", "ης",
-                            "η", "α", "ο", "ι"
-                    )
-                    .stream()
-                    .distinct()
-                    .sorted(
-                            Comparator.comparingInt(String::length)
-                                    .reversed()
-                    )
-                    .toList();
+            normalizedSuffixes(List.of(
+                    "ων", "ους", "εις", "εων", "ιας",
+                    "ιων", "ικων", "ικες", "ικα",
+                    "ος", "ου", "οι", "ες", "ας", "ης",
+                    "η", "α", "ο", "ι"
+            ));
 
     private static final List<String> DERIVATIONAL_SUFFIXES =
-            List.of(
-                            "ικοτητα", "οτητα", "ισμος", "ιστικος",
-                            "ικος", "ικη", "ικο", "τικος",
-                            "τικη", "τικο"
-                    )
-                    .stream()
-                    .distinct()
-                    .sorted(
-                            Comparator.comparingInt(String::length)
-                                    .reversed()
-                    )
-                    .toList();
+            normalizedSuffixes(List.of(
+                    "ικοτητα", "οτητα", "ισμος", "ιστικος",
+                    "ικος", "ικη", "ικο", "τικος",
+                    "τικη", "τικο"
+            ));
 
     @Override
     public String language() {
@@ -84,6 +70,29 @@ public class GreekSemanticMorphologyNormalizer
                         4
                 ))
                 .toList();
+    }
+
+    private static List<String> normalizedSuffixes(
+            List<String> suffixes
+    ) {
+        return suffixes.stream()
+                .map(GreekSemanticMorphologyNormalizer::canonicalGreek)
+                .distinct()
+                .sorted(
+                        Comparator.comparingInt(String::length)
+                                .reversed()
+                )
+                .toList();
+    }
+
+    private static String canonicalGreek(String value) {
+        return Normalizer.normalize(
+                        value,
+                        Normalizer.Form.NFD
+                )
+                .replaceAll("\\p{M}+", "")
+                .toLowerCase(GREEK)
+                .replace('ς', 'σ');
     }
 
     private String stripOnce(
