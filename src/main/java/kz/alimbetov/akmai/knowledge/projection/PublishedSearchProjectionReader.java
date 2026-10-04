@@ -39,6 +39,15 @@ public interface PublishedSearchProjectionReader {
             int limit
     );
 
+    default List<SearchProjection> searchSemanticConcepts(
+            List<String> conceptIds,
+            List<String> documentIds,
+            Set<Long> accessLevels,
+            int limit
+    ) {
+        return List.of();
+    }
+
     record ProjectionKey(
             long accessLevel,
             String documentId,
