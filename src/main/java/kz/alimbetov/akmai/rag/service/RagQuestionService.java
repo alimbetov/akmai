@@ -96,7 +96,7 @@ public class RagQuestionService {
 
     public RagResponse ask(String question, Set<Long> accessLevels) {
         if (accessLevels == null || accessLevels.isEmpty()) {
-            return insufficientInformation();
+            return insufficientInformation(question);
         }
 
         List<QueryChunk> queryChunks = queryChunker.chunk(question);
@@ -152,7 +152,7 @@ public class RagQuestionService {
         }
 
         if (finalContext.isEmpty()) {
-            return insufficientInformation();
+            return insufficientInformation(question);
         }
 
         String context = contextAssembler.assemble(finalContext);
@@ -164,7 +164,7 @@ public class RagQuestionService {
 
         if (validation.answer().isBlank()
                 || validation.citedSources().isEmpty()) {
-            return insufficientInformation();
+            return insufficientInformation(question);
         }
 
         AnswerGroundingVerifier.GroundingValidation grounding =
@@ -173,7 +173,7 @@ public class RagQuestionService {
                         finalContext
                 );
         if (!grounding.grounded()) {
-            return insufficientInformation();
+            return insufficientInformation(question);
         }
 
         associationLearningRecorder.record(
