@@ -22,7 +22,7 @@ jobs:
       - name: Production retrieval quality, graph replay and routing
         run: >
           mvn -B
-          -Dtest=QueryLanguageDetectorTest,MultilingualChunkingRulesTest,IndustryProfileLanguageCoverageTest,IndustryProfileSemanticRulesTest,MultilingualRetrievalQualityRegressionTest,PublishedVectorSearchIntegrationTest,PostgresRetrievalIntegrationTest,AnswerGroundingVerifierTest,TemporalAuthorityFilterTest,RagQuestionServiceAssuranceTest,AdaptiveGraphScoreCalculatorTest,AssociationLearningRecorderTest,AdaptiveGraphReplayUtilityTest,AdaptiveGraphThresholdCalibratorTest,GraphReplayHarnessTest,AdaptiveGraphReplayQualityGateTest
+          -Dtest=QueryLanguageDetectorTest,MultilingualChunkingRulesTest,IndustryProfileLanguageCoverageTest,IndustryProfileSemanticRulesTest,MultilingualRetrievalQualityRegressionTest,PublishedVectorSearchIntegrationTest,PostgresRetrievalIntegrationTest,AnswerGroundingVerifierTest,TemporalAuthorityFilterTest,RagFallbackMessagesTest,RagQuestionServiceAssuranceTest,AdaptiveGraphScoreCalculatorTest,AssociationLearningRecorderTest,AdaptiveGraphReplayUtilityTest,AdaptiveGraphThresholdCalibratorTest,GraphReplayHarnessTest,AdaptiveGraphReplayQualityGateTest
           test
 
       - name: Upload adaptive graph replay report
