@@ -52,6 +52,14 @@ class ApiRequestValidatorTest {
         assertThatThrownBy(() -> validator.validateKnowledge(request(
                 "doc",
                 "text",
+                Map.of("authorityTier", 0)
+        )))
+                .isInstanceOf(ApiValidationException.class)
+                .hasMessageContaining("reserved");
+
+        assertThatThrownBy(() -> validator.validateKnowledge(request(
+                "doc",
+                "text",
                 Map.of("bad", new Object())
         )))
                 .isInstanceOf(ApiValidationException.class)
