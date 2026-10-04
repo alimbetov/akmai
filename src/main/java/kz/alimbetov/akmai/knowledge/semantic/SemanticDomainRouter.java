@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +13,8 @@ import org.springframework.stereotype.Component;
 public class SemanticDomainRouter {
 
     private final SemanticDomainCatalog catalog;
+    private final Map<String, Pattern> boundedPatterns =
+            new ConcurrentHashMap<>();
 
     public SemanticDomainRouter(SemanticDomainCatalog catalog) {
         this.catalog = catalog;
@@ -96,10 +100,13 @@ public class SemanticDomainRouter {
         if ("zh".equals(language)) {
             return text.contains(candidate);
         }
-        Pattern bounded = Pattern.compile(
-                "(?iu)(?<![\\p{L}\\p{N}])"
-                        + Pattern.quote(candidate)
-                        + "(?![\\p{L}\\p{N}])"
+        Pattern bounded = boundedPatterns.computeIfAbsent(
+                candidate,
+                value -> Pattern.compile(
+                        "(?iu)(?<![\\p{L}\\p{N}])"
+                                + Pattern.quote(value)
+                                + "(?![\\p{L}\\p{N}])"
+                )
         );
         return bounded.matcher(text).find();
     }
