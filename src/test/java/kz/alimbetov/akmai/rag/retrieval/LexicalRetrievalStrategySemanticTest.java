@@ -31,7 +31,6 @@ import kz.alimbetov.akmai.knowledge.semantic.SemanticConceptSurfaceRegistry;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticDomainCatalog;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticDomainRouter;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticMatchMode;
-import kz.alimbetov.akmai.knowledge.semantic.SemanticMorphologyNormalizer;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticMorphologyRegistry;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalysis;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalyzer;
