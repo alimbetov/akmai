@@ -2,7 +2,6 @@ package kz.alimbetov.akmai.knowledge.semantic;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -120,17 +119,18 @@ public class SemanticConceptMatcher {
             String text,
             String phrase
     ) {
-        if (phrase == null || phrase.isBlank()) {
+        if (text == null
+                || text.isBlank()
+                || phrase == null
+                || phrase.isBlank()) {
             return false;
         }
-        Pattern pattern = Pattern.compile(
-                "(?<![\\p{L}\\p{N}])"
-                        + Pattern.quote(phrase)
-                        + "(?![\\p{L}\\p{N}])",
-                Pattern.CASE_INSENSITIVE
-                        | Pattern.UNICODE_CASE
-        );
-        return pattern.matcher(text).find();
+        if (text.equals(phrase)) {
+            return true;
+        }
+        return text.startsWith(phrase + " ")
+                || text.endsWith(" " + phrase)
+                || text.contains(" " + phrase + " ");
     }
 
     private boolean containsTokenSequence(
