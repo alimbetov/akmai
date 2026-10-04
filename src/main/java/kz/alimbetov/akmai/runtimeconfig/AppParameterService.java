@@ -9,7 +9,6 @@ import kz.alimbetov.akmai.config.AdaptiveGraphCompetitionProperties;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -67,6 +66,32 @@ public class AppParameterService {
                 .toList();
     }
 
+    public ResolvedAppParameter getAuthoritative(
+            AppParameterKey key
+    ) {
+        if (key == null) {
+            throw new IllegalArgumentException(
+                    "app parameter key must not be null"
+            );
+        }
+        ResolvedAppParameter resolved = repository.find(key.key())
+                .map(ResolvedAppParameter::from)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Missing persisted app parameter: " + key.key()
+                ));
+        cache.put(key, resolved);
+        return resolved;
+    }
+
+    public List<ResolvedAppParameter> listAuthoritative() {
+        return Arrays.stream(AppParameterKey.values())
+                .map(this::getAuthoritative)
+                .sorted(Comparator.comparing(
+                        value -> value.key().key()
+                ))
+                .toList();
+    }
+
     public ResolvedAppParameter updateBoolean(
             AppParameterKey key,
             boolean value,
@@ -113,7 +138,7 @@ public class AppParameterService {
             return repository.find(key.key())
                     .map(ResolvedAppParameter::from)
                     .orElseGet(() -> fallback(key));
-        } catch (DataAccessException exception) {
+        } catch (RuntimeException exception) {
             LOGGER.warn(
                     "app_parameter_read event=fallback key={} errorType={}",
                     key.key(),
