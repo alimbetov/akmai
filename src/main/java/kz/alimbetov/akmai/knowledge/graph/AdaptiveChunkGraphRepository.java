@@ -9,7 +9,8 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Repository
-public class AdaptiveChunkGraphRepository {
+public class AdaptiveChunkGraphRepository
+        implements AdaptiveGraphLookupReader {
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
