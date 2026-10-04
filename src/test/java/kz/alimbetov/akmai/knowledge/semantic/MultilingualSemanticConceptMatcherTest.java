@@ -148,6 +148,23 @@ class MultilingualSemanticConceptMatcherTest {
     }
 
     @Test
+    void italianPhraseMapsToCanonicalConceptId() {
+        var match = matcher.match(
+                        "Il coefficiente di adeguatezza patrimoniale resta solido.",
+                        "it"
+                )
+                .stream()
+                .filter(value -> value.conceptId().equals(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                ))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(match.matchMode())
+                .isEqualTo(SemanticMatchMode.EXACT);
+    }
+
+    @Test
     void unsupportedLanguageCannotFallBackToAnotherSurfacePack() {
         assertThat(matcher.match(
                 "коэффициент достаточности капитала",
