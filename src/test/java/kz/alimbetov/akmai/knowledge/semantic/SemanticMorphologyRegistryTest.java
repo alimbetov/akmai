@@ -11,14 +11,7 @@ class SemanticMorphologyRegistryTest {
     @Test
     void registersLanguageSpecificMorphologyWithoutUniversalHeuristics() {
         SemanticMorphologyRegistry registry =
-                new SemanticMorphologyRegistry(
-                        List.of(
-                                new EnglishSemanticMorphologyNormalizer(),
-                                new RussianSemanticMorphologyNormalizer(),
-                                new KazakhSemanticMorphologyNormalizer(),
-                                new ChineseSemanticMorphologyNormalizer()
-                        )
-                );
+                SemanticTestMorphology.registry();
 
         assertThat(registry.supports("en")).isTrue();
         assertThat(registry.supports("ru")).isTrue();
