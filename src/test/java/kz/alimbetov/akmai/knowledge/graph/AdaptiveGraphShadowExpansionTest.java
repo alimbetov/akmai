@@ -27,8 +27,8 @@ class AdaptiveGraphShadowExpansionTest {
     @Test
     void disabledShadowExpansionDoesNotReadGraph() {
         AdaptiveGraphProperties properties = properties(false);
-        AdaptiveChunkGraphRepository graph =
-                mock(AdaptiveChunkGraphRepository.class);
+        AdaptiveGraphLookupReader graph =
+                mock(AdaptiveGraphLookupReader.class);
         AdaptiveGraphShadowExpansion expansion =
                 new AdaptiveGraphShadowExpansion(
                         properties,
@@ -56,8 +56,8 @@ class AdaptiveGraphShadowExpansionTest {
     @Test
     void reportsPublishedHotCandidateWithoutMutatingRealCandidates() {
         AdaptiveGraphProperties properties = properties(true);
-        AdaptiveChunkGraphRepository graph =
-                mock(AdaptiveChunkGraphRepository.class);
+        AdaptiveGraphLookupReader graph =
+                mock(AdaptiveGraphLookupReader.class);
         PublishedSearchProjectionReader projections =
                 mock(PublishedSearchProjectionReader.class);
         AkmaiMetrics metrics =
@@ -128,8 +128,8 @@ class AdaptiveGraphShadowExpansionTest {
     @Test
     void rejectsDuplicateAndUnpublishedTarget() {
         AdaptiveGraphProperties properties = properties(true);
-        AdaptiveChunkGraphRepository graph =
-                mock(AdaptiveChunkGraphRepository.class);
+        AdaptiveGraphLookupReader graph =
+                mock(AdaptiveGraphLookupReader.class);
         PublishedSearchProjectionReader projections =
                 mock(PublishedSearchProjectionReader.class);
 
@@ -201,8 +201,8 @@ class AdaptiveGraphShadowExpansionTest {
     @Test
     void aggregatesIndependentSeedContributionsWithBoundedNoisyOr() {
         AdaptiveGraphProperties properties = properties(true);
-        AdaptiveChunkGraphRepository graph =
-                mock(AdaptiveChunkGraphRepository.class);
+        AdaptiveGraphLookupReader graph =
+                mock(AdaptiveGraphLookupReader.class);
         PublishedSearchProjectionReader projections =
                 mock(PublishedSearchProjectionReader.class);
 
