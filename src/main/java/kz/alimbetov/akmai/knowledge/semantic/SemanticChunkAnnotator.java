@@ -17,7 +17,7 @@ public class SemanticChunkAnnotator {
     private static final int MAX_CONCEPTS = 12;
 
     private final SemanticDomainRouter router;
-    private final EnglishSemanticConceptMatcher conceptMatcher;
+    private final SemanticConceptMatcher conceptMatcher;
 
     public SemanticChunkAnnotator(SemanticDomainRouter router) {
         this(router, null);
@@ -26,7 +26,7 @@ public class SemanticChunkAnnotator {
     @Autowired
     public SemanticChunkAnnotator(
             SemanticDomainRouter router,
-            EnglishSemanticConceptMatcher conceptMatcher
+            SemanticConceptMatcher conceptMatcher
     ) {
         this.router = router;
         this.conceptMatcher = conceptMatcher;
@@ -42,9 +42,12 @@ public class SemanticChunkAnnotator {
                 chunk.language()
         );
         List<SemanticConceptMatch> conceptMatches =
-                "en".equals(chunk.language()) && conceptMatcher != null
-                        ? conceptMatcher.match(chunk.rawText())
-                        : List.of();
+                conceptMatcher == null
+                        ? List.of()
+                        : conceptMatcher.match(
+                                chunk.rawText(),
+                                chunk.language()
+                        );
 
         if (profile.domains().isEmpty() && conceptMatches.isEmpty()) {
             return chunk;
@@ -111,7 +114,7 @@ public class SemanticChunkAnnotator {
 
             metadata.put(
                     "semanticConceptVersion",
-                    conceptMatcher.version()
+                    conceptMatcher.version(chunk.language())
             );
             metadata.put(
                     "semanticConcepts",
