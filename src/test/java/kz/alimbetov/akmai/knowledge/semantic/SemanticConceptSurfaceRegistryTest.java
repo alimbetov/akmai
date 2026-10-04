@@ -10,8 +10,14 @@ class SemanticConceptSurfaceRegistryTest {
             new SemanticDomainCatalog();
     private final EnglishSemanticConceptCatalog conceptCatalog =
             new EnglishSemanticConceptCatalog(domainCatalog);
-    private final EnglishSemanticMorphologyNormalizer morphology =
-            new EnglishSemanticMorphologyNormalizer();
+    private final SemanticMorphologyRegistry morphology =
+            new SemanticMorphologyRegistry(
+                    java.util.List.of(
+                            new EnglishSemanticMorphologyNormalizer(),
+                            new RussianSemanticMorphologyNormalizer(),
+                            new KazakhSemanticMorphologyNormalizer()
+                    )
+            );
     private final SemanticConceptSurfaceRegistry registry =
             new SemanticConceptSurfaceRegistry(
                     conceptCatalog,
@@ -52,9 +58,33 @@ class SemanticConceptSurfaceRegistryTest {
     }
 
     @Test
-    void unsupportedLanguagesDoNotFallBackToEnglishSurfaces() {
-        assertThat(registry.surfaces("ru")).isEmpty();
-        assertThat(registry.surfaces("kk")).isEmpty();
+    void russianAndKazakhPacksCoverEveryDomainWithCuratedSurfaces() {
+        for (String language : java.util.List.of("ru", "kk")) {
+            assertThat(registry.surfaces(language))
+                    .as(language)
+                    .hasSize(32);
+
+            assertThat(registry.surfaces(language))
+                    .extracting(SemanticConceptSurface::domainId)
+                    .containsExactlyInAnyOrderElementsOf(
+                            conceptCatalog.concepts().stream()
+                                    .map(SemanticConcept::domainId)
+                                    .distinct()
+                                    .flatMap(domain ->
+                                            java.util.stream.Stream.of(
+                                                    domain,
+                                                    domain
+                                            )
+                                    )
+                                    .toList()
+                    );
+        }
+    }
+
+    @Test
+    void languagesWithoutTranslatedConceptPacksStayUnsupported() {
         assertThat(registry.surfaces("zh")).isEmpty();
+        assertThat(registry.surfaces("de")).isEmpty();
+        assertThat(registry.version("zh")).isNull();
     }
 }
