@@ -76,6 +76,59 @@ class ParallelRetrievalExecutorTest {
     }
 
     @Test
+    void preservesTypedRoutingIdentityWhenAddingQueryChunkMetadata() {
+        ExecutorService executor = Executors.newFixedThreadPool(1);
+        try {
+            RetrievalStrategy vector = new RetrievalStrategy() {
+                @Override
+                public RetrievalType type() {
+                    return RetrievalType.VECTOR;
+                }
+
+                @Override
+                public List<RetrievalHit> retrieve(
+                        QueryChunk queryChunk,
+                        RetrievalContext context
+                ) {
+                    return List.of(new RetrievalHit(
+                            RetrievalType.VECTOR,
+                            7L,
+                            "doc",
+                            3L,
+                            "chunk",
+                            "text",
+                            Map.of("generation", 999L)
+                    ));
+                }
+            };
+            ParallelRetrievalExecutor subject = subject(
+                    List.of(vector),
+                    executor
+            );
+            RetrievalPlan plan = new RetrievalPlan(List.of(
+                    new RetrievalStep(
+                            "v",
+                            query(),
+                            RetrievalType.VECTOR,
+                            List.of()
+                    )
+            ));
+
+            RetrievalHit hit = subject.execute(
+                    plan,
+                    Set.of(7L, 8L)
+            ).getFirst();
+
+            assertThat(hit.accessLevel()).isEqualTo(7L);
+            assertThat(hit.generation()).isEqualTo(3L);
+            assertThat(hit.metadata())
+                    .containsEntry("queryChunkId", query().id());
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
     void failedPrimaryBranchIsPreservedAsTypedOutcome() {
         ExecutorService executor = Executors.newFixedThreadPool(3);
         try {
