@@ -72,8 +72,12 @@ class SemanticConceptSurfaceRegistryTest {
     }
 
     @Test
-    void everyCompletedSurfaceKeepsMultiTokenLemmaAndStemSequences() {
-        for (String language : List.of("en", "ru", "kk", "zh")) {
+    void everyCompletedSurfaceKeepsUsableNormalizedSequences() {
+        for (String language :
+                List.of(
+                        "en", "ru", "kk", "zh", "de", "fr",
+                        "es", "pt", "it", "tr", "el"
+                )) {
             assertThat(registry.surfaces(language))
                     .as(language)
                     .allSatisfy(surface -> {
