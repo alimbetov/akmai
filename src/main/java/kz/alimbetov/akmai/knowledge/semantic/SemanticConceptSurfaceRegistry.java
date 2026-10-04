@@ -5,6 +5,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,8 @@ public class SemanticConceptSurfaceRegistry {
             "semantic/concept-surfaces-tr-v1.yaml",
             "semantic/concept-surfaces-el-v1.yaml"
     );
+    private static final String ALIAS_RESOURCE =
+            "semantic/concept-aliases-core-v1.yaml";
 
     private final EnglishSemanticConceptCatalog catalog;
     private final Map<String, List<SemanticConceptSurface>> byLanguage;
@@ -38,7 +41,8 @@ public class SemanticConceptSurfaceRegistry {
         this(
                 catalog,
                 new SemanticMorphologyRegistry(List.of(normalizer)),
-                List.of()
+                List.of(),
+                null
         );
     }
 
@@ -50,7 +54,8 @@ public class SemanticConceptSurfaceRegistry {
         this(
                 catalog,
                 morphologyRegistry,
-                loadMultilingualDefinitions()
+                loadMultilingualDefinitions(),
+                loadAliasDefinition()
         );
     }
 
@@ -58,6 +63,15 @@ public class SemanticConceptSurfaceRegistry {
             EnglishSemanticConceptCatalog catalog,
             SemanticMorphologyRegistry morphologyRegistry,
             List<MultilingualConceptSurfaceDefinition> definitions
+    ) {
+        this(catalog, morphologyRegistry, definitions, null);
+    }
+
+    SemanticConceptSurfaceRegistry(
+            EnglishSemanticConceptCatalog catalog,
+            SemanticMorphologyRegistry morphologyRegistry,
+            List<MultilingualConceptSurfaceDefinition> definitions,
+            SemanticConceptAliasDefinition aliasDefinition
     ) {
         this.catalog = catalog;
 
@@ -155,6 +169,12 @@ public class SemanticConceptSurfaceRegistry {
             }
         }
 
+        applyAliases(
+                surfaces,
+                aliasDefinition,
+                morphologyRegistry
+        );
+
         this.byLanguage = Map.copyOf(surfaces);
         this.versionByLanguage = Map.copyOf(versions);
     }
@@ -169,6 +189,115 @@ public class SemanticConceptSurfaceRegistry {
 
     public boolean supports(String language) {
         return byLanguage.containsKey(language);
+    }
+
+    private void applyAliases(
+            LinkedHashMap<String, List<SemanticConceptSurface>> surfaces,
+            SemanticConceptAliasDefinition definition,
+            SemanticMorphologyRegistry morphologyRegistry
+    ) {
+        if (definition == null) {
+            return;
+        }
+        if (definition.version() == null
+                || definition.version().isBlank()) {
+            throw new IllegalArgumentException(
+                    "Semantic concept alias version is required"
+            );
+        }
+
+        for (SemanticConceptAliasDefinition.Entry entry :
+                definition.entries()) {
+            if (entry == null
+                    || entry.conceptId() == null
+                    || entry.conceptId().isBlank()) {
+                throw new IllegalArgumentException(
+                        "Semantic concept alias id is required"
+                );
+            }
+            catalog.require(entry.conceptId());
+
+            for (var languageAliases : entry.aliases().entrySet()) {
+                String language = languageAliases.getKey();
+                List<SemanticConceptSurface> current =
+                        surfaces.get(language);
+                if (current == null) {
+                    throw new IllegalArgumentException(
+                            "Semantic aliases target unsupported language: "
+                                    + language
+                    );
+                }
+
+                SemanticMorphologyNormalizer normalizer =
+                        morphologyRegistry.require(language);
+                List<String> normalizedAliases =
+                        normalizeAliases(
+                                languageAliases.getValue(),
+                                normalizer
+                        );
+                if (normalizedAliases.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "Semantic alias list must not be empty for "
+                                    + language
+                                    + "/"
+                                    + entry.conceptId()
+                    );
+                }
+
+                boolean found = false;
+                java.util.ArrayList<SemanticConceptSurface> updated =
+                        new java.util.ArrayList<>(current.size());
+                for (SemanticConceptSurface existing : current) {
+                    if (!existing.conceptId().equals(entry.conceptId())) {
+                        updated.add(existing);
+                        continue;
+                    }
+
+                    found = true;
+                    LinkedHashSet<String> aliases =
+                            new LinkedHashSet<>(existing.aliases());
+                    for (String alias : normalizedAliases) {
+                        if (!alias.equals(existing.preferredPhrase())) {
+                            aliases.add(alias);
+                        }
+                    }
+                    updated.add(new SemanticConceptSurface(
+                            existing.conceptId(),
+                            existing.domainId(),
+                            existing.subdomainId(),
+                            existing.language(),
+                            existing.preferredPhrase(),
+                            existing.lemmaPhrase(),
+                            List.copyOf(aliases),
+                            existing.stemTokens()
+                    ));
+                }
+
+                if (!found) {
+                    throw new IllegalArgumentException(
+                            "Semantic alias concept is missing from surface pack: "
+                                    + language
+                                    + "/"
+                                    + entry.conceptId()
+                    );
+                }
+                surfaces.put(language, List.copyOf(updated));
+            }
+        }
+    }
+
+    private List<String> normalizeAliases(
+            List<String> aliases,
+            SemanticMorphologyNormalizer normalizer
+    ) {
+        return (aliases == null ? List.<String>of() : aliases).stream()
+                .map(value -> String.join(
+                        " ",
+                        normalizer.normalizeTokens(value)
+                ))
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .toList();
     }
 
     private SemanticConceptSurface surface(
@@ -233,6 +362,24 @@ public class SemanticConceptSurfaceRegistry {
             throw new UncheckedIOException(
                     "Cannot load multilingual semantic surfaces "
                             + resource,
+                    exception
+            );
+        }
+    }
+
+    private static SemanticConceptAliasDefinition loadAliasDefinition() {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        try (var input = new ClassPathResource(
+                ALIAS_RESOURCE
+        ).getInputStream()) {
+            return mapper.readValue(
+                    input,
+                    SemanticConceptAliasDefinition.class
+            );
+        } catch (IOException exception) {
+            throw new UncheckedIOException(
+                    "Cannot load semantic concept aliases "
+                            + ALIAS_RESOURCE,
                     exception
             );
         }
