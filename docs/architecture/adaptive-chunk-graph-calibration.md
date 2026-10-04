@@ -125,38 +125,48 @@ with p50/p90/p95/p99 distributions by ACL.
 
 The most useful distribution is not stored edge degree. It is how many graph neighbours per strong seed survive semantic compatibility and downstream reranking.
 
-## Activation threshold
+## Threshold taxonomy
 
-Global QPS is not a valid activation threshold for one edge. High traffic does not imply that a particular relation is trustworthy.
+AkmAI has three different threshold families. They serve different decisions and must not be calibrated as if they were interchangeable.
 
-Activation should depend on independent evidence dimensions:
+### Edge lifecycle thresholds
 
-- context_count;
-- citation_count;
-- distinct_query_support;
-- last_reinforced_at;
-- origin mix.
+`scoring.promote-warm`, `scoring.promote-hot`, `scoring.demote-warm` and `scoring.demote-hot` govern learned edge lifecycle transitions. They operate on the edge evidence weight produced from distinct-query, context, citation and freshness evidence.
 
-Calibration procedure:
+Global QPS is not a valid lifecycle threshold for one edge. High traffic does not imply that a particular relation is trustworthy.
 
-1. collect CANDIDATE/WARM/HOT graph candidates in shadow mode without changing user-visible context;
-2. record the graph candidate score and deterministic replay inputs;
+### Adjacency read thresholds
+
+`shadow-expansion.min-hot-weight` and `shadow-expansion.min-warm-weight` decide which stored HOT/WARM edges are eligible to contribute to graph candidate generation. They operate on edge weight, not on the final aggregated candidate score.
+
+### Competitive serving threshold T*
+
+The measured threshold in this phase targets exactly:
+
+    akmai.adaptive-graph.competition.min-graph-score
+
+`AdaptiveGraphCompetitiveAdmission` applies this threshold only to graph candidates whose strongest band is HOT. The value compared with T* is `adaptiveGraphScore`, the aggregated candidate score produced by the bounded graph expansion planner. T* therefore controls whether an already-generated HOT graph candidate may compete for at most the configured 1-2 promoted positions; it does not promote graph edges to HOT.
+
+Calibration procedure for T*:
+
+1. collect graph candidate/replay inputs without changing the graph evidence lifecycle;
+2. record the exact aggregated graph candidate score used by competitive admission;
 3. split requests into a calibration interval and a later holdout replay interval;
-4. replay every candidate score threshold on the calibration request cohort;
-5. for every threshold, compare graph-enabled replay with the graph-disabled baseline on the same requests;
-6. reject duplicate request identities within a threshold evaluation;
-7. choose the lowest threshold that satisfies the pre-declared utility, confidence, regression, latency and safety gates;
-8. replay that threshold unchanged on the holdout request cohort;
+4. replay every candidate T* against the same calibration request cohort;
+5. for every T*, compare graph-enabled replay with the graph-disabled baseline on the same requests;
+6. require the identical replay-key cohort at every threshold and reject duplicates;
+7. choose the lowest T* that satisfies the pre-declared utility, confidence, regression, latency and safety gates;
+8. replay that T* unchanged on the holdout request cohort;
 9. only a holdout result that passes the same statistical gates becomes QUALITY_GATE_CANDIDATE;
 10. the repository quality gate must pass before that candidate becomes CANARY_ELIGIBLE.
 
-A temporary bootstrap threshold is allowed, but it is explicitly provisional. User feedback is not part of this contract.
+The current application default `competition.min-graph-score=0.70` is a bootstrap value only. Calibration produces a candidate replacement for that setting; it never rewrites the setting at runtime. User feedback is not part of this contract.
 
 ## Measured graph utility without user feedback
 
 The primary learning signal is system-observed retrieval utility, not thumbs-up/down or other explicit user feedback.
 
-The replay harness executes every candidate threshold against the same request cohort and the same graph-disabled baseline. Calibration must not infer counterfactual utility by taking one graph-enabled run and filtering candidates after the fact: changing the threshold can change candidate admission, context displacement and answer quality.
+The replay harness executes every candidate threshold against the same request cohort and the same graph-disabled baseline. Calibration rejects a sweep when request identities differ across thresholds. It must not infer counterfactual utility by taking one graph-enabled run and filtering candidates after the fact: changing the threshold can change candidate admission, context displacement and answer quality.
 
 Each request-level replay observation contains at minimum:
 
@@ -215,13 +225,15 @@ The Java reference implementation is `AdaptiveGraphThresholdCalibrator`. It has 
     validateReplay(holdout_set, candidate_threshold)
         -> QUALITY_GATE_CANDIDATE | REJECTED | INSUFFICIENT_DATA
 
-Neither operation changes runtime configuration. QUALITY_GATE_CANDIDATE is deliberately weaker than CANARY_ELIGIBLE. The normal repository retrieval-quality checks and the graph replay quality gate must pass before canary eligibility is granted.
+Neither operation changes runtime configuration. The calibrator's target is `akmai.adaptive-graph.competition.min-graph-score`; edge lifecycle thresholds and adjacency minimum weights are calibrated separately. QUALITY_GATE_CANDIDATE is deliberately weaker than CANARY_ELIGIBLE. The normal repository retrieval-quality checks and the graph replay quality gate must pass before canary eligibility is granted.
 
 ### Canary and approval
 
 The existing multilingual retrieval regression suite remains a blocking safety gate, but it is not by itself a calibration corpus: its healthy baseline is intentionally at the quality ceiling for its small deterministic cases, so it has no useful headroom for measuring positive graph lift.
 
 The graph replay corpus must therefore contain harder request-level cases with real ranking headroom, graded or multi-relevant targets where appropriate, hard negatives, and representative language/domain coverage. Existing Recall@5, MRR and nDCG@10 evaluation machinery should be reused as deterministic metrics rather than introducing user feedback or an unconstrained LLM judge.
+
+`AdaptiveGraphUtilityRecorder` provides runtime selected/assisted observability for controlled online traffic. Those counters are canary evidence and operational telemetry; they are not a substitute for paired replay utility because live traffic has no graph-disabled counterfactual for the same request.
 
 CANARY_ELIGIBLE is not production approval. Canary runs the already-selected threshold on bounded traffic and measures the same quality, safety, capacity and latency invariants. The threshold must not be retuned from canary traffic in place.
 
@@ -416,7 +428,7 @@ The repository quality gate promotes QUALITY_GATE_CANDIDATE to CANARY_ELIGIBLE. 
 
 ## Candidate configuration
 
-Configuration belongs under the existing AkmAI namespace:
+Calibration reports must name the exact runtime parameter they target. The competitive serving threshold belongs to the existing AkmAI configuration:
 
     akmai:
       adaptive-graph:
@@ -424,21 +436,35 @@ Configuration belongs under the existing AkmAI namespace:
         maintenance-enabled: false
         shadow-expansion-enabled: false
         expansion-enabled: false
-        max-active-neighbors: ...
-        max-candidates: ...
-        activation:
-          minimum-weight: ...
-          minimum-distinct-query-support: ...
-        decay:
+
+        competition:
+          enabled: false
+          max-promotions: 1..2
+          protected-base-prefix: ...
+          min-graph-score: T*
+
+        shadow-expansion:
+          min-hot-weight: ...
+          min-warm-weight: ...
+          max-seeds: ...
+          max-candidates: ...
+
+        scoring:
+          promote-warm: ...
+          demote-warm: ...
+          promote-hot: ...
+          demote-hot: ...
           half-life: ...
-        candidate-ttl: ...
-        decayed-ttl: ...
-        compaction:
-          fixed-delay: ...
-          batch-size: ...
-          parallelism: ...
+
+        quotas:
+          hot: ...
+          warm: ...
+          candidate: ...
+
         storage:
-          hash-buckets-per-acl: ...
+          hash-buckets-per-acl: 32
+
+The calibration report may recommend T*, but applying it remains a versioned deployment/configuration action. It does not enable `competition.enabled` or `expansion-enabled`.
 
 ## Quality gates
 
