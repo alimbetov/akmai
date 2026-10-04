@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -22,6 +23,7 @@ public class SemanticChunkAnnotator {
         this(router, null);
     }
 
+    @Autowired
     public SemanticChunkAnnotator(
             SemanticDomainRouter router,
             EnglishSemanticConceptMatcher conceptMatcher
