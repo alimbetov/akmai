@@ -5,6 +5,13 @@ names:
   ru: Программное обеспечение
   en: Software engineering
   zh: 软件工程
+  de: Softwareentwicklung
+  fr: Génie logiciel
+  es: Ingeniería de software
+  pt: Engenharia de software
+  it: Ingegneria del software
+  tr: Yazılım mühendisliği
+  el: Μηχανική λογισμικού
 headings:
   "*":
     - level: 6
