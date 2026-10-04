@@ -47,8 +47,21 @@ public class GenerationEmbeddingService {
             List<SearchProjection> projections,
             EmbeddingProfile profile
     ) {
+        return embed(projections, profile, () -> { });
+    }
+
+    public List<float[]> embed(
+            List<SearchProjection> projections,
+            EmbeddingProfile profile,
+            Runnable heartbeat
+    ) {
         if (projections == null || projections.isEmpty()) {
             return List.of();
+        }
+        if (heartbeat == null) {
+            throw new IllegalArgumentException(
+                    "heartbeat must not be null"
+            );
         }
 
         List<float[]> validated = new ArrayList<>(projections.size());
@@ -60,6 +73,8 @@ public class GenerationEmbeddingService {
                     projections.size(),
                     start + maxBatchSize
             );
+            heartbeat.run();
+
             List<String> texts = projections
                     .subList(start, end)
                     .stream()
@@ -79,6 +94,8 @@ public class GenerationEmbeddingService {
                 ));
             }
         }
+
+        heartbeat.run();
 
         if (validated.size() != projections.size()) {
             throw new IllegalStateException(
