@@ -66,6 +66,11 @@ class RagQuestionServiceAssuranceTest {
                 anyList(),
                 any(CitationValidator.CitationValidation.class)
         );
+        verify(fixture.utility()).record(
+                anyList(),
+                any(CitationValidator.CitationValidation.class),
+                eq(true)
+        );
     }
 
     @Test
@@ -84,6 +89,11 @@ class RagQuestionServiceAssuranceTest {
                 .isEqualTo("В базе знаний недостаточно информации.");
         assertThat(response.sources()).isEmpty();
         verifyNoInteractions(fixture.learning());
+        verify(fixture.utility()).record(
+                anyList(),
+                any(CitationValidator.CitationValidation.class),
+                eq(false)
+        );
     }
 
     @Test
@@ -203,7 +213,7 @@ class RagQuestionServiceAssuranceTest {
                 utility
         );
 
-        return new Fixture(service, learning, generation);
+        return new Fixture(service, learning, generation, utility);
     }
 
     private RetrievalHit hit(
@@ -231,7 +241,8 @@ class RagQuestionServiceAssuranceTest {
     private record Fixture(
             RagQuestionService service,
             AssociationLearningRecorder learning,
-            AnswerGenerationService generation
+            AnswerGenerationService generation,
+            AdaptiveGraphUtilityRecorder utility
     ) {
     }
 }
