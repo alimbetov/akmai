@@ -63,7 +63,10 @@ class AdaptiveGraphPropertiesTest {
                         0.35,
                         0.20,
                         0.45,
-                        0.50
+                        0.50,
+                        2,
+                        4,
+                        1
                 ))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("hysteresis");
@@ -134,7 +137,10 @@ class AdaptiveGraphPropertiesTest {
                 0.35,
                 0.20,
                 0.65,
-                0.50
+                0.50,
+                2,
+                4,
+                1
         );
     }
 
