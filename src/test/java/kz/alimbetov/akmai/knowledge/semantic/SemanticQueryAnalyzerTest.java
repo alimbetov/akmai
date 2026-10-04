@@ -101,6 +101,10 @@ class SemanticQueryAnalyzerTest {
                 .isEqualTo(
                         "finance_banking.risk_capital.capital_adequacy_ratio"
                 );
+        assertThat(conceptId("coefficiente di adeguatezza patrimoniale"))
+                .isEqualTo(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                );
     }
 
     @Test
