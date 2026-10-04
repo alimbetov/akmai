@@ -46,12 +46,14 @@ public class AnswerGroundingVerifier {
 
         for (String raw : SENTENCE_BOUNDARY.split(input)) {
             String sentence = raw == null ? "" : raw.trim();
-            if (!hasClaimContent(sentence)) {
+            String claimText = SOURCE.matcher(sentence)
+                    .replaceAll("")
+                    .trim();
+            if (!hasClaimContent(claimText)) {
                 continue;
             }
 
             Set<Integer> citations = citations(sentence, safeContext.size());
-            String claimText = SOURCE.matcher(sentence).replaceAll("").trim();
             if (citations.isEmpty()) {
                 unsupportedClaims++;
                 claims.add(new ClaimValidation(
