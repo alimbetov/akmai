@@ -81,7 +81,7 @@ public final class AdaptiveGraphThresholdCalibrator {
         );
     }
 
-    public ReplayGateReport validateReplay(
+    public ReplayValidationReport validateReplay(
             List<ReplayObservation> replayObservations,
             double candidateThreshold,
             CalibrationPolicy policy
@@ -99,16 +99,16 @@ public final class AdaptiveGraphThresholdCalibrator {
                 policy
         );
 
-        GateDecision decision;
+        ReplayDecision decision;
         if (evaluation.sampleCount() < policy.minimumSamples()) {
-            decision = GateDecision.INSUFFICIENT_DATA;
+            decision = ReplayDecision.INSUFFICIENT_DATA;
         } else if (evaluation.gatePassed()) {
-            decision = GateDecision.CANARY_ELIGIBLE;
+            decision = ReplayDecision.QUALITY_GATE_CANDIDATE;
         } else {
-            decision = GateDecision.REJECTED;
+            decision = ReplayDecision.REJECTED;
         }
 
-        return new ReplayGateReport(decision, evaluation);
+        return new ReplayValidationReport(decision, evaluation);
     }
 
     public ThresholdEvaluation evaluateAtThreshold(
@@ -364,10 +364,10 @@ public final class AdaptiveGraphThresholdCalibrator {
         REPLAY_CANDIDATE
     }
 
-    public enum GateDecision {
+    public enum ReplayDecision {
         INSUFFICIENT_DATA,
         REJECTED,
-        CANARY_ELIGIBLE
+        QUALITY_GATE_CANDIDATE
     }
 
     public record CalibrationReport(
@@ -382,8 +382,8 @@ public final class AdaptiveGraphThresholdCalibrator {
         }
     }
 
-    public record ReplayGateReport(
-            GateDecision decision,
+    public record ReplayValidationReport(
+            ReplayDecision decision,
             ThresholdEvaluation evaluation
     ) {
     }
