@@ -23,6 +23,11 @@ public class SemanticConceptMatcher {
         return surfaces.version(language);
     }
 
+    public boolean supports(String language) {
+        return surfaces.supports(language)
+                && morphologyRegistry.supports(language);
+    }
+
     public List<SemanticConceptMatch> match(
             String text,
             String language
