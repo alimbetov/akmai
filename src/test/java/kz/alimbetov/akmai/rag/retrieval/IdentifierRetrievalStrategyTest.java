@@ -29,6 +29,7 @@ class IdentifierRetrievalStrategyTest {
         DocumentIdentifier identifier = new DocumentIdentifier(
                 "doc-1",
                 3L,
+                3L,
                 "chunk-1",
                 7,
                 IdentifierType.CONTRACT_NUMBER,
@@ -40,6 +41,7 @@ class IdentifierRetrievalStrategyTest {
         SearchProjection projection = new SearchProjection(
                 "chunk-1",
                 "doc-1",
+                3L,
                 3L,
                 null,
                 0,
