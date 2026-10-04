@@ -149,6 +149,10 @@ public class GenerationPublicationService {
             IngestionIdempotencyContext idempotency,
             KnowledgeIngestionResponse response
     ) {
+        idempotencyRepository.lockCurrentClaimInCurrentTransaction(
+                idempotency
+        );
+
         String activeProfile = jdbcTemplate.queryForObject(
                 """
                 SELECT active_profile_id

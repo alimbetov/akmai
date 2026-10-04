@@ -190,6 +190,45 @@ public class IngestionIdempotencyRepository {
         });
     }
 
+    public void renew(
+            IngestionIdempotencyContext context,
+            Duration leaseDuration
+    ) {
+        if (context == null) {
+            return;
+        }
+        if (leaseDuration == null
+                || leaseDuration.isZero()
+                || leaseDuration.isNegative()) {
+            throw new IllegalArgumentException(
+                    "leaseDuration must be positive"
+            );
+        }
+        int updated = jdbcTemplate.update(
+                """
+                UPDATE knowledge_ingestion_request
+                SET lease_until = clock_timestamp()
+                    + (? * interval '1 millisecond'),
+                    updated_at = clock_timestamp()
+                WHERE idempotency_key = ?
+                  AND claim_id = ?
+                  AND request_fingerprint = ?
+                  AND request_status = 'IN_PROGRESS'
+                  AND lease_until > clock_timestamp()
+                """,
+                leaseDuration.toMillis(),
+                context.key(),
+                context.claimId(),
+                context.fingerprint()
+        );
+        if (updated != 1) {
+            throw new IdempotencyConflictException(
+                    "INGESTION_IDEMPOTENCY_LOST",
+                    "Idempotency claim is no longer current"
+            );
+        }
+    }
+
     public void attachGeneration(
             IngestionIdempotencyContext context,
             long generation
@@ -217,6 +256,37 @@ public class IngestionIdempotencyRepository {
             throw new IdempotencyConflictException(
                     "INGESTION_IDEMPOTENCY_LOST",
                     "Idempotency claim expired before generation allocation"
+            );
+        }
+    }
+
+    public void lockCurrentClaimInCurrentTransaction(
+            IngestionIdempotencyContext context
+    ) {
+        if (context == null) {
+            return;
+        }
+        Integer current = jdbcTemplate.query(
+                """
+                SELECT 1
+                FROM knowledge_ingestion_request
+                WHERE idempotency_key = ?
+                  AND claim_id = ?
+                  AND request_fingerprint = ?
+                  AND request_status = 'IN_PROGRESS'
+                  AND lease_until > clock_timestamp()
+                FOR UPDATE
+                """,
+                (rs, rowNum) -> rs.getInt(1),
+                context.key(),
+                context.claimId(),
+                context.fingerprint()
+        ).stream().findFirst().orElse(null);
+
+        if (current == null) {
+            throw new IdempotencyConflictException(
+                    "INGESTION_IDEMPOTENCY_LOST",
+                    "Idempotency claim is no longer current"
             );
         }
     }

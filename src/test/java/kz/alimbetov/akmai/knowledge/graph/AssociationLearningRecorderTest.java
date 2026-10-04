@@ -86,6 +86,84 @@ class AssociationLearningRecorderTest {
     }
 
     @Test
+    void learnsOnlyCitationAnchoredContextPairs() {
+        AdaptiveChunkGraphRepository repository =
+                mock(AdaptiveChunkGraphRepository.class);
+        AdaptiveGraphProperties properties = properties(true);
+
+        AssociationLearningRecorder recorder =
+                new AssociationLearningRecorder(
+                        properties,
+                        repository,
+                        new PrivacySafeQueryFingerprint(properties),
+                        mock(AkmaiMetrics.class)
+                );
+
+        recorder.record(
+                List.of(query()),
+                Set.of(1L),
+                List.of(
+                        hit("a", "ca", 0.9),
+                        hit("b", "cb", 0.8),
+                        hit("c", "cc", 0.7)
+                ),
+                validation(1)
+        );
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<AssociationObservation>> captor =
+                ArgumentCaptor.forClass(List.class);
+        verify(repository).reinforceSymmetricBatch(captor.capture());
+
+        org.assertj.core.api.Assertions.assertThat(captor.getValue())
+                .hasSize(2)
+                .allSatisfy(observation ->
+                        org.assertj.core.api.Assertions.assertThat(
+                                Set.of(
+                                        observation.left().chunkId(),
+                                        observation.right().chunkId()
+                                )
+                        ).contains("ca")
+                );
+    }
+
+    @Test
+    void graphExpandedContextDoesNotReinforceAdaptiveGraph() {
+        AdaptiveChunkGraphRepository repository =
+                mock(AdaptiveChunkGraphRepository.class);
+        AdaptiveGraphProperties properties = properties(true);
+
+        AssociationLearningRecorder recorder =
+                new AssociationLearningRecorder(
+                        properties,
+                        repository,
+                        new PrivacySafeQueryFingerprint(properties),
+                        mock(AkmaiMetrics.class)
+                );
+
+        RetrievalHit graph = new RetrievalHit(
+                RetrievalType.GRAPH,
+                1,
+                "graph-doc",
+                1,
+                "graph-chunk",
+                "graph text",
+                Map.of("expansion", "adaptive_graph"),
+                List.of(),
+                0.9
+        );
+
+        recorder.record(
+                List.of(query()),
+                Set.of(1L),
+                List.of(hit("base", "base-chunk", 0.8), graph),
+                validation(1, 2)
+        );
+
+        verify(repository, never()).reinforceSymmetricBatch(anyList());
+    }
+
+    @Test
     void doesNotCreateCrossAclPair() {
         AdaptiveChunkGraphRepository repository =
                 mock(AdaptiveChunkGraphRepository.class);

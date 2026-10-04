@@ -16,6 +16,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import kz.alimbetov.akmai.config.IdempotencyProperties;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import kz.alimbetov.akmai.knowledge.embedding.GenerationEmbeddingService;
@@ -122,6 +123,61 @@ class PersistenceCoordinatorTest {
                             "[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
                     );
                 });
+    }
+
+    @Test
+    void lostIdempotencyClaimFailsAllocatedGenerationImmediately() {
+        Fixture fixture = fixture();
+        when(fixture.generations.allocate(
+                eq("doc-1"),
+                eq(RetentionPolicy.PERMANENT),
+                isNull(),
+                eq(fixture.profile.profileId()),
+                anyString(),
+                eq(1L)
+        )).thenReturn(11L);
+        org.mockito.Mockito.doThrow(new kz.alimbetov.akmai.knowledge.idempotency.IdempotencyConflictException(
+                "INGESTION_IDEMPOTENCY_LOST",
+                "lost"
+        )).when(fixture.idempotency).attachGeneration(any(), eq(11L));
+
+        assertThatThrownBy(() ->
+                fixture.coordinator.persist(
+                        List.of(chunk("stable-1", "doc-1", 0)),
+                        new kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyContext(
+                                "key",
+                                java.util.UUID.randomUUID(),
+                                "fingerprint"
+                        ),
+                        new kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResponse(
+                                "doc-1",
+                                1
+                        ),
+                        1L
+                ))
+                .isInstanceOf(
+                        kz.alimbetov.akmai.knowledge.idempotency.IdempotencyConflictException.class
+                );
+
+        verify(fixture.generations).fail(
+                eq("doc-1"),
+                eq(11L),
+                eq("INGESTION_IDEMPOTENCY_LOST"),
+                anyString()
+        );
+        verify(fixture.publication, never()).publish(
+                anyString(),
+                any(Long.class),
+                any(),
+                any(),
+                any(),
+                anyList(),
+                anyList(),
+                anyList(),
+                anyList(),
+                any(),
+                any()
+        );
     }
 
     @Test
@@ -311,6 +367,7 @@ class PersistenceCoordinatorTest {
                 publication,
                 outcomeResolver,
                 idempotency,
+                new IdempotencyProperties(Duration.ofMinutes(5)),
                 properties
         );
         return new Fixture(

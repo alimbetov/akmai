@@ -72,6 +72,8 @@ public class AdaptiveGraphScoreCalculator {
         AssociationBand target = transition(
                 currentBand,
                 effectiveWeight,
+                distinctQuerySupport,
+                citationCount,
                 age,
                 scoring
         );
@@ -81,12 +83,16 @@ public class AdaptiveGraphScoreCalculator {
     private AssociationBand transition(
             AssociationBand current,
             double weight,
+            long distinctQuerySupport,
+            long citationCount,
             Duration age,
             AdaptiveGraphProperties.Scoring scoring
     ) {
         return switch (current) {
             case CANDIDATE -> {
-                if (weight >= scoring.promoteWarm()) {
+                if (weight >= scoring.promoteWarm()
+                        && distinctQuerySupport
+                        >= scoring.minimumDistinctQuerySupportWarm()) {
                     yield AssociationBand.WARM;
                 }
                 if (age.compareTo(scoring.candidateTtl()) >= 0) {
@@ -95,7 +101,11 @@ public class AdaptiveGraphScoreCalculator {
                 yield AssociationBand.CANDIDATE;
             }
             case WARM -> {
-                if (weight >= scoring.promoteHot()) {
+                if (weight >= scoring.promoteHot()
+                        && distinctQuerySupport
+                        >= scoring.minimumDistinctQuerySupportHot()
+                        && citationCount
+                        >= scoring.minimumCitationCountHot()) {
                     yield AssociationBand.HOT;
                 }
                 if (weight < scoring.demoteWarm()) {

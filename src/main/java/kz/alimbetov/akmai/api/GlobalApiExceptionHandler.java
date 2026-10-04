@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import java.util.concurrent.RejectedExecutionException;
 import kz.alimbetov.akmai.knowledge.idempotency.IdempotencyConflictException;
+import kz.alimbetov.akmai.security.AccessLevelForbiddenException;
 import kz.alimbetov.akmai.rag.service.AnswerGenerationException;
 import kz.alimbetov.akmai.rag.service.RetrievalUnavailableException;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,20 @@ public class GlobalApiExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "VALIDATION_ERROR",
                 safeValidationMessage(exception),
+                request,
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(AccessLevelForbiddenException.class)
+    public ResponseEntity<ApiErrorResponse> accessDenied(
+            AccessLevelForbiddenException exception,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.FORBIDDEN,
+                "ACCESS_LEVEL_FORBIDDEN",
+                exception.getMessage(),
                 request,
                 Map.of()
         );

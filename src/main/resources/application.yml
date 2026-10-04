@@ -52,6 +52,11 @@ akmai:
     shadow-expansion-enabled: ${AKMAI_ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED:false}
     expansion-enabled: ${AKMAI_ADAPTIVE_GRAPH_EXPANSION_ENABLED:false}
     graph-version: ${AKMAI_ADAPTIVE_GRAPH_VERSION:1}
+    competition:
+      enabled: ${AKMAI_ADAPTIVE_GRAPH_COMPETITION_ENABLED:false}
+      max-promotions: ${AKMAI_ADAPTIVE_GRAPH_COMPETITION_MAX_PROMOTIONS:2}
+      protected-base-prefix: ${AKMAI_ADAPTIVE_GRAPH_COMPETITION_PROTECTED_PREFIX:4}
+      min-graph-score: ${AKMAI_ADAPTIVE_GRAPH_COMPETITION_MIN_SCORE:0.70}
     learning:
       max-context-chunks: ${AKMAI_ADAPTIVE_GRAPH_LEARNING_MAX_CONTEXT_CHUNKS:8}
       max-pairs-per-request: ${AKMAI_ADAPTIVE_GRAPH_LEARNING_MAX_PAIRS:32}
@@ -81,6 +86,9 @@ akmai:
       demote-warm: ${AKMAI_ADAPTIVE_GRAPH_DEMOTE_WARM:0.20}
       promote-hot: ${AKMAI_ADAPTIVE_GRAPH_PROMOTE_HOT:0.65}
       demote-hot: ${AKMAI_ADAPTIVE_GRAPH_DEMOTE_HOT:0.50}
+      minimum-distinct-query-support-warm: ${AKMAI_ADAPTIVE_GRAPH_MIN_DISTINCT_QUERY_SUPPORT_WARM:2}
+      minimum-distinct-query-support-hot: ${AKMAI_ADAPTIVE_GRAPH_MIN_DISTINCT_QUERY_SUPPORT_HOT:4}
+      minimum-citation-count-hot: ${AKMAI_ADAPTIVE_GRAPH_MIN_CITATION_COUNT_HOT:1}
     maintenance:
       batch-size: ${AKMAI_ADAPTIVE_GRAPH_MAINTENANCE_BATCH_SIZE:100}
       max-batches-per-run: ${AKMAI_ADAPTIVE_GRAPH_MAINTENANCE_MAX_BATCHES:10}

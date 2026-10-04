@@ -27,8 +27,8 @@ class AdaptiveGraphShadowExpansionTest {
     @Test
     void disabledShadowExpansionDoesNotReadGraph() {
         AdaptiveGraphProperties properties = properties(false);
-        AdaptiveChunkGraphRepository graph =
-                mock(AdaptiveChunkGraphRepository.class);
+        AdaptiveGraphLookupReader graph =
+                mock(AdaptiveGraphLookupReader.class);
         AdaptiveGraphShadowExpansion expansion =
                 new AdaptiveGraphShadowExpansion(
                         properties,
@@ -46,6 +46,7 @@ class AdaptiveGraphShadowExpansionTest {
         verify(graph, never()).findRelated(
                 anySet(),
                 org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyInt(),
                 anySet(),
                 org.mockito.ArgumentMatchers.anyDouble(),
                 org.mockito.ArgumentMatchers.anyInt()
@@ -55,8 +56,8 @@ class AdaptiveGraphShadowExpansionTest {
     @Test
     void reportsPublishedHotCandidateWithoutMutatingRealCandidates() {
         AdaptiveGraphProperties properties = properties(true);
-        AdaptiveChunkGraphRepository graph =
-                mock(AdaptiveChunkGraphRepository.class);
+        AdaptiveGraphLookupReader graph =
+                mock(AdaptiveGraphLookupReader.class);
         PublishedSearchProjectionReader projections =
                 mock(PublishedSearchProjectionReader.class);
         AkmaiMetrics metrics =
@@ -71,6 +72,7 @@ class AdaptiveGraphShadowExpansionTest {
         when(graph.findRelated(
                 eq(Set.of(1L)),
                 eq(seedNode),
+                eq(1),
                 eq(Set.of(AssociationBand.HOT)),
                 eq(0.50),
                 eq(4)
@@ -83,6 +85,7 @@ class AdaptiveGraphShadowExpansionTest {
         when(graph.findRelated(
                 eq(Set.of(1L)),
                 eq(seedNode),
+                eq(1),
                 eq(Set.of(AssociationBand.WARM)),
                 eq(0.30),
                 eq(2)
@@ -125,8 +128,8 @@ class AdaptiveGraphShadowExpansionTest {
     @Test
     void rejectsDuplicateAndUnpublishedTarget() {
         AdaptiveGraphProperties properties = properties(true);
-        AdaptiveChunkGraphRepository graph =
-                mock(AdaptiveChunkGraphRepository.class);
+        AdaptiveGraphLookupReader graph =
+                mock(AdaptiveGraphLookupReader.class);
         PublishedSearchProjectionReader projections =
                 mock(PublishedSearchProjectionReader.class);
 
@@ -142,6 +145,7 @@ class AdaptiveGraphShadowExpansionTest {
         when(graph.findRelated(
                 eq(Set.of(1L)),
                 eq(seedNode),
+                eq(1),
                 eq(Set.of(AssociationBand.HOT)),
                 eq(0.50),
                 eq(4)
@@ -162,6 +166,7 @@ class AdaptiveGraphShadowExpansionTest {
         when(graph.findRelated(
                 eq(Set.of(1L)),
                 eq(seedNode),
+                eq(1),
                 eq(Set.of(AssociationBand.WARM)),
                 eq(0.30),
                 eq(2)
@@ -196,8 +201,8 @@ class AdaptiveGraphShadowExpansionTest {
     @Test
     void aggregatesIndependentSeedContributionsWithBoundedNoisyOr() {
         AdaptiveGraphProperties properties = properties(true);
-        AdaptiveChunkGraphRepository graph =
-                mock(AdaptiveChunkGraphRepository.class);
+        AdaptiveGraphLookupReader graph =
+                mock(AdaptiveGraphLookupReader.class);
         PublishedSearchProjectionReader projections =
                 mock(PublishedSearchProjectionReader.class);
 
@@ -213,6 +218,7 @@ class AdaptiveGraphShadowExpansionTest {
         when(graph.findRelated(
                 eq(Set.of(1L)),
                 eq(firstNode),
+                eq(1),
                 eq(Set.of(AssociationBand.HOT)),
                 eq(0.50),
                 eq(4)
@@ -227,6 +233,7 @@ class AdaptiveGraphShadowExpansionTest {
         when(graph.findRelated(
                 eq(Set.of(1L)),
                 eq(secondNode),
+                eq(1),
                 eq(Set.of(AssociationBand.HOT)),
                 eq(0.50),
                 eq(4)
@@ -241,6 +248,7 @@ class AdaptiveGraphShadowExpansionTest {
         when(graph.findRelated(
                 anySet(),
                 org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyInt(),
                 eq(Set.of(AssociationBand.WARM)),
                 eq(0.30),
                 eq(2)

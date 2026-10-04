@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -101,6 +102,46 @@ class KnowledgeIngestionServiceTest {
                 ArgumentCaptor.forClass(KnowledgeDocument.class);
         verify(chunker).chunk(captor.capture());
         assertThat(captor.getValue().language()).isEqualTo("de");
+    }
+
+    @Test
+    void rejectsDocumentThatNormalizesToNoIndexableChunks() {
+        SemanticChunker chunker = mock(SemanticChunker.class);
+        ParallelIngestionExecutor executor =
+                mock(ParallelIngestionExecutor.class);
+        PersistenceCoordinator persistence =
+                mock(PersistenceCoordinator.class);
+        when(chunker.chunk(any())).thenReturn(List.of());
+
+        KnowledgeIngestionService service = new KnowledgeIngestionService(
+                chunker,
+                executor,
+                persistence,
+                mock(IngestionIdempotencyRepository.class),
+                mock(CanonicalRequestFingerprint.class),
+                new IdempotencyProperties(Duration.ofMinutes(5))
+        );
+
+        assertThatThrownBy(() -> service.addText(new AddKnowledgeRequest(
+                "doc-empty",
+                "Title",
+                "   ",
+                "source",
+                "en",
+                KnowledgeDomain.GENERAL,
+                1L,
+                Map.of()
+        )))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("no indexable chunks");
+
+        verify(executor, never()).execute(anyList());
+        verify(persistence, never()).persist(
+                anyList(),
+                any(),
+                any(),
+                any(Long.class)
+        );
     }
 
     @Test

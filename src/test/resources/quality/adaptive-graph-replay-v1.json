@@ -1,0 +1,227 @@
+{
+  "corpusVersion": "adaptive-graph-replay-v1",
+  "utilityContractVersion": "adaptive-graph-ranking-utility-v1",
+  "thresholds": [0.60, 0.70, 0.80],
+  "utilityWeights": {
+    "recallAt5": 0.50,
+    "reciprocalRank": 0.20,
+    "ndcgAt10": 0.30
+  },
+  "policy": {
+    "minimumSamples": 6,
+    "minimumMeaningfulCompetitionDelta": 0.05,
+    "minimumMeanAppendOnlyUtilityLift": 0.0,
+    "minimumMeanOverallUtilityLift": 0.10,
+    "minimumMeanCompetitionUtilityLift": 0.10,
+    "minimumBenefitProbabilityLowerBound": 0.40,
+    "confidenceZ": 1.0,
+    "maximumRegressionRate": 0.05,
+    "maximumP95LatencyRegressionMillis": 10.0
+  },
+  "cases": [
+    {
+      "id": "cal-en-legal-useful",
+      "split": "CALIBRATION",
+      "language": "en",
+      "domain": "LEGAL",
+      "question": "Which clause controls the termination deadline?",
+      "relevantChunkIds": ["cal-en-graph-relevant"],
+      "baseRelevantRank": 0,
+      "graphCandidates": [
+        {
+          "chunkId": "cal-en-graph-relevant",
+          "score": 0.78,
+          "band": "HOT",
+          "contributingEdges": 2
+        }
+      ]
+    },
+    {
+      "id": "cal-ru-medical-useful",
+      "split": "CALIBRATION",
+      "language": "ru",
+      "domain": "MEDICAL",
+      "question": "Какое наблюдение требуется после изменения дозы?",
+      "relevantChunkIds": ["cal-ru-graph-relevant"],
+      "baseRelevantRank": 0,
+      "graphCandidates": [
+        {
+          "chunkId": "cal-ru-graph-relevant",
+          "score": 0.82,
+          "band": "HOT",
+          "contributingEdges": 3
+        }
+      ]
+    },
+    {
+      "id": "cal-kk-legal-useful",
+      "split": "CALIBRATION",
+      "language": "kk",
+      "domain": "LEGAL",
+      "question": "Хабарлау мерзімін қай тармақ белгілейді?",
+      "relevantChunkIds": ["cal-kk-graph-relevant"],
+      "baseRelevantRank": 0,
+      "graphCandidates": [
+        {
+          "chunkId": "cal-kk-graph-relevant",
+          "score": 0.74,
+          "band": "HOT",
+          "contributingEdges": 2
+        }
+      ]
+    },
+    {
+      "id": "cal-zh-medical-useful",
+      "split": "CALIBRATION",
+      "language": "zh",
+      "domain": "MEDICAL",
+      "question": "剂量调整后需要什么监测？",
+      "relevantChunkIds": ["cal-zh-graph-relevant"],
+      "baseRelevantRank": 0,
+      "graphCandidates": [
+        {
+          "chunkId": "cal-zh-graph-relevant",
+          "score": 0.76,
+          "band": "HOT",
+          "contributingEdges": 2
+        }
+      ]
+    },
+    {
+      "id": "cal-de-noise",
+      "split": "CALIBRATION",
+      "language": "de",
+      "domain": "LEGAL",
+      "question": "Welche Frist gilt für die Mitteilung?",
+      "relevantChunkIds": ["cal-de-base-relevant"],
+      "baseRelevantRank": 5,
+      "graphCandidates": [
+        {
+          "chunkId": "cal-de-graph-noise",
+          "score": 0.66,
+          "band": "HOT",
+          "contributingEdges": 2
+        }
+      ]
+    },
+    {
+      "id": "cal-fr-noise",
+      "split": "CALIBRATION",
+      "language": "fr",
+      "domain": "MEDICAL",
+      "question": "Quelle surveillance est obligatoire?",
+      "relevantChunkIds": ["cal-fr-base-relevant"],
+      "baseRelevantRank": 5,
+      "graphCandidates": [
+        {
+          "chunkId": "cal-fr-graph-noise",
+          "score": 0.68,
+          "band": "HOT",
+          "contributingEdges": 3
+        }
+      ]
+    },
+    {
+      "id": "hold-es-useful",
+      "split": "HOLDOUT",
+      "language": "es",
+      "domain": "LEGAL",
+      "question": "¿Qué cláusula fija el plazo de notificación?",
+      "relevantChunkIds": ["hold-es-graph-relevant"],
+      "baseRelevantRank": 0,
+      "graphCandidates": [
+        {
+          "chunkId": "hold-es-graph-relevant",
+          "score": 0.79,
+          "band": "HOT",
+          "contributingEdges": 2
+        }
+      ]
+    },
+    {
+      "id": "hold-pt-useful",
+      "split": "HOLDOUT",
+      "language": "pt",
+      "domain": "MEDICAL",
+      "question": "Que monitorização é exigida após ajuste de dose?",
+      "relevantChunkIds": ["hold-pt-graph-relevant"],
+      "baseRelevantRank": 0,
+      "graphCandidates": [
+        {
+          "chunkId": "hold-pt-graph-relevant",
+          "score": 0.73,
+          "band": "HOT",
+          "contributingEdges": 2
+        }
+      ]
+    },
+    {
+      "id": "hold-it-useful",
+      "split": "HOLDOUT",
+      "language": "it",
+      "domain": "LEGAL",
+      "question": "Quale clausola stabilisce il termine di preavviso?",
+      "relevantChunkIds": ["hold-it-graph-relevant"],
+      "baseRelevantRank": 0,
+      "graphCandidates": [
+        {
+          "chunkId": "hold-it-graph-relevant",
+          "score": 0.77,
+          "band": "HOT",
+          "contributingEdges": 2
+        }
+      ]
+    },
+    {
+      "id": "hold-tr-useful",
+      "split": "HOLDOUT",
+      "language": "tr",
+      "domain": "MEDICAL",
+      "question": "Doz değişikliğinden sonra hangi izlem gerekir?",
+      "relevantChunkIds": ["hold-tr-graph-relevant"],
+      "baseRelevantRank": 0,
+      "graphCandidates": [
+        {
+          "chunkId": "hold-tr-graph-relevant",
+          "score": 0.75,
+          "band": "HOT",
+          "contributingEdges": 3
+        }
+      ]
+    },
+    {
+      "id": "hold-el-noise",
+      "split": "HOLDOUT",
+      "language": "el",
+      "domain": "LEGAL",
+      "question": "Ποια προθεσμία ισχύει για την ειδοποίηση;",
+      "relevantChunkIds": ["hold-el-base-relevant"],
+      "baseRelevantRank": 5,
+      "graphCandidates": [
+        {
+          "chunkId": "hold-el-graph-noise",
+          "score": 0.67,
+          "band": "HOT",
+          "contributingEdges": 2
+        }
+      ]
+    },
+    {
+      "id": "hold-en-noise",
+      "split": "HOLDOUT",
+      "language": "en",
+      "domain": "MEDICAL",
+      "question": "What monitoring schedule is mandatory?",
+      "relevantChunkIds": ["hold-en-base-relevant"],
+      "baseRelevantRank": 5,
+      "graphCandidates": [
+        {
+          "chunkId": "hold-en-graph-noise",
+          "score": 0.69,
+          "band": "HOT",
+          "contributingEdges": 2
+        }
+      ]
+    }
+  ]
+}

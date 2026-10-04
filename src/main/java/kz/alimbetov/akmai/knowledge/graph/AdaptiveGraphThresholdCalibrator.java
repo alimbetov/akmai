@@ -1,0 +1,499 @@
+package kz.alimbetov.akmai.knowledge.graph;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import kz.alimbetov.akmai.config.AdaptiveGraphCompetitionProperties;
+
+/**
+ * Offline/shadow-only threshold calibration for adaptive graph serving.
+ *
+ * <p>The replay harness must evaluate the same request cohort in three modes:
+ * BASE_ONLY, GRAPH_APPEND_ONLY and GRAPH_COMPETITIVE(T). This calibrator uses
+ * the resulting paired deltas; it never infers counterfactual utility by
+ * filtering one replay run.</p>
+ *
+ * <p>The calibrated threshold targets
+ * {@code akmai.adaptive-graph.competition.min-graph-score}, which is applied
+ * to the aggregated adaptive graph candidate score by
+ * {@link AdaptiveGraphCompetitiveAdmission}. It does not calibrate edge
+ * lifecycle promotion thresholds or adjacency minimum weights.</p>
+ *
+ * <p>The calibrator is deliberately advisory. It never mutates runtime
+ * configuration and never promotes a graph version by itself.</p>
+ */
+public final class AdaptiveGraphThresholdCalibrator {
+
+    private static final double DELTA_EPSILON = 1.0e-9;
+
+    public static final String TARGET_PARAMETER =
+            AdaptiveGraphCompetitionProperties.MIN_GRAPH_SCORE_PROPERTY;
+
+    public CalibrationReport calibrate(
+            List<ReplayObservation> calibrationObservations,
+            CalibrationPolicy policy
+    ) {
+        Objects.requireNonNull(
+                calibrationObservations,
+                "calibrationObservations must not be null"
+        );
+        Objects.requireNonNull(policy, "policy must not be null");
+
+        List<Double> thresholds = calibrationObservations.stream()
+                .map(ReplayObservation::candidateThreshold)
+                .distinct()
+                .sorted()
+                .toList();
+
+        if (thresholds.isEmpty()) {
+            return new CalibrationReport(
+                    CalibrationDecision.INSUFFICIENT_DATA,
+                    null,
+                    List.of()
+            );
+        }
+
+        requireSameRequestCohort(
+                calibrationObservations,
+                thresholds
+        );
+
+        List<ThresholdEvaluation> evaluations =
+                new ArrayList<>(thresholds.size());
+        ThresholdEvaluation selected = null;
+        boolean anyThresholdHasEnoughData = false;
+
+        for (double threshold : thresholds) {
+            ThresholdEvaluation evaluation = evaluateAtThreshold(
+                    calibrationObservations,
+                    threshold,
+                    policy
+            );
+            evaluations.add(evaluation);
+            if (evaluation.sampleCount() >= policy.minimumSamples()) {
+                anyThresholdHasEnoughData = true;
+            }
+            if (selected == null && evaluation.gatePassed()) {
+                selected = evaluation;
+            }
+        }
+
+        if (selected != null) {
+            return new CalibrationReport(
+                    CalibrationDecision.REPLAY_CANDIDATE,
+                    selected,
+                    evaluations
+            );
+        }
+
+        return new CalibrationReport(
+                anyThresholdHasEnoughData
+                        ? CalibrationDecision.REJECTED
+                        : CalibrationDecision.INSUFFICIENT_DATA,
+                null,
+                evaluations
+        );
+    }
+
+    public ReplayValidationReport validateReplay(
+            List<ReplayObservation> replayObservations,
+            double candidateThreshold,
+            CalibrationPolicy policy
+    ) {
+        Objects.requireNonNull(
+                replayObservations,
+                "replayObservations must not be null"
+        );
+        Objects.requireNonNull(policy, "policy must not be null");
+        requireUnitInterval("candidateThreshold", candidateThreshold);
+
+        ThresholdEvaluation evaluation = evaluateAtThreshold(
+                replayObservations,
+                candidateThreshold,
+                policy
+        );
+
+        ReplayDecision decision;
+        if (evaluation.sampleCount() < policy.minimumSamples()) {
+            decision = ReplayDecision.INSUFFICIENT_DATA;
+        } else if (evaluation.gatePassed()) {
+            decision = ReplayDecision.QUALITY_GATE_CANDIDATE;
+        } else {
+            decision = ReplayDecision.REJECTED;
+        }
+
+        return new ReplayValidationReport(decision, evaluation);
+    }
+
+    public ThresholdEvaluation evaluateAtThreshold(
+            List<ReplayObservation> observations,
+            double threshold,
+            CalibrationPolicy policy
+    ) {
+        Objects.requireNonNull(observations, "observations must not be null");
+        Objects.requireNonNull(policy, "policy must not be null");
+        requireUnitInterval("threshold", threshold);
+
+        List<ReplayObservation> included = observations.stream()
+                .filter(observation ->
+                        Double.compare(
+                                observation.candidateThreshold(),
+                                threshold
+                        ) == 0
+                )
+                .toList();
+
+        requireIndependentRequests(included, threshold);
+
+        int sampleCount = included.size();
+        if (sampleCount == 0) {
+            return new ThresholdEvaluation(
+                    threshold,
+                    0,
+                    0,
+                    0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    true,
+                    false
+            );
+        }
+
+        int benefitCount = 0;
+        int regressionCount = 0;
+        boolean safetyGatePassed = true;
+        double overallUtilityTotal = 0.0;
+        double appendOnlyUtilityTotal = 0.0;
+        double competitionUtilityTotal = 0.0;
+        List<Double> latencyDeltas = new ArrayList<>(sampleCount);
+
+        for (ReplayObservation observation : included) {
+            overallUtilityTotal += observation.overallUtilityDelta();
+            appendOnlyUtilityTotal += observation.appendOnlyUtilityDelta();
+            competitionUtilityTotal += observation.competitionUtilityDelta();
+            latencyDeltas.add(observation.latencyDeltaMillis());
+
+            if (observation.safetyViolation()) {
+                safetyGatePassed = false;
+            }
+            if (observation.competitionUtilityDelta()
+                    >= policy.minimumMeaningfulCompetitionDelta()) {
+                benefitCount++;
+            } else if (observation.competitionUtilityDelta()
+                    <= -policy.minimumMeaningfulCompetitionDelta()) {
+                regressionCount++;
+            }
+        }
+
+        double meanOverallUtilityDelta =
+                overallUtilityTotal / sampleCount;
+        double meanAppendOnlyUtilityDelta =
+                appendOnlyUtilityTotal / sampleCount;
+        double meanCompetitionUtilityDelta =
+                competitionUtilityTotal / sampleCount;
+        double benefitProbability = (double) benefitCount / sampleCount;
+        double benefitProbabilityLowerBound = wilsonLowerBound(
+                benefitCount,
+                sampleCount,
+                policy.confidenceZ()
+        );
+        double regressionRate = (double) regressionCount / sampleCount;
+        double p95LatencyDeltaMillis = percentile95(latencyDeltas);
+
+        boolean qualityGatePassed =
+                sampleCount >= policy.minimumSamples()
+                        && meanAppendOnlyUtilityDelta
+                        >= policy.minimumMeanAppendOnlyUtilityLift()
+                        && meanOverallUtilityDelta
+                        >= policy.minimumMeanOverallUtilityLift()
+                        && meanCompetitionUtilityDelta
+                        >= policy.minimumMeanCompetitionUtilityLift()
+                        && benefitProbabilityLowerBound
+                        >= policy.minimumBenefitProbabilityLowerBound()
+                        && regressionRate
+                        <= policy.maximumRegressionRate()
+                        && p95LatencyDeltaMillis
+                        <= policy.maximumP95LatencyRegressionMillis();
+
+        return new ThresholdEvaluation(
+                threshold,
+                sampleCount,
+                benefitCount,
+                regressionCount,
+                meanOverallUtilityDelta,
+                meanAppendOnlyUtilityDelta,
+                meanCompetitionUtilityDelta,
+                benefitProbability,
+                benefitProbabilityLowerBound,
+                regressionRate,
+                p95LatencyDeltaMillis,
+                safetyGatePassed,
+                qualityGatePassed
+        );
+    }
+
+    private void requireSameRequestCohort(
+            List<ReplayObservation> observations,
+            List<Double> thresholds
+    ) {
+        Set<String> expected = null;
+        for (double threshold : thresholds) {
+            Set<String> actual = new HashSet<>();
+            for (ReplayObservation observation : observations) {
+                if (Double.compare(
+                        observation.candidateThreshold(),
+                        threshold
+                ) != 0) {
+                    continue;
+                }
+                if (!actual.add(observation.replayKey())) {
+                    throw new IllegalArgumentException(
+                            "duplicate replayKey at threshold "
+                                    + threshold
+                                    + ": "
+                                    + observation.replayKey()
+                    );
+                }
+            }
+
+            if (expected == null) {
+                expected = Set.copyOf(actual);
+                continue;
+            }
+            if (!actual.equals(expected)) {
+                throw new IllegalArgumentException(
+                        "threshold sweep must use the same replayKey cohort"
+                );
+            }
+        }
+    }
+
+    private void requireIndependentRequests(
+            List<ReplayObservation> observations,
+            double threshold
+    ) {
+        Set<String> replayKeys = new HashSet<>();
+        for (ReplayObservation observation : observations) {
+            if (!replayKeys.add(observation.replayKey())) {
+                throw new IllegalArgumentException(
+                        "duplicate replayKey at threshold "
+                                + threshold
+                                + ": "
+                                + observation.replayKey()
+                );
+            }
+        }
+    }
+
+    private double wilsonLowerBound(
+            int successes,
+            int trials,
+            double z
+    ) {
+        if (trials <= 0) {
+            return 0.0;
+        }
+        double n = trials;
+        double probability = successes / n;
+        double zSquared = z * z;
+        double denominator = 1.0 + zSquared / n;
+        double center = probability + zSquared / (2.0 * n);
+        double margin = z * Math.sqrt(
+                probability * (1.0 - probability) / n
+                        + zSquared / (4.0 * n * n)
+        );
+        return Math.max(0.0, (center - margin) / denominator);
+    }
+
+    private double percentile95(List<Double> values) {
+        List<Double> sorted = values.stream()
+                .sorted(Comparator.naturalOrder())
+                .toList();
+        int index = Math.max(
+                0,
+                (int) Math.ceil(0.95 * sorted.size()) - 1
+        );
+        return sorted.get(index);
+    }
+
+    private static void requireUnitInterval(String name, double value) {
+        if (!Double.isFinite(value) || value < 0.0 || value > 1.0) {
+            throw new IllegalArgumentException(
+                    name + " must be finite and in [0, 1]"
+            );
+        }
+    }
+
+    public record ReplayObservation(
+            String replayKey,
+            double candidateThreshold,
+            double overallUtilityDelta,
+            double appendOnlyUtilityDelta,
+            double competitionUtilityDelta,
+            double latencyDeltaMillis,
+            boolean safetyViolation
+    ) {
+        public ReplayObservation {
+            if (replayKey == null || replayKey.isBlank()) {
+                throw new IllegalArgumentException(
+                        "replayKey must not be blank"
+                );
+            }
+            requireUnitInterval(
+                    "candidateThreshold",
+                    candidateThreshold
+            );
+            requireFinite("overallUtilityDelta", overallUtilityDelta);
+            requireFinite(
+                    "appendOnlyUtilityDelta",
+                    appendOnlyUtilityDelta
+            );
+            requireFinite(
+                    "competitionUtilityDelta",
+                    competitionUtilityDelta
+            );
+            requireFinite("latencyDeltaMillis", latencyDeltaMillis);
+
+            double reconstructed = appendOnlyUtilityDelta
+                    + competitionUtilityDelta;
+            if (Math.abs(overallUtilityDelta - reconstructed)
+                    > DELTA_EPSILON) {
+                throw new IllegalArgumentException(
+                        "overall utility delta must equal append-only "
+                                + "plus competition utility delta"
+                );
+            }
+        }
+    }
+
+    public record CalibrationPolicy(
+            int minimumSamples,
+            double minimumMeaningfulCompetitionDelta,
+            double minimumMeanAppendOnlyUtilityLift,
+            double minimumMeanOverallUtilityLift,
+            double minimumMeanCompetitionUtilityLift,
+            double minimumBenefitProbabilityLowerBound,
+            double confidenceZ,
+            double maximumRegressionRate,
+            double maximumP95LatencyRegressionMillis
+    ) {
+        public CalibrationPolicy {
+            if (minimumSamples < 1) {
+                throw new IllegalArgumentException(
+                        "minimumSamples must be positive"
+                );
+            }
+            if (!Double.isFinite(minimumMeaningfulCompetitionDelta)
+                    || minimumMeaningfulCompetitionDelta <= 0.0) {
+                throw new IllegalArgumentException(
+                        "minimumMeaningfulCompetitionDelta must be positive"
+                );
+            }
+            requireFinite(
+                    "minimumMeanAppendOnlyUtilityLift",
+                    minimumMeanAppendOnlyUtilityLift
+            );
+            requireFinite(
+                    "minimumMeanOverallUtilityLift",
+                    minimumMeanOverallUtilityLift
+            );
+            requireFinite(
+                    "minimumMeanCompetitionUtilityLift",
+                    minimumMeanCompetitionUtilityLift
+            );
+            requireUnitInterval(
+                    "minimumBenefitProbabilityLowerBound",
+                    minimumBenefitProbabilityLowerBound
+            );
+            if (!Double.isFinite(confidenceZ) || confidenceZ <= 0.0) {
+                throw new IllegalArgumentException(
+                        "confidenceZ must be positive"
+                );
+            }
+            requireUnitInterval(
+                    "maximumRegressionRate",
+                    maximumRegressionRate
+            );
+            if (!Double.isFinite(maximumP95LatencyRegressionMillis)
+                    || maximumP95LatencyRegressionMillis < 0.0) {
+                throw new IllegalArgumentException(
+                        "maximumP95LatencyRegressionMillis "
+                                + "must be finite and non-negative"
+                );
+            }
+        }
+    }
+
+    public record ThresholdEvaluation(
+            double threshold,
+            int sampleCount,
+            int benefitCount,
+            int regressionCount,
+            double meanOverallUtilityDelta,
+            double meanAppendOnlyUtilityDelta,
+            double meanCompetitionUtilityDelta,
+            double benefitProbability,
+            double benefitProbabilityLowerBound,
+            double regressionRate,
+            double p95LatencyDeltaMillis,
+            boolean safetyGatePassed,
+            boolean qualityGatePassed
+    ) {
+        public boolean gatePassed() {
+            return safetyGatePassed && qualityGatePassed;
+        }
+    }
+
+    public enum CalibrationDecision {
+        INSUFFICIENT_DATA,
+        REJECTED,
+        REPLAY_CANDIDATE
+    }
+
+    public enum ReplayDecision {
+        INSUFFICIENT_DATA,
+        REJECTED,
+        QUALITY_GATE_CANDIDATE
+    }
+
+    public record CalibrationReport(
+            CalibrationDecision decision,
+            ThresholdEvaluation selectedThreshold,
+            List<ThresholdEvaluation> evaluations
+    ) {
+        public CalibrationReport {
+            evaluations = evaluations == null
+                    ? List.of()
+                    : List.copyOf(evaluations);
+        }
+
+        public String targetParameter() {
+            return TARGET_PARAMETER;
+        }
+    }
+
+    public record ReplayValidationReport(
+            ReplayDecision decision,
+            ThresholdEvaluation evaluation
+    ) {
+        public String targetParameter() {
+            return TARGET_PARAMETER;
+        }
+    }
+
+    private static void requireFinite(String name, double value) {
+        if (!Double.isFinite(value)) {
+            throw new IllegalArgumentException(
+                    name + " must be finite"
+            );
+        }
+    }
+}

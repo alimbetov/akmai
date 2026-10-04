@@ -9,7 +9,8 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Repository
-public class AdaptiveChunkGraphRepository {
+public class AdaptiveChunkGraphRepository
+        implements AdaptiveGraphLookupReader {
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
@@ -75,6 +76,7 @@ public class AdaptiveChunkGraphRepository {
     public List<ChunkAssociation> findRelated(
             Set<Long> allowedAccessLevels,
             ChunkGraphNode source,
+            int graphVersion,
             Set<AssociationBand> bands,
             double minimumWeight,
             int limit
@@ -85,6 +87,9 @@ public class AdaptiveChunkGraphRepository {
         }
         if (!allowedAccessLevels.contains(source.accessLevel())) {
             return List.of();
+        }
+        if (graphVersion <= 0) {
+            throw new IllegalArgumentException("graphVersion must be positive");
         }
         if (bands == null || bands.isEmpty()) {
             throw new IllegalArgumentException("bands must not be empty");
@@ -130,6 +135,7 @@ public class AdaptiveChunkGraphRepository {
                   AND source_document_id = ?
                   AND source_generation = ?
                   AND source_chunk_id = ?
+                  AND graph_version = ?
                   AND band = ANY (?)
                   AND weight >= ?
                 ORDER BY weight DESC,
@@ -146,15 +152,16 @@ public class AdaptiveChunkGraphRepository {
                     ps.setString(2, source.documentId());
                     ps.setLong(3, source.generation());
                     ps.setString(4, source.chunkId());
+                    ps.setInt(5, graphVersion);
                     ps.setArray(
-                            5,
+                            6,
                             ps.getConnection().createArrayOf(
                                     "varchar",
                                     bandNames.toArray()
                             )
                     );
-                    ps.setDouble(6, minimumWeight);
-                    ps.setInt(7, limit);
+                    ps.setDouble(7, minimumWeight);
+                    ps.setInt(8, limit);
                 },
                 (rs, rowNum) -> new ChunkAssociation(
                         source,
@@ -300,7 +307,8 @@ public class AdaptiveChunkGraphRepository {
                     source_chunk_id,
                     target_document_id,
                     target_generation,
-                    target_chunk_id
+                    target_chunk_id,
+                    graph_version
                 ) DO UPDATE SET
                     band = CASE
                         WHEN knowledge_chunk_association.band = 'HOT'
@@ -358,10 +366,6 @@ public class AdaptiveChunkGraphRepository {
                     query_support_sketch =
                         knowledge_chunk_association.query_support_sketch
                         | EXCLUDED.query_support_sketch,
-                    graph_version = greatest(
-                        knowledge_chunk_association.graph_version,
-                        EXCLUDED.graph_version
-                    ),
                     last_seen_at = greatest(
                         knowledge_chunk_association.last_seen_at,
                         EXCLUDED.last_seen_at

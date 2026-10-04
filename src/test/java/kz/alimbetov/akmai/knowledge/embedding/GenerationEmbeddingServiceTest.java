@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,34 @@ class GenerationEmbeddingServiceTest {
                 .containsExactly(0.0f, 1.0f, 2.0f);
         assertThat(result.get(129))
                 .containsExactly(129.0f, 130.0f, 131.0f);
+    }
+
+    @Test
+    void invokesHeartbeatBeforeEveryBatchAndAfterEmbedding() {
+        EmbeddingModel model = mock(EmbeddingModel.class);
+        when(model.embed(anyList())).thenAnswer(invocation -> {
+            List<String> texts = invocation.getArgument(0);
+            return texts.stream()
+                    .map(text -> new float[] {1f, 2f, 3f})
+                    .toList();
+        });
+        GenerationEmbeddingService service =
+                new GenerationEmbeddingService(model, 2);
+        AtomicInteger heartbeats = new AtomicInteger();
+
+        service.embed(
+                List.of(
+                        projection(0),
+                        projection(1),
+                        projection(2),
+                        projection(3),
+                        projection(4)
+                ),
+                profile(),
+                heartbeats::incrementAndGet
+        );
+
+        assertThat(heartbeats.get()).isEqualTo(4);
     }
 
     private SearchProjection projection(int index) {

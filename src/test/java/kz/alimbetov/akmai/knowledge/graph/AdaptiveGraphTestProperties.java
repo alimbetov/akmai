@@ -43,7 +43,10 @@ final class AdaptiveGraphTestProperties {
                         0.35,
                         0.20,
                         0.65,
-                        0.50
+                        0.50,
+                        2,
+                        4,
+                        1
                 ),
                 new AdaptiveGraphProperties.Maintenance(
                         100,

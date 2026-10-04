@@ -19,8 +19,15 @@ jobs:
       - name: Formatting
         run: mvn -B spotless:check
 
-      - name: Production retrieval quality and routing
+      - name: Production retrieval quality, graph replay and routing
         run: >
           mvn -B
-          -Dtest=QueryLanguageDetectorTest,MultilingualChunkingRulesTest,MultilingualRetrievalQualityRegressionTest,PublishedVectorSearchIntegrationTest,PostgresRetrievalIntegrationTest
+          -Dtest=QueryLanguageDetectorTest,MultilingualChunkingRulesTest,MultilingualRetrievalQualityRegressionTest,PublishedVectorSearchIntegrationTest,PostgresRetrievalIntegrationTest,AdaptiveGraphScoreCalculatorTest,AssociationLearningRecorderTest,AdaptiveGraphReplayUtilityTest,AdaptiveGraphThresholdCalibratorTest,GraphReplayHarnessTest,AdaptiveGraphReplayQualityGateTest
           test
+
+      - name: Upload adaptive graph replay report
+        uses: actions/upload-artifact@v4
+        with:
+          name: adaptive-graph-replay-report
+          path: target/quality/adaptive-graph-replay-report.json
+          if-no-files-found: error

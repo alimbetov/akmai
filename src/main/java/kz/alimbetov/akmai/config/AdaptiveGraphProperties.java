@@ -22,6 +22,7 @@ public record AdaptiveGraphProperties(
 ) {
 
     private static final int STORAGE_HASH_BUCKETS_V1 = 32;
+    private static final int QUERY_SUPPORT_BUCKETS = 256;
 
     @ConstructorBinding
     public AdaptiveGraphProperties {
@@ -184,7 +185,10 @@ public record AdaptiveGraphProperties(
             double promoteWarm,
             double demoteWarm,
             double promoteHot,
-            double demoteHot
+            double demoteHot,
+            int minimumDistinctQuerySupportWarm,
+            int minimumDistinctQuerySupportHot,
+            int minimumCitationCountHot
     ) {
         public Scoring {
             positiveFinite("distinctQueryWeight", distinctQueryWeight);
@@ -202,6 +206,24 @@ public record AdaptiveGraphProperties(
             bounded("promoteWarm", promoteWarm);
             bounded("demoteHot", demoteHot);
             bounded("promoteHot", promoteHot);
+            boundedInt(
+                    "minimumDistinctQuerySupportWarm",
+                    minimumDistinctQuerySupportWarm,
+                    1,
+                    QUERY_SUPPORT_BUCKETS
+            );
+            boundedInt(
+                    "minimumDistinctQuerySupportHot",
+                    minimumDistinctQuerySupportHot,
+                    minimumDistinctQuerySupportWarm,
+                    QUERY_SUPPORT_BUCKETS
+            );
+            boundedInt(
+                    "minimumCitationCountHot",
+                    minimumCitationCountHot,
+                    1,
+                    Integer.MAX_VALUE
+            );
 
             if (!(demoteWarm < promoteWarm
                     && promoteWarm < demoteHot
@@ -229,6 +251,25 @@ public record AdaptiveGraphProperties(
                         "adaptive-graph "
                                 + name
                                 + " must be finite and positive"
+                );
+            }
+        }
+
+        private static void boundedInt(
+                String name,
+                int value,
+                int minimum,
+                int maximum
+        ) {
+            if (value < minimum || value > maximum) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph "
+                                + name
+                                + " must be in ["
+                                + minimum
+                                + ", "
+                                + maximum
+                                + "]"
                 );
             }
         }

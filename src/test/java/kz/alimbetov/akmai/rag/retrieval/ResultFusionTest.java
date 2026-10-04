@@ -2,9 +2,7 @@ package kz.alimbetov.akmai.rag.retrieval;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anySet;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -27,21 +25,19 @@ class ResultFusionTest {
     void setUp() {
         PublishedSearchProjectionReader repository =
                 mock(PublishedSearchProjectionReader.class);
-        when(repository.findByDocumentGenerationAndChunkIds(
-                anyString(),
-                anyLong(),
+        when(repository.findPublishedByKeys(
                 anyList(),
                 anySet()
         )).thenAnswer(invocation -> {
-            String documentId = invocation.getArgument(0);
-            long generation = invocation.getArgument(1);
-            List<String> chunkIds = invocation.getArgument(2);
-            return chunkIds.stream()
-                    .map(chunkId -> projection(
-                            documentId,
-                            generation,
-                            chunkId,
-                            chunkId
+            List<PublishedSearchProjectionReader.ProjectionKey> keys =
+                    invocation.getArgument(0);
+            return keys.stream()
+                    .map(key -> projection(
+                            key.accessLevel(),
+                            key.documentId(),
+                            key.generation(),
+                            key.chunkId(),
+                            key.chunkId()
                     ))
                     .toList();
         });
@@ -88,25 +84,24 @@ class ResultFusionTest {
     void exactAuthorityTierSortsAheadOfSemanticEvidence() {
         RetrievalHit semantic = new RetrievalHit(
                 RetrievalType.VECTOR,
+                1L,
                 "doc",
+                1L,
                 "semantic",
                 "semantic",
                 Map.of(
                         "queryChunkId", "q1",
-                        "authorityTier", 2,
-                        "generation", 1L
+                        "authorityTier", 0
                 )
         );
         RetrievalHit exact = new RetrievalHit(
                 RetrievalType.IDENTIFIER,
+                1L,
                 "doc",
+                1L,
                 "exact",
                 "exact",
-                Map.of(
-                        "queryChunkId", "q1",
-                        "authorityTier", 0,
-                        "generation", 1L
-                )
+                Map.of("queryChunkId", "q1")
         );
 
         assertThat(fusion.fuse(List.of(semantic, exact), ACCESS)
@@ -118,17 +113,21 @@ class ResultFusionTest {
     void fusionKeyIncludesDocumentId() {
         RetrievalHit first = new RetrievalHit(
                 RetrievalType.LEXICAL,
+                1L,
                 "doc-a",
+                1L,
                 "same",
                 "a",
-                Map.of("queryChunkId", "q1", "generation", 1L)
+                Map.of("queryChunkId", "q1")
         );
         RetrievalHit second = new RetrievalHit(
                 RetrievalType.LEXICAL,
+                1L,
                 "doc-b",
+                1L,
                 "same",
                 "b",
-                Map.of("queryChunkId", "q1", "generation", 1L)
+                Map.of("queryChunkId", "q1")
         );
 
         assertThat(fusion.fuse(List.of(first, second), ACCESS)).hasSize(2);
@@ -139,15 +138,19 @@ class ResultFusionTest {
         PublishedSearchProjectionReader repository =
                 mock(PublishedSearchProjectionReader.class);
         SearchProjection canonical = projection(
+                1L,
                 "doc",
                 2L,
                 "chunk-1",
                 "FULL CANONICAL TEXT"
         );
-        when(repository.findByDocumentGenerationAndChunkIds(
-                "doc",
-                2L,
-                List.of("chunk-1"),
+        when(repository.findPublishedByKeys(
+                List.of(new PublishedSearchProjectionReader.ProjectionKey(
+                        1L,
+                        "doc",
+                        2L,
+                        "chunk-1"
+                )),
                 ACCESS
         )).thenReturn(List.of(canonical));
         ResultFusion local = new ResultFusion(
@@ -156,14 +159,12 @@ class ResultFusionTest {
         );
         RetrievalHit snippet = new RetrievalHit(
                 RetrievalType.IDENTIFIER,
+                1L,
                 "doc",
+                2L,
                 "chunk-1",
                 "short identifier snippet",
-                Map.of(
-                        "queryChunkId", "q1",
-                        "authorityTier", 0,
-                        "generation", 2L
-                )
+                Map.of("queryChunkId", "q1")
         );
 
         RetrievalHit fused = local.fuse(List.of(snippet), ACCESS).getFirst();
@@ -178,10 +179,13 @@ class ResultFusionTest {
     void staleGenerationIsDroppedInsteadOfReadingNewPublication() {
         PublishedSearchProjectionReader repository =
                 mock(PublishedSearchProjectionReader.class);
-        when(repository.findByDocumentGenerationAndChunkIds(
-                "doc",
-                1L,
-                List.of("chunk-1"),
+        when(repository.findPublishedByKeys(
+                List.of(new PublishedSearchProjectionReader.ProjectionKey(
+                        1L,
+                        "doc",
+                        1L,
+                        "chunk-1"
+                )),
                 ACCESS
         )).thenReturn(List.of());
 
@@ -191,13 +195,90 @@ class ResultFusionTest {
         );
         RetrievalHit stale = new RetrievalHit(
                 RetrievalType.VECTOR,
+                1L,
                 "doc",
+                1L,
                 "chunk-1",
                 "generation one text",
-                Map.of("queryChunkId", "q1", "generation", 1L)
+                Map.of("queryChunkId", "q1")
         );
 
         assertThat(local.fuse(List.of(stale), ACCESS)).isEmpty();
+    }
+
+    @Test
+    void userAuthorityMetadataCannotElevateSemanticHit() {
+        RetrievalHit injected = new RetrievalHit(
+                RetrievalType.VECTOR,
+                1L,
+                "doc",
+                1L,
+                "semantic",
+                "semantic",
+                Map.of(
+                        "queryChunkId", "q1",
+                        "authorityTier", 0,
+                        "authority", "EXACT_REFERENCE"
+                )
+        );
+        RetrievalHit normal = hit(RetrievalType.LEXICAL, "normal");
+
+        List<RetrievalHit> fused = fusion.fuse(
+                List.of(injected, normal),
+                ACCESS
+        );
+
+        assertThat(fused)
+                .allSatisfy(value ->
+                        assertThat(value.metadata().get("authorityTier"))
+                                .isEqualTo(2)
+                );
+    }
+
+    @Test
+    void staleHitDoesNotConsumeRankOfCanonicalResult() {
+        PublishedSearchProjectionReader repository =
+                mock(PublishedSearchProjectionReader.class);
+        when(repository.findPublishedByKeys(anyList(), anySet()))
+                .thenReturn(List.of(
+                        projection(
+                                1L,
+                                "doc",
+                                2L,
+                                "fresh",
+                                "fresh"
+                        )
+                ));
+        ResultFusion local = new ResultFusion(
+                RetrievalTestProperties.defaults(),
+                repository
+        );
+
+        RetrievalHit stale = new RetrievalHit(
+                RetrievalType.VECTOR,
+                1L,
+                "doc",
+                1L,
+                "stale",
+                "stale",
+                Map.of("queryChunkId", "q1")
+        );
+        RetrievalHit fresh = new RetrievalHit(
+                RetrievalType.VECTOR,
+                1L,
+                "doc",
+                2L,
+                "fresh",
+                "fresh",
+                Map.of("queryChunkId", "q1")
+        );
+
+        RetrievalHit fused = local.fuse(
+                List.of(stale, fresh),
+                ACCESS
+        ).getFirst();
+
+        assertThat(fused.evidence().getFirst().rank()).isEqualTo(1);
     }
 
     private RetrievalHit hit(RetrievalType type, String chunkId) {
@@ -211,17 +292,17 @@ class ResultFusionTest {
     ) {
         return new RetrievalHit(
                 type,
+                1L,
                 "doc",
+                1L,
                 chunkId,
                 chunkId,
-                Map.of(
-                        "queryChunkId", queryChunkId,
-                        "generation", 1L
-                )
+                Map.of("queryChunkId", queryChunkId)
         );
     }
 
     private SearchProjection projection(
+            long accessLevel,
             String documentId,
             long generation,
             String chunkId,
@@ -231,6 +312,7 @@ class ResultFusionTest {
                 chunkId,
                 documentId,
                 generation,
+                accessLevel,
                 null,
                 4,
                 text,

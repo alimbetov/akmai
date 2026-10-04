@@ -2,7 +2,10 @@ package kz.alimbetov.akmai.rag.service;
 
 import java.util.List;
 import java.util.Set;
+import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphCompetitiveAdmission;
+import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphOnlineExpansion;
 import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphShadowExpansion;
+import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphUtilityRecorder;
 import kz.alimbetov.akmai.knowledge.graph.AssociationLearningRecorder;
 import kz.alimbetov.akmai.rag.api.RagResponse;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
@@ -12,13 +15,16 @@ import kz.alimbetov.akmai.rag.retrieval.ContextBudget;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.KnowledgeExpansion;
 import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
+import kz.alimbetov.akmai.rag.retrieval.PublishedContextRevalidator;
 import kz.alimbetov.akmai.rag.retrieval.Reranker;
 import kz.alimbetov.akmai.rag.retrieval.ResultFusion;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalExecutionResult;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlanner;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionException;
 
 @Service
 public class RagQuestionService {
@@ -33,11 +39,15 @@ public class RagQuestionService {
     private final Reranker reranker;
     private final KnowledgeExpansion knowledgeExpansion;
     private final ContextBudget contextBudget;
+    private final PublishedContextRevalidator contextRevalidator;
     private final ContextAssembler contextAssembler;
     private final CitationValidator citationValidator;
     private final AnswerGenerationService answerGenerationService;
     private final AssociationLearningRecorder associationLearningRecorder;
     private final AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion;
+    private final AdaptiveGraphOnlineExpansion adaptiveGraphOnlineExpansion;
+    private final AdaptiveGraphCompetitiveAdmission adaptiveGraphCompetitiveAdmission;
+    private final AdaptiveGraphUtilityRecorder adaptiveGraphUtilityRecorder;
 
     public RagQuestionService(
             QueryChunker queryChunker,
@@ -47,11 +57,15 @@ public class RagQuestionService {
             Reranker reranker,
             KnowledgeExpansion knowledgeExpansion,
             ContextBudget contextBudget,
+            PublishedContextRevalidator contextRevalidator,
             ContextAssembler contextAssembler,
             CitationValidator citationValidator,
             AnswerGenerationService answerGenerationService,
             AssociationLearningRecorder associationLearningRecorder,
-            AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion
+            AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion,
+            AdaptiveGraphOnlineExpansion adaptiveGraphOnlineExpansion,
+            AdaptiveGraphCompetitiveAdmission adaptiveGraphCompetitiveAdmission,
+            AdaptiveGraphUtilityRecorder adaptiveGraphUtilityRecorder
     ) {
         this.queryChunker = queryChunker;
         this.retrievalPlanner = retrievalPlanner;
@@ -60,11 +74,16 @@ public class RagQuestionService {
         this.reranker = reranker;
         this.knowledgeExpansion = knowledgeExpansion;
         this.contextBudget = contextBudget;
+        this.contextRevalidator = contextRevalidator;
         this.contextAssembler = contextAssembler;
         this.citationValidator = citationValidator;
         this.answerGenerationService = answerGenerationService;
         this.associationLearningRecorder = associationLearningRecorder;
         this.adaptiveGraphShadowExpansion = adaptiveGraphShadowExpansion;
+        this.adaptiveGraphOnlineExpansion = adaptiveGraphOnlineExpansion;
+        this.adaptiveGraphCompetitiveAdmission =
+                adaptiveGraphCompetitiveAdmission;
+        this.adaptiveGraphUtilityRecorder = adaptiveGraphUtilityRecorder;
     }
 
     public RagResponse ask(String question, Set<Long> accessLevels) {
@@ -83,27 +102,55 @@ public class RagQuestionService {
             );
         }
 
-        List<RetrievalHit> fused = resultFusion.fuse(execution.hits(), accessLevels);
-        List<RetrievalHit> ranked = reranker.rerank(fused, question);
-        List<RetrievalHit> expanded = knowledgeExpansion.expand(ranked, accessLevels);
+        List<RetrievalHit> finalContext;
+        try {
+            List<RetrievalHit> fused =
+                    resultFusion.fuse(execution.hits(), accessLevels);
+            List<RetrievalHit> ranked =
+                    reranker.rerank(fused, question);
+            List<RetrievalHit> expanded =
+                    knowledgeExpansion.expand(ranked, accessLevels);
 
-        adaptiveGraphShadowExpansion.observe(
-                ranked,
-                expanded,
-                accessLevels
-        );
+            AdaptiveGraphShadowExpansion.ShadowExpansionReport graphReport =
+                    adaptiveGraphShadowExpansion.observe(
+                            ranked,
+                            expanded,
+                            accessLevels
+                    );
+            List<RetrievalHit> graphExpanded =
+                    adaptiveGraphOnlineExpansion.expand(
+                            expanded,
+                            graphReport,
+                            accessLevels
+                    );
+            List<RetrievalHit> competitive =
+                    adaptiveGraphCompetitiveAdmission.admit(
+                            graphExpanded
+                    );
 
-        List<RetrievalHit> bounded = contextBudget.apply(expanded, question);
+            List<RetrievalHit> bounded =
+                    contextBudget.apply(competitive, question);
+            finalContext = contextRevalidator.revalidate(
+                    bounded,
+                    accessLevels
+            );
+        } catch (DataAccessException | TransactionException exception) {
+            throw new RetrievalUnavailableException(
+                    "Knowledge retrieval is temporarily unavailable",
+                    exception
+            );
+        }
 
-        if (bounded.isEmpty()) {
+        if (finalContext.isEmpty()) {
             return insufficientInformation();
         }
 
-        String context = contextAssembler.assemble(bounded);
+        String context = contextAssembler.assemble(finalContext);
         String answer = answerGenerationService.generate(question, context);
 
         CitationValidator.CitationValidation validation =
-                citationValidator.validate(answer, bounded);
+                citationValidator.validate(answer, finalContext);
+        adaptiveGraphUtilityRecorder.record(finalContext, validation);
 
         if (validation.answer().isBlank()
                 || validation.citedSources().isEmpty()) {
@@ -113,7 +160,7 @@ public class RagQuestionService {
         associationLearningRecorder.record(
                 queryChunks,
                 accessLevels,
-                bounded,
+                finalContext,
                 validation
         );
 

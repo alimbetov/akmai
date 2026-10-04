@@ -118,15 +118,10 @@ public class ApiRequestValidator {
             for (Map.Entry<?, ?> entry : map.entrySet()) {
                 String key = String.valueOf(entry.getKey());
                 String normalizedKey = key.toLowerCase(Locale.ROOT);
-                if (normalizedKey.startsWith("akmai")) {
+                if (DocumentMetadata.isReservedUserKey(normalizedKey)) {
                     throw new ApiValidationException(
-                            "metadata keys beginning with 'akmai' are reserved"
-                    );
-                }
-                if (DocumentMetadata.ACCESS_LEVEL.equals(normalizedKey)) {
-                    throw new ApiValidationException(
-                            "metadata key '" + DocumentMetadata.ACCESS_LEVEL
-                                    + "' is reserved; use accessLevel"
+                            "metadata key '" + key
+                                    + "' is reserved for runtime control"
                     );
                 }
                 MetadataStats nested = inspect(entry.getValue(), depth + 1);
