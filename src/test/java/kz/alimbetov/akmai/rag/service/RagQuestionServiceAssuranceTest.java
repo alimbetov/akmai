@@ -181,6 +181,9 @@ class RagQuestionServiceAssuranceTest {
 
         RagQuestionService service = new RagQuestionService(
                 chunker,
+                new RagFallbackMessages(
+                        new kz.alimbetov.akmai.rag.query.QueryLanguageDetector()
+                ),
                 planner,
                 executor,
                 fusion,
