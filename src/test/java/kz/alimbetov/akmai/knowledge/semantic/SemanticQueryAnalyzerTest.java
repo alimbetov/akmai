@@ -2,7 +2,6 @@ package kz.alimbetov.akmai.knowledge.semantic;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
 import kz.alimbetov.akmai.rag.query.QueryLanguageDetector;
 import org.junit.jupiter.api.Test;
 
