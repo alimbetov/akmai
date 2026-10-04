@@ -15,19 +15,22 @@ class SemanticMorphologyRegistryTest {
                         List.of(
                                 new EnglishSemanticMorphologyNormalizer(),
                                 new RussianSemanticMorphologyNormalizer(),
-                                new KazakhSemanticMorphologyNormalizer()
+                                new KazakhSemanticMorphologyNormalizer(),
+                                new ChineseSemanticMorphologyNormalizer()
                         )
                 );
 
         assertThat(registry.supports("en")).isTrue();
         assertThat(registry.supports("ru")).isTrue();
         assertThat(registry.supports("kk")).isTrue();
-        assertThat(registry.supports("zh")).isFalse();
+        assertThat(registry.supports("zh")).isTrue();
+        assertThat(registry.supports("de")).isFalse();
         assertThat(registry.require("en").language()).isEqualTo("en");
         assertThat(registry.require("ru").language()).isEqualTo("ru");
         assertThat(registry.require("kk").language()).isEqualTo("kk");
+        assertThat(registry.require("zh").language()).isEqualTo("zh");
 
-        assertThatThrownBy(() -> registry.require("zh"))
+        assertThatThrownBy(() -> registry.require("de"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("No semantic morphology normalizer");
     }
