@@ -79,6 +79,66 @@ class MultilingualSemanticConceptAnnotationTest {
                 );
     }
 
+    @Test
+    void europeanAndTurkishGreekChunksPersistCanonicalMetadata() {
+        List<LanguageCase> cases = List.of(
+                new LanguageCase(
+                        "de",
+                        "Die Kapitaladäquanzquote bleibt stabil.",
+                        "semantic-surfaces-de-v1"
+                ),
+                new LanguageCase(
+                        "fr",
+                        "Le ratio adéquation des fonds propres reste solide.",
+                        "semantic-surfaces-fr-v1"
+                ),
+                new LanguageCase(
+                        "es",
+                        "El ratio de adecuación de capital sigue estable.",
+                        "semantic-surfaces-es-v1"
+                ),
+                new LanguageCase(
+                        "pt",
+                        "O índice de adequação de capital permanece sólido.",
+                        "semantic-surfaces-pt-v1"
+                ),
+                new LanguageCase(
+                        "it",
+                        "Il coefficiente di adeguatezza patrimoniale resta solido.",
+                        "semantic-surfaces-it-v1"
+                ),
+                new LanguageCase(
+                        "tr",
+                        "Sermaye yeterlilik oranı güçlü kalmaktadır.",
+                        "semantic-surfaces-tr-v1"
+                ),
+                new LanguageCase(
+                        "el",
+                        "Ο δείκτης κεφαλαιακής επάρκειας παραμένει ισχυρός.",
+                        "semantic-surfaces-el-v1"
+                )
+        );
+
+        for (LanguageCase value : cases) {
+            KnowledgeChunk annotated = annotator.annotate(
+                    chunk(value.text(), value.language())
+            );
+
+            assertThat(annotated.metadata().get("semanticConcepts"))
+                    .as(value.language())
+                    .asList()
+                    .contains(
+                            "finance_banking.risk_capital.capital_adequacy_ratio"
+                    );
+            assertThat(annotated.metadata())
+                    .as(value.language())
+                    .containsEntry(
+                            "semanticConceptVersion",
+                            value.version()
+                    );
+        }
+    }
+
     private SemanticConceptMatcher matcher() {
         SemanticMorphologyRegistry morphology =
                 SemanticTestMorphology.registry();
@@ -91,6 +151,13 @@ class MultilingualSemanticConceptAnnotationTest {
                 ),
                 morphology
         );
+    }
+
+    private record LanguageCase(
+            String language,
+            String text,
+            String version
+    ) {
     }
 
     private KnowledgeChunk chunk(String text, String language) {
