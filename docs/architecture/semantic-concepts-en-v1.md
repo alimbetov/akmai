@@ -184,3 +184,54 @@ EXCLUDES
 
 That layer should be added only after retrieval tests show that phrase concepts
 improve precision without harming recall.
+
+
+## Staged lexical retrieval integration
+
+The first retrieval rollout uses canonical concepts as a bounded lexical
+normalization signal for only the three initial languages:
+
+```text
+en
+ru
+kk
+```
+
+The original lexical query is always executed first. When morphology or an
+alias resolves the query to a canonical concept whose preferred phrase is not
+already present in the query, lexical retrieval may run up to two additional
+canonical-phrase searches.
+
+Semantic expansion is deliberately quota bounded:
+
+```text
+maximum semantic query expansions = 2
+maximum semantic result slots      = 2
+```
+
+The merged result preserves the baseline lexical ranking and reserves only a
+small tail quota for new semantic hits. The other production languages keep
+their existing lexical behavior in this rollout.
+
+Generated >1000-term domain lexicons are not injected into FTS queries. They
+remain low-confidence enrichment data; using them as unrestricted query
+expansion would increase false-positive and latency risk.
+
+## Semantic golden set
+
+A deterministic golden set contains 120 query cases:
+
+```text
+40 English
+40 Russian
+40 Kazakh
+```
+
+The 40 canonical concepts are stratified across all 16 root semantic domains.
+Each case carries the expected language-independent `conceptId`, and the
+retrieval quality workflow requires the production `SemanticQueryAnalyzer`
+to resolve it correctly.
+
+This golden set is a query-understanding regression contract. It does not by
+itself prove a production recall percentage; retrieval lift must be measured
+against a corpus-backed benchmark with expected chunks/documents.
