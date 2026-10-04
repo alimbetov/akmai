@@ -44,6 +44,10 @@ class AdaptiveGraphThresholdCalibratorTest {
         assertThat(report.selectedThreshold().threshold())
                 .isEqualTo(0.50);
         assertThat(report.selectedThreshold().gatePassed()).isTrue();
+        assertThat(report.targetParameter())
+                .isEqualTo(
+                        "akmai.adaptive-graph.competition.min-graph-score"
+                );
     }
 
     @Test
@@ -91,6 +95,10 @@ class AdaptiveGraphThresholdCalibratorTest {
                 .isEqualTo(
                         AdaptiveGraphThresholdCalibrator
                                 .ReplayDecision.REJECTED
+                );
+        assertThat(passing.targetParameter())
+                .isEqualTo(
+                        "akmai.adaptive-graph.competition.min-graph-score"
                 );
     }
 
