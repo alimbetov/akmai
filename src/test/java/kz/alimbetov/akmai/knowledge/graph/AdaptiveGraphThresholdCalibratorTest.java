@@ -48,7 +48,7 @@ class AdaptiveGraphThresholdCalibratorTest {
 
     @Test
     void independentReplayMustPassBeforeCanaryEligibility() {
-        AdaptiveGraphThresholdCalibrator.ReplayGateReport passing =
+        AdaptiveGraphThresholdCalibrator.ReplayValidationReport passing =
                 calibrator.validateReplay(
                         List.of(
                                 observation("h1", 0.50, 0.10, 3.0),
@@ -61,7 +61,7 @@ class AdaptiveGraphThresholdCalibratorTest {
                         policy()
                 );
 
-        AdaptiveGraphThresholdCalibrator.ReplayGateReport failing =
+        AdaptiveGraphThresholdCalibrator.ReplayValidationReport failing =
                 calibrator.validateReplay(
                         List.of(
                                 observation("h1", 0.50, -0.12, 3.0),
@@ -77,18 +77,18 @@ class AdaptiveGraphThresholdCalibratorTest {
         assertThat(passing.decision())
                 .isEqualTo(
                         AdaptiveGraphThresholdCalibrator
-                                .GateDecision.CANARY_ELIGIBLE
+                                .ReplayDecision.QUALITY_GATE_CANDIDATE
                 );
         assertThat(failing.decision())
                 .isEqualTo(
                         AdaptiveGraphThresholdCalibrator
-                                .GateDecision.REJECTED
+                                .ReplayDecision.REJECTED
                 );
     }
 
     @Test
     void safetyViolationBlocksOtherwiseUsefulThreshold() {
-        AdaptiveGraphThresholdCalibrator.ReplayGateReport report =
+        AdaptiveGraphThresholdCalibrator.ReplayValidationReport report =
                 calibrator.validateReplay(
                         List.of(
                                 observation("h1", 0.50, 0.10, 3.0),
@@ -113,7 +113,7 @@ class AdaptiveGraphThresholdCalibratorTest {
         assertThat(report.decision())
                 .isEqualTo(
                         AdaptiveGraphThresholdCalibrator
-                                .GateDecision.REJECTED
+                                .ReplayDecision.REJECTED
                 );
     }
 
