@@ -60,6 +60,48 @@ class IndustryProfileSemanticRulesTest {
         );
     }
 
+    @org.junit.jupiter.api.Test
+    void specializedRulesDoNotMatchUnrelatedNearMisses() {
+        assertNoType(
+                "banking",
+                "en",
+                "The capital city published a general report."
+        );
+        assertNoType(
+                "pharmacology",
+                "en",
+                "The tablet package contains a patient leaflet."
+        );
+        assertNoType(
+                "cybersecurity",
+                "en",
+                "The user opens the application dashboard."
+        );
+        assertNoType(
+                "public_administration",
+                "en",
+                "The administrative procedure is described below."
+        );
+    }
+
+    private void assertNoType(
+            String profileId,
+            String language,
+            String text
+    ) {
+        IndustryProfile profile = profiles.stream()
+                .filter(value -> value.code().id().equals(profileId))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(profile.classifyType(
+                text,
+                LanguageProfiles.forCode(language)
+        ))
+                .as(profileId + "/" + language)
+                .isEmpty();
+    }
+
     private void assertType(
             String profileId,
             String language,
