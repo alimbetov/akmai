@@ -26,6 +26,7 @@ final class GenericIndustryProfile implements IndustryProfile {
                     "industry definition must not be null"
             );
         }
+        validateNames(definition.names());
         this.code = new IndustryCode(
                 definition.id(),
                 definition.domain(),
@@ -134,6 +135,24 @@ final class GenericIndustryProfile implements IndustryProfile {
             result.put(language, Map.copyOf(compiled));
         });
         return Map.copyOf(result);
+    }
+
+    private void validateNames(Map<String, String> names) {
+        List<String> missing = java.util.Arrays.stream(
+                        KnowledgeLanguage.values()
+                )
+                .filter(language -> language != KnowledgeLanguage.UNKNOWN)
+                .map(KnowledgeLanguage::code)
+                .filter(code -> names == null
+                        || names.get(code) == null
+                        || names.get(code).isBlank())
+                .toList();
+        if (!missing.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "industry profile must define names for all supported languages; missing="
+                            + missing
+            );
+        }
     }
 
     private void validateLanguageKey(String language) {
