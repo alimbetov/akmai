@@ -109,14 +109,7 @@ class SemanticQueryAnalyzerTest {
         EnglishSemanticConceptCatalog conceptCatalog =
                 new EnglishSemanticConceptCatalog(domainCatalog);
         SemanticMorphologyRegistry morphology =
-                new SemanticMorphologyRegistry(
-                        List.of(
-                                new EnglishSemanticMorphologyNormalizer(),
-                                new RussianSemanticMorphologyNormalizer(),
-                                new KazakhSemanticMorphologyNormalizer(),
-                                new ChineseSemanticMorphologyNormalizer()
-                        )
-                );
+                SemanticTestMorphology.registry();
         SemanticConceptMatcher matcher =
                 new SemanticConceptMatcher(
                         new SemanticConceptSurfaceRegistry(
