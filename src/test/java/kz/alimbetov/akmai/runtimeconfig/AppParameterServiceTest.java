@@ -131,6 +131,34 @@ class AppParameterServiceTest {
     }
 
     @Test
+    void runtimeReadKeepsLastKnownGoodValueDuringDatabaseOutage() {
+        AppParameterRepository repository =
+                mock(AppParameterRepository.class);
+        AppParameterKey key =
+                AppParameterKey.ADAPTIVE_GRAPH_COMPETITION_ENABLED;
+        AppParameter persisted = parameter(key, true, 4L);
+        when(repository.find(key.key()))
+                .thenReturn(Optional.of(persisted))
+                .thenThrow(new DataAccessResourceFailureException("down"));
+
+        AppParameterService service = service(
+                repository,
+                mock(AdaptiveGraphProperties.class),
+                mock(AdaptiveGraphCompetitionProperties.class)
+        );
+
+        assertThat(service.get(key).value()).isTrue();
+        service.invalidateAll();
+
+        ResolvedAppParameter duringOutage = service.get(key);
+
+        assertThat(duringOutage.value()).isTrue();
+        assertThat(duringOutage.version()).isEqualTo(4L);
+        assertThat(duringOutage.source())
+                .isEqualTo(AppParameterSource.DATABASE);
+    }
+
+    @Test
     void authoritativeAdminReadDoesNotHideDatabaseFailure() {
         AppParameterRepository repository =
                 mock(AppParameterRepository.class);
