@@ -4,6 +4,7 @@ public enum RetrievalType {
     IDENTIFIER,
     VECTOR,
     LEXICAL,
+    CONCEPT,
     REFERENCE,
     GRAPH
 }
