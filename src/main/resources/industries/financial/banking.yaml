@@ -1,0 +1,49 @@
+id: banking
+domain: FINANCIAL
+names:
+  kk: Банк ісі
+  ru: Банковское дело
+  en: Banking
+  zh: 银行业务
+  de: Bankwesen
+  fr: Banque
+  es: Banca
+  pt: Atividade bancária
+  it: Attività bancaria
+  tr: Bankacılık
+  el: Τραπεζική
+headings: {}
+semanticTypes:
+  kk:
+    RULE:
+      - '(?iu)(капиталдың жеткіліктілігі|несиелік лимит|сыйақы мөлшерлемесі)'
+  ru:
+    RULE:
+      - '(?iu)(достаточност[ьи] капитала|кредитн(?:ый|ого) лимит|процентн(?:ая|ой) ставк)'
+  en:
+    RULE:
+      - '(?iu)(capital adequacy|credit limit|interest rate)'
+  zh:
+    RULE:
+      - '(资本充足率|授信额度|利率)'
+  de:
+    RULE:
+      - '(?iu)(kapitaladäquanz|kreditlimit|zinssatz)'
+  fr:
+    RULE:
+      - "(?iu)(adéquation des fonds propres|limite de crédit|taux d'intérêt)"
+  es:
+    RULE:
+      - '(?iu)(adecuación de capital|límite de crédito|tasa de interés)'
+  pt:
+    RULE:
+      - '(?iu)(adequação de capital|limite de crédito|taxa de juro|taxa de juros)'
+  it:
+    RULE:
+      - '(?iu)(adeguatezza patrimoniale|limite di credito|tasso di interesse)'
+  tr:
+    RULE:
+      - '(?iu)(sermaye yeterliliği|kredi limiti|faiz oranı)'
+  el:
+    RULE:
+      - '(?iu)(κεφαλαιακή επάρκεια|πιστωτικό όριο|επιτόκιο)'
