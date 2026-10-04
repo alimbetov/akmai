@@ -10,7 +10,7 @@ import java.util.Set;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
-import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
+import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphLookupReader;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +27,7 @@ class ReferenceRetrievalStrategyTest {
     private PublishedSearchProjectionReader projectionRepository;
 
     @Mock
-    private ReferenceGraphRepository referenceGraphRepository;
+    private ReferenceGraphLookupReader referenceGraphRepository;
 
     @Test
     void resolvesPublishedSameDocumentReferenceToCanonicalTarget() {
@@ -104,10 +104,12 @@ class ReferenceRetrievalStrategyTest {
                         seed("seed-1"),
                         new RetrievalHit(
                                 RetrievalType.VECTOR,
+                                1L,
                                 "doc",
+                                GENERATION,
                                 "seed-2",
                                 "seed two",
-                                Map.of("generation", GENERATION)
+                                Map.of()
                         )
                 ), ACCESS)
         );
@@ -186,7 +188,9 @@ class ReferenceRetrievalStrategyTest {
                 new QueryChunk("q", 0, "q", "q", "q", "ru", List.of()),
                 new RetrievalContext(List.of(new RetrievalHit(
                         RetrievalType.LEXICAL,
+                        1L,
                         "doc",
+                        0L,
                         "seed",
                         "seed",
                         Map.of()
@@ -199,10 +203,12 @@ class ReferenceRetrievalStrategyTest {
     private RetrievalHit seed(String chunkId) {
         return new RetrievalHit(
                 RetrievalType.LEXICAL,
+                1L,
                 "doc",
+                GENERATION,
                 chunkId,
                 "seed text",
-                Map.of("generation", GENERATION)
+                Map.of()
         );
     }
 
@@ -211,6 +217,7 @@ class ReferenceRetrievalStrategyTest {
                 chunkId,
                 "doc",
                 GENERATION,
+                1L,
                 null,
                 1,
                 text,
