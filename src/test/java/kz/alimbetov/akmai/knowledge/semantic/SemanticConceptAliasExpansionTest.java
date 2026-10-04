@@ -5,8 +5,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -69,6 +72,38 @@ class SemanticConceptAliasExpansionTest {
     }
 
     @Test
+    void aliasesDoNotCreateCrossConceptSurfaceCollisions() {
+        SemanticMorphologyRegistry morphology =
+                SemanticTestMorphology.registry();
+        SemanticConceptSurfaceRegistry registry =
+                new SemanticConceptSurfaceRegistry(
+                        conceptCatalog,
+                        morphology
+                );
+
+        for (String language : CORE_LANGUAGES) {
+            Map<String, Set<String>> owners = new LinkedHashMap<>();
+            for (SemanticConceptSurface surface :
+                    registry.surfaces(language)) {
+                register(
+                        owners,
+                        surface.preferredPhrase(),
+                        surface.conceptId()
+                );
+                for (String alias : surface.aliases()) {
+                    register(owners, alias, surface.conceptId());
+                }
+            }
+
+            assertThat(owners.entrySet().stream()
+                    .filter(entry -> entry.getValue().size() > 1)
+                    .toList())
+                    .as(language + " semantic surface collisions")
+                    .isEmpty();
+        }
+    }
+
+    @Test
     void aliasesResolveToStableCanonicalConceptsAcrossCoreLanguages() {
         SemanticMorphologyRegistry morphology =
                 SemanticTestMorphology.registry();
@@ -98,6 +133,17 @@ class SemanticConceptAliasExpansionTest {
                 "kk",
                 "transport_logistics.freight_transport.freight_transportation_network"
         );
+    }
+
+    private void register(
+            Map<String, Set<String>> owners,
+            String phrase,
+            String conceptId
+    ) {
+        owners.computeIfAbsent(
+                phrase,
+                ignored -> new LinkedHashSet<>()
+        ).add(conceptId);
     }
 
     private void assertConcept(
