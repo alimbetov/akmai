@@ -5,13 +5,18 @@ import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.validation.annotation.Validated;
 
 @Validated
-@ConfigurationProperties("akmai.adaptive-graph.competition")
+@ConfigurationProperties(AdaptiveGraphCompetitionProperties.PREFIX)
 public record AdaptiveGraphCompetitionProperties(
         boolean enabled,
         int maxPromotions,
         int protectedBasePrefix,
         double minGraphScore
 ) {
+
+    public static final String PREFIX =
+            "akmai.adaptive-graph.competition";
+    public static final String MIN_GRAPH_SCORE_PROPERTY =
+            PREFIX + ".min-graph-score";
 
     @ConstructorBinding
     public AdaptiveGraphCompetitionProperties {
