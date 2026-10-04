@@ -131,6 +131,23 @@ class MultilingualSemanticConceptMatcherTest {
     }
 
     @Test
+    void portuguesePhraseMapsToCanonicalConceptId() {
+        var match = matcher.match(
+                        "O índice de adequação de capital permanece robusto.",
+                        "pt"
+                )
+                .stream()
+                .filter(value -> value.conceptId().equals(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                ))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(match.matchMode())
+                .isEqualTo(SemanticMatchMode.EXACT);
+    }
+
+    @Test
     void unsupportedLanguageCannotFallBackToAnotherSurfacePack() {
         assertThat(matcher.match(
                 "коэффициент достаточности капитала",
