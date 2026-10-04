@@ -52,6 +52,11 @@ akmai:
     shadow-expansion-enabled: ${AKMAI_ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED:false}
     expansion-enabled: ${AKMAI_ADAPTIVE_GRAPH_EXPANSION_ENABLED:false}
     graph-version: ${AKMAI_ADAPTIVE_GRAPH_VERSION:1}
+    competition:
+      enabled: ${AKMAI_ADAPTIVE_GRAPH_COMPETITION_ENABLED:false}
+      max-promotions: ${AKMAI_ADAPTIVE_GRAPH_COMPETITION_MAX_PROMOTIONS:2}
+      protected-base-prefix: ${AKMAI_ADAPTIVE_GRAPH_COMPETITION_PROTECTED_PREFIX:4}
+      min-graph-score: ${AKMAI_ADAPTIVE_GRAPH_COMPETITION_MIN_SCORE:0.70}
     learning:
       max-context-chunks: ${AKMAI_ADAPTIVE_GRAPH_LEARNING_MAX_CONTEXT_CHUNKS:8}
       max-pairs-per-request: ${AKMAI_ADAPTIVE_GRAPH_LEARNING_MAX_PAIRS:32}

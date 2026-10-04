@@ -1,16 +1,20 @@
 package kz.alimbetov.akmai.rag.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphCompetitiveAdmission;
 import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphOnlineExpansion;
 import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphShadowExpansion;
+import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphUtilityRecorder;
 import kz.alimbetov.akmai.knowledge.graph.AssociationLearningRecorder;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
@@ -49,6 +53,10 @@ class RagQuestionServiceTest {
                 mock(AdaptiveGraphShadowExpansion.class);
         AdaptiveGraphOnlineExpansion onlineExpansion =
                 mock(AdaptiveGraphOnlineExpansion.class);
+        AdaptiveGraphCompetitiveAdmission competitiveAdmission =
+                mock(AdaptiveGraphCompetitiveAdmission.class);
+        AdaptiveGraphUtilityRecorder utilityRecorder =
+                mock(AdaptiveGraphUtilityRecorder.class);
 
         QueryChunk query = new QueryChunk(
                 "q", 0, "question", "question", "question", "en", List.of()
@@ -103,6 +111,8 @@ class RagQuestionServiceTest {
                 graphReport,
                 scope
         )).thenReturn(List.of(hit));
+        when(competitiveAdmission.admit(List.of(hit)))
+                .thenReturn(List.of(hit));
         when(budget.apply(List.of(hit), "question")).thenReturn(List.of(hit));
         when(assembler.assemble(anyList())).thenReturn("{\"sources\":[]}");
         when(generation.generate(eq("question"), eq("{\"sources\":[]}")))
@@ -121,7 +131,9 @@ class RagQuestionServiceTest {
                 generation,
                 learning,
                 shadowExpansion,
-                onlineExpansion
+                onlineExpansion,
+                competitiveAdmission,
+                utilityRecorder
         );
 
         var response = service.ask("question", scope);
@@ -129,5 +141,9 @@ class RagQuestionServiceTest {
         assertThat(response.answer())
                 .isEqualTo("В базе знаний недостаточно информации.");
         assertThat(response.sources()).isEmpty();
+        verify(utilityRecorder).record(
+                eq(List.of(hit)),
+                any(CitationValidator.CitationValidation.class)
+        );
     }
 }

@@ -18,7 +18,8 @@ import org.springframework.context.annotation.Configuration;
     ReembeddingProperties.class,
     RetentionCleanupProperties.class,
     RetentionEconomicsProperties.class,
-    AdaptiveGraphProperties.class
+    AdaptiveGraphProperties.class,
+    AdaptiveGraphCompetitionProperties.class
 })
 public class AkmaiConfiguration {
 }

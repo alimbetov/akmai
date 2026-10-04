@@ -243,6 +243,13 @@ public class AkmaiMetrics {
         ).increment(count);
     }
 
+    public void adaptiveGraphUtilityRequest(String outcome) {
+        registry.counter(
+                "akmai.adaptive.graph.utility.requests",
+                "outcome", requireGraphTag(outcome)
+        ).increment();
+    }
+
     public void adaptiveGraphShadowSeeds(int count) {
         if (count >= 0) {
             registry.summary("akmai.adaptive.graph.shadow.seeds")

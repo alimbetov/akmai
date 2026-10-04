@@ -2,8 +2,10 @@ package kz.alimbetov.akmai.rag.service;
 
 import java.util.List;
 import java.util.Set;
+import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphCompetitiveAdmission;
 import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphOnlineExpansion;
 import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphShadowExpansion;
+import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphUtilityRecorder;
 import kz.alimbetov.akmai.knowledge.graph.AssociationLearningRecorder;
 import kz.alimbetov.akmai.rag.api.RagResponse;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
@@ -40,6 +42,8 @@ public class RagQuestionService {
     private final AssociationLearningRecorder associationLearningRecorder;
     private final AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion;
     private final AdaptiveGraphOnlineExpansion adaptiveGraphOnlineExpansion;
+    private final AdaptiveGraphCompetitiveAdmission adaptiveGraphCompetitiveAdmission;
+    private final AdaptiveGraphUtilityRecorder adaptiveGraphUtilityRecorder;
 
     public RagQuestionService(
             QueryChunker queryChunker,
@@ -54,7 +58,9 @@ public class RagQuestionService {
             AnswerGenerationService answerGenerationService,
             AssociationLearningRecorder associationLearningRecorder,
             AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion,
-            AdaptiveGraphOnlineExpansion adaptiveGraphOnlineExpansion
+            AdaptiveGraphOnlineExpansion adaptiveGraphOnlineExpansion,
+            AdaptiveGraphCompetitiveAdmission adaptiveGraphCompetitiveAdmission,
+            AdaptiveGraphUtilityRecorder adaptiveGraphUtilityRecorder
     ) {
         this.queryChunker = queryChunker;
         this.retrievalPlanner = retrievalPlanner;
@@ -69,6 +75,9 @@ public class RagQuestionService {
         this.associationLearningRecorder = associationLearningRecorder;
         this.adaptiveGraphShadowExpansion = adaptiveGraphShadowExpansion;
         this.adaptiveGraphOnlineExpansion = adaptiveGraphOnlineExpansion;
+        this.adaptiveGraphCompetitiveAdmission =
+                adaptiveGraphCompetitiveAdmission;
+        this.adaptiveGraphUtilityRecorder = adaptiveGraphUtilityRecorder;
     }
 
     public RagResponse ask(String question, Set<Long> accessLevels) {
@@ -102,9 +111,11 @@ public class RagQuestionService {
                 graphReport,
                 accessLevels
         );
+        List<RetrievalHit> competitive =
+                adaptiveGraphCompetitiveAdmission.admit(graphExpanded);
 
         List<RetrievalHit> bounded =
-                contextBudget.apply(graphExpanded, question);
+                contextBudget.apply(competitive, question);
 
         if (bounded.isEmpty()) {
             return insufficientInformation();
@@ -115,6 +126,7 @@ public class RagQuestionService {
 
         CitationValidator.CitationValidation validation =
                 citationValidator.validate(answer, bounded);
+        adaptiveGraphUtilityRecorder.record(bounded, validation);
 
         if (validation.answer().isBlank()
                 || validation.citedSources().isEmpty()) {
