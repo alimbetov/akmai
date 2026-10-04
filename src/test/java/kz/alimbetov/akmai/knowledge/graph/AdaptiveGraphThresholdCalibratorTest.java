@@ -47,7 +47,7 @@ class AdaptiveGraphThresholdCalibratorTest {
     }
 
     @Test
-    void independentReplayMustPassBeforeCanaryEligibility() {
+    void independentReplayMustPassBeforeQualityGateCandidate() {
         AdaptiveGraphThresholdCalibrator.ReplayValidationReport passing =
                 calibrator.validateReplay(
                         List.of(
