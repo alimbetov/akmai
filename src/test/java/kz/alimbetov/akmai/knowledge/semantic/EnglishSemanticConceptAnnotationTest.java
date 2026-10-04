@@ -74,7 +74,8 @@ class EnglishSemanticConceptAnnotationTest {
                         List.of(
                                 new EnglishSemanticMorphologyNormalizer(),
                                 new RussianSemanticMorphologyNormalizer(),
-                                new KazakhSemanticMorphologyNormalizer()
+                                new KazakhSemanticMorphologyNormalizer(),
+                                new ChineseSemanticMorphologyNormalizer()
                         )
                 );
         return new SemanticConceptMatcher(
