@@ -1,166 +1,42 @@
 package kz.alimbetov.akmai.knowledge.semantic;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class EnglishSemanticConceptMatcher {
 
-    private final SemanticConceptSurfaceRegistry surfaces;
-    private final EnglishSemanticMorphologyNormalizer morphology;
+    private final SemanticConceptMatcher delegate;
 
     public EnglishSemanticConceptMatcher(
             EnglishSemanticConceptCatalog catalog
     ) {
-        this(
+        EnglishSemanticMorphologyNormalizer english =
+                new EnglishSemanticMorphologyNormalizer();
+        SemanticMorphologyRegistry morphologyRegistry =
+                new SemanticMorphologyRegistry(List.of(english));
+        this.delegate = new SemanticConceptMatcher(
                 new SemanticConceptSurfaceRegistry(
                         catalog,
-                        new EnglishSemanticMorphologyNormalizer()
+                        english
                 ),
-                new EnglishSemanticMorphologyNormalizer()
+                morphologyRegistry
         );
     }
 
     @Autowired
     public EnglishSemanticConceptMatcher(
-            SemanticConceptSurfaceRegistry surfaces,
-            EnglishSemanticMorphologyNormalizer morphology
+            SemanticConceptMatcher delegate
     ) {
-        this.surfaces = surfaces;
-        this.morphology = morphology;
+        this.delegate = delegate;
     }
 
     public String version() {
-        return surfaces.version();
+        return delegate.version("en");
     }
 
     public List<SemanticConceptMatch> match(String text) {
-        List<String> normalizedTokens =
-                morphology.normalizeTokens(text);
-        if (normalizedTokens.isEmpty()) {
-            return List.of();
-        }
-
-        String normalizedText = String.join(" ", normalizedTokens);
-        String lemmaText = String.join(
-                " ",
-                morphology.lemmaTokens(text)
-        );
-        List<String> stemTokens = morphology.stemTokens(text);
-
-        List<SemanticConceptMatch> result = new ArrayList<>();
-        for (SemanticConceptSurface surface : surfaces.surfaces("en")) {
-            Match match = strongestMatch(
-                    surface,
-                    normalizedText,
-                    lemmaText,
-                    stemTokens
-            );
-            if (match == null) {
-                continue;
-            }
-
-            int tokenCount = surface.preferredPhrase()
-                    .split("\\s+")
-                    .length;
-            result.add(new SemanticConceptMatch(
-                    surface.conceptId(),
-                    surface.domainId(),
-                    surface.subdomainId(),
-                    surface.preferredPhrase(),
-                    tokenCount * match.mode().confidence(),
-                    match.mode()
-            ));
-        }
-
-        return List.copyOf(result);
-    }
-
-    private Match strongestMatch(
-            SemanticConceptSurface surface,
-            String normalizedText,
-            String lemmaText,
-            List<String> stemTokens
-    ) {
-        if (containsPhrase(
-                normalizedText,
-                surface.preferredPhrase()
-        )) {
-            return new Match(SemanticMatchMode.EXACT);
-        }
-
-        for (String alias : surface.aliases()) {
-            if (containsPhrase(
-                    normalizedText,
-                    EnglishSemanticConceptCatalog.normalizePhrase(alias)
-            )) {
-                return new Match(SemanticMatchMode.EXACT);
-            }
-        }
-
-        if (containsPhrase(
-                lemmaText,
-                surface.lemmaPhrase()
-        )) {
-            return new Match(SemanticMatchMode.LEMMA);
-        }
-
-        if (containsTokenSequence(
-                stemTokens,
-                surface.stemTokens()
-        )) {
-            return new Match(SemanticMatchMode.STEM);
-        }
-        return null;
-    }
-
-    private boolean containsPhrase(
-            String text,
-            String phrase
-    ) {
-        if (phrase == null || phrase.isBlank()) {
-            return false;
-        }
-        Pattern pattern = Pattern.compile(
-                "(?<![\\p{L}\\p{N}])"
-                        + Pattern.quote(phrase)
-                        + "(?![\\p{L}\\p{N}])",
-                Pattern.CASE_INSENSITIVE
-                        | Pattern.UNICODE_CASE
-        );
-        return pattern.matcher(text).find();
-    }
-
-    private boolean containsTokenSequence(
-            List<String> text,
-            List<String> phrase
-    ) {
-        if (phrase.size() < 2 || text.size() < phrase.size()) {
-            return false;
-        }
-        for (int start = 0;
-                start <= text.size() - phrase.size();
-                start++) {
-            boolean equal = true;
-            for (int offset = 0;
-                    offset < phrase.size();
-                    offset++) {
-                if (!text.get(start + offset)
-                        .equals(phrase.get(offset))) {
-                    equal = false;
-                    break;
-                }
-            }
-            if (equal) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private record Match(SemanticMatchMode mode) {
+        return delegate.match(text, "en");
     }
 }
