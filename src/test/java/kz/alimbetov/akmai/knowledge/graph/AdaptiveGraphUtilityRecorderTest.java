@@ -62,6 +62,31 @@ class AdaptiveGraphUtilityRecorderTest {
     }
 
     @Test
+    void rejectedGroundingKeepsSelectionButNeverRecordsAssist() {
+        AkmaiMetrics metrics = mock(AkmaiMetrics.class);
+        AdaptiveGraphUtilityRecorder recorder =
+                new AdaptiveGraphUtilityRecorder(metrics);
+        List<RetrievalHit> context = List.of(
+                hit(RetrievalType.VECTOR, "base"),
+                hit(RetrievalType.GRAPH, "graph")
+        );
+        CitationValidator.CitationValidation validation =
+                new CitationValidator().validate(
+                        "answer [SOURCE 2]",
+                        context
+                );
+
+        recorder.record(context, validation, false);
+
+        verify(metrics).adaptiveGraphUtilityRequest("selected");
+        verify(metrics, never()).adaptiveGraphExpansion(
+                "online_cited",
+                1
+        );
+        verify(metrics, never()).adaptiveGraphUtilityRequest("assisted");
+    }
+
+    @Test
     void baseOnlyContextDoesNotAffectGraphUtilityMetrics() {
         AkmaiMetrics metrics = mock(AkmaiMetrics.class);
         AdaptiveGraphUtilityRecorder recorder =
