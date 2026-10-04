@@ -430,11 +430,18 @@ public final class AdaptiveGraphThresholdCalibrator {
                     ? List.of()
                     : List.copyOf(evaluations);
         }
+
+        public String targetParameter() {
+            return TARGET_PARAMETER;
+        }
     }
 
     public record ReplayValidationReport(
             ReplayDecision decision,
             ThresholdEvaluation evaluation
     ) {
+        public String targetParameter() {
+            return TARGET_PARAMETER;
+        }
     }
 }
