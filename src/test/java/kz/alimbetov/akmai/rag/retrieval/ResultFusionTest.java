@@ -138,6 +138,7 @@ class ResultFusionTest {
         PublishedSearchProjectionReader repository =
                 mock(PublishedSearchProjectionReader.class);
         SearchProjection canonical = projection(
+                1L,
                 "doc",
                 2L,
                 "chunk-1",
