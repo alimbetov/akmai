@@ -2,11 +2,18 @@ package kz.alimbetov.akmai.knowledge.graph;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Offline/shadow-only threshold calibration for adaptive graph serving.
+ *
+ * <p>The replay harness must execute every candidate threshold against a
+ * graph-disabled baseline on an independent request cohort. This calibrator
+ * evaluates those measured request-level outcomes; it does not infer
+ * counterfactual utility by filtering one replay run.</p>
  *
  * <p>The calibrator is deliberately advisory. It never mutates runtime
  * configuration and never promotes a graph version by itself.</p>
@@ -23,7 +30,13 @@ public final class AdaptiveGraphThresholdCalibrator {
         );
         Objects.requireNonNull(policy, "policy must not be null");
 
-        if (calibrationObservations.size() < policy.minimumSamples()) {
+        List<Double> thresholds = calibrationObservations.stream()
+                .map(ReplayObservation::candidateThreshold)
+                .distinct()
+                .sorted()
+                .toList();
+
+        if (thresholds.isEmpty()) {
             return new CalibrationReport(
                     CalibrationDecision.INSUFFICIENT_DATA,
                     null,
@@ -31,15 +44,10 @@ public final class AdaptiveGraphThresholdCalibrator {
             );
         }
 
-        List<Double> thresholds = calibrationObservations.stream()
-                .map(ReplayObservation::graphScore)
-                .distinct()
-                .sorted()
-                .toList();
-
         List<ThresholdEvaluation> evaluations =
                 new ArrayList<>(thresholds.size());
         ThresholdEvaluation selected = null;
+        boolean anyThresholdHasEnoughData = false;
 
         for (double threshold : thresholds) {
             ThresholdEvaluation evaluation = evaluateAtThreshold(
@@ -48,22 +56,27 @@ public final class AdaptiveGraphThresholdCalibrator {
                     policy
             );
             evaluations.add(evaluation);
+            if (evaluation.sampleCount() >= policy.minimumSamples()) {
+                anyThresholdHasEnoughData = true;
+            }
             if (selected == null && evaluation.gatePassed()) {
                 selected = evaluation;
             }
         }
 
-        if (selected == null) {
+        if (selected != null) {
             return new CalibrationReport(
-                    CalibrationDecision.REJECTED,
-                    null,
+                    CalibrationDecision.REPLAY_CANDIDATE,
+                    selected,
                     evaluations
             );
         }
 
         return new CalibrationReport(
-                CalibrationDecision.REPLAY_CANDIDATE,
-                selected,
+                anyThresholdHasEnoughData
+                        ? CalibrationDecision.REJECTED
+                        : CalibrationDecision.INSUFFICIENT_DATA,
+                null,
                 evaluations
         );
     }
@@ -108,8 +121,15 @@ public final class AdaptiveGraphThresholdCalibrator {
         requireUnitInterval("threshold", threshold);
 
         List<ReplayObservation> included = observations.stream()
-                .filter(observation -> observation.graphScore() >= threshold)
+                .filter(observation ->
+                        Double.compare(
+                                observation.candidateThreshold(),
+                                threshold
+                        ) == 0
+                )
                 .toList();
+
+        requireIndependentRequests(included, threshold);
 
         int sampleCount = included.size();
         if (sampleCount == 0) {
@@ -185,6 +205,23 @@ public final class AdaptiveGraphThresholdCalibrator {
         );
     }
 
+    private void requireIndependentRequests(
+            List<ReplayObservation> observations,
+            double threshold
+    ) {
+        Set<String> replayKeys = new HashSet<>();
+        for (ReplayObservation observation : observations) {
+            if (!replayKeys.add(observation.replayKey())) {
+                throw new IllegalArgumentException(
+                        "duplicate replayKey at threshold "
+                                + threshold
+                                + ": "
+                                + observation.replayKey()
+                );
+            }
+        }
+    }
+
     private double wilsonLowerBound(
             int successes,
             int trials,
@@ -225,13 +262,22 @@ public final class AdaptiveGraphThresholdCalibrator {
     }
 
     public record ReplayObservation(
-            double graphScore,
+            String replayKey,
+            double candidateThreshold,
             double utilityDelta,
             double latencyDeltaMillis,
             boolean safetyViolation
     ) {
         public ReplayObservation {
-            requireUnitInterval("graphScore", graphScore);
+            if (replayKey == null || replayKey.isBlank()) {
+                throw new IllegalArgumentException(
+                        "replayKey must not be blank"
+                );
+            }
+            requireUnitInterval(
+                    "candidateThreshold",
+                    candidateThreshold
+            );
             if (!Double.isFinite(utilityDelta)) {
                 throw new IllegalArgumentException(
                         "utilityDelta must be finite"
