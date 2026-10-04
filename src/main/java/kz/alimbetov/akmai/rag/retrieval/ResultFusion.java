@@ -6,8 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
+import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -28,32 +28,35 @@ public class ResultFusion {
             List<RetrievalHit> hits,
             Set<Long> accessLevels
     ) {
-        if (accessLevels == null || accessLevels.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "accessLevels must not be empty"
-            );
-        }
+        Set<Long> scope = requireAccessLevels(accessLevels);
         if (hits == null || hits.isEmpty()) {
+            return List.of();
+        }
+
+        List<RoutedHit> routed = hits.stream()
+                .map(hit -> routed(hit, scope))
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (routed.isEmpty()) {
+            return List.of();
+        }
+
+        Map<CanonicalKey, SearchProjection> canonical =
+                canonicalProjections(routed, scope);
+        if (canonical.isEmpty()) {
             return List.of();
         }
 
         Map<CanonicalKey, Accumulator> accumulated = new LinkedHashMap<>();
         Map<String, Integer> ranks = new LinkedHashMap<>();
 
-        for (RetrievalHit hit : hits) {
-            long generation = hit.generation();
-            long accessLevel = effectiveAccessLevel(
-                    hit,
-                    accessLevels
-            );
-            if (accessLevel <= 0
-                    || generation <= 0
-                    || hit.documentId() == null
-                    || hit.documentId().isBlank()
-                    || hit.chunkId() == null
-                    || hit.chunkId().isBlank()) {
+        for (RoutedHit routedHit : routed) {
+            RetrievalHit hit = routedHit.hit();
+            SearchProjection projection = canonical.get(routedHit.key());
+            if (projection == null) {
                 continue;
             }
+
             int rank = ranks.merge(rankKey(hit), 1, Integer::sum);
             RetrievalEvidence evidence = new RetrievalEvidence(
                     hit.type(),
@@ -61,29 +64,22 @@ public class ResultFusion {
                     rawScore(hit)
             );
             accumulated.computeIfAbsent(
-                            key(hit, accessLevel, generation),
+                            routedHit.key(),
                             ignored -> new Accumulator(
                                     hit,
-                                    accessLevel,
-                                    generation
+                                    routedHit.key().accessLevel(),
+                                    routedHit.key().generation()
                             )
                     )
                     .add(evidence, authorityTier(hit));
         }
 
-        if (accumulated.isEmpty()) {
-            return List.of();
-        }
-
-        Map<CanonicalKey, SearchProjection> canonical = canonicalProjections(
-                accumulated.values().stream().toList()
-        );
-
         return accumulated.entrySet().stream()
-                .filter(entry -> canonical.containsKey(entry.getKey()))
-                .map(entry -> entry.getValue().toHit(canonical.get(entry.getKey())))
+                .map(entry -> entry.getValue().toHit(
+                        canonical.get(entry.getKey())
+                ))
                 .sorted(
-                        Comparator.comparingInt(this::authorityTier)
+                        Comparator.comparingInt(this::authorityTierFromCanonical)
                                 .thenComparing(
                                         Comparator.comparingDouble(
                                                 RetrievalHit::fusedScore
@@ -95,46 +91,62 @@ public class ResultFusion {
                 .toList();
     }
 
-    private Map<CanonicalKey, SearchProjection> canonicalProjections(
-            List<Accumulator> values
+    private RoutedHit routed(
+            RetrievalHit hit,
+            Set<Long> allowed
     ) {
-        LinkedHashMap<DocumentGeneration, List<String>> grouped =
-                new LinkedHashMap<>();
-        for (Accumulator value : values) {
-            RetrievalHit hit = value.representative;
-            grouped.computeIfAbsent(
-                    new DocumentGeneration(
-                            value.accessLevel,
-                            hit.documentId(),
-                            value.generation
-                    ),
-                    ignored -> new ArrayList<>()
-            ).add(hit.chunkId());
+        if (hit == null
+                || !hit.hasRoutingIdentity()
+                || !allowed.contains(hit.accessLevel())) {
+            return null;
         }
+        return new RoutedHit(
+                hit,
+                new CanonicalKey(
+                        hit.accessLevel(),
+                        hit.documentId(),
+                        hit.generation(),
+                        hit.chunkId()
+                )
+        );
+    }
+
+    private Map<CanonicalKey, SearchProjection> canonicalProjections(
+            List<RoutedHit> routed,
+            Set<Long> accessLevels
+    ) {
+        List<PublishedSearchProjectionReader.ProjectionKey> keys =
+                routed.stream()
+                        .map(RoutedHit::key)
+                        .distinct()
+                        .map(key ->
+                                new PublishedSearchProjectionReader.ProjectionKey(
+                                        key.accessLevel(),
+                                        key.documentId(),
+                                        key.generation(),
+                                        key.chunkId()
+                                )
+                        )
+                        .toList();
 
         LinkedHashMap<CanonicalKey, SearchProjection> result =
                 new LinkedHashMap<>();
-        grouped.forEach((scope, chunkIds) ->
-                projectionRepository.findByDocumentGenerationAndChunkIds(
-                                scope.documentId(),
-                                scope.generation(),
-                                chunkIds.stream().distinct().toList(),
-                                Set.of(scope.accessLevel())
-                        )
-                        .forEach(projection ->
-                                result.put(
-                                        new CanonicalKey(
-                                                projection.accessLevel() > 0
-                                                        ? projection.accessLevel()
-                                                        : scope.accessLevel(),
-                                                projection.documentId(),
-                                                projection.generation(),
-                                                projection.chunkId()
-                                        ),
-                                        projection
-                                )
-                        )
-        );
+        projectionRepository.findPublishedByKeys(keys, accessLevels)
+                .forEach(projection -> {
+                    if (projection.accessLevel() <= 0
+                            || projection.generation() <= 0) {
+                        return;
+                    }
+                    result.put(
+                            new CanonicalKey(
+                                    projection.accessLevel(),
+                                    projection.documentId(),
+                                    projection.generation(),
+                                    projection.chunkId()
+                            ),
+                            projection
+                    );
+                });
         return result;
     }
 
@@ -143,48 +155,52 @@ public class ResultFusion {
         return String.valueOf(queryChunkId) + "|" + hit.type();
     }
 
-    private CanonicalKey key(
-            RetrievalHit hit,
-            long accessLevel,
-            long generation
-    ) {
-        return new CanonicalKey(
-                accessLevel,
-                hit.documentId(),
-                generation,
-                hit.chunkId()
-        );
-    }
-
-    private long effectiveAccessLevel(
-            RetrievalHit hit,
-            Set<Long> allowed
-    ) {
-        if (hit.accessLevel() <= 0) {
-            return 0L;
-        }
-        return allowed.contains(hit.accessLevel())
-                ? hit.accessLevel()
-                : 0L;
-    }
-
     private Double rawScore(RetrievalHit hit) {
         Object score = hit.metadata().get("score");
-        return score instanceof Number number && Double.isFinite(number.doubleValue())
+        return score instanceof Number number
+                && Double.isFinite(number.doubleValue())
                 ? number.doubleValue()
                 : null;
     }
 
     private int authorityTier(RetrievalHit hit) {
+        return switch (hit.type()) {
+            case IDENTIFIER -> 0;
+            case REFERENCE -> exactReference(hit) ? 0 : 3;
+            case VECTOR, LEXICAL -> 2;
+            case GRAPH -> 4;
+        };
+    }
+
+    private boolean exactReference(RetrievalHit hit) {
+        return "EXACT_REFERENCE".equals(
+                hit.metadata().get("authority")
+        );
+    }
+
+    private int authorityTierFromCanonical(RetrievalHit hit) {
         Object explicit = hit.metadata().get("authorityTier");
-        if (explicit instanceof Number number) {
-            return Math.max(0, number.intValue());
+        return explicit instanceof Number number
+                ? Math.max(0, number.intValue())
+                : authorityTier(hit);
+    }
+
+    private Set<Long> requireAccessLevels(Set<Long> accessLevels) {
+        if (accessLevels == null || accessLevels.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "accessLevels must not be empty"
+            );
         }
-        if (hit.type() == RetrievalType.IDENTIFIER
-                || hit.type() == RetrievalType.REFERENCE) {
-            return 0;
+        java.util.TreeSet<Long> normalized = new java.util.TreeSet<>();
+        for (Long value : accessLevels) {
+            if (value == null || value <= 0) {
+                throw new IllegalArgumentException(
+                        "accessLevels must contain positive values"
+                );
+            }
+            normalized.add(value);
         }
-        return 2;
+        return Set.copyOf(normalized);
     }
 
     private final class Accumulator {
@@ -217,7 +233,8 @@ public class ResultFusion {
                     canonical,
                     representative.metadata()
             );
-            Map<String, Object> metadata = new LinkedHashMap<>(source.metadata());
+            Map<String, Object> metadata =
+                    new LinkedHashMap<>(source.metadata());
             metadata.put("authorityTier", authorityTier);
             return new RetrievalHit(
                     source.type(),
@@ -236,19 +253,21 @@ public class ResultFusion {
                 SearchProjection projection,
                 Map<String, Object> evidenceMetadata
         ) {
-            Map<String, Object> metadata = new LinkedHashMap<>(projection.metadata());
+            Map<String, Object> metadata =
+                    new LinkedHashMap<>(projection.metadata());
             metadata.putAll(evidenceMetadata);
             metadata.put("generation", projection.generation());
             metadata.put("language", projection.language());
-            metadata.put("sectionPath", projection.sectionPath() == null
-                    ? ""
-                    : projection.sectionPath());
+            metadata.put(
+                    "sectionPath",
+                    projection.sectionPath() == null
+                            ? ""
+                            : projection.sectionPath()
+            );
             metadata.put("chunkIndex", projection.chunkIndex());
             return new RetrievalHit(
                     representative.type(),
-                    projection.accessLevel() > 0
-                            ? projection.accessLevel()
-                            : accessLevel,
+                    projection.accessLevel(),
                     projection.documentId(),
                     projection.generation(),
                     projection.chunkId(),
@@ -258,10 +277,9 @@ public class ResultFusion {
         }
     }
 
-    private record DocumentGeneration(
-            long accessLevel,
-            String documentId,
-            long generation
+    private record RoutedHit(
+            RetrievalHit hit,
+            CanonicalKey key
     ) {
     }
 
