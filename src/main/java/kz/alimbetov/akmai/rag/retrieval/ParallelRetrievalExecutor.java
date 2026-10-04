@@ -60,29 +60,61 @@ public class ParallelRetrievalExecutor {
             schedule(step, plan, futures, scope);
         }
 
-        LinkedHashMap<String, RetrievalStepOutcome> outcomes = new LinkedHashMap<>();
+        LinkedHashMap<String, RetrievalStepOutcome> outcomes =
+                new LinkedHashMap<>();
         for (RetrievalStep step : plan.steps()) {
-            long remaining = Duration.between(Instant.now(), deadline).toMillis();
+            CompletableFuture<RetrievalStepOutcome> future =
+                    futures.get(step.id());
+            long remaining =
+                    Duration.between(Instant.now(), deadline).toMillis();
+
             if (remaining <= 0) {
-                outcomes.put(step.id(), timeout(step));
+                if (future.isDone()) {
+                    outcomes.put(
+                            step.id(),
+                            completedOutcome(step, future)
+                    );
+                } else {
+                    future.cancel(true);
+                    outcomes.put(step.id(), timeout(step));
+                }
                 continue;
             }
+
             try {
-                RetrievalStepOutcome outcome = futures.get(step.id())
-                        .get(remaining, TimeUnit.MILLISECONDS);
-                outcomes.put(step.id(), outcome);
+                outcomes.put(
+                        step.id(),
+                        future.get(remaining, TimeUnit.MILLISECONDS)
+                );
             } catch (java.util.concurrent.TimeoutException exception) {
-                futures.get(step.id()).cancel(true);
-                outcomes.put(step.id(), timeout(step));
+                if (future.isDone()) {
+                    outcomes.put(
+                            step.id(),
+                            completedOutcome(step, future)
+                    );
+                } else {
+                    future.cancel(true);
+                    outcomes.put(step.id(), timeout(step));
+                }
             } catch (InterruptedException exception) {
+                future.cancel(true);
                 Thread.currentThread().interrupt();
-                outcomes.put(step.id(), failed(
-                        step,
-                        RetrievalOutcomeStatus.FAILED,
-                        "INTERRUPTED"
-                ));
+                outcomes.put(
+                        step.id(),
+                        failed(
+                                step,
+                                RetrievalOutcomeStatus.FAILED,
+                                "INTERRUPTED"
+                        )
+                );
             } catch (java.util.concurrent.ExecutionException exception) {
-                outcomes.put(step.id(), outcomeFromFailure(step, exception.getCause()));
+                outcomes.put(
+                        step.id(),
+                        outcomeFromFailure(
+                                step,
+                                exception.getCause()
+                        )
+                );
             }
         }
 
@@ -123,25 +155,41 @@ public class ParallelRetrievalExecutor {
                 dependencies.toArray(CompletableFuture[]::new)
         );
 
-        CompletableFuture<RetrievalStepOutcome> future;
-        try {
-            future = ready.thenApplyAsync(
-                    ignored -> executeStep(
-                            step,
-                            dependencies,
-                            accessLevels
-                    ),
-                    retrievalExecutor
-            );
-        } catch (RejectedExecutionException exception) {
-            future = CompletableFuture.completedFuture(
-                    failed(step, RetrievalOutcomeStatus.REJECTED, "EXECUTOR_REJECTED")
-            );
-        }
-
-        future = future
-                .orTimeout(properties.strategyTimeout().toMillis(), TimeUnit.MILLISECONDS)
-                .exceptionally(exception -> outcomeFromFailure(step, exception));
+        CompletableFuture<RetrievalStepOutcome> future =
+                ready.thenCompose(ignored -> {
+                    try {
+                        return CompletableFuture.supplyAsync(
+                                        () -> executeStep(
+                                                step,
+                                                dependencies,
+                                                accessLevels
+                                        ),
+                                        retrievalExecutor
+                                )
+                                .orTimeout(
+                                        properties.strategyTimeout().toMillis(),
+                                        TimeUnit.MILLISECONDS
+                                )
+                                .exceptionally(
+                                        exception ->
+                                                outcomeFromFailure(
+                                                        step,
+                                                        exception
+                                                )
+                                );
+                    } catch (RejectedExecutionException exception) {
+                        return CompletableFuture.completedFuture(
+                                failed(
+                                        step,
+                                        RetrievalOutcomeStatus.REJECTED,
+                                        "EXECUTOR_REJECTED"
+                                )
+                        );
+                    }
+                })
+                .exceptionally(
+                        exception -> outcomeFromFailure(step, exception)
+                );
         futures.put(step.id(), future);
         return future;
     }
@@ -273,6 +321,19 @@ public class ParallelRetrievalExecutor {
             current = current.getCause();
         }
         return current;
+    }
+
+    private RetrievalStepOutcome completedOutcome(
+            RetrievalStep step,
+            CompletableFuture<RetrievalStepOutcome> future
+    ) {
+        try {
+            return future.join();
+        } catch (java.util.concurrent.CancellationException exception) {
+            return timeout(step);
+        } catch (CompletionException exception) {
+            return outcomeFromFailure(step, exception.getCause());
+        }
     }
 
     private RetrievalStepOutcome timeout(RetrievalStep step) {
