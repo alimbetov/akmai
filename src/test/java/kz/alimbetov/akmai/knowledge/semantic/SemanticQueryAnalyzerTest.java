@@ -97,6 +97,10 @@ class SemanticQueryAnalyzerTest {
                 .isEqualTo(
                         "finance_banking.risk_capital.capital_adequacy_ratio"
                 );
+        assertThat(conceptId("índice de adequação de capital"))
+                .isEqualTo(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                );
     }
 
     @Test
