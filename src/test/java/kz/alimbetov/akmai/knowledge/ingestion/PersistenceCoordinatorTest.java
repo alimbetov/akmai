@@ -48,7 +48,11 @@ class PersistenceCoordinatorTest {
                 anyString(),
                 eq(1L)
         )).thenReturn(7L);
-        when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
+        when(fixture.embeddings.embed(
+                anyList(),
+                eq(fixture.profile),
+                any(Runnable.class)
+        ))
                 .thenReturn(List.of(
                         new float[] {1f, 0f, 0f},
                         new float[] {0f, 1f, 0f}
@@ -191,7 +195,11 @@ class PersistenceCoordinatorTest {
                 anyString(),
                 eq(1L)
         )).thenReturn(8L);
-        when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
+        when(fixture.embeddings.embed(
+                anyList(),
+                eq(fixture.profile),
+                any(Runnable.class)
+        ))
                 .thenThrow(new IllegalStateException("embedding unavailable"));
 
         assertThatThrownBy(() ->
@@ -236,7 +244,11 @@ class PersistenceCoordinatorTest {
                 anyString(),
                 eq(1L)
         )).thenReturn(9L);
-        when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
+        when(fixture.embeddings.embed(
+                anyList(),
+                eq(fixture.profile),
+                any(Runnable.class)
+        ))
                 .thenReturn(List.of(new float[] {1f, 0f, 0f}));
         when(fixture.publication.publish(
                 eq("doc-1"),
@@ -280,7 +292,11 @@ class PersistenceCoordinatorTest {
                 anyString(),
                 eq(1L)
         )).thenReturn(10L);
-        when(fixture.embeddings.embed(anyList(), eq(fixture.profile)))
+        when(fixture.embeddings.embed(
+                anyList(),
+                eq(fixture.profile),
+                any(Runnable.class)
+        ))
                 .thenReturn(List.of(new float[] {1f, 0f, 0f}));
         when(fixture.publication.publish(
                 eq("doc-1"),
