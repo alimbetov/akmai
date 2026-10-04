@@ -1,0 +1,725 @@
+{
+  "version": "semantic-concept-golden-v1",
+  "cases": [
+    {
+      "caseId": "en-001",
+      "language": "en",
+      "query": "Explain credit risk assessment.",
+      "expectedConceptId": "finance_banking.lending_credit.credit_risk_assessment"
+    },
+    {
+      "caseId": "ru-001",
+      "language": "ru",
+      "query": "Что означает: оценка кредитного риска?",
+      "expectedConceptId": "finance_banking.lending_credit.credit_risk_assessment"
+    },
+    {
+      "caseId": "kk-001",
+      "language": "kk",
+      "query": "Түсіндіріңіз: кредиттік тәуекелді бағалау.",
+      "expectedConceptId": "finance_banking.lending_credit.credit_risk_assessment"
+    },
+    {
+      "caseId": "en-002",
+      "language": "en",
+      "query": "Explain consumer loan underwriting.",
+      "expectedConceptId": "finance_banking.lending_credit.consumer_loan_underwriting"
+    },
+    {
+      "caseId": "ru-002",
+      "language": "ru",
+      "query": "Что означает: андеррайтинг потребительского кредита?",
+      "expectedConceptId": "finance_banking.lending_credit.consumer_loan_underwriting"
+    },
+    {
+      "caseId": "kk-002",
+      "language": "kk",
+      "query": "Түсіндіріңіз: тұтынушылық кредит андеррайтингі.",
+      "expectedConceptId": "finance_banking.lending_credit.consumer_loan_underwriting"
+    },
+    {
+      "caseId": "en-003",
+      "language": "en",
+      "query": "Explain corporate credit facility.",
+      "expectedConceptId": "finance_banking.lending_credit.corporate_credit_facility"
+    },
+    {
+      "caseId": "ru-003",
+      "language": "ru",
+      "query": "Что означает: корпоративная кредитная линия?",
+      "expectedConceptId": "finance_banking.lending_credit.corporate_credit_facility"
+    },
+    {
+      "caseId": "kk-003",
+      "language": "kk",
+      "query": "Түсіндіріңіз: корпоративтік кредит желісі.",
+      "expectedConceptId": "finance_banking.lending_credit.corporate_credit_facility"
+    },
+    {
+      "caseId": "en-004",
+      "language": "en",
+      "query": "Explain nonperforming loan ratio.",
+      "expectedConceptId": "finance_banking.lending_credit.nonperforming_loan_ratio"
+    },
+    {
+      "caseId": "ru-004",
+      "language": "ru",
+      "query": "Что означает: коэффициент неработающих кредитов?",
+      "expectedConceptId": "finance_banking.lending_credit.nonperforming_loan_ratio"
+    },
+    {
+      "caseId": "kk-004",
+      "language": "kk",
+      "query": "Түсіндіріңіз: жұмыс істемейтін кредиттер коэффициенті.",
+      "expectedConceptId": "finance_banking.lending_credit.nonperforming_loan_ratio"
+    },
+    {
+      "caseId": "en-005",
+      "language": "en",
+      "query": "Explain loan loss provision.",
+      "expectedConceptId": "finance_banking.lending_credit.loan_loss_provision"
+    },
+    {
+      "caseId": "ru-005",
+      "language": "ru",
+      "query": "Что означает: резерв на потери по кредитам?",
+      "expectedConceptId": "finance_banking.lending_credit.loan_loss_provision"
+    },
+    {
+      "caseId": "kk-005",
+      "language": "kk",
+      "query": "Түсіндіріңіз: кредиттік шығындар резерві.",
+      "expectedConceptId": "finance_banking.lending_credit.loan_loss_provision"
+    },
+    {
+      "caseId": "en-006",
+      "language": "en",
+      "query": "Explain debt service coverage.",
+      "expectedConceptId": "finance_banking.lending_credit.debt_service_coverage"
+    },
+    {
+      "caseId": "ru-006",
+      "language": "ru",
+      "query": "Что означает: покрытие обслуживания долга?",
+      "expectedConceptId": "finance_banking.lending_credit.debt_service_coverage"
+    },
+    {
+      "caseId": "kk-006",
+      "language": "kk",
+      "query": "Түсіндіріңіз: борышты өтеуді жабу.",
+      "expectedConceptId": "finance_banking.lending_credit.debt_service_coverage"
+    },
+    {
+      "caseId": "en-007",
+      "language": "en",
+      "query": "Explain customer deposit base.",
+      "expectedConceptId": "finance_banking.deposits_liquidity.customer_deposit_base"
+    },
+    {
+      "caseId": "ru-007",
+      "language": "ru",
+      "query": "Что означает: клиентская депозитная база?",
+      "expectedConceptId": "finance_banking.deposits_liquidity.customer_deposit_base"
+    },
+    {
+      "caseId": "kk-007",
+      "language": "kk",
+      "query": "Түсіндіріңіз: клиенттік депозиттік база.",
+      "expectedConceptId": "finance_banking.deposits_liquidity.customer_deposit_base"
+    },
+    {
+      "caseId": "en-008",
+      "language": "en",
+      "query": "Explain liquidity coverage ratio.",
+      "expectedConceptId": "finance_banking.deposits_liquidity.liquidity_coverage_ratio"
+    },
+    {
+      "caseId": "ru-008",
+      "language": "ru",
+      "query": "Что означает: коэффициент покрытия ликвидности?",
+      "expectedConceptId": "finance_banking.deposits_liquidity.liquidity_coverage_ratio"
+    },
+    {
+      "caseId": "kk-008",
+      "language": "kk",
+      "query": "Түсіндіріңіз: өтімділікті жабу коэффициенті.",
+      "expectedConceptId": "finance_banking.deposits_liquidity.liquidity_coverage_ratio"
+    },
+    {
+      "caseId": "en-009",
+      "language": "en",
+      "query": "Explain net stable funding.",
+      "expectedConceptId": "finance_banking.deposits_liquidity.net_stable_funding"
+    },
+    {
+      "caseId": "ru-009",
+      "language": "ru",
+      "query": "Что означает: чистое стабильное фондирование?",
+      "expectedConceptId": "finance_banking.deposits_liquidity.net_stable_funding"
+    },
+    {
+      "caseId": "kk-009",
+      "language": "kk",
+      "query": "Түсіндіріңіз: таза тұрақты қаржыландыру.",
+      "expectedConceptId": "finance_banking.deposits_liquidity.net_stable_funding"
+    },
+    {
+      "caseId": "en-010",
+      "language": "en",
+      "query": "Explain deposit interest rate.",
+      "expectedConceptId": "finance_banking.deposits_liquidity.deposit_interest_rate"
+    },
+    {
+      "caseId": "ru-010",
+      "language": "ru",
+      "query": "Что означает: процентная ставка по депозиту?",
+      "expectedConceptId": "finance_banking.deposits_liquidity.deposit_interest_rate"
+    },
+    {
+      "caseId": "kk-010",
+      "language": "kk",
+      "query": "Түсіндіріңіз: депозиттік пайыздық мөлшерлеме.",
+      "expectedConceptId": "finance_banking.deposits_liquidity.deposit_interest_rate"
+    },
+    {
+      "caseId": "en-011",
+      "language": "en",
+      "query": "Explain cash reserve requirement.",
+      "expectedConceptId": "finance_banking.deposits_liquidity.cash_reserve_requirement"
+    },
+    {
+      "caseId": "ru-011",
+      "language": "ru",
+      "query": "Что означает: норматив обязательных резервов?",
+      "expectedConceptId": "finance_banking.deposits_liquidity.cash_reserve_requirement"
+    },
+    {
+      "caseId": "kk-011",
+      "language": "kk",
+      "query": "Түсіндіріңіз: міндетті резерв нормативі.",
+      "expectedConceptId": "finance_banking.deposits_liquidity.cash_reserve_requirement"
+    },
+    {
+      "caseId": "en-012",
+      "language": "en",
+      "query": "Explain liquidity stress testing.",
+      "expectedConceptId": "finance_banking.deposits_liquidity.liquidity_stress_testing"
+    },
+    {
+      "caseId": "ru-012",
+      "language": "ru",
+      "query": "Что означает: стресс тестирование ликвидности?",
+      "expectedConceptId": "finance_banking.deposits_liquidity.liquidity_stress_testing"
+    },
+    {
+      "caseId": "kk-012",
+      "language": "kk",
+      "query": "Түсіндіріңіз: өтімділікті стресс тестілеу.",
+      "expectedConceptId": "finance_banking.deposits_liquidity.liquidity_stress_testing"
+    },
+    {
+      "caseId": "en-013",
+      "language": "en",
+      "query": "Explain capital adequacy ratio.",
+      "expectedConceptId": "finance_banking.risk_capital.capital_adequacy_ratio"
+    },
+    {
+      "caseId": "ru-013",
+      "language": "ru",
+      "query": "Что означает: коэффициент достаточности капитала?",
+      "expectedConceptId": "finance_banking.risk_capital.capital_adequacy_ratio"
+    },
+    {
+      "caseId": "kk-013",
+      "language": "kk",
+      "query": "Түсіндіріңіз: капитал жеткіліктілігінің коэффициенті.",
+      "expectedConceptId": "finance_banking.risk_capital.capital_adequacy_ratio"
+    },
+    {
+      "caseId": "en-014",
+      "language": "en",
+      "query": "Explain risk weighted assets.",
+      "expectedConceptId": "finance_banking.risk_capital.risk_weighted_assets"
+    },
+    {
+      "caseId": "ru-014",
+      "language": "ru",
+      "query": "Что означает: активы взвешенные по риску?",
+      "expectedConceptId": "finance_banking.risk_capital.risk_weighted_assets"
+    },
+    {
+      "caseId": "kk-014",
+      "language": "kk",
+      "query": "Түсіндіріңіз: тәуекелмен өлшенген активтер.",
+      "expectedConceptId": "finance_banking.risk_capital.risk_weighted_assets"
+    },
+    {
+      "caseId": "en-015",
+      "language": "en",
+      "query": "Explain common equity tier.",
+      "expectedConceptId": "finance_banking.risk_capital.common_equity_tier"
+    },
+    {
+      "caseId": "ru-015",
+      "language": "ru",
+      "query": "Что означает: базовый капитал первого уровня?",
+      "expectedConceptId": "finance_banking.risk_capital.common_equity_tier"
+    },
+    {
+      "caseId": "kk-015",
+      "language": "kk",
+      "query": "Түсіндіріңіз: негізгі бірінші деңгей капиталы.",
+      "expectedConceptId": "finance_banking.risk_capital.common_equity_tier"
+    },
+    {
+      "caseId": "en-016",
+      "language": "en",
+      "query": "Explain market risk exposure.",
+      "expectedConceptId": "finance_banking.risk_capital.market_risk_exposure"
+    },
+    {
+      "caseId": "ru-016",
+      "language": "ru",
+      "query": "Что означает: подверженность рыночному риску?",
+      "expectedConceptId": "finance_banking.risk_capital.market_risk_exposure"
+    },
+    {
+      "caseId": "kk-016",
+      "language": "kk",
+      "query": "Түсіндіріңіз: нарықтық тәуекелге ұшырау.",
+      "expectedConceptId": "finance_banking.risk_capital.market_risk_exposure"
+    },
+    {
+      "caseId": "en-017",
+      "language": "en",
+      "query": "Explain operational risk capital.",
+      "expectedConceptId": "finance_banking.risk_capital.operational_risk_capital"
+    },
+    {
+      "caseId": "ru-017",
+      "language": "ru",
+      "query": "Что означает: капитал под операционный риск?",
+      "expectedConceptId": "finance_banking.risk_capital.operational_risk_capital"
+    },
+    {
+      "caseId": "kk-017",
+      "language": "kk",
+      "query": "Түсіндіріңіз: операциялық тәуекел капиталы.",
+      "expectedConceptId": "finance_banking.risk_capital.operational_risk_capital"
+    },
+    {
+      "caseId": "en-018",
+      "language": "en",
+      "query": "Explain internal capital assessment.",
+      "expectedConceptId": "finance_banking.risk_capital.internal_capital_assessment"
+    },
+    {
+      "caseId": "ru-018",
+      "language": "ru",
+      "query": "Что означает: внутренняя оценка достаточности капитала?",
+      "expectedConceptId": "finance_banking.risk_capital.internal_capital_assessment"
+    },
+    {
+      "caseId": "kk-018",
+      "language": "kk",
+      "query": "Түсіндіріңіз: капитал жеткіліктілігін ішкі бағалау.",
+      "expectedConceptId": "finance_banking.risk_capital.internal_capital_assessment"
+    },
+    {
+      "caseId": "en-019",
+      "language": "en",
+      "query": "Explain payment settlement system.",
+      "expectedConceptId": "finance_banking.payments_compliance.payment_settlement_system"
+    },
+    {
+      "caseId": "ru-019",
+      "language": "ru",
+      "query": "Что означает: система расчетов по платежам?",
+      "expectedConceptId": "finance_banking.payments_compliance.payment_settlement_system"
+    },
+    {
+      "caseId": "kk-019",
+      "language": "kk",
+      "query": "Түсіндіріңіз: төлем есеп айырысу жүйесі.",
+      "expectedConceptId": "finance_banking.payments_compliance.payment_settlement_system"
+    },
+    {
+      "caseId": "en-020",
+      "language": "en",
+      "query": "Explain anti money laundering.",
+      "expectedConceptId": "finance_banking.payments_compliance.anti_money_laundering"
+    },
+    {
+      "caseId": "ru-020",
+      "language": "ru",
+      "query": "Что означает: противодействие отмыванию денег?",
+      "expectedConceptId": "finance_banking.payments_compliance.anti_money_laundering"
+    },
+    {
+      "caseId": "kk-020",
+      "language": "kk",
+      "query": "Түсіндіріңіз: ақшаны жылыстатуға қарсы іс қимыл.",
+      "expectedConceptId": "finance_banking.payments_compliance.anti_money_laundering"
+    },
+    {
+      "caseId": "en-021",
+      "language": "en",
+      "query": "Explain know your customer.",
+      "expectedConceptId": "finance_banking.payments_compliance.know_your_customer"
+    },
+    {
+      "caseId": "ru-021",
+      "language": "ru",
+      "query": "Что означает: процедура знай своего клиента?",
+      "expectedConceptId": "finance_banking.payments_compliance.know_your_customer"
+    },
+    {
+      "caseId": "kk-021",
+      "language": "kk",
+      "query": "Түсіндіріңіз: клиентті тану рәсімі.",
+      "expectedConceptId": "finance_banking.payments_compliance.know_your_customer"
+    },
+    {
+      "caseId": "en-022",
+      "language": "en",
+      "query": "Explain suspicious transaction monitoring.",
+      "expectedConceptId": "finance_banking.payments_compliance.suspicious_transaction_monitoring"
+    },
+    {
+      "caseId": "ru-022",
+      "language": "ru",
+      "query": "Что означает: мониторинг подозрительных транзакций?",
+      "expectedConceptId": "finance_banking.payments_compliance.suspicious_transaction_monitoring"
+    },
+    {
+      "caseId": "kk-022",
+      "language": "kk",
+      "query": "Түсіндіріңіз: күдікті транзакцияларды мониторингтеу.",
+      "expectedConceptId": "finance_banking.payments_compliance.suspicious_transaction_monitoring"
+    },
+    {
+      "caseId": "en-023",
+      "language": "en",
+      "query": "Explain cross border payment.",
+      "expectedConceptId": "finance_banking.payments_compliance.cross_border_payment"
+    },
+    {
+      "caseId": "ru-023",
+      "language": "ru",
+      "query": "Что означает: трансграничный платеж?",
+      "expectedConceptId": "finance_banking.payments_compliance.cross_border_payment"
+    },
+    {
+      "caseId": "kk-023",
+      "language": "kk",
+      "query": "Түсіндіріңіз: трансшекаралық төлем операциясы.",
+      "expectedConceptId": "finance_banking.payments_compliance.cross_border_payment"
+    },
+    {
+      "caseId": "en-024",
+      "language": "en",
+      "query": "Explain payment fraud detection.",
+      "expectedConceptId": "finance_banking.payments_compliance.payment_fraud_detection"
+    },
+    {
+      "caseId": "ru-024",
+      "language": "ru",
+      "query": "Что означает: выявление платежного мошенничества?",
+      "expectedConceptId": "finance_banking.payments_compliance.payment_fraud_detection"
+    },
+    {
+      "caseId": "kk-024",
+      "language": "kk",
+      "query": "Түсіндіріңіз: төлем алаяқтығын анықтау.",
+      "expectedConceptId": "finance_banking.payments_compliance.payment_fraud_detection"
+    },
+    {
+      "caseId": "en-025",
+      "language": "en",
+      "query": "Explain insurance underwriting process.",
+      "expectedConceptId": "insurance.underwriting_pricing.insurance_underwriting_process"
+    },
+    {
+      "caseId": "ru-025",
+      "language": "ru",
+      "query": "Что означает: процесс страхового андеррайтинга?",
+      "expectedConceptId": "insurance.underwriting_pricing.insurance_underwriting_process"
+    },
+    {
+      "caseId": "kk-025",
+      "language": "kk",
+      "query": "Түсіндіріңіз: сақтандыру андеррайтингі процесі.",
+      "expectedConceptId": "insurance.underwriting_pricing.insurance_underwriting_process"
+    },
+    {
+      "caseId": "en-026",
+      "language": "en",
+      "query": "Explain risk based pricing.",
+      "expectedConceptId": "insurance.underwriting_pricing.risk_based_pricing"
+    },
+    {
+      "caseId": "ru-026",
+      "language": "ru",
+      "query": "Что означает: ценообразование на основе риска?",
+      "expectedConceptId": "insurance.underwriting_pricing.risk_based_pricing"
+    },
+    {
+      "caseId": "kk-026",
+      "language": "kk",
+      "query": "Түсіндіріңіз: тәуекелге негізделген баға белгілеу.",
+      "expectedConceptId": "insurance.underwriting_pricing.risk_based_pricing"
+    },
+    {
+      "caseId": "en-027",
+      "language": "en",
+      "query": "Explain actuarial pricing model.",
+      "expectedConceptId": "insurance.underwriting_pricing.actuarial_pricing_model"
+    },
+    {
+      "caseId": "ru-027",
+      "language": "ru",
+      "query": "Что означает: актуарная модель ценообразования?",
+      "expectedConceptId": "insurance.underwriting_pricing.actuarial_pricing_model"
+    },
+    {
+      "caseId": "kk-027",
+      "language": "kk",
+      "query": "Түсіндіріңіз: актуарлық баға белгілеу моделі.",
+      "expectedConceptId": "insurance.underwriting_pricing.actuarial_pricing_model"
+    },
+    {
+      "caseId": "en-028",
+      "language": "en",
+      "query": "Explain policy coverage limit.",
+      "expectedConceptId": "insurance.underwriting_pricing.policy_coverage_limit"
+    },
+    {
+      "caseId": "ru-028",
+      "language": "ru",
+      "query": "Что означает: лимит страхового покрытия?",
+      "expectedConceptId": "insurance.underwriting_pricing.policy_coverage_limit"
+    },
+    {
+      "caseId": "kk-028",
+      "language": "kk",
+      "query": "Түсіндіріңіз: сақтандыру өтемінің лимиті.",
+      "expectedConceptId": "insurance.underwriting_pricing.policy_coverage_limit"
+    },
+    {
+      "caseId": "en-029",
+      "language": "en",
+      "query": "Explain insurance premium calculation.",
+      "expectedConceptId": "insurance.underwriting_pricing.insurance_premium_calculation"
+    },
+    {
+      "caseId": "ru-029",
+      "language": "ru",
+      "query": "Что означает: расчет страховой премии?",
+      "expectedConceptId": "insurance.underwriting_pricing.insurance_premium_calculation"
+    },
+    {
+      "caseId": "kk-029",
+      "language": "kk",
+      "query": "Түсіндіріңіз: сақтандыру сыйлықақысын есептеу.",
+      "expectedConceptId": "insurance.underwriting_pricing.insurance_premium_calculation"
+    },
+    {
+      "caseId": "en-030",
+      "language": "en",
+      "query": "Explain underwriting risk appetite.",
+      "expectedConceptId": "insurance.underwriting_pricing.underwriting_risk_appetite"
+    },
+    {
+      "caseId": "ru-030",
+      "language": "ru",
+      "query": "Что означает: аппетит к андеррайтинговому риску?",
+      "expectedConceptId": "insurance.underwriting_pricing.underwriting_risk_appetite"
+    },
+    {
+      "caseId": "kk-030",
+      "language": "kk",
+      "query": "Түсіндіріңіз: андеррайтингтік тәуекел тәбеті.",
+      "expectedConceptId": "insurance.underwriting_pricing.underwriting_risk_appetite"
+    },
+    {
+      "caseId": "en-031",
+      "language": "en",
+      "query": "Explain insurance claim assessment.",
+      "expectedConceptId": "insurance.claims_management.insurance_claim_assessment"
+    },
+    {
+      "caseId": "ru-031",
+      "language": "ru",
+      "query": "Что означает: оценка страхового требования?",
+      "expectedConceptId": "insurance.claims_management.insurance_claim_assessment"
+    },
+    {
+      "caseId": "kk-031",
+      "language": "kk",
+      "query": "Түсіндіріңіз: сақтандыру талабын бағалау.",
+      "expectedConceptId": "insurance.claims_management.insurance_claim_assessment"
+    },
+    {
+      "caseId": "en-032",
+      "language": "en",
+      "query": "Explain claims settlement process.",
+      "expectedConceptId": "insurance.claims_management.claims_settlement_process"
+    },
+    {
+      "caseId": "ru-032",
+      "language": "ru",
+      "query": "Что означает: процесс урегулирования страховых требований?",
+      "expectedConceptId": "insurance.claims_management.claims_settlement_process"
+    },
+    {
+      "caseId": "kk-032",
+      "language": "kk",
+      "query": "Түсіндіріңіз: сақтандыру талаптарын реттеу процесі.",
+      "expectedConceptId": "insurance.claims_management.claims_settlement_process"
+    },
+    {
+      "caseId": "en-033",
+      "language": "en",
+      "query": "Explain loss adjustment expense.",
+      "expectedConceptId": "insurance.claims_management.loss_adjustment_expense"
+    },
+    {
+      "caseId": "ru-033",
+      "language": "ru",
+      "query": "Что означает: расходы на урегулирование убытков?",
+      "expectedConceptId": "insurance.claims_management.loss_adjustment_expense"
+    },
+    {
+      "caseId": "kk-033",
+      "language": "kk",
+      "query": "Түсіндіріңіз: залалды реттеу шығындары.",
+      "expectedConceptId": "insurance.claims_management.loss_adjustment_expense"
+    },
+    {
+      "caseId": "en-034",
+      "language": "en",
+      "query": "Explain fraudulent claim detection.",
+      "expectedConceptId": "insurance.claims_management.fraudulent_claim_detection"
+    },
+    {
+      "caseId": "ru-034",
+      "language": "ru",
+      "query": "Что означает: выявление мошеннических страховых требований?",
+      "expectedConceptId": "insurance.claims_management.fraudulent_claim_detection"
+    },
+    {
+      "caseId": "kk-034",
+      "language": "kk",
+      "query": "Түсіндіріңіз: алаяқтық сақтандыру талабын анықтау.",
+      "expectedConceptId": "insurance.claims_management.fraudulent_claim_detection"
+    },
+    {
+      "caseId": "en-035",
+      "language": "en",
+      "query": "Explain claim reserve estimate.",
+      "expectedConceptId": "insurance.claims_management.claim_reserve_estimate"
+    },
+    {
+      "caseId": "ru-035",
+      "language": "ru",
+      "query": "Что означает: оценка резерва по требованиям?",
+      "expectedConceptId": "insurance.claims_management.claim_reserve_estimate"
+    },
+    {
+      "caseId": "kk-035",
+      "language": "kk",
+      "query": "Түсіндіріңіз: сақтандыру резервін бағалау.",
+      "expectedConceptId": "insurance.claims_management.claim_reserve_estimate"
+    },
+    {
+      "caseId": "en-036",
+      "language": "en",
+      "query": "Explain claims handling procedure.",
+      "expectedConceptId": "insurance.claims_management.claims_handling_procedure"
+    },
+    {
+      "caseId": "ru-036",
+      "language": "ru",
+      "query": "Что означает: процедура обработки страховых требований?",
+      "expectedConceptId": "insurance.claims_management.claims_handling_procedure"
+    },
+    {
+      "caseId": "kk-036",
+      "language": "kk",
+      "query": "Түсіндіріңіз: сақтандыру талаптарын өңдеу рәсімі.",
+      "expectedConceptId": "insurance.claims_management.claims_handling_procedure"
+    },
+    {
+      "caseId": "en-037",
+      "language": "en",
+      "query": "Explain life insurance policy.",
+      "expectedConceptId": "insurance.life_health.life_insurance_policy"
+    },
+    {
+      "caseId": "ru-037",
+      "language": "ru",
+      "query": "Что означает: полис страхования жизни?",
+      "expectedConceptId": "insurance.life_health.life_insurance_policy"
+    },
+    {
+      "caseId": "kk-037",
+      "language": "kk",
+      "query": "Түсіндіріңіз: өмірді сақтандыру полисі.",
+      "expectedConceptId": "insurance.life_health.life_insurance_policy"
+    },
+    {
+      "caseId": "en-038",
+      "language": "en",
+      "query": "Explain health insurance coverage.",
+      "expectedConceptId": "insurance.life_health.health_insurance_coverage"
+    },
+    {
+      "caseId": "ru-038",
+      "language": "ru",
+      "query": "Что означает: покрытие медицинского страхования?",
+      "expectedConceptId": "insurance.life_health.health_insurance_coverage"
+    },
+    {
+      "caseId": "kk-038",
+      "language": "kk",
+      "query": "Түсіндіріңіз: медициналық сақтандыру өтемі.",
+      "expectedConceptId": "insurance.life_health.health_insurance_coverage"
+    },
+    {
+      "caseId": "en-039",
+      "language": "en",
+      "query": "Explain mortality risk model.",
+      "expectedConceptId": "insurance.life_health.mortality_risk_model"
+    },
+    {
+      "caseId": "ru-039",
+      "language": "ru",
+      "query": "Что означает: модель риска смертности?",
+      "expectedConceptId": "insurance.life_health.mortality_risk_model"
+    },
+    {
+      "caseId": "kk-039",
+      "language": "kk",
+      "query": "Түсіндіріңіз: өлім тәуекелі моделі.",
+      "expectedConceptId": "insurance.life_health.mortality_risk_model"
+    },
+    {
+      "caseId": "en-040",
+      "language": "en",
+      "query": "Explain morbidity risk estimate.",
+      "expectedConceptId": "insurance.life_health.morbidity_risk_estimate"
+    },
+    {
+      "caseId": "ru-040",
+      "language": "ru",
+      "query": "Что означает: оценка риска заболеваемости?",
+      "expectedConceptId": "insurance.life_health.morbidity_risk_estimate"
+    },
+    {
+      "caseId": "kk-040",
+      "language": "kk",
+      "query": "Түсіндіріңіз: сырқаттанушылық тәуекелін бағалау.",
+      "expectedConceptId": "insurance.life_health.morbidity_risk_estimate"
+    }
+  ]
+}
