@@ -57,7 +57,21 @@ class SemanticQueryAnalyzerTest {
     }
 
     @Test
-    void threeLanguagesResolveToSameCanonicalConcept() {
+    void resolvesChinesePhraseWithoutWhitespace() {
+        SemanticQueryAnalysis analysis =
+                analyzer.analyze("资本充足率如何计算");
+
+        assertThat(analysis.semanticLanguage()).isEqualTo("zh");
+        assertThat(analysis.domains()).contains("finance_banking");
+        assertThat(analysis.concepts())
+                .extracting(SemanticConceptMatch::conceptId)
+                .contains(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                );
+    }
+
+    @Test
+    void fourLanguagesResolveToSameCanonicalConcept() {
         String en = conceptId("capital adequacy ratio");
         String ru = conceptId(
                 "коэффициент достаточности капитала"
@@ -65,8 +79,9 @@ class SemanticQueryAnalyzerTest {
         String kk = conceptId(
                 "капитал жеткіліктілігінің коэффициенті"
         );
+        String zh = conceptId("资本充足率");
 
-        assertThat(en).isEqualTo(ru).isEqualTo(kk);
+        assertThat(en).isEqualTo(ru).isEqualTo(kk).isEqualTo(zh);
     }
 
     @Test
@@ -98,7 +113,8 @@ class SemanticQueryAnalyzerTest {
                         List.of(
                                 new EnglishSemanticMorphologyNormalizer(),
                                 new RussianSemanticMorphologyNormalizer(),
-                                new KazakhSemanticMorphologyNormalizer()
+                                new KazakhSemanticMorphologyNormalizer(),
+                                new ChineseSemanticMorphologyNormalizer()
                         )
                 );
         SemanticConceptMatcher matcher =
