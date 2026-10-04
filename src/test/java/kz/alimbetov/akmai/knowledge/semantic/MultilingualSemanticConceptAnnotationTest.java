@@ -59,13 +59,34 @@ class MultilingualSemanticConceptAnnotationTest {
                 );
     }
 
+    @Test
+    void chineseChunkGetsCanonicalConceptMetadataWithoutWhitespace() {
+        KnowledgeChunk annotated = annotator.annotate(chunk(
+                "自然语言处理系统使用大语言模型生成答案。",
+                "zh"
+        ));
+
+        assertThat(annotated.metadata().get("semanticConcepts"))
+                .asList()
+                .contains(
+                        "computer_science_ai.data_nlp.natural_language_processing",
+                        "computer_science_ai.data_nlp.large_language_model"
+                );
+        assertThat(annotated.metadata())
+                .containsEntry(
+                        "semanticConceptVersion",
+                        "semantic-surfaces-zh-v1"
+                );
+    }
+
     private SemanticConceptMatcher matcher() {
         SemanticMorphologyRegistry morphology =
                 new SemanticMorphologyRegistry(
                         List.of(
                                 new EnglishSemanticMorphologyNormalizer(),
                                 new RussianSemanticMorphologyNormalizer(),
-                                new KazakhSemanticMorphologyNormalizer()
+                                new KazakhSemanticMorphologyNormalizer(),
+                                new ChineseSemanticMorphologyNormalizer()
                         )
                 );
         return new SemanticConceptMatcher(
