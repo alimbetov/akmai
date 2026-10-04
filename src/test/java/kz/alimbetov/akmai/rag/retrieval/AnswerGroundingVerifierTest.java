@@ -32,6 +32,17 @@ class AnswerGroundingVerifierTest {
     }
 
     @Test
+    void rejectsCitationOnlyAnswerAsHavingNoFactualClaims() {
+        var result = verifier.verify(
+                "[SOURCE 1]",
+                List.of(hit("Evidence"))
+        );
+
+        assertThat(result.grounded()).isFalse();
+        assertThat(result.claims()).isEmpty();
+    }
+
+    @Test
     void rejectsUncitedBulletEvenWhenLaterBulletHasCitation() {
         var result = verifier.verify(
                 "- First factual claim\n- Second factual claim [SOURCE 1]",
