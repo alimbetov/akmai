@@ -20,6 +20,19 @@ public class TransactionTemplatesConfiguration {
         return new TransactionTemplate(manager);
     }
 
+    @Bean(name = "retrievalTransactionTemplate")
+    public TransactionTemplate retrievalTransactionTemplate(
+            PlatformTransactionManager manager,
+            kz.alimbetov.akmai.rag.retrieval.RetrievalProperties properties
+    ) {
+        TransactionTemplate template = bounded(
+                manager,
+                properties.strategyTimeout()
+        );
+        template.setReadOnly(true);
+        return template;
+    }
+
     @Bean(name = "publicationTransactionTemplate")
     public TransactionTemplate publicationTransactionTemplate(
             PlatformTransactionManager manager,
