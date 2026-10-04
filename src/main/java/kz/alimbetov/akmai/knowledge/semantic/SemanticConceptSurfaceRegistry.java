@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -27,8 +28,10 @@ public class SemanticConceptSurfaceRegistry {
             "semantic/concept-surfaces-tr-v1.yaml",
             "semantic/concept-surfaces-el-v1.yaml"
     );
-    private static final String ALIAS_RESOURCE =
-            "semantic/concept-aliases-core-v1.yaml";
+    private static final List<String> ALIAS_RESOURCES = List.of(
+            "semantic/concept-aliases-core-v1.yaml",
+            "semantic/concept-aliases-global-v1.yaml"
+    );
 
     private final EnglishSemanticConceptCatalog catalog;
     private final Map<String, List<SemanticConceptSurface>> byLanguage;
@@ -245,8 +248,8 @@ public class SemanticConceptSurfaceRegistry {
                 }
 
                 boolean found = false;
-                java.util.ArrayList<SemanticConceptSurface> updated =
-                        new java.util.ArrayList<>(current.size());
+                ArrayList<SemanticConceptSurface> updated =
+                        new ArrayList<>(current.size());
                 for (SemanticConceptSurface existing : current) {
                     if (!existing.conceptId().equals(entry.conceptId())) {
                         updated.add(existing);
@@ -360,8 +363,7 @@ public class SemanticConceptSurfaceRegistry {
             );
         } catch (IOException exception) {
             throw new UncheckedIOException(
-                    "Cannot load multilingual semantic surfaces "
-                            + resource,
+                    "Cannot load multilingual semantic surfaces " + resource,
                     exception
             );
         }
@@ -369,17 +371,35 @@ public class SemanticConceptSurfaceRegistry {
 
     private static SemanticConceptAliasDefinition loadAliasDefinition() {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        try (var input = new ClassPathResource(
-                ALIAS_RESOURCE
-        ).getInputStream()) {
+        ArrayList<SemanticConceptAliasDefinition.Entry> entries =
+                new ArrayList<>();
+        ArrayList<String> versions = new ArrayList<>();
+
+        for (String resource : ALIAS_RESOURCES) {
+            SemanticConceptAliasDefinition definition =
+                    loadAliasDefinition(mapper, resource);
+            versions.add(definition.version());
+            entries.addAll(definition.entries());
+        }
+
+        return new SemanticConceptAliasDefinition(
+                String.join("+", versions),
+                entries
+        );
+    }
+
+    private static SemanticConceptAliasDefinition loadAliasDefinition(
+            ObjectMapper mapper,
+            String resource
+    ) {
+        try (var input = new ClassPathResource(resource).getInputStream()) {
             return mapper.readValue(
                     input,
                     SemanticConceptAliasDefinition.class
             );
         } catch (IOException exception) {
             throw new UncheckedIOException(
-                    "Cannot load semantic concept aliases "
-                            + ALIAS_RESOURCE,
+                    "Cannot load semantic concept aliases " + resource,
                     exception
             );
         }
