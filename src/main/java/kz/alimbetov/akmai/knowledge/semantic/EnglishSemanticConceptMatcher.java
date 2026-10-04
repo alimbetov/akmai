@@ -16,6 +16,10 @@ public class EnglishSemanticConceptMatcher {
         this.catalog = catalog;
     }
 
+    public String version() {
+        return catalog.version();
+    }
+
     public List<SemanticConceptMatch> match(String text) {
         String normalized =
                 EnglishSemanticConceptCatalog.normalizePhrase(text);
