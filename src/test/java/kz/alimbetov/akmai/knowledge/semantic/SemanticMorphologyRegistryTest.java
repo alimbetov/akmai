@@ -21,7 +21,7 @@ class SemanticMorphologyRegistryTest {
         assertThat(registry.supports("es")).isTrue();
         assertThat(registry.supports("pt")).isTrue();
         assertThat(registry.supports("it")).isTrue();
-        assertThat(registry.supports("tr")).isFalse();
+        assertThat(registry.supports("tr")).isTrue();
         assertThat(registry.supports("el")).isFalse();
         assertThat(registry.require("en").language()).isEqualTo("en");
         assertThat(registry.require("ru").language()).isEqualTo("ru");
@@ -32,8 +32,9 @@ class SemanticMorphologyRegistryTest {
         assertThat(registry.require("es").language()).isEqualTo("es");
         assertThat(registry.require("pt").language()).isEqualTo("pt");
         assertThat(registry.require("it").language()).isEqualTo("it");
+        assertThat(registry.require("tr").language()).isEqualTo("tr");
 
-        assertThatThrownBy(() -> registry.require("tr"))
+        assertThatThrownBy(() -> registry.require("el"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("No semantic morphology normalizer");
     }
