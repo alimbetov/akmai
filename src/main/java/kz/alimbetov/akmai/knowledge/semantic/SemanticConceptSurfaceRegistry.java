@@ -17,7 +17,9 @@ public class SemanticConceptSurfaceRegistry {
     private static final List<String> MULTILINGUAL_RESOURCES = List.of(
             "semantic/concept-surfaces-ru-v1.yaml",
             "semantic/concept-surfaces-kk-v1.yaml",
-            "semantic/concept-surfaces-zh-v1.yaml"
+            "semantic/concept-surfaces-zh-v1.yaml",
+            "semantic/concept-surfaces-de-v1.yaml",
+            "semantic/concept-surfaces-fr-v1.yaml"
     );
 
     private final EnglishSemanticConceptCatalog catalog;
