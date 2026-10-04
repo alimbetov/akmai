@@ -2,6 +2,7 @@ package kz.alimbetov.akmai.runtimeconfig;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -63,6 +64,8 @@ class AppParameterServiceTest {
                 true,
                 1L
         );
+        when(repository.lockAll(anyList()))
+                .thenReturn(allFalseParameters());
         when(repository.updateBoolean(
                 updated.key(),
                 true,
@@ -88,6 +91,7 @@ class AppParameterServiceTest {
         assertThat(service.isEnabled(
                 AppParameterKey.ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED
         )).isTrue();
+        verify(repository).lockAll(anyList());
         verify(repository).updateBoolean(
                 updated.key(),
                 true,
@@ -153,13 +157,8 @@ class AppParameterServiceTest {
                 mock(AdaptiveGraphProperties.class);
         AdaptiveGraphCompetitionProperties competition =
                 mock(AdaptiveGraphCompetitionProperties.class);
-        when(repository.find(
-                AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED.key()
-        )).thenReturn(Optional.of(parameter(
-                AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED,
-                false,
-                0L
-        )));
+        when(repository.lockAll(anyList()))
+                .thenReturn(allFalseParameters());
         AppParameterService service = service(
                 repository,
                 graph,
@@ -187,6 +186,8 @@ class AppParameterServiceTest {
         );
         AppParameterKey key =
                 AppParameterKey.ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED;
+        when(repository.lockAll(anyList()))
+                .thenReturn(allFalseParameters());
         when(repository.updateBoolean(
                 key.key(),
                 true,
@@ -202,6 +203,12 @@ class AppParameterServiceTest {
         ))
                 .isInstanceOf(AppParameterConflictException.class)
                 .hasMessageContaining("expected version 7");
+    }
+
+    private java.util.List<AppParameter> allFalseParameters() {
+        return java.util.Arrays.stream(AppParameterKey.values())
+                .map(key -> parameter(key, false, 0L))
+                .toList();
     }
 
     private AppParameterService service(
