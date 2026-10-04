@@ -22,6 +22,7 @@ public record AdaptiveGraphProperties(
 ) {
 
     private static final int STORAGE_HASH_BUCKETS_V1 = 32;
+    private static final int QUERY_SUPPORT_BUCKETS = 256;
 
     @ConstructorBinding
     public AdaptiveGraphProperties {
@@ -209,13 +210,13 @@ public record AdaptiveGraphProperties(
                     "minimumDistinctQuerySupportWarm",
                     minimumDistinctQuerySupportWarm,
                     1,
-                    AssociationEvidenceSupport.MAX_DISTINCT_QUERY_SUPPORT
+                    QUERY_SUPPORT_BUCKETS
             );
             boundedInt(
                     "minimumDistinctQuerySupportHot",
                     minimumDistinctQuerySupportHot,
                     minimumDistinctQuerySupportWarm,
-                    AssociationEvidenceSupport.MAX_DISTINCT_QUERY_SUPPORT
+                    QUERY_SUPPORT_BUCKETS
             );
             boundedInt(
                     "minimumCitationCountHot",
@@ -296,13 +297,6 @@ public record AdaptiveGraphProperties(
                                 + " must be positive"
                 );
             }
-        }
-    }
-
-    private static final class AssociationEvidenceSupport {
-        private static final int MAX_DISTINCT_QUERY_SUPPORT = 256;
-
-        private AssociationEvidenceSupport() {
         }
     }
 
