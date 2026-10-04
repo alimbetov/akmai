@@ -149,6 +149,7 @@ class RetrievalPlannerTest {
                     .containsExactly(
                             RetrievalType.VECTOR,
                             RetrievalType.LEXICAL,
+                            RetrievalType.CONCEPT,
                             RetrievalType.REFERENCE
                     );
         }
