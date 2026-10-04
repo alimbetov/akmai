@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.concurrent.RejectedExecutionException;
 import kz.alimbetov.akmai.knowledge.idempotency.IdempotencyConflictException;
 import kz.alimbetov.akmai.security.AccessLevelForbiddenException;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterConflictException;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterUnavailableException;
 import kz.alimbetov.akmai.rag.service.AnswerGenerationException;
 import kz.alimbetov.akmai.rag.service.RetrievalUnavailableException;
 import org.springframework.http.HttpStatus;
@@ -50,6 +52,20 @@ public class GlobalApiExceptionHandler {
         );
     }
 
+    @ExceptionHandler(AppParameterConflictException.class)
+    public ResponseEntity<ApiErrorResponse> appParameterConflict(
+            AppParameterConflictException exception,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.CONFLICT,
+                "APP_PARAMETER_CONFLICT",
+                exception.getMessage(),
+                request,
+                Map.of()
+        );
+    }
+
     @ExceptionHandler(IdempotencyConflictException.class)
     public ResponseEntity<ApiErrorResponse> idempotency(
             IdempotencyConflictException exception,
@@ -71,6 +87,20 @@ public class GlobalApiExceptionHandler {
                         Long.toString(exception.retryAfterSeconds())
                 )
                 .body(result.getBody());
+    }
+
+    @ExceptionHandler(AppParameterUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> appParameterUnavailable(
+            AppParameterUnavailableException exception,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "APP_PARAMETER_STORE_UNAVAILABLE",
+                exception.getMessage(),
+                request,
+                Map.of()
+        );
     }
 
     @ExceptionHandler({

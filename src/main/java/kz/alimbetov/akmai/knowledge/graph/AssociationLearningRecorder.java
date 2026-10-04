@@ -13,8 +13,11 @@ import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterKey;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -27,6 +30,7 @@ public class AssociationLearningRecorder {
     private final AdaptiveChunkGraphRepository repository;
     private final PrivacySafeQueryFingerprint fingerprint;
     private final AkmaiMetrics metrics;
+    private final AppParameterService appParameterService;
 
     public AssociationLearningRecorder(
             AdaptiveGraphProperties properties,
@@ -34,10 +38,28 @@ public class AssociationLearningRecorder {
             PrivacySafeQueryFingerprint fingerprint,
             AkmaiMetrics metrics
     ) {
+        this(
+                properties,
+                repository,
+                fingerprint,
+                metrics,
+                null
+        );
+    }
+
+    @Autowired
+    public AssociationLearningRecorder(
+            AdaptiveGraphProperties properties,
+            AdaptiveChunkGraphRepository repository,
+            PrivacySafeQueryFingerprint fingerprint,
+            AkmaiMetrics metrics,
+            AppParameterService appParameterService
+    ) {
         this.properties = properties;
         this.repository = repository;
         this.fingerprint = fingerprint;
         this.metrics = metrics;
+        this.appParameterService = appParameterService;
     }
 
     public void record(
@@ -46,7 +68,10 @@ public class AssociationLearningRecorder {
             List<RetrievalHit> boundedContext,
             CitationValidator.CitationValidation validation
     ) {
-        if (!properties.learningEnabled()) {
+        if (!runtimeEnabled(
+                AppParameterKey.ADAPTIVE_GRAPH_LEARNING_ENABLED,
+                properties.learningEnabled()
+        )) {
             return;
         }
 
@@ -116,6 +141,15 @@ public class AssociationLearningRecorder {
                     exception.getClass().getSimpleName()
             );
         }
+    }
+
+    private boolean runtimeEnabled(
+            AppParameterKey key,
+            boolean fallback
+    ) {
+        return appParameterService == null
+                ? fallback
+                : appParameterService.isEnabled(key);
     }
 
     private List<IndexedHit> eligibleHits(

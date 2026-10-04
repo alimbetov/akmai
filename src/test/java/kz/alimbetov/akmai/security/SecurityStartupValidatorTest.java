@@ -12,6 +12,8 @@ class SecurityStartupValidatorTest {
 
     private static final String STRONG_KEY =
             "0123456789abcdef0123456789abcdef";
+    private static final String STRONG_ADMIN_KEY =
+            "abcdef0123456789abcdef0123456789";
 
     @Test
     void productionRequiresSecurityEnabled() {
@@ -68,11 +70,43 @@ class SecurityStartupValidatorTest {
                 new SecurityProperties(
                         true,
                         STRONG_KEY,
+                        STRONG_ADMIN_KEY,
                         false,
                         Set.of(1L, 2L)
                 ),
                 "prod"
         ).run(arguments());
+    }
+
+    @Test
+    void productionRejectsMissingAdminKey() {
+        assertThatThrownBy(() -> validator(
+                new SecurityProperties(
+                        true,
+                        STRONG_KEY,
+                        false,
+                        Set.of(1L)
+                ),
+                "prod"
+        ).run(arguments()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("admin API key is required");
+    }
+
+    @Test
+    void productionRequiresDistinctAdminKey() {
+        assertThatThrownBy(() -> validator(
+                new SecurityProperties(
+                        true,
+                        STRONG_KEY,
+                        STRONG_KEY,
+                        false,
+                        Set.of(1L)
+                ),
+                "prod"
+        ).run(arguments()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("must differ");
     }
 
     @Test

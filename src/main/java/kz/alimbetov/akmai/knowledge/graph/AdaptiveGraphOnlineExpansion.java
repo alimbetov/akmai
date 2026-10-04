@@ -12,8 +12,11 @@ import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.observability.AkmaiMetrics;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterKey;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -25,15 +28,27 @@ public class AdaptiveGraphOnlineExpansion {
     private final AdaptiveGraphProperties properties;
     private final PublishedSearchProjectionReader projectionReader;
     private final AkmaiMetrics metrics;
+    private final AppParameterService appParameterService;
 
     public AdaptiveGraphOnlineExpansion(
             AdaptiveGraphProperties properties,
             PublishedSearchProjectionReader projectionReader,
             AkmaiMetrics metrics
     ) {
+        this(properties, projectionReader, metrics, null);
+    }
+
+    @Autowired
+    public AdaptiveGraphOnlineExpansion(
+            AdaptiveGraphProperties properties,
+            PublishedSearchProjectionReader projectionReader,
+            AkmaiMetrics metrics,
+            AppParameterService appParameterService
+    ) {
         this.properties = properties;
         this.projectionReader = projectionReader;
         this.metrics = metrics;
+        this.appParameterService = appParameterService;
     }
 
     public List<RetrievalHit> expand(
@@ -41,7 +56,10 @@ public class AdaptiveGraphOnlineExpansion {
             AdaptiveGraphShadowExpansion.ShadowExpansionReport report,
             Set<Long> allowedAccessLevels
     ) {
-        if (!properties.expansionEnabled()) {
+        if (!runtimeEnabled(
+                AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED,
+                properties.expansionEnabled()
+        )) {
             return copy(existingCandidates);
         }
         if (existingCandidates == null || existingCandidates.isEmpty()) {
@@ -66,6 +84,15 @@ public class AdaptiveGraphOnlineExpansion {
             );
             return List.copyOf(existingCandidates);
         }
+    }
+
+    private boolean runtimeEnabled(
+            AppParameterKey key,
+            boolean fallback
+    ) {
+        return appParameterService == null
+                ? fallback
+                : appParameterService.isEnabled(key);
     }
 
     private List<RetrievalHit> expandInternal(

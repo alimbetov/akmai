@@ -7,8 +7,11 @@ import kz.alimbetov.akmai.config.AdaptiveGraphCompetitionProperties;
 import kz.alimbetov.akmai.observability.AkmaiMetrics;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterKey;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -19,20 +22,34 @@ public class AdaptiveGraphCompetitiveAdmission {
 
     private final AdaptiveGraphCompetitionProperties properties;
     private final AkmaiMetrics metrics;
+    private final AppParameterService appParameterService;
 
     public AdaptiveGraphCompetitiveAdmission(
             AdaptiveGraphCompetitionProperties properties,
             AkmaiMetrics metrics
     ) {
+        this(properties, metrics, null);
+    }
+
+    @Autowired
+    public AdaptiveGraphCompetitiveAdmission(
+            AdaptiveGraphCompetitionProperties properties,
+            AkmaiMetrics metrics,
+            AppParameterService appParameterService
+    ) {
         this.properties = properties;
         this.metrics = metrics;
+        this.appParameterService = appParameterService;
     }
 
     public List<RetrievalHit> admit(List<RetrievalHit> candidates) {
         if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
-        if (!properties.enabled()) {
+        if (!runtimeEnabled(
+                AppParameterKey.ADAPTIVE_GRAPH_COMPETITION_ENABLED,
+                properties.enabled()
+        )) {
             return List.copyOf(candidates);
         }
 
@@ -46,6 +63,15 @@ public class AdaptiveGraphCompetitiveAdmission {
             );
             return List.copyOf(candidates);
         }
+    }
+
+    private boolean runtimeEnabled(
+            AppParameterKey key,
+            boolean fallback
+    ) {
+        return appParameterService == null
+                ? fallback
+                : appParameterService.isEnabled(key);
     }
 
     private List<RetrievalHit> admitInternal(List<RetrievalHit> candidates) {

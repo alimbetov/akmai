@@ -34,6 +34,8 @@ public class ApiSecurityConfiguration {
                     "/actuator/prometheus/**"
             };
             if (properties.enabled()) {
+                auth.requestMatchers("/api/admin/**")
+                        .hasRole("ADMIN");
                 auth.requestMatchers(protectedEndpoints)
                         .hasRole("API");
             } else {

@@ -13,11 +13,16 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 class SecurityApiIntegrationTest {
 
+    private static final String API_KEY =
+            "0123456789abcdef0123456789abcdef";
+    private static final String ADMIN_KEY =
+            "abcdef0123456789abcdef0123456789";
+
     private final ApiKeyAuthenticationFilter filter =
             new ApiKeyAuthenticationFilter(
                     new SecurityProperties(
                             true,
-                            "0123456789abcdef0123456789abcdef",
+                            API_KEY,
                             false,
                             java.util.Set.of(1L, 2L)
                     ),
@@ -94,7 +99,7 @@ class SecurityApiIntegrationTest {
                 "POST",
                 "/api/knowledge/text"
         );
-        request.addHeader("X-AKMAI-API-Key", "0123456789abcdef0123456789abcdef");
+        request.addHeader("X-AKMAI-API-Key", API_KEY);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(
@@ -117,6 +122,81 @@ class SecurityApiIntegrationTest {
     }
 
     @Test
+    void rejectsNormalApiKeyForAdminEndpoint() throws Exception {
+        ApiKeyAuthenticationFilter adminFilter =
+                new ApiKeyAuthenticationFilter(
+                        new SecurityProperties(
+                                true,
+                                API_KEY,
+                                ADMIN_KEY,
+                                false,
+                                java.util.Set.of(1L, 2L)
+                        ),
+                        new ObjectMapper()
+                );
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET",
+                "/api/admin/app-parameters"
+        );
+        request.addHeader("X-AKMAI-API-Key", API_KEY);
+        MockHttpServletResponse response =
+                new MockHttpServletResponse();
+
+        adminFilter.doFilter(
+                request,
+                response,
+                new MockFilterChain()
+        );
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(response.getContentAsString())
+                .contains("X-AKMAI-Admin-Key");
+    }
+
+    @Test
+    void authenticatesDedicatedAdminKeyForAdminEndpoint()
+            throws Exception {
+        ApiKeyAuthenticationFilter adminFilter =
+                new ApiKeyAuthenticationFilter(
+                        new SecurityProperties(
+                                true,
+                                API_KEY,
+                                ADMIN_KEY,
+                                false,
+                                java.util.Set.of(1L, 2L)
+                        ),
+                        new ObjectMapper()
+                );
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET",
+                "/api/admin/app-parameters"
+        );
+        request.addHeader("X-AKMAI-Admin-Key", ADMIN_KEY);
+        MockHttpServletResponse response =
+                new MockHttpServletResponse();
+
+        adminFilter.doFilter(
+                request,
+                response,
+                new MockFilterChain()
+        );
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(SecurityContextHolder.getContext().getAuthentication())
+                .isNotNull();
+        assertThat(SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities())
+                .extracting(Object::toString)
+                .contains("ROLE_ADMIN");
+        assertThat(SecurityContextHolder.getContext().getAuthentication()
+                .getPrincipal())
+                .isEqualTo(new ApiKeyPrincipal(
+                        "akmai-admin-key",
+                        java.util.Set.of(1L, 2L)
+                ));
+    }
+
+    @Test
     void authenticatesPrometheusScrapeWithBearerCredential()
             throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest(
@@ -125,7 +205,7 @@ class SecurityApiIntegrationTest {
         );
         request.addHeader(
                 "Authorization",
-                "Bearer 0123456789abcdef0123456789abcdef"
+                "Bearer " + API_KEY
         );
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -148,7 +228,7 @@ class SecurityApiIntegrationTest {
         );
         request.addHeader(
                 "X-AKMAI-API-Key",
-                "0123456789abcdef0123456789abcdef"
+                API_KEY
         );
         MockHttpServletResponse response = new MockHttpServletResponse();
 

@@ -32,7 +32,9 @@ class KnowledgeExpansionTest {
                 );
         RetrievalHit seed = new RetrievalHit(
                 RetrievalType.VECTOR,
+                1L,
                 "doc",
+                1L,
                 "chunk-1",
                 "seed",
                 Map.of("generation", 1L)
@@ -75,7 +77,9 @@ class KnowledgeExpansionTest {
                 java.util.stream.IntStream.range(0, 12)
                         .mapToObj(index -> new RetrievalHit(
                                 RetrievalType.VECTOR,
+                                1L,
                                 "doc",
+                                1L,
                                 "chunk-" + index,
                                 "seed-" + index,
                                 Map.of(
@@ -113,7 +117,9 @@ class KnowledgeExpansionTest {
                 );
         RetrievalHit seed = new RetrievalHit(
                 RetrievalType.VECTOR,
+                1L,
                 "doc",
+                1L,
                 "seed",
                 "seed",
                 Map.of(
@@ -125,6 +131,7 @@ class KnowledgeExpansionTest {
         SearchProjection neighbor = new SearchProjection(
                 "neighbor-provenance",
                 "doc",
+                1L,
                 1L,
                 null,
                 2,
@@ -170,7 +177,9 @@ class KnowledgeExpansionTest {
                 );
         RetrievalHit seed = new RetrievalHit(
                 RetrievalType.VECTOR,
+                1L,
                 "doc",
+                1L,
                 "seed",
                 "seed",
                 Map.of("generation", 1L)
@@ -187,6 +196,7 @@ class KnowledgeExpansionTest {
         return new SearchProjection(
                 chunkId,
                 "doc",
+                1L,
                 1L,
                 null,
                 index,

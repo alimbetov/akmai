@@ -47,29 +47,57 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String supplied = suppliedCredential(request);
-        if (!matches(supplied, properties.apiKey())) {
-            unauthorized(request, response);
+        boolean adminRequest = isAdminRequest(
+                request.getRequestURI()
+        );
+        String supplied = suppliedCredential(
+                request,
+                adminRequest
+        );
+        String configured = adminRequest
+                ? properties.adminApiKey()
+                : properties.apiKey();
+        if (!matches(supplied, configured)) {
+            unauthorized(
+                    request,
+                    response,
+                    adminRequest
+            );
             return;
         }
 
+        List<SimpleGrantedAuthority> authorities = adminRequest
+                ? List.of(
+                        new SimpleGrantedAuthority("ROLE_API"),
+                        new SimpleGrantedAuthority("ROLE_ADMIN")
+                )
+                : List.of(
+                        new SimpleGrantedAuthority("ROLE_API")
+                );
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(
                         new ApiKeyPrincipal(
-                                "akmai-api-key",
+                                adminRequest
+                                        ? "akmai-admin-key"
+                                        : "akmai-api-key",
                                 properties.accessLevels()
                         ),
                         null,
-                        List.of(new SimpleGrantedAuthority("ROLE_API"))
+                        authorities
                 )
         );
         filterChain.doFilter(request, response);
     }
 
     private String suppliedCredential(
-            HttpServletRequest request
+            HttpServletRequest request,
+            boolean adminRequest
     ) {
-        String apiKey = request.getHeader("X-AKMAI-API-Key");
+        String apiKey = request.getHeader(
+                adminRequest
+                        ? "X-AKMAI-Admin-Key"
+                        : "X-AKMAI-API-Key"
+        );
         if (apiKey != null && !apiKey.isBlank()) {
             return apiKey;
         }
@@ -86,6 +114,11 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             return authorization.substring(7).trim();
         }
         return null;
+    }
+
+    private boolean isAdminRequest(String requestUri) {
+        return requestUri != null
+                && requestUri.startsWith("/api/admin/");
     }
 
     private boolean requiresApiKey(String requestUri) {
@@ -115,7 +148,8 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
     private void unauthorized(
             HttpServletRequest request,
-            HttpServletResponse response
+            HttpServletResponse response,
+            boolean adminRequest
     ) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -123,7 +157,9 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
                 response.getOutputStream(),
                 new ApiErrorResponse(
                         "UNAUTHORIZED",
-                        "Valid X-AKMAI-API-Key is required",
+                        adminRequest
+                                ? "Valid X-AKMAI-Admin-Key is required"
+                                : "Valid X-AKMAI-API-Key is required",
                         RequestIdSupport.requestId(request),
                         HttpServletResponse.SC_UNAUTHORIZED,
                         java.util.Map.of()

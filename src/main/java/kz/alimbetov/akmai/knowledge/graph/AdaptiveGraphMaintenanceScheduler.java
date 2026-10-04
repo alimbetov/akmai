@@ -4,8 +4,11 @@ import java.time.Duration;
 import java.time.Instant;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import kz.alimbetov.akmai.observability.AkmaiMetrics;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterKey;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -18,15 +21,36 @@ public class AdaptiveGraphMaintenanceScheduler {
     private final AdaptiveGraphMaintenanceService service;
     private final AdaptiveGraphProperties properties;
     private final AkmaiMetrics metrics;
+    private final AppParameterService appParameterService;
 
     public AdaptiveGraphMaintenanceScheduler(
             AdaptiveGraphMaintenanceService service,
             AdaptiveGraphProperties properties,
             AkmaiMetrics metrics
     ) {
+        this(service, properties, metrics, null);
+    }
+
+    @Autowired
+    public AdaptiveGraphMaintenanceScheduler(
+            AdaptiveGraphMaintenanceService service,
+            AdaptiveGraphProperties properties,
+            AkmaiMetrics metrics,
+            AppParameterService appParameterService
+    ) {
         this.service = service;
         this.properties = properties;
         this.metrics = metrics;
+        this.appParameterService = appParameterService;
+    }
+
+    private boolean runtimeEnabled(
+            AppParameterKey key,
+            boolean fallback
+    ) {
+        return appParameterService == null
+                ? fallback
+                : appParameterService.isEnabled(key);
     }
 
     @Scheduled(
@@ -34,7 +58,10 @@ public class AdaptiveGraphMaintenanceScheduler {
                     "${akmai.adaptive-graph.maintenance.fixed-delay:PT5M}"
     )
     public void maintain() {
-        if (!properties.maintenanceEnabled()) {
+        if (!runtimeEnabled(
+                AppParameterKey.ADAPTIVE_GRAPH_MAINTENANCE_ENABLED,
+                properties.maintenanceEnabled()
+        )) {
             return;
         }
 

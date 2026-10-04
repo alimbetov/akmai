@@ -14,8 +14,11 @@ import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.observability.AkmaiMetrics;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterKey;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -28,6 +31,7 @@ public class AdaptiveGraphShadowExpansion {
     private final AdaptiveGraphLookupReader graphRepository;
     private final PublishedSearchProjectionReader projectionReader;
     private final AkmaiMetrics metrics;
+    private final AppParameterService appParameterService;
 
     public AdaptiveGraphShadowExpansion(
             AdaptiveGraphProperties properties,
@@ -35,10 +39,28 @@ public class AdaptiveGraphShadowExpansion {
             PublishedSearchProjectionReader projectionReader,
             AkmaiMetrics metrics
     ) {
+        this(
+                properties,
+                graphRepository,
+                projectionReader,
+                metrics,
+                null
+        );
+    }
+
+    @Autowired
+    public AdaptiveGraphShadowExpansion(
+            AdaptiveGraphProperties properties,
+            AdaptiveGraphLookupReader graphRepository,
+            PublishedSearchProjectionReader projectionReader,
+            AkmaiMetrics metrics,
+            AppParameterService appParameterService
+    ) {
         this.properties = properties;
         this.graphRepository = graphRepository;
         this.projectionReader = projectionReader;
         this.metrics = metrics;
+        this.appParameterService = appParameterService;
     }
 
     public ShadowExpansionReport observe(
@@ -46,8 +68,15 @@ public class AdaptiveGraphShadowExpansion {
             List<RetrievalHit> existingCandidates,
             Set<Long> allowedAccessLevels
     ) {
-        if (!properties.shadowExpansionEnabled()
-                && !properties.expansionEnabled()) {
+        boolean shadowEnabled = runtimeEnabled(
+                AppParameterKey.ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED,
+                properties.shadowExpansionEnabled()
+        );
+        boolean expansionEnabled = runtimeEnabled(
+                AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED,
+                properties.expansionEnabled()
+        );
+        if (!shadowEnabled && !expansionEnabled) {
             return ShadowExpansionReport.disabled();
         }
 
@@ -65,6 +94,15 @@ public class AdaptiveGraphShadowExpansion {
             );
             return ShadowExpansionReport.failure();
         }
+    }
+
+    private boolean runtimeEnabled(
+            AppParameterKey key,
+            boolean fallback
+    ) {
+        return appParameterService == null
+                ? fallback
+                : appParameterService.isEnabled(key);
     }
 
     private ShadowExpansionReport observeInternal(

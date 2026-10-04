@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +13,8 @@ import kz.alimbetov.akmai.config.AdaptiveGraphCompetitionProperties;
 import kz.alimbetov.akmai.observability.AkmaiMetrics;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterKey;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterService;
 import org.junit.jupiter.api.Test;
 
 class AdaptiveGraphCompetitiveAdmissionTest {
@@ -33,6 +36,36 @@ class AdaptiveGraphCompetitiveAdmissionTest {
         assertThat(admission.admit(candidates))
                 .containsExactlyElementsOf(candidates);
         verifyNoInteractions(metrics);
+    }
+
+    @Test
+    void runtimeParameterCanEnableCompetitionWithoutRestart() {
+        AkmaiMetrics metrics = mock(AkmaiMetrics.class);
+        AppParameterService appParameters =
+                mock(AppParameterService.class);
+        when(appParameters.isEnabled(
+                AppParameterKey.ADAPTIVE_GRAPH_COMPETITION_ENABLED
+        )).thenReturn(true);
+        AdaptiveGraphCompetitiveAdmission admission =
+                new AdaptiveGraphCompetitiveAdmission(
+                        properties(false),
+                        metrics,
+                        appParameters
+                );
+
+        List<RetrievalHit> candidates = new ArrayList<>();
+        for (int index = 1; index <= 6; index++) {
+            candidates.add(base("base-" + index));
+        }
+        candidates.add(graph("graph-1", "HOT", 0.90, 2));
+
+        assertThat(admission.admit(candidates))
+                .extracting(RetrievalHit::chunkId)
+                .containsSubsequence(
+                        "base-4",
+                        "graph-1",
+                        "base-5"
+                );
     }
 
     @Test
