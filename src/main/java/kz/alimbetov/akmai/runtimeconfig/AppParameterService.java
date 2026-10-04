@@ -4,13 +4,18 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import kz.alimbetov.akmai.config.AdaptiveGraphCompetitionProperties;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class AppParameterService {
@@ -97,6 +102,7 @@ public class AppParameterService {
                 .toList();
     }
 
+    @Transactional
     public ResolvedAppParameter updateBoolean(
             AppParameterKey key,
             boolean value,
@@ -113,7 +119,10 @@ public class AppParameterService {
                     "expectedVersion must not be negative"
             );
         }
-        validateTransition(key, value);
+        Map<AppParameterKey, Boolean> locked =
+                lockParameterSnapshot();
+        validateTransition(key, value, locked);
+
         String actor = normalizeActor(updatedBy);
         AppParameter updated;
         try {
@@ -132,9 +141,10 @@ public class AppParameterService {
         } catch (DataAccessException exception) {
             throw new AppParameterUnavailableException(exception);
         }
+
         ResolvedAppParameter resolved =
                 ResolvedAppParameter.from(updated);
-        cache.put(key, resolved);
+        publishCacheAfterCommit(key, resolved);
         return resolved;
     }
 
@@ -142,23 +152,56 @@ public class AppParameterService {
         cache.invalidateAll();
     }
 
+    private Map<AppParameterKey, Boolean> lockParameterSnapshot() {
+        List<String> keys = Arrays.stream(AppParameterKey.values())
+                .map(AppParameterKey::key)
+                .sorted()
+                .toList();
+        List<AppParameter> locked;
+        try {
+            locked = repository.lockAll(keys);
+        } catch (DataAccessException exception) {
+            throw new AppParameterUnavailableException(exception);
+        }
+
+        LinkedHashMap<AppParameterKey, Boolean> snapshot =
+                new LinkedHashMap<>();
+        for (AppParameter parameter : locked) {
+            AppParameterKey parameterKey =
+                    AppParameterKey.parse(parameter.key());
+            snapshot.put(
+                    parameterKey,
+                    parameter.booleanValue()
+            );
+        }
+        if (snapshot.size() != AppParameterKey.values().length) {
+            throw new IllegalStateException(
+                    "Runtime parameter registry is incomplete"
+            );
+        }
+        return Map.copyOf(snapshot);
+    }
+
     private void validateTransition(
             AppParameterKey key,
-            boolean value
+            boolean value,
+            Map<AppParameterKey, Boolean> current
     ) {
         if (!value) {
             if (key == AppParameterKey.ADAPTIVE_GRAPH_MAINTENANCE_ENABLED
-                    && getAuthoritative(
+                    && enabled(
+                            current,
                             AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED
-                    ).value()) {
+                    )) {
                 throw new IllegalArgumentException(
                         "Cannot disable adaptive graph maintenance while online expansion is enabled"
                 );
             }
             if (key == AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED
-                    && getAuthoritative(
+                    && enabled(
+                            current,
                             AppParameterKey.ADAPTIVE_GRAPH_COMPETITION_ENABLED
-                    ).value()) {
+                    )) {
                 throw new IllegalArgumentException(
                         "Cannot disable adaptive graph expansion while competition is enabled"
                 );
@@ -177,18 +220,20 @@ public class AppParameterService {
                 }
             }
             case ADAPTIVE_GRAPH_EXPANSION_ENABLED -> {
-                if (!getAuthoritative(
+                if (!enabled(
+                        current,
                         AppParameterKey.ADAPTIVE_GRAPH_MAINTENANCE_ENABLED
-                ).value()) {
+                )) {
                     throw new IllegalArgumentException(
                             "adaptive graph online expansion requires maintenance to be enabled first"
                     );
                 }
             }
             case ADAPTIVE_GRAPH_COMPETITION_ENABLED -> {
-                if (!getAuthoritative(
+                if (!enabled(
+                        current,
                         AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED
-                ).value()) {
+                )) {
                     throw new IllegalArgumentException(
                             "adaptive graph competition requires online expansion to be enabled first"
                     );
@@ -199,6 +244,32 @@ public class AppParameterService {
                 // no additional dependency
             }
         }
+    }
+
+    private boolean enabled(
+            Map<AppParameterKey, Boolean> snapshot,
+            AppParameterKey key
+    ) {
+        return Boolean.TRUE.equals(snapshot.get(key));
+    }
+
+    private void publishCacheAfterCommit(
+            AppParameterKey key,
+            ResolvedAppParameter value
+    ) {
+        if (!TransactionSynchronizationManager
+                .isSynchronizationActive()) {
+            cache.put(key, value);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        cache.put(key, value);
+                    }
+                }
+        );
     }
 
     private ResolvedAppParameter loadFailSafe(
