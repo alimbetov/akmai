@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import kz.alimbetov.akmai.config.AdaptiveGraphCompetitionProperties;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import org.slf4j.Logger;
@@ -27,6 +28,8 @@ public class AppParameterService {
     private final AdaptiveGraphProperties graphProperties;
     private final AdaptiveGraphCompetitionProperties competitionProperties;
     private final Cache<AppParameterKey, ResolvedAppParameter> cache;
+    private final Map<AppParameterKey, ResolvedAppParameter> lastKnownGood =
+            new ConcurrentHashMap<>();
 
     public AppParameterService(
             AppParameterRepository repository,
@@ -86,7 +89,7 @@ public class AppParameterService {
                     .orElseThrow(() -> new IllegalStateException(
                             "Missing persisted app parameter: " + key.key()
                     ));
-            cache.put(key, resolved);
+            remember(key, resolved);
             return resolved;
         } catch (DataAccessException exception) {
             throw new AppParameterUnavailableException(exception);
@@ -259,14 +262,14 @@ public class AppParameterService {
     ) {
         if (!TransactionSynchronizationManager
                 .isSynchronizationActive()) {
-            cache.put(key, value);
+            remember(key, value);
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(
                 new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        cache.put(key, value);
+                        remember(key, value);
                     }
                 }
         );
@@ -276,17 +279,41 @@ public class AppParameterService {
             AppParameterKey key
     ) {
         try {
-            return repository.find(key.key())
+            ResolvedAppParameter resolved = repository.find(key.key())
                     .map(ResolvedAppParameter::from)
-                    .orElseGet(() -> fallback(key));
+                    .orElse(null);
+            if (resolved == null) {
+                LOGGER.warn(
+                        "app_parameter_read event=missing key={}",
+                        key.key()
+                );
+                return lastKnownOrFallback(key);
+            }
+            lastKnownGood.put(key, resolved);
+            return resolved;
         } catch (RuntimeException exception) {
             LOGGER.warn(
                     "app_parameter_read event=fallback key={} errorType={}",
                     key.key(),
                     exception.getClass().getSimpleName()
             );
-            return fallback(key);
+            return lastKnownOrFallback(key);
         }
+    }
+
+    private ResolvedAppParameter lastKnownOrFallback(
+            AppParameterKey key
+    ) {
+        ResolvedAppParameter known = lastKnownGood.get(key);
+        return known == null ? fallback(key) : known;
+    }
+
+    private void remember(
+            AppParameterKey key,
+            ResolvedAppParameter value
+    ) {
+        lastKnownGood.put(key, value);
+        cache.put(key, value);
     }
 
     private ResolvedAppParameter fallback(
