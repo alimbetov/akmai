@@ -24,7 +24,7 @@ public class AppParameterController {
 
     @GetMapping
     public List<AppParameterResponse> list() {
-        return service.list().stream()
+        return service.listAuthoritative().stream()
                 .map(AppParameterResponse::from)
                 .toList();
     }
@@ -34,7 +34,7 @@ public class AppParameterController {
             @PathVariable String key
     ) {
         return AppParameterResponse.from(
-                service.get(AppParameterKey.parse(key))
+                service.getAuthoritative(AppParameterKey.parse(key))
         );
     }
 
