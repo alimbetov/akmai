@@ -139,12 +139,13 @@ Calibration procedure:
 
 1. collect CANDIDATE/WARM/HOT graph candidates in shadow mode without changing user-visible context;
 2. record the graph candidate score and deterministic replay inputs;
-3. split observations into a calibration interval and a later holdout replay interval;
-4. sweep candidate score thresholds on the calibration interval;
-5. for every threshold, compare graph-enabled replay with the graph-disabled baseline;
-6. choose the lowest threshold that satisfies the pre-declared utility, confidence, regression, latency and safety gates;
-7. evaluate that threshold unchanged on the holdout replay interval;
-8. only a holdout result that passes the same gates becomes CANARY_ELIGIBLE.
+3. split requests into a calibration interval and a later holdout replay interval;
+4. replay every candidate score threshold on the calibration request cohort;
+5. for every threshold, compare graph-enabled replay with the graph-disabled baseline on the same requests;
+6. reject duplicate request identities within a threshold evaluation;
+7. choose the lowest threshold that satisfies the pre-declared utility, confidence, regression, latency and safety gates;
+8. replay that threshold unchanged on the holdout request cohort;
+9. only a holdout result that passes the same gates becomes CANARY_ELIGIBLE.
 
 A temporary bootstrap threshold is allowed, but it is explicitly provisional. User feedback is not part of this contract.
 
@@ -152,22 +153,25 @@ A temporary bootstrap threshold is allowed, but it is explicitly provisional. Us
 
 The primary learning signal is system-observed retrieval utility, not thumbs-up/down or other explicit user feedback.
 
-Each shadow/replay observation contains at minimum:
+The replay harness executes every candidate threshold against the same request cohort and the same graph-disabled baseline. Calibration must not infer counterfactual utility by taking one graph-enabled run and filtering candidates after the fact: changing the threshold can change candidate admission, context displacement and answer quality.
 
-    graph_score
+Each request-level replay observation contains at minimum:
+
+    replay_key
+    candidate_threshold
     utility_delta
     latency_delta_ms
     safety_violation
 
-`utility_delta` is computed by the replay harness as graph-enabled quality minus the graph-disabled baseline for the same request. The utility definition must be declared before calibration. It may combine deterministic retrieval/citation quality metrics, but the weights must not be retuned on the same observations used to select the threshold.
+`replay_key` is a privacy-safe stable identifier for one independent replay request. It must be unique within one threshold evaluation. Duplicate keys are rejected because repeated copies of the same request would inflate statistical confidence.
+
+`utility_delta` is computed by the replay harness as graph-enabled quality minus the graph-disabled baseline for the same request and threshold. The utility definition must be declared before calibration. It may combine deterministic retrieval/citation quality metrics, but the weights must not be retuned on the same observations used to select the threshold.
 
 A request is a measurable benefit only when:
 
     utility_delta >= minimum_meaningful_utility_delta
 
-For threshold `T`, calibration evaluates only observations where:
-
-    graph_score >= T
+For threshold `T`, calibration evaluates the request-level observations produced by an actual replay at exactly `T`.
 
 For those observations it records:
 
