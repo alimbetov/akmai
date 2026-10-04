@@ -68,8 +68,8 @@ public class EnglishSemanticConceptMatcher {
                     .length;
             result.add(new SemanticConceptMatch(
                     surface.conceptId(),
-                    conceptDomain(surface.conceptId()),
-                    conceptSubdomain(surface.conceptId()),
+                    surface.domainId(),
+                    surface.subdomainId(),
                     surface.preferredPhrase(),
                     tokenCount * match.mode().confidence(),
                     match.mode()
@@ -159,22 +159,6 @@ public class EnglishSemanticConceptMatcher {
             }
         }
         return false;
-    }
-
-    private String conceptDomain(String conceptId) {
-        int separator = conceptId.indexOf('.');
-        return separator < 0
-                ? conceptId
-                : conceptId.substring(0, separator);
-    }
-
-    private String conceptSubdomain(String conceptId) {
-        int first = conceptId.indexOf('.');
-        int second = conceptId.indexOf('.', first + 1);
-        if (first < 0 || second < 0) {
-            return "";
-        }
-        return conceptId.substring(first + 1, second);
     }
 
     private record Match(SemanticMatchMode mode) {
