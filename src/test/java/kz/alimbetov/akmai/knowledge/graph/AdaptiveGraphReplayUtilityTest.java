@@ -52,6 +52,23 @@ class AdaptiveGraphReplayUtilityTest {
     }
 
     @Test
+    void marksAppendOnlyRecallLossAsSafetyViolation() {
+        AdaptiveGraphReplayUtility.Evaluation evaluation =
+                utility.evaluate(
+                        quality(1.0, 0.20, 0.38685280723454163),
+                        quality(0.0, 1.0 / 6.0, 0.3562071871080222),
+                        quality(1.0, 0.20, 0.38685280723454163),
+                        new AdaptiveGraphReplayUtility.Weights(
+                                0.50,
+                                0.20,
+                                0.30
+                        )
+                );
+
+        assertThat(evaluation.safetyViolation()).isTrue();
+    }
+
+    @Test
     void normalizesUtilityWeights() {
         double first = utility.score(
                 quality(1.0, 0.50, 0.25),
