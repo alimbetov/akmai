@@ -25,13 +25,13 @@ public class AdaptiveGraphShadowExpansion {
             LoggerFactory.getLogger(AdaptiveGraphShadowExpansion.class);
 
     private final AdaptiveGraphProperties properties;
-    private final AdaptiveChunkGraphRepository graphRepository;
+    private final AdaptiveGraphLookupReader graphRepository;
     private final PublishedSearchProjectionReader projectionReader;
     private final AkmaiMetrics metrics;
 
     public AdaptiveGraphShadowExpansion(
             AdaptiveGraphProperties properties,
-            AdaptiveChunkGraphRepository graphRepository,
+            AdaptiveGraphLookupReader graphRepository,
             PublishedSearchProjectionReader projectionReader,
             AkmaiMetrics metrics
     ) {
