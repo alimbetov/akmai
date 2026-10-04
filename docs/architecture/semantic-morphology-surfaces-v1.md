@@ -32,11 +32,15 @@ Stem matching is phrase-bounded: the complete stem-token sequence must occur
 contiguously. A single root such as `risk`, `capital`, or `payment`
 cannot activate a multi-word concept.
 
-## English v1
+## Production language coverage
 
-English currently provides the first morphology normalizer.
+Language-specific morphology is active for all production languages:
 
-Examples:
+```text
+en ru kk zh de fr es pt it tr el
+```
+
+English examples:
 
 ```text
 risk weighted assets
@@ -54,34 +58,25 @@ payment fraud detecting
 
 can fall back to the same bounded stem sequence.
 
-## Multilingual rollout
+## Language-specific strategies
 
-Do not reuse English suffix rules for other languages.
+English suffix rules are not reused as a universal morphology model.
 
-Each language must implement its own `SemanticMorphologyNormalizer`.
-
-Recommended rollout:
+The current implementation uses:
 
 ```text
-EN
-RU
-KK
-ZH segmentation-only
-TR
-DE
-FR
-ES
-PT
-IT
-EL
+EN              bounded English suffix morphology
+RU / KK         language-specific Cyrillic/Turkic suffix morphology
+ZH              Han segmentation without stemming
+DE / FR / ES
+PT / IT         language-specific European suffix profiles
+TR              Turkish-locale agglutinative suffix handling
+EL              tonos-insensitive Greek normalization and final-sigma
+                canonicalization with Greek suffix rules
 ```
 
-For Chinese, phrase segmentation replaces stemming.
-
-For Kazakh and Turkish, morphology should be suffix-aware and
-agglutination-aware.
-
-For German, compound handling should be introduced before broad stem matching.
+Every language owns its recognition surface behavior while all matches resolve
+to the same language-independent canonical IDs.
 
 ## Safety
 
