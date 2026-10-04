@@ -25,7 +25,7 @@ public class AnswerGroundingVerifier {
     private static final Pattern SOURCE =
             Pattern.compile("\\[SOURCE\\s+(\\d+)]");
     private static final Pattern SENTENCE_BOUNDARY =
-            Pattern.compile("(?<=[.!?。！？])\\s+|(?<=[。！？])");
+            Pattern.compile("\\R+|(?<=[.!?。！？])\\s+|(?<=[。！？])");
     private static final Pattern NUMBER =
             Pattern.compile("(?<![\\p{L}\\p{N}])[-+]?\\d+(?:[.,]\\d+)?");
 
