@@ -23,6 +23,7 @@ import kz.alimbetov.akmai.rag.retrieval.ContextBudget;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.KnowledgeExpansion;
 import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
+import kz.alimbetov.akmai.rag.retrieval.PublishedContextRevalidator;
 import kz.alimbetov.akmai.rag.retrieval.Reranker;
 import kz.alimbetov.akmai.rag.retrieval.ResultFusion;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalExecutionResult;
@@ -44,6 +45,8 @@ class RagQuestionServiceTest {
         Reranker reranker = mock(Reranker.class);
         KnowledgeExpansion expansion = mock(KnowledgeExpansion.class);
         ContextBudget budget = mock(ContextBudget.class);
+        PublishedContextRevalidator revalidator =
+                mock(PublishedContextRevalidator.class);
         ContextAssembler assembler = mock(ContextAssembler.class);
         AnswerGenerationService generation =
                 mock(AnswerGenerationService.class);
@@ -114,6 +117,8 @@ class RagQuestionServiceTest {
         when(competitiveAdmission.admit(List.of(hit)))
                 .thenReturn(List.of(hit));
         when(budget.apply(List.of(hit), "question")).thenReturn(List.of(hit));
+        when(revalidator.revalidate(List.of(hit), scope))
+                .thenReturn(List.of(hit));
         when(assembler.assemble(anyList())).thenReturn("{\"sources\":[]}");
         when(generation.generate(eq("question"), eq("{\"sources\":[]}")))
                 .thenReturn("Grounded-looking answer without citation.");
@@ -126,6 +131,7 @@ class RagQuestionServiceTest {
                 reranker,
                 expansion,
                 budget,
+                revalidator,
                 assembler,
                 new CitationValidator(),
                 generation,
@@ -141,6 +147,7 @@ class RagQuestionServiceTest {
         assertThat(response.answer())
                 .isEqualTo("В базе знаний недостаточно информации.");
         assertThat(response.sources()).isEmpty();
+        verify(revalidator).revalidate(List.of(hit), scope);
         verify(utilityRecorder).record(
                 eq(List.of(hit)),
                 any(CitationValidator.CitationValidation.class)
