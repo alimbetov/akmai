@@ -1,0 +1,49 @@
+id: public_administration
+domain: GOVERNMENT
+names:
+  kk: Мемлекеттік басқару
+  ru: Государственное управление
+  en: Public administration
+  zh: 公共行政
+  de: Öffentliche Verwaltung
+  fr: Administration publique
+  es: Administración pública
+  pt: Administração pública
+  it: Pubblica amministrazione
+  tr: Kamu yönetimi
+  el: Δημόσια διοίκηση
+headings: {}
+semanticTypes:
+  kk:
+    DEADLINE:
+      - '(?iu)(әкімшілік рәсім мерзімі)'
+  ru:
+    DEADLINE:
+      - '(?iu)(срок административной процедуры)'
+  en:
+    DEADLINE:
+      - '(?iu)(administrative procedure deadline)'
+  zh:
+    DEADLINE:
+      - '(行政程序期限)'
+  de:
+    DEADLINE:
+      - '(?iu)(frist des verwaltungsverfahrens)'
+  fr:
+    DEADLINE:
+      - '(?iu)(délai de la procédure administrative)'
+  es:
+    DEADLINE:
+      - '(?iu)(plazo del procedimiento administrativo)'
+  pt:
+    DEADLINE:
+      - '(?iu)(prazo do procedimento administrativo)'
+  it:
+    DEADLINE:
+      - '(?iu)(termine del procedimento amministrativo)'
+  tr:
+    DEADLINE:
+      - '(?iu)(idari usul süresi)'
+  el:
+    DEADLINE:
+      - '(?iu)(προθεσμία διοικητικής διαδικασίας)'
