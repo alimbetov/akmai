@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import kz.alimbetov.akmai.config.IdempotencyProperties;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import kz.alimbetov.akmai.knowledge.embedding.GenerationEmbeddingService;
@@ -39,6 +40,7 @@ public class PersistenceCoordinator {
     private final GenerationPublicationService publicationService;
     private final PublicationOutcomeResolver publicationOutcomeResolver;
     private final IngestionIdempotencyRepository idempotencyRepository;
+    private final IdempotencyProperties idempotencyProperties;
     private final RetentionProperties retentionProperties;
     private AkmaiMetrics metrics;
 
@@ -50,6 +52,7 @@ public class PersistenceCoordinator {
             GenerationPublicationService publicationService,
             PublicationOutcomeResolver publicationOutcomeResolver,
             IngestionIdempotencyRepository idempotencyRepository,
+            IdempotencyProperties idempotencyProperties,
             RetentionProperties retentionProperties
     ) {
         this.projectionFactory = projectionFactory;
@@ -59,6 +62,7 @@ public class PersistenceCoordinator {
         this.publicationService = publicationService;
         this.publicationOutcomeResolver = publicationOutcomeResolver;
         this.idempotencyRepository = idempotencyRepository;
+        this.idempotencyProperties = idempotencyProperties;
         this.retentionProperties = retentionProperties;
     }
 
@@ -85,10 +89,12 @@ public class PersistenceCoordinator {
                 .toList();
         String documentId = singleDocumentId(baseProjections);
 
+        heartbeat(idempotency);
         profileService.assertConfiguredProfileIsActive();
         EmbeddingProfile profile = profileService.activeProfile();
         String contentFingerprint = fingerprint(baseProjections);
 
+        heartbeat(idempotency);
         long generation = generationRepository.allocate(
                 documentId,
                 retentionProperties.defaultPolicy(),
@@ -97,7 +103,24 @@ public class PersistenceCoordinator {
                 contentFingerprint,
                 accessLevel
         );
-        idempotencyRepository.attachGeneration(idempotency, generation);
+        try {
+            idempotencyRepository.attachGeneration(
+                    idempotency,
+                    generation
+            );
+        } catch (RuntimeException attachFailure) {
+            try {
+                generationRepository.fail(
+                        documentId,
+                        generation,
+                        "INGESTION_IDEMPOTENCY_LOST",
+                        safeMessage(attachFailure)
+                );
+            } catch (RuntimeException cleanupFailure) {
+                attachFailure.addSuppressed(cleanupFailure);
+            }
+            throw attachFailure;
+        }
 
         GenerationIdentity identity = new GenerationIdentity(
                 documentId,
@@ -110,7 +133,11 @@ public class PersistenceCoordinator {
             List<SearchProjection> projections = baseProjections.stream()
                     .map(value -> value.withIdentity(identity))
                     .toList();
-            List<float[]> embeddings = embeddingService.embed(projections, profile);
+            List<float[]> embeddings = embeddingService.embed(
+                    projections,
+                    profile,
+                    () -> heartbeat(idempotency)
+            );
             List<DocumentIdentifier> identifiers = identifiers(projections);
             List<VectorGenerationEntry> manifest = manifest(projections, generation);
             List<VectorRow> vectors = vectors(
@@ -119,6 +146,8 @@ public class PersistenceCoordinator {
                     profile,
                     generation
             );
+
+            heartbeat(idempotency);
 
             GenerationPublicationService.PublicationResult result;
             try {
@@ -203,6 +232,15 @@ public class PersistenceCoordinator {
             idempotencyRepository.fail(idempotency, safeMessage(exception));
             throw exception;
         }
+    }
+
+    private void heartbeat(
+            IngestionIdempotencyContext idempotency
+    ) {
+        idempotencyRepository.renew(
+                idempotency,
+                idempotencyProperties.leaseDuration()
+        );
     }
 
     private String singleDocumentId(List<SearchProjection> projections) {
