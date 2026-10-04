@@ -51,6 +51,25 @@ public class SecurityStartupValidator implements ApplicationRunner {
                     "Production API key must contain at least 32 characters"
             );
         }
+        if (production
+                && (properties.adminApiKey() == null
+                || properties.adminApiKey().isBlank())) {
+            throw new IllegalStateException(
+                    "Production admin API key is required"
+            );
+        }
+        if (production
+                && properties.adminApiKey().length() < 32) {
+            throw new IllegalStateException(
+                    "Production admin API key must contain at least 32 characters"
+            );
+        }
+        if (production
+                && properties.adminApiKey().equals(properties.apiKey())) {
+            throw new IllegalStateException(
+                    "Production admin API key must differ from API key"
+            );
+        }
         if (properties.accessLevels().isEmpty()
                 || properties.accessLevels().stream()
                 .anyMatch(value -> value == null || value <= 0)) {
