@@ -213,6 +213,62 @@ class PostgresRetrievalIntegrationTest {
 
 
     @Test
+    void semanticConceptReadIsCrossLanguagePublishedAndBounded() {
+        long generation = generations.allocate(
+                "doc",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fp-semantic-concept",
+                1L
+        );
+        String target =
+                "finance_banking.lending_credit.corporate_credit_facility";
+        projections.saveAll(List.of(
+                projection(
+                        "semantic-ru",
+                        generation,
+                        "Корпоративное финансирование для заемщика.",
+                        "ru",
+                        Map.of(
+                                "source", "integration",
+                                "semanticConcepts", List.of(target)
+                        )
+                ),
+                projection(
+                        "semantic-en-other",
+                        generation,
+                        "Unrelated treasury policy.",
+                        "en",
+                        Map.of(
+                                "source", "integration",
+                                "semanticConcepts",
+                                List.of("finance_banking.treasury.liquidity_buffer")
+                        )
+                )
+        ));
+        publish("doc", generation);
+
+        assertThat(projections.searchSemanticConcepts(
+                List.of(target),
+                List.of(),
+                Set.of(1L),
+                4
+        ))
+                .extracting(SearchProjection::chunkId)
+                .containsExactly("semantic-ru");
+
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT to_regclass(
+                    'public.ksp_1_ru_semc'
+                )::text
+                """,
+                String.class
+        )).isEqualTo("ksp_1_ru_semc");
+    }
+
+    @Test
     void sameChunkIdCannotOverwriteAnotherDocumentOwner() {
         long first = generations.allocate(
                 "doc-owner-a",
@@ -737,6 +793,22 @@ class PostgresRetrievalIntegrationTest {
             String text,
             String language
     ) {
+        return projection(
+                chunkId,
+                generation,
+                text,
+                language,
+                Map.of("source", "integration")
+        );
+    }
+
+    private SearchProjection projection(
+            String chunkId,
+            long generation,
+            String text,
+            String language,
+            Map<String, Object> metadata
+    ) {
         return new SearchProjection(
                 chunkId,
                 "doc",
@@ -750,7 +822,7 @@ class PostgresRetrievalIntegrationTest {
                 "integration",
                 List.of(),
                 List.of(),
-                Map.of("source", "integration"),
+                metadata,
                 2
         );
     }
