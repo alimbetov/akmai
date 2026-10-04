@@ -10,7 +10,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class ReferenceGraphRepository {
+public class ReferenceGraphRepository
+        implements ReferenceGraphLookupReader {
 
     private final JdbcTemplate jdbcTemplate;
     private final CrossReferenceExtractor extractor;
