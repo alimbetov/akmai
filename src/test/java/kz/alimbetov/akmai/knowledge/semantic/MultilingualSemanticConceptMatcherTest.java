@@ -114,6 +114,23 @@ class MultilingualSemanticConceptMatcherTest {
     }
 
     @Test
+    void spanishPhraseMapsToCanonicalConceptId() {
+        var match = matcher.match(
+                        "El ratio de adecuación de capital supera el mínimo.",
+                        "es"
+                )
+                .stream()
+                .filter(value -> value.conceptId().equals(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                ))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(match.matchMode())
+                .isEqualTo(SemanticMatchMode.EXACT);
+    }
+
+    @Test
     void unsupportedLanguageCannotFallBackToAnotherSurfacePack() {
         assertThat(matcher.match(
                 "коэффициент достаточности капитала",
