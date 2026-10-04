@@ -194,3 +194,195 @@ languages:
         preferredPhrase: διαχείριση μεταλλευτικών αποβλήτων
       - conceptId: oil_gas_mining.mining_operations.mineral_reserve_classification
         preferredPhrase: ταξινόμηση ορυκτών αποθεμάτων
+      - conceptId: manufacturing.production_systems.production_planning_system
+        preferredPhrase: σύστημα προγραμματισμού παραγωγής
+      - conceptId: manufacturing.production_systems.manufacturing_execution_system
+        preferredPhrase: σύστημα εκτέλεσης παραγωγής
+      - conceptId: manufacturing.production_systems.production_line_balancing
+        preferredPhrase: εξισορρόπηση γραμμής παραγωγής
+      - conceptId: manufacturing.production_systems.takt_time_calculation
+        preferredPhrase: υπολογισμός χρόνου takt
+      - conceptId: manufacturing.production_systems.overall_equipment_effectiveness
+        preferredPhrase: συνολική αποτελεσματικότητα εξοπλισμού
+      - conceptId: manufacturing.production_systems.batch_production_schedule
+        preferredPhrase: πρόγραμμα παραγωγής κατά παρτίδες
+      - conceptId: manufacturing.quality_management.statistical_process_control
+        preferredPhrase: στατιστικός έλεγχος διεργασιών
+      - conceptId: manufacturing.quality_management.quality_management_system
+        preferredPhrase: σύστημα διαχείρισης ποιότητας
+      - conceptId: manufacturing.quality_management.root_cause_analysis
+        preferredPhrase: ανάλυση βασικής αιτίας
+      - conceptId: manufacturing.quality_management.nonconformance_corrective_action
+        preferredPhrase: διορθωτική ενέργεια μη συμμόρφωσης
+      - conceptId: manufacturing.quality_management.process_capability_index
+        preferredPhrase: δείκτης ικανότητας διεργασίας
+      - conceptId: manufacturing.quality_management.incoming_quality_inspection
+        preferredPhrase: έλεγχος ποιότητας εισερχομένων
+      - conceptId: manufacturing.maintenance_reliability.preventive_maintenance_schedule
+        preferredPhrase: πρόγραμμα προληπτικής συντήρησης
+      - conceptId: manufacturing.maintenance_reliability.predictive_maintenance_model
+        preferredPhrase: μοντέλο προγνωστικής συντήρησης
+      - conceptId: manufacturing.maintenance_reliability.reliability_centered_maintenance
+        preferredPhrase: συντήρηση με επίκεντρο την αξιοπιστία
+      - conceptId: manufacturing.maintenance_reliability.mean_time_between_failures
+        preferredPhrase: μέσος χρόνος μεταξύ βλαβών
+      - conceptId: manufacturing.maintenance_reliability.equipment_failure_mode
+        preferredPhrase: τρόπος αστοχίας εξοπλισμού
+      - conceptId: manufacturing.maintenance_reliability.maintenance_work_order
+        preferredPhrase: εντολή εργασίας συντήρησης
+      - conceptId: manufacturing.industrial_operations.industrial_process_automation
+        preferredPhrase: αυτοματοποίηση βιομηχανικών διεργασιών
+      - conceptId: manufacturing.industrial_operations.programmable_logic_controller
+        preferredPhrase: προγραμματιζόμενος λογικός ελεγκτής
+      - conceptId: manufacturing.industrial_operations.production_capacity_utilization
+        preferredPhrase: αξιοποίηση παραγωγικής δυναμικότητας
+      - conceptId: manufacturing.industrial_operations.industrial_safety_procedure
+        preferredPhrase: διαδικασία βιομηχανικής ασφάλειας
+      - conceptId: manufacturing.industrial_operations.plant_operations_management
+        preferredPhrase: διαχείριση λειτουργίας εργοστασίου
+      - conceptId: manufacturing.industrial_operations.process_optimization_study
+        preferredPhrase: μελέτη βελτιστοποίησης διεργασίας
+      - conceptId: construction_real_estate.design_construction.building_structural_design
+        preferredPhrase: στατικός σχεδιασμός κτιρίου
+      - conceptId: construction_real_estate.design_construction.construction_project_schedule
+        preferredPhrase: χρονοδιάγραμμα κατασκευαστικού έργου
+      - conceptId: construction_real_estate.design_construction.building_information_modeling
+        preferredPhrase: μοντελοποίηση πληροφοριών κτιρίου
+      - conceptId: construction_real_estate.design_construction.reinforced_concrete_structure
+        preferredPhrase: κατασκευή από οπλισμένο σκυρόδεμα
+      - conceptId: construction_real_estate.design_construction.construction_site_management
+        preferredPhrase: διαχείριση εργοταξίου
+      - conceptId: construction_real_estate.design_construction.building_code_compliance
+        preferredPhrase: συμμόρφωση με οικοδομικό κανονισμό
+      - conceptId: construction_real_estate.real_estate_market.commercial_property_valuation
+        preferredPhrase: αποτίμηση εμπορικού ακινήτου
+      - conceptId: construction_real_estate.real_estate_market.residential_property_market
+        preferredPhrase: αγορά οικιστικών ακινήτων
+      - conceptId: construction_real_estate.real_estate_market.rental_yield_analysis
+        preferredPhrase: ανάλυση απόδοσης μίσθωσης
+      - conceptId: construction_real_estate.real_estate_market.real_estate_transaction
+        preferredPhrase: συναλλαγή ακινήτου
+      - conceptId: construction_real_estate.real_estate_market.property_market_appraisal
+        preferredPhrase: εκτίμηση αγοραίας αξίας ακινήτου
+      - conceptId: construction_real_estate.real_estate_market.investment_property_return
+        preferredPhrase: απόδοση επενδυτικού ακινήτου
+      - conceptId: construction_real_estate.facilities_management.facility_maintenance_plan
+        preferredPhrase: σχέδιο συντήρησης εγκαταστάσεων
+      - conceptId: construction_real_estate.facilities_management.building_energy_performance
+        preferredPhrase: ενεργειακή απόδοση κτιρίου
+      - conceptId: construction_real_estate.facilities_management.property_asset_management
+        preferredPhrase: διαχείριση περιουσιακών στοιχείων ακινήτων
+      - conceptId: construction_real_estate.facilities_management.preventive_facility_maintenance
+        preferredPhrase: προληπτική συντήρηση εγκαταστάσεων
+      - conceptId: construction_real_estate.facilities_management.building_occupancy_management
+        preferredPhrase: διαχείριση πληρότητας κτιρίου
+      - conceptId: construction_real_estate.facilities_management.facilities_service_contract
+        preferredPhrase: σύμβαση υπηρεσιών εγκαταστάσεων
+      - conceptId: construction_real_estate.project_controls.construction_cost_estimate
+        preferredPhrase: εκτίμηση κόστους κατασκευής
+      - conceptId: construction_real_estate.project_controls.earned_value_management
+        preferredPhrase: διαχείριση δεδουλευμένης αξίας
+      - conceptId: construction_real_estate.project_controls.project_schedule_variance
+        preferredPhrase: απόκλιση χρονοδιαγράμματος έργου
+      - conceptId: construction_real_estate.project_controls.construction_risk_register
+        preferredPhrase: μητρώο κινδύνων κατασκευής
+      - conceptId: construction_real_estate.project_controls.contractor_progress_payment
+        preferredPhrase: πληρωμή προόδου εργολάβου
+      - conceptId: construction_real_estate.project_controls.change_order_management
+        preferredPhrase: διαχείριση εντολών αλλαγής
+      - conceptId: transport_logistics.freight_transport.freight_transportation_network
+        preferredPhrase: δίκτυο μεταφοράς εμπορευμάτων
+      - conceptId: transport_logistics.freight_transport.intermodal_freight_terminal
+        preferredPhrase: διατροπικός τερματικός σταθμός εμπορευμάτων
+      - conceptId: transport_logistics.freight_transport.cargo_transport_capacity
+        preferredPhrase: ικανότητα μεταφοράς φορτίου
+      - conceptId: transport_logistics.freight_transport.rail_freight_service
+        preferredPhrase: υπηρεσία σιδηροδρομικών εμπορευματικών μεταφορών
+      - conceptId: transport_logistics.freight_transport.road_freight_operation
+        preferredPhrase: λειτουργία οδικών εμπορευματικών μεταφορών
+      - conceptId: transport_logistics.freight_transport.air_cargo_handling
+        preferredPhrase: διαχείριση αεροπορικού φορτίου
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_management_system
+        preferredPhrase: σύστημα διαχείρισης αποθήκης
+      - conceptId: transport_logistics.warehousing_distribution.distribution_center_operation
+        preferredPhrase: λειτουργία κέντρου διανομής
+      - conceptId: transport_logistics.warehousing_distribution.inventory_storage_policy
+        preferredPhrase: πολιτική αποθήκευσης αποθέματος
+      - conceptId: transport_logistics.warehousing_distribution.order_fulfillment_process
+        preferredPhrase: διαδικασία εκπλήρωσης παραγγελιών
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_picking_strategy
+        preferredPhrase: στρατηγική συλλογής παραγγελιών αποθήκης
+      - conceptId: transport_logistics.warehousing_distribution.cold_chain_logistics
+        preferredPhrase: εφοδιαστική ψυχρής αλυσίδας
+      - conceptId: transport_logistics.fleet_operations.fleet_maintenance_program
+        preferredPhrase: πρόγραμμα συντήρησης στόλου
+      - conceptId: transport_logistics.fleet_operations.vehicle_route_optimization
+        preferredPhrase: βελτιστοποίηση διαδρομών οχημάτων
+      - conceptId: transport_logistics.fleet_operations.fleet_fuel_efficiency
+        preferredPhrase: αποδοτικότητα καυσίμου στόλου
+      - conceptId: transport_logistics.fleet_operations.driver_safety_management
+        preferredPhrase: διαχείριση ασφάλειας οδηγών
+      - conceptId: transport_logistics.fleet_operations.vehicle_utilization_rate
+        preferredPhrase: ποσοστό αξιοποίησης οχημάτων
+      - conceptId: transport_logistics.fleet_operations.fleet_telematics_system
+        preferredPhrase: σύστημα τηλεματικής στόλου
+      - conceptId: transport_logistics.supply_chain.supply_chain_disruption
+        preferredPhrase: διαταραχή εφοδιαστικής αλυσίδας
+      - conceptId: transport_logistics.supply_chain.supplier_lead_time
+        preferredPhrase: χρόνος παράδοσης προμηθευτή
+      - conceptId: transport_logistics.supply_chain.logistics_network_optimization
+        preferredPhrase: βελτιστοποίηση δικτύου εφοδιαστικής
+      - conceptId: transport_logistics.supply_chain.demand_supply_planning
+        preferredPhrase: σχεδιασμός ζήτησης και προσφοράς
+      - conceptId: transport_logistics.supply_chain.supply_chain_resilience
+        preferredPhrase: ανθεκτικότητα εφοδιαστικής αλυσίδας
+      - conceptId: transport_logistics.supply_chain.last_mile_delivery
+        preferredPhrase: παράδοση τελευταίου μιλίου
+      - conceptId: agriculture_food.crop_science.crop_yield_forecast
+        preferredPhrase: πρόβλεψη απόδοσης καλλιέργειας
+      - conceptId: agriculture_food.crop_science.soil_nutrient_management
+        preferredPhrase: διαχείριση θρεπτικών στοιχείων εδάφους
+      - conceptId: agriculture_food.crop_science.precision_agriculture_system
+        preferredPhrase: σύστημα γεωργίας ακριβείας
+      - conceptId: agriculture_food.crop_science.integrated_pest_management
+        preferredPhrase: ολοκληρωμένη διαχείριση επιβλαβών οργανισμών
+      - conceptId: agriculture_food.crop_science.irrigation_scheduling_model
+        preferredPhrase: μοντέλο προγραμματισμού άρδευσης
+      - conceptId: agriculture_food.crop_science.crop_disease_monitoring
+        preferredPhrase: παρακολούθηση ασθενειών καλλιεργειών
+      - conceptId: agriculture_food.livestock_production.livestock_health_management
+        preferredPhrase: διαχείριση υγείας κτηνοτροφικών ζώων
+      - conceptId: agriculture_food.livestock_production.animal_feed_formulation
+        preferredPhrase: σύνθεση ζωοτροφών
+      - conceptId: agriculture_food.livestock_production.dairy_production_system
+        preferredPhrase: σύστημα γαλακτοπαραγωγής
+      - conceptId: agriculture_food.livestock_production.herd_reproductive_performance
+        preferredPhrase: αναπαραγωγική απόδοση κοπαδιού
+      - conceptId: agriculture_food.livestock_production.livestock_disease_control
+        preferredPhrase: έλεγχος ασθενειών κτηνοτροφικών ζώων
+      - conceptId: agriculture_food.livestock_production.animal_welfare_standard
+        preferredPhrase: πρότυπο ευζωίας ζώων
+      - conceptId: agriculture_food.food_processing.food_processing_technology
+        preferredPhrase: τεχνολογία επεξεργασίας τροφίμων
+      - conceptId: agriculture_food.food_processing.food_production_line
+        preferredPhrase: γραμμή παραγωγής τροφίμων
+      - conceptId: agriculture_food.food_processing.thermal_food_processing
+        preferredPhrase: θερμική επεξεργασία τροφίμων
+      - conceptId: agriculture_food.food_processing.food_packaging_system
+        preferredPhrase: σύστημα συσκευασίας τροφίμων
+      - conceptId: agriculture_food.food_processing.shelf_life_evaluation
+        preferredPhrase: αξιολόγηση διάρκειας ζωής προϊόντος
+      - conceptId: agriculture_food.food_processing.food_quality_control
+        preferredPhrase: έλεγχος ποιότητας τροφίμων
+      - conceptId: agriculture_food.food_safety.food_safety_management
+        preferredPhrase: διαχείριση ασφάλειας τροφίμων
+      - conceptId: agriculture_food.food_safety.hazard_analysis_control
+        preferredPhrase: ανάλυση κινδύνων και έλεγχος
+      - conceptId: agriculture_food.food_safety.microbial_contamination_risk
+        preferredPhrase: κίνδυνος μικροβιακής επιμόλυνσης
+      - conceptId: agriculture_food.food_safety.food_traceability_system
+        preferredPhrase: σύστημα ιχνηλασιμότητας τροφίμων
+      - conceptId: agriculture_food.food_safety.allergen_control_program
+        preferredPhrase: πρόγραμμα ελέγχου αλλεργιογόνων
+      - conceptId: agriculture_food.food_safety.food_hygiene_standard
+        preferredPhrase: πρότυπο υγιεινής τροφίμων
