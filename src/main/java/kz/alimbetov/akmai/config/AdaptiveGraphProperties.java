@@ -184,7 +184,10 @@ public record AdaptiveGraphProperties(
             double promoteWarm,
             double demoteWarm,
             double promoteHot,
-            double demoteHot
+            double demoteHot,
+            int minimumDistinctQuerySupportWarm,
+            int minimumDistinctQuerySupportHot,
+            int minimumCitationCountHot
     ) {
         public Scoring {
             positiveFinite("distinctQueryWeight", distinctQueryWeight);
@@ -202,6 +205,24 @@ public record AdaptiveGraphProperties(
             bounded("promoteWarm", promoteWarm);
             bounded("demoteHot", demoteHot);
             bounded("promoteHot", promoteHot);
+            boundedInt(
+                    "minimumDistinctQuerySupportWarm",
+                    minimumDistinctQuerySupportWarm,
+                    1,
+                    AssociationEvidenceSupport.MAX_DISTINCT_QUERY_SUPPORT
+            );
+            boundedInt(
+                    "minimumDistinctQuerySupportHot",
+                    minimumDistinctQuerySupportHot,
+                    minimumDistinctQuerySupportWarm,
+                    AssociationEvidenceSupport.MAX_DISTINCT_QUERY_SUPPORT
+            );
+            boundedInt(
+                    "minimumCitationCountHot",
+                    minimumCitationCountHot,
+                    1,
+                    Integer.MAX_VALUE
+            );
 
             if (!(demoteWarm < promoteWarm
                     && promoteWarm < demoteHot
@@ -233,6 +254,25 @@ public record AdaptiveGraphProperties(
             }
         }
 
+        private static void boundedInt(
+                String name,
+                int value,
+                int minimum,
+                int maximum
+        ) {
+            if (value < minimum || value > maximum) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph "
+                                + name
+                                + " must be in ["
+                                + minimum
+                                + ", "
+                                + maximum
+                                + "]"
+                );
+            }
+        }
+
         private static void bounded(String name, double value) {
             if (!Double.isFinite(value) || value < 0 || value > 1) {
                 throw new IllegalArgumentException(
@@ -256,6 +296,13 @@ public record AdaptiveGraphProperties(
                                 + " must be positive"
                 );
             }
+        }
+    }
+
+    private static final class AssociationEvidenceSupport {
+        private static final int MAX_DISTINCT_QUERY_SUPPORT = 256;
+
+        private AssociationEvidenceSupport() {
         }
     }
 
