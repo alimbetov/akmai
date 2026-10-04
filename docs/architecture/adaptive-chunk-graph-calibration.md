@@ -164,60 +164,94 @@ The current application default `competition.min-graph-score=0.70` is a bootstra
 
 ## Measured graph utility without user feedback
 
-The primary learning signal is system-observed retrieval utility, not thumbs-up/down or other explicit user feedback.
+The primary calibration signal is system-observed replay utility, not
+thumbs-up/down or other explicit user feedback.
 
-The replay harness executes every candidate threshold against the same request cohort and the same graph-disabled baseline. Calibration rejects a sweep when request identities differ across thresholds. It must not infer counterfactual utility by taking one graph-enabled run and filtering candidates after the fact: changing the threshold can change candidate admission, context displacement and answer quality.
+Competition calibration uses three paired modes for the same request:
 
-Each request-level replay observation contains at minimum:
+    BASE_ONLY
+    GRAPH_APPEND_ONLY
+    GRAPH_COMPETITIVE(T)
+
+This separation is required because append-only graph expansion and competitive
+reordering are different interventions. The serving threshold T* must not claim
+utility that was already delivered by append-only graph expansion.
+
+The replay harness executes every candidate threshold against the same request
+cohort. Calibration rejects a sweep when request identities differ across
+thresholds and rejects duplicate replay keys within one threshold.
+
+Each request-level replay observation contains:
 
     replay_key
     candidate_threshold
-    utility_delta
+    overall_utility_delta
+    append_only_utility_delta
+    competition_utility_delta
     latency_delta_ms
     safety_violation
 
-`replay_key` is a privacy-safe stable identifier for one independent replay request. It must be unique within one threshold evaluation. Duplicate keys are rejected because repeated copies of the same request would inflate statistical confidence.
+The utility identity is mandatory:
 
-`utility_delta` is computed by the replay harness as graph-enabled quality minus the graph-disabled baseline for the same request and threshold. The utility definition must be declared before calibration. It may combine deterministic retrieval/citation quality metrics, but the weights must not be retuned on the same observations used to select the threshold.
+    overall_utility_delta
+      = append_only_utility_delta
+      + competition_utility_delta
 
-A request is a measurable benefit only when:
+The constructor validates this equality within a small numerical tolerance.
 
-    utility_delta >= minimum_meaningful_utility_delta
+The current deterministic utility contract is versioned as:
 
-For threshold `T`, calibration evaluates the request-level observations produced by an actual replay at exactly `T`.
+    adaptive-graph-ranking-utility-v1
 
-For those observations it records:
+and combines:
+
+    Recall@5
+    MRR
+    nDCG@10
+
+The versioned corpus stores the weights. Weights are calibration data, not
+runtime constants.
+
+A competition result is considered a measurable benefit when:
+
+    competition_utility_delta
+      >= minimum_meaningful_competition_delta
+
+For each threshold T the calibrator records:
 
 - sample count;
-- mean utility lift;
-- benefit rate;
-- regression rate;
+- mean append-only utility lift;
+- mean overall utility lift;
+- mean competition utility lift;
+- competition benefit rate;
+- competition regression rate;
+- Wilson lower confidence bound on benefit probability;
 - p95 latency delta;
 - safety violations.
-
-The probability gate uses a Wilson lower confidence bound rather than raw benefit rate. This prevents a threshold supported by one or two lucky observations from looking production-ready.
-
-Conceptually:
-
-    benefit_probability = beneficial_requests / eligible_requests
-    conservative_probability = WilsonLowerBound(
-        beneficial_requests,
-        eligible_requests,
-        confidence_z
-    )
 
 A threshold passes only when all configured gates hold:
 
     samples >= minimum_samples
-    mean_utility_delta >= minimum_mean_utility_lift
-    conservative_probability >= minimum_benefit_probability
+    mean_append_only_utility_delta
+      >= minimum_mean_append_only_utility_lift
+    mean_overall_utility_delta
+      >= minimum_mean_overall_utility_lift
+    mean_competition_utility_delta
+      >= minimum_mean_competition_utility_lift
+    conservative_benefit_probability
+      >= minimum_benefit_probability
     regression_rate <= maximum_regression_rate
     p95_latency_delta <= maximum_latency_regression
     safety_violations == 0
 
-Among passing thresholds, select the lowest one. This maximizes useful coverage while preserving the declared safety/quality contract.
+The safety gate currently treats a drop in competitive Recall@5 below the
+BASE_ONLY Recall@5 for the same request as blocking.
 
-The Java reference implementation is `AdaptiveGraphThresholdCalibrator`. It has two separate operations:
+Among passing thresholds, select the lowest one. This maximizes useful coverage
+while preserving the declared safety/quality contract.
+
+The Java reference implementation is AdaptiveGraphThresholdCalibrator. It has
+two separate operations:
 
     calibrate(calibration_set)
         -> REPLAY_CANDIDATE
@@ -225,7 +259,23 @@ The Java reference implementation is `AdaptiveGraphThresholdCalibrator`. It has 
     validateReplay(holdout_set, candidate_threshold)
         -> QUALITY_GATE_CANDIDATE | REJECTED | INSUFFICIENT_DATA
 
-Neither operation changes runtime configuration. The calibrator's target is `akmai.adaptive-graph.competition.min-graph-score`; edge lifecycle thresholds and adjacency minimum weights are calibrated separately. QUALITY_GATE_CANDIDATE is deliberately weaker than CANARY_ELIGIBLE. The normal repository retrieval-quality checks and the graph replay quality gate must pass before canary eligibility is granted.
+Neither operation changes runtime configuration. The calibrator's target is
+akmai.adaptive-graph.competition.min-graph-score; edge lifecycle thresholds and
+adjacency minimum weights are calibrated separately.
+
+The deterministic GraphReplayHarness reuses production
+AdaptiveGraphCompetitiveAdmission and ContextBudget. Its versioned v1 corpus
+lives at:
+
+    src/test/resources/quality/adaptive-graph-replay-v1.json
+
+The Retrieval Quality Gate emits and uploads:
+
+    target/quality/adaptive-graph-replay-report.json
+
+This fixture validates replay mechanics and statistical gating. Full
+replay/load validation must still supply measured latency/capacity evidence
+before canary approval.
 
 ### Canary and approval
 
@@ -327,7 +377,20 @@ The implemented evidence score uses the three configured evidence dimensions exp
     freshness = 0.5 ^ age_in_half_lives
     weight = clamp(evidence * freshness, 0, 1)
 
-Context co-occurrence remains a weaker signal by configuration, but it must not be declared in configuration and then omitted from the actual score. The functional form is architecture; coefficients are calibration data.
+Context co-occurrence remains a weaker signal by configuration, but it must not be declared in configuration and then omitted from the actual score. The scalar score is necessary but not sufficient for lifecycle promotion.
+
+Current bootstrap evidence gates are:
+
+    CANDIDATE -> WARM
+      distinct_query_support >= 2
+
+    WARM -> HOT
+      distinct_query_support >= 4
+      citation_count >= 1
+
+AssociationLearningRecorder also requires every learned pair to contain at least one cited chunk. Uncited-to-uncited context pairs are not learned.
+
+The functional form and safety invariants are architecture; coefficients and support cutoffs remain calibration data.
 
 ## Decay and half-life
 
@@ -454,6 +517,9 @@ Calibration reports must name the exact runtime parameter they target. The compe
           demote-warm: ...
           promote-hot: ...
           demote-hot: ...
+          minimum-distinct-query-support-warm: ...
+          minimum-distinct-query-support-hot: ...
+          minimum-citation-count-hot: ...
           half-life: ...
 
         quotas:
@@ -470,15 +536,18 @@ The calibration report may recommend T*, but applying it remains a versioned dep
 
 Do not hard-code universal quality claims such as a specific Recall lift or tolerated p99 regression.
 
-Record the current graph-disabled baseline and explicit project SLOs first.
+Record the current baseline and explicit project SLOs first.
 
-Every candidate parameter set is evaluated against:
+Competition candidates are evaluated against paired modes:
 
-1. graph-disabled baseline;
-2. shadow/oracle graph results;
-3. graph-enabled replay;
-4. ACL and generation correctness;
-5. storage/load behaviour.
+1. BASE_ONLY;
+2. GRAPH_APPEND_ONLY;
+3. GRAPH_COMPETITIVE(T);
+4. shadow/oracle graph results where available;
+5. ACL and generation correctness;
+6. storage/load behaviour.
+
+This prevents competition T* from inheriting utility that belongs to append-only graph expansion.
 
 Security regressions are always blocking.
 
