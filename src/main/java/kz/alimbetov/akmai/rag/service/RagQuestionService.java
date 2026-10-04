@@ -160,10 +160,14 @@ public class RagQuestionService {
 
         CitationValidator.CitationValidation validation =
                 citationValidator.validate(answer, finalContext);
-        adaptiveGraphUtilityRecorder.record(finalContext, validation);
 
         if (validation.answer().isBlank()
                 || validation.citedSources().isEmpty()) {
+            adaptiveGraphUtilityRecorder.record(
+                    finalContext,
+                    validation,
+                    false
+            );
             return insufficientInformation(question);
         }
 
@@ -172,6 +176,11 @@ public class RagQuestionService {
                         validation.answer(),
                         finalContext
                 );
+        adaptiveGraphUtilityRecorder.record(
+                finalContext,
+                validation,
+                grounding.grounded()
+        );
         if (!grounding.grounded()) {
             return insufficientInformation(question);
         }
