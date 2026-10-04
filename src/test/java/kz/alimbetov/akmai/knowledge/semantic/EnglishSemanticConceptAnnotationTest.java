@@ -70,14 +70,7 @@ class EnglishSemanticConceptAnnotationTest {
 
     private SemanticConceptMatcher matcher() {
         SemanticMorphologyRegistry morphology =
-                new SemanticMorphologyRegistry(
-                        List.of(
-                                new EnglishSemanticMorphologyNormalizer(),
-                                new RussianSemanticMorphologyNormalizer(),
-                                new KazakhSemanticMorphologyNormalizer(),
-                                new ChineseSemanticMorphologyNormalizer()
-                        )
-                );
+                SemanticTestMorphology.registry();
         return new SemanticConceptMatcher(
                 new SemanticConceptSurfaceRegistry(
                         new EnglishSemanticConceptCatalog(
