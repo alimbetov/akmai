@@ -21,7 +21,8 @@ public class SemanticConceptSurfaceRegistry {
             "semantic/concept-surfaces-de-v1.yaml",
             "semantic/concept-surfaces-fr-v1.yaml",
             "semantic/concept-surfaces-es-v1.yaml",
-            "semantic/concept-surfaces-pt-v1.yaml"
+            "semantic/concept-surfaces-pt-v1.yaml",
+            "semantic/concept-surfaces-it-v1.yaml"
     );
 
     private final EnglishSemanticConceptCatalog catalog;
