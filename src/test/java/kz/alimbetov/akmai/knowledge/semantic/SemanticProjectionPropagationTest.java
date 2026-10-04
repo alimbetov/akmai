@@ -29,7 +29,14 @@ class SemanticProjectionPropagationTest {
                 List.of(),
                 Map.of(
                         "semanticOntologyVersion", "semantic-domain-v2",
-                        "semanticDomains", List.of("finance_banking")
+                        "semanticDomains", List.of("finance_banking"),
+                        "semanticConceptVersion", "semantic-concepts-en-v1",
+                        "semanticConcepts", List.of(
+                                "finance_banking.risk_capital.capital_adequacy_ratio"
+                        ),
+                        "semanticConceptPhrases", List.of(
+                                "capital adequacy ratio"
+                        )
                 )
         );
 
@@ -48,5 +55,11 @@ class SemanticProjectionPropagationTest {
                 );
         assertThat(projection.metadata().get("semanticDomains"))
                 .isEqualTo(List.of("finance_banking"));
+        assertThat(projection.metadata().get("semanticConcepts"))
+                .isEqualTo(List.of(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                ));
+        assertThat(projection.metadata().get("semanticConceptPhrases"))
+                .isEqualTo(List.of("capital adequacy ratio"));
     }
 }
