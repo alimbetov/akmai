@@ -37,6 +37,33 @@ public class PostgresAppParameterRepository
     }
 
     @Override
+    public List<AppParameter> lockAll(List<String> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return List.of();
+        }
+        String placeholders = String.join(
+                ", ",
+                java.util.Collections.nCopies(keys.size(), "?")
+        );
+        return jdbcTemplate.query(
+                """
+                SELECT parameter_key,
+                       parameter_type,
+                       parameter_value,
+                       row_version,
+                       updated_at,
+                       updated_by
+                FROM app_parameter
+                WHERE parameter_key IN (""" + placeholders + """)
+                ORDER BY parameter_key
+                FOR UPDATE
+                """,
+                (rs, rowNum) -> map(rs),
+                keys.toArray()
+        );
+    }
+
+    @Override
     public Optional<AppParameter> updateBoolean(
             String key,
             boolean value,
