@@ -2,6 +2,7 @@ package kz.alimbetov.akmai.knowledge.semantic;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class SemanticConceptSurfaceRegistryTest {
@@ -12,7 +13,7 @@ class SemanticConceptSurfaceRegistryTest {
             new EnglishSemanticConceptCatalog(domainCatalog);
     private final SemanticMorphologyRegistry morphology =
             new SemanticMorphologyRegistry(
-                    java.util.List.of(
+                    List.of(
                             new EnglishSemanticMorphologyNormalizer(),
                             new RussianSemanticMorphologyNormalizer(),
                             new KazakhSemanticMorphologyNormalizer()
@@ -25,60 +26,95 @@ class SemanticConceptSurfaceRegistryTest {
             );
 
     @Test
-    void everyCanonicalConceptGetsExactlyOneEnglishSurface() {
-        assertThat(registry.surfaces("en"))
-                .hasSameSizeAs(conceptCatalog.concepts());
+    void everyCanonicalConceptGetsExactlyOneSurfacePerCompletedLanguage() {
+        List<String> canonicalIds = conceptCatalog.concepts().stream()
+                .map(SemanticConcept::id)
+                .toList();
 
-        assertThat(registry.surfaces("en"))
-                .extracting(SemanticConceptSurface::conceptId)
-                .containsExactlyInAnyOrderElementsOf(
-                        conceptCatalog.concepts().stream()
-                                .map(SemanticConcept::id)
-                                .toList()
-                );
-    }
-
-    @Test
-    void everySurfaceKeepsMultiTokenLemmaAndStemSequences() {
-        assertThat(registry.surfaces("en"))
-                .allSatisfy(surface -> {
-                    assertThat(surface.lemmaPhrase())
-                            .as(surface.conceptId())
-                            .isNotBlank();
-                    assertThat(surface.lemmaPhrase().split("\\s+"))
-                            .as(surface.conceptId() + "/lemma")
-                            .hasSizeGreaterThanOrEqualTo(2);
-                    assertThat(surface.stemTokens())
-                            .as(surface.conceptId() + "/stems")
-                            .hasSizeGreaterThanOrEqualTo(2)
-                            .allSatisfy(stem ->
-                                    assertThat(stem).isNotBlank()
-                            );
-                });
-    }
-
-    @Test
-    void russianAndKazakhPacksCoverEveryDomainWithCuratedSurfaces() {
-        for (String language : java.util.List.of("ru", "kk")) {
+        for (String language : List.of("en", "ru", "kk")) {
             assertThat(registry.surfaces(language))
                     .as(language)
-                    .hasSize(32);
+                    .hasSameSizeAs(conceptCatalog.concepts());
 
             assertThat(registry.surfaces(language))
+                    .as(language)
+                    .extracting(SemanticConceptSurface::conceptId)
+                    .containsExactlyInAnyOrderElementsOf(canonicalIds);
+        }
+    }
+
+    @Test
+    void completedSurfacePacksPreserveAllDomainsAndSubdomains() {
+        List<String> canonicalDomains = conceptCatalog.concepts().stream()
+                .map(SemanticConcept::domainId)
+                .distinct()
+                .toList();
+        List<String> canonicalSubdomains = conceptCatalog.concepts().stream()
+                .map(concept ->
+                        concept.domainId()
+                                + "/"
+                                + concept.subdomainId()
+                )
+                .distinct()
+                .toList();
+
+        for (String language : List.of("ru", "kk")) {
+            assertThat(registry.surfaces(language))
                     .extracting(SemanticConceptSurface::domainId)
+                    .containsAll(canonicalDomains);
+
+            assertThat(registry.surfaces(language).stream()
+                    .map(surface ->
+                            surface.domainId()
+                                    + "/"
+                                    + surface.subdomainId()
+                    )
+                    .distinct()
+                    .toList())
                     .containsExactlyInAnyOrderElementsOf(
-                            conceptCatalog.concepts().stream()
-                                    .map(SemanticConcept::domainId)
-                                    .distinct()
-                                    .flatMap(domain ->
-                                            java.util.stream.Stream.of(
-                                                    domain,
-                                                    domain
-                                            )
-                                    )
-                                    .toList()
+                            canonicalSubdomains
                     );
         }
+    }
+
+    @Test
+    void everyCompletedSurfaceKeepsMultiTokenLemmaAndStemSequences() {
+        for (String language : List.of("en", "ru", "kk")) {
+            assertThat(registry.surfaces(language))
+                    .as(language)
+                    .allSatisfy(surface -> {
+                        assertThat(surface.preferredPhrase())
+                                .as(surface.conceptId() + "/preferred")
+                                .isNotBlank();
+                        assertThat(
+                                surface.preferredPhrase().split("\\s+")
+                        )
+                                .as(surface.conceptId() + "/preferred")
+                                .hasSizeGreaterThanOrEqualTo(2);
+                        assertThat(surface.lemmaPhrase())
+                                .as(surface.conceptId() + "/lemma")
+                                .isNotBlank();
+                        assertThat(surface.lemmaPhrase().split("\\s+"))
+                                .as(surface.conceptId() + "/lemma")
+                                .hasSizeGreaterThanOrEqualTo(2);
+                        assertThat(surface.stemTokens())
+                                .as(surface.conceptId() + "/stems")
+                                .hasSizeGreaterThanOrEqualTo(2)
+                                .allSatisfy(stem ->
+                                        assertThat(stem).isNotBlank()
+                                );
+                    });
+        }
+    }
+
+    @Test
+    void completedLanguageVersionsAreIndependent() {
+        assertThat(registry.version("en"))
+                .isEqualTo("semantic-concepts-en-v1");
+        assertThat(registry.version("ru"))
+                .isEqualTo("semantic-surfaces-ru-v1");
+        assertThat(registry.version("kk"))
+                .isEqualTo("semantic-surfaces-kk-v1");
     }
 
     @Test
