@@ -32,8 +32,10 @@ Reference degree is therefore only a cold-start structural prior. Once shadow le
       -> SHADOW
       -> REPLAY_CANDIDATE
       -> REPLAY_VALIDATED
+      -> QUALITY_GATE_CANDIDATE
       -> CANARY_ELIGIBLE
       -> CANARY
+      -> APPROVAL_CANDIDATE
       -> APPROVED
       -> PRODUCTION
 
@@ -145,7 +147,8 @@ Calibration procedure:
 6. reject duplicate request identities within a threshold evaluation;
 7. choose the lowest threshold that satisfies the pre-declared utility, confidence, regression, latency and safety gates;
 8. replay that threshold unchanged on the holdout request cohort;
-9. only a holdout result that passes the same gates becomes CANARY_ELIGIBLE.
+9. only a holdout result that passes the same statistical gates becomes QUALITY_GATE_CANDIDATE;
+10. the repository quality gate must pass before that candidate becomes CANARY_ELIGIBLE.
 
 A temporary bootstrap threshold is allowed, but it is explicitly provisional. User feedback is not part of this contract.
 
@@ -210,15 +213,19 @@ The Java reference implementation is `AdaptiveGraphThresholdCalibrator`. It has 
         -> REPLAY_CANDIDATE
 
     validateReplay(holdout_set, candidate_threshold)
-        -> CANARY_ELIGIBLE | REJECTED | INSUFFICIENT_DATA
+        -> QUALITY_GATE_CANDIDATE | REJECTED | INSUFFICIENT_DATA
 
-Neither operation changes runtime configuration.
+Neither operation changes runtime configuration. QUALITY_GATE_CANDIDATE is deliberately weaker than CANARY_ELIGIBLE. The normal repository retrieval-quality checks and the graph replay quality gate must pass before canary eligibility is granted.
 
 ### Canary and approval
 
+The existing multilingual retrieval regression suite remains a blocking safety gate, but it is not by itself a calibration corpus: its healthy baseline is intentionally at the quality ceiling for its small deterministic cases, so it has no useful headroom for measuring positive graph lift.
+
+The graph replay corpus must therefore contain harder request-level cases with real ranking headroom, graded or multi-relevant targets where appropriate, hard negatives, and representative language/domain coverage. Existing Recall@5, MRR and nDCG@10 evaluation machinery should be reused as deterministic metrics rather than introducing user feedback or an unconstrained LLM judge.
+
 CANARY_ELIGIBLE is not production approval. Canary runs the already-selected threshold on bounded traffic and measures the same quality, safety, capacity and latency invariants. The threshold must not be retuned from canary traffic in place.
 
-Final approval is an explicit versioned configuration decision. A failed canary returns to shadow/replay calibration; it never silently lowers the gate.
+A successful canary produces an APPROVAL_CANDIDATE. Final approval is an explicit versioned configuration decision. A failed canary returns to shadow/replay calibration; it never silently lowers the gate.
 
 ## Per-band degree calibration
 
@@ -403,9 +410,9 @@ Independent replay decision states:
 
     INSUFFICIENT_DATA
     REJECTED
-    CANARY_ELIGIBLE
+    QUALITY_GATE_CANDIDATE
 
-Only CANARY_ELIGIBLE can enter a bounded canary. Canary success still requires explicit approval before production.
+The repository quality gate promotes QUALITY_GATE_CANDIDATE to CANARY_ELIGIBLE. Only CANARY_ELIGIBLE can enter a bounded canary. Canary success produces an APPROVAL_CANDIDATE and still requires explicit approval before production.
 
 ## Candidate configuration
 
