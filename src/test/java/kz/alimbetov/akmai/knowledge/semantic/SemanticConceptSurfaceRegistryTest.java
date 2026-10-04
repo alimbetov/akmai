@@ -25,7 +25,7 @@ class SemanticConceptSurfaceRegistryTest {
                 .map(SemanticConcept::id)
                 .toList();
 
-        for (String language : List.of("en", "ru", "kk", "zh", "de", "fr", "es", "pt", "it")) {
+        for (String language : List.of("en", "ru", "kk", "zh", "de", "fr", "es", "pt", "it", "tr")) {
             assertThat(registry.surfaces(language))
                     .as(language)
                     .hasSameSizeAs(conceptCatalog.concepts());
@@ -52,7 +52,7 @@ class SemanticConceptSurfaceRegistryTest {
                 .distinct()
                 .toList();
 
-        for (String language : List.of("ru", "kk", "zh", "de", "fr", "es", "pt", "it")) {
+        for (String language : List.of("ru", "kk", "zh", "de", "fr", "es", "pt", "it", "tr")) {
             assertThat(registry.surfaces(language))
                     .extracting(SemanticConceptSurface::domainId)
                     .containsAll(canonicalDomains);
@@ -121,12 +121,13 @@ class SemanticConceptSurfaceRegistryTest {
                 .isEqualTo("semantic-surfaces-pt-v1");
         assertThat(registry.version("it"))
                 .isEqualTo("semantic-surfaces-it-v1");
+        assertThat(registry.version("tr"))
+                .isEqualTo("semantic-surfaces-tr-v1");
     }
 
     @Test
     void languagesWithoutTranslatedConceptPacksStayUnsupported() {
-        assertThat(registry.surfaces("tr")).isEmpty();
         assertThat(registry.surfaces("el")).isEmpty();
-        assertThat(registry.version("tr")).isNull();
+        assertThat(registry.version("el")).isNull();
     }
 }
