@@ -32,6 +32,23 @@ class AnswerGroundingVerifierTest {
     }
 
     @Test
+    void rejectsUncitedBulletEvenWhenLaterBulletHasCitation() {
+        var result = verifier.verify(
+                "- First factual claim\n- Second factual claim [SOURCE 1]",
+                List.of(hit("Second factual claim"))
+        );
+
+        assertThat(result.grounded()).isFalse();
+        assertThat(result.unsupportedClaimCount()).isEqualTo(1);
+        assertThat(result.claims())
+                .extracting(AnswerGroundingVerifier.ClaimValidation::status)
+                .containsExactly(
+                        AnswerGroundingVerifier.ClaimStatus.MISSING_CITATION,
+                        AnswerGroundingVerifier.ClaimStatus.SUPPORTED
+                );
+    }
+
+    @Test
     void rejectsNumericClaimThatCitationDoesNotSupport() {
         var result = verifier.verify(
                 "The recommended dose is 20 mg [SOURCE 1].",
