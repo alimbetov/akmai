@@ -9,6 +9,7 @@ import kz.alimbetov.akmai.config.AdaptiveGraphCompetitionProperties;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -74,13 +75,17 @@ public class AppParameterService {
                     "app parameter key must not be null"
             );
         }
-        ResolvedAppParameter resolved = repository.find(key.key())
-                .map(ResolvedAppParameter::from)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Missing persisted app parameter: " + key.key()
-                ));
-        cache.put(key, resolved);
-        return resolved;
+        try {
+            ResolvedAppParameter resolved = repository.find(key.key())
+                    .map(ResolvedAppParameter::from)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Missing persisted app parameter: " + key.key()
+                    ));
+            cache.put(key, resolved);
+            return resolved;
+        } catch (DataAccessException exception) {
+            throw new AppParameterUnavailableException(exception);
+        }
     }
 
     public List<ResolvedAppParameter> listAuthoritative() {
@@ -108,19 +113,25 @@ public class AppParameterService {
                     "expectedVersion must not be negative"
             );
         }
+        validateTransition(key, value);
         String actor = normalizeActor(updatedBy);
-        AppParameter updated = repository.updateBoolean(
-                        key.key(),
-                        value,
-                        expectedVersion,
-                        actor
-                )
-                .orElseThrow(() ->
-                        new AppParameterConflictException(
-                                key.key(),
-                                expectedVersion
-                        )
-                );
+        AppParameter updated;
+        try {
+            updated = repository.updateBoolean(
+                            key.key(),
+                            value,
+                            expectedVersion,
+                            actor
+                    )
+                    .orElseThrow(() ->
+                            new AppParameterConflictException(
+                                    key.key(),
+                                    expectedVersion
+                            )
+                    );
+        } catch (DataAccessException exception) {
+            throw new AppParameterUnavailableException(exception);
+        }
         ResolvedAppParameter resolved =
                 ResolvedAppParameter.from(updated);
         cache.put(key, resolved);
@@ -129,6 +140,65 @@ public class AppParameterService {
 
     public void invalidateAll() {
         cache.invalidateAll();
+    }
+
+    private void validateTransition(
+            AppParameterKey key,
+            boolean value
+    ) {
+        if (!value) {
+            if (key == AppParameterKey.ADAPTIVE_GRAPH_MAINTENANCE_ENABLED
+                    && getAuthoritative(
+                            AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED
+                    ).value()) {
+                throw new IllegalArgumentException(
+                        "Cannot disable adaptive graph maintenance while online expansion is enabled"
+                );
+            }
+            if (key == AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED
+                    && getAuthoritative(
+                            AppParameterKey.ADAPTIVE_GRAPH_COMPETITION_ENABLED
+                    ).value()) {
+                throw new IllegalArgumentException(
+                        "Cannot disable adaptive graph expansion while competition is enabled"
+                );
+            }
+            return;
+        }
+
+        switch (key) {
+            case ADAPTIVE_GRAPH_LEARNING_ENABLED -> {
+                String secret = graphProperties.learning()
+                        .fingerprintSecret();
+                if (secret == null || secret.length() < 32) {
+                    throw new IllegalArgumentException(
+                            "adaptive graph learning requires a fingerprint secret of at least 32 characters"
+                    );
+                }
+            }
+            case ADAPTIVE_GRAPH_EXPANSION_ENABLED -> {
+                if (!getAuthoritative(
+                        AppParameterKey.ADAPTIVE_GRAPH_MAINTENANCE_ENABLED
+                ).value()) {
+                    throw new IllegalArgumentException(
+                            "adaptive graph online expansion requires maintenance to be enabled first"
+                    );
+                }
+            }
+            case ADAPTIVE_GRAPH_COMPETITION_ENABLED -> {
+                if (!getAuthoritative(
+                        AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED
+                ).value()) {
+                    throw new IllegalArgumentException(
+                            "adaptive graph competition requires online expansion to be enabled first"
+                    );
+                }
+            }
+            case ADAPTIVE_GRAPH_MAINTENANCE_ENABLED,
+                    ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED -> {
+                // no additional dependency
+            }
+        }
     }
 
     private ResolvedAppParameter loadFailSafe(
