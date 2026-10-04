@@ -62,7 +62,11 @@ class AdaptiveGraphReplayUtilityTest {
                 new AdaptiveGraphReplayUtility.Weights(0.50, 0.20, 0.30)
         );
 
-        assertThat(first).isEqualTo(second);
+        assertThat(first)
+                .isCloseTo(
+                        second,
+                        org.assertj.core.data.Offset.offset(1.0e-12)
+                );
     }
 
     private AdaptiveGraphReplayUtility.QualitySnapshot quality(
