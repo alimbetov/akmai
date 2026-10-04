@@ -15,11 +15,7 @@ class EnglishSemanticConceptAnnotationTest {
     private final SemanticChunkAnnotator annotator =
             new SemanticChunkAnnotator(
                     new SemanticDomainRouter(domainCatalog),
-                    new EnglishSemanticConceptMatcher(
-                            new EnglishSemanticConceptCatalog(
-                                    domainCatalog
-                            )
-                    )
+                    matcher()
             );
 
     @Test
@@ -60,7 +56,7 @@ class EnglishSemanticConceptAnnotationTest {
     }
 
     @Test
-    void EnglishConceptLayerDoesNotInventMatchesForOtherLanguages() {
+    void EnglishPhraseDoesNotLeakIntoRussianSurfaceMatching() {
         KnowledgeChunk original = chunk(
                 "capital adequacy ratio",
                 "ru"
@@ -70,6 +66,26 @@ class EnglishSemanticConceptAnnotationTest {
 
         assertThat(annotated.metadata())
                 .doesNotContainKey("semanticConcepts");
+    }
+
+    private SemanticConceptMatcher matcher() {
+        SemanticMorphologyRegistry morphology =
+                new SemanticMorphologyRegistry(
+                        List.of(
+                                new EnglishSemanticMorphologyNormalizer(),
+                                new RussianSemanticMorphologyNormalizer(),
+                                new KazakhSemanticMorphologyNormalizer()
+                        )
+                );
+        return new SemanticConceptMatcher(
+                new SemanticConceptSurfaceRegistry(
+                        new EnglishSemanticConceptCatalog(
+                                domainCatalog
+                        ),
+                        morphology
+                ),
+                morphology
+        );
     }
 
     private KnowledgeChunk chunk(String text, String language) {
