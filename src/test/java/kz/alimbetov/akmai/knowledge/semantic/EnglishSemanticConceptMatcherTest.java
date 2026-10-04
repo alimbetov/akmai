@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.knowledge.semantic;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import org.junit.jupiter.api.Test;
 
@@ -68,7 +69,7 @@ class EnglishSemanticConceptMatcherTest {
 
         assertThat(match.matchMode())
                 .isEqualTo(SemanticMatchMode.STEM);
-        assertThat(match.weight()).isEqualTo(1.95);
+        assertThat(match.weight()).isCloseTo(1.95, within(1.0e-12));
     }
 
     @Test
