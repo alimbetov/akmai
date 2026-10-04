@@ -39,7 +39,8 @@ class RetrievalPlannerTest {
 
         assertThat(plan.steps())
                 .filteredOn(step -> step.type() == RetrievalType.VECTOR
-                        || step.type() == RetrievalType.LEXICAL)
+                        || step.type() == RetrievalType.LEXICAL
+                        || step.type() == RetrievalType.CONCEPT)
                 .allSatisfy(step -> assertThat(step.dependsOn())
                         .containsExactly(identifier.id()));
     }
@@ -58,17 +59,20 @@ class RetrievalPlannerTest {
                 .containsExactly(
                         RetrievalType.VECTOR,
                         RetrievalType.LEXICAL,
+                        RetrievalType.CONCEPT,
                         RetrievalType.REFERENCE
                 );
 
         RetrievalStep vector = plan.steps().get(0);
         RetrievalStep lexical = plan.steps().get(1);
-        RetrievalStep reference = plan.steps().get(2);
+        RetrievalStep concept = plan.steps().get(2);
+        RetrievalStep reference = plan.steps().get(3);
 
         assertThat(vector.dependsOn()).isEmpty();
         assertThat(lexical.dependsOn()).isEmpty();
+        assertThat(concept.dependsOn()).isEmpty();
         assertThat(reference.dependsOn())
-                .containsExactly(vector.id(), lexical.id());
+                .containsExactly(vector.id(), lexical.id(), concept.id());
     }
 
     @Test
@@ -125,6 +129,7 @@ class RetrievalPlannerTest {
                 .containsExactly(
                         RetrievalType.VECTOR,
                         RetrievalType.LEXICAL,
+                        RetrievalType.CONCEPT,
                         RetrievalType.REFERENCE
                 );
     }
