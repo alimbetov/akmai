@@ -118,13 +118,11 @@ public class ReferenceRetrievalStrategy implements RetrievalStrategy {
             RetrievalHit hit,
             java.util.Set<Long> allowed
     ) {
-        if (hit.accessLevel() > 0) {
-            return allowed.contains(hit.accessLevel())
-                    ? hit.accessLevel()
-                    : 0L;
+        if (hit.accessLevel() <= 0) {
+            return 0L;
         }
-        return allowed.size() == 1
-                ? allowed.iterator().next()
+        return allowed.contains(hit.accessLevel())
+                ? hit.accessLevel()
                 : 0L;
     }
 
