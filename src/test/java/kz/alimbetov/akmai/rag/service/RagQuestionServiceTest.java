@@ -157,7 +157,8 @@ class RagQuestionServiceTest {
         verify(revalidator).revalidate(List.of(hit), scope);
         verify(utilityRecorder).record(
                 eq(List.of(hit)),
-                any(CitationValidator.CitationValidation.class)
+                any(CitationValidator.CitationValidation.class),
+                eq(false)
         );
     }
 }
