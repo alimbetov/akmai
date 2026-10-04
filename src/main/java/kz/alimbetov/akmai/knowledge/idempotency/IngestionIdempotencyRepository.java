@@ -214,6 +214,7 @@ public class IngestionIdempotencyRepository {
                   AND claim_id = ?
                   AND request_fingerprint = ?
                   AND request_status = 'IN_PROGRESS'
+                  AND lease_until > clock_timestamp()
                 """,
                 leaseDuration.toMillis(),
                 context.key(),
@@ -309,7 +310,6 @@ public class IngestionIdempotencyRepository {
                   AND claim_id = ?
                   AND request_fingerprint = ?
                   AND request_status = 'IN_PROGRESS'
-                  AND lease_until > clock_timestamp()
                 """,
                 writeResponse(response),
                 context.key(),
