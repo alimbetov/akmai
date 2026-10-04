@@ -1,9 +1,18 @@
 package kz.alimbetov.akmai.runtimeconfig;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import kz.alimbetov.akmai.config.AdaptiveGraphCompetitionProperties;
+import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +42,7 @@ class PostgresAppParameterRepositoryIntegrationTest {
     static JdbcTemplate jdbc;
     static TransactionTemplate tx;
     static PostgresAppParameterRepository repository;
+    static AppParameterService service;
 
     @BeforeAll
     static void migrate() throws Exception {
@@ -53,6 +63,15 @@ class PostgresAppParameterRepositoryIntegrationTest {
                 new DataSourceTransactionManager(dataSource)
         );
         repository = new PostgresAppParameterRepository(jdbc);
+        service = new AppParameterService(
+                repository,
+                mock(AdaptiveGraphProperties.class),
+                mock(AdaptiveGraphCompetitionProperties.class),
+                new AppParameterProperties(
+                        Duration.ofSeconds(2),
+                        64
+                )
+        );
     }
 
     @BeforeEach
@@ -115,6 +134,93 @@ class PostgresAppParameterRepositoryIntegrationTest {
                 .orElseThrow();
         assertThat(persisted.booleanValue()).isTrue();
         assertThat(persisted.version()).isEqualTo(1L);
+    }
+
+    @Test
+    void concurrentDependencyUpdatesCannotCommitInvalidGraphState()
+            throws Exception {
+        AppParameterKey maintenance =
+                AppParameterKey.ADAPTIVE_GRAPH_MAINTENANCE_ENABLED;
+        AppParameterKey expansion =
+                AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED;
+
+        AppParameter enabledMaintenance = repository.updateBoolean(
+                maintenance.key(),
+                true,
+                0L,
+                "setup"
+        ).orElseThrow();
+        assertThat(enabledMaintenance.version()).isEqualTo(1L);
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            Future<Boolean> enableExpansion = executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                return tryUpdate(
+                        expansion,
+                        true,
+                        0L,
+                        "enable-expansion"
+                );
+            });
+            Future<Boolean> disableMaintenance = executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                return tryUpdate(
+                        maintenance,
+                        false,
+                        1L,
+                        "disable-maintenance"
+                );
+            });
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            boolean expansionSucceeded =
+                    enableExpansion.get(10, TimeUnit.SECONDS);
+            boolean maintenanceDisableSucceeded =
+                    disableMaintenance.get(10, TimeUnit.SECONDS);
+
+            assertThat(List.of(
+                    expansionSucceeded,
+                    maintenanceDisableSucceeded
+            )).containsExactlyInAnyOrder(true, false);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        boolean maintenanceEnabled = repository.find(
+                maintenance.key()
+        ).orElseThrow().booleanValue();
+        boolean expansionEnabled = repository.find(
+                expansion.key()
+        ).orElseThrow().booleanValue();
+
+        assertThat(expansionEnabled && !maintenanceEnabled).isFalse();
+    }
+
+    private boolean tryUpdate(
+            AppParameterKey key,
+            boolean value,
+            long expectedVersion,
+            String actor
+    ) {
+        try {
+            tx.executeWithoutResult(status -> service.updateBoolean(
+                    key,
+                    value,
+                    expectedVersion,
+                    actor
+            ));
+            return true;
+        } catch (IllegalArgumentException expected) {
+            return false;
+        }
     }
 
     private List<String> keys() {
