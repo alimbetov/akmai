@@ -78,11 +78,19 @@ public class KnowledgeIngestionService {
         }
 
         try {
+            heartbeat(idempotency);
             return ingest(request, idempotency);
         } catch (RuntimeException exception) {
             idempotencyRepository.fail(idempotency, exception.getMessage());
             throw exception;
         }
+    }
+
+    private void heartbeat(IngestionIdempotencyContext idempotency) {
+        idempotencyRepository.renew(
+                idempotency,
+                idempotencyProperties.leaseDuration()
+        );
     }
 
     private KnowledgeIngestionResponse ingest(
@@ -105,8 +113,16 @@ public class KnowledgeIngestionService {
         );
 
         List<KnowledgeChunk> chunks = semanticChunker.chunk(document);
+        if (chunks.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Document produced no indexable chunks after normalization"
+            );
+        }
+        heartbeat(idempotency);
+
         List<EnrichedKnowledgeChunk> enriched =
                 parallelIngestionExecutor.execute(chunks);
+        heartbeat(idempotency);
 
         KnowledgeIngestionResponse response = new KnowledgeIngestionResponse(
                 document.documentId(),
