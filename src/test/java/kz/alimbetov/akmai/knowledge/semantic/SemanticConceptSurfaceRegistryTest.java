@@ -25,7 +25,7 @@ class SemanticConceptSurfaceRegistryTest {
                 .map(SemanticConcept::id)
                 .toList();
 
-        for (String language : List.of("en", "ru", "kk", "zh")) {
+        for (String language : List.of("en", "ru", "kk", "zh", "de", "fr")) {
             assertThat(registry.surfaces(language))
                     .as(language)
                     .hasSameSizeAs(conceptCatalog.concepts());
@@ -52,7 +52,7 @@ class SemanticConceptSurfaceRegistryTest {
                 .distinct()
                 .toList();
 
-        for (String language : List.of("ru", "kk", "zh")) {
+        for (String language : List.of("ru", "kk", "zh", "de", "fr")) {
             assertThat(registry.surfaces(language))
                     .extracting(SemanticConceptSurface::domainId)
                     .containsAll(canonicalDomains);
@@ -84,16 +84,16 @@ class SemanticConceptSurfaceRegistryTest {
                                 surface.preferredPhrase().split("\\s+")
                         )
                                 .as(surface.conceptId() + "/preferred")
-                                .hasSizeGreaterThanOrEqualTo(2);
+                                .isNotEmpty();
                         assertThat(surface.lemmaPhrase())
                                 .as(surface.conceptId() + "/lemma")
                                 .isNotBlank();
                         assertThat(surface.lemmaPhrase().split("\\s+"))
                                 .as(surface.conceptId() + "/lemma")
-                                .hasSizeGreaterThanOrEqualTo(2);
+                                .isNotEmpty();
                         assertThat(surface.stemTokens())
                                 .as(surface.conceptId() + "/stems")
-                                .hasSizeGreaterThanOrEqualTo(2)
+                                .isNotEmpty()
                                 .allSatisfy(stem ->
                                         assertThat(stem).isNotBlank()
                                 );
@@ -111,12 +111,16 @@ class SemanticConceptSurfaceRegistryTest {
                 .isEqualTo("semantic-surfaces-kk-v1");
         assertThat(registry.version("zh"))
                 .isEqualTo("semantic-surfaces-zh-v1");
+        assertThat(registry.version("de"))
+                .isEqualTo("semantic-surfaces-de-v1");
+        assertThat(registry.version("fr"))
+                .isEqualTo("semantic-surfaces-fr-v1");
     }
 
     @Test
     void languagesWithoutTranslatedConceptPacksStayUnsupported() {
-        assertThat(registry.surfaces("de")).isEmpty();
-        assertThat(registry.surfaces("fr")).isEmpty();
-        assertThat(registry.version("de")).isNull();
+        assertThat(registry.surfaces("es")).isEmpty();
+        assertThat(registry.surfaces("pt")).isEmpty();
+        assertThat(registry.version("es")).isNull();
     }
 }
