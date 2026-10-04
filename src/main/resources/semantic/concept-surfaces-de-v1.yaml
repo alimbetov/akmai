@@ -1,0 +1,1171 @@
+version: semantic-surfaces-de-v1
+languages:
+  - language: de
+    surfaces:
+      - conceptId: finance_banking.lending_credit.credit_risk_assessment
+        preferredPhrase: Kreditrisikobewertung
+        aliases: []
+      - conceptId: finance_banking.lending_credit.consumer_loan_underwriting
+        preferredPhrase: Prüfung von Verbraucherkrediten
+        aliases: []
+      - conceptId: finance_banking.lending_credit.corporate_credit_facility
+        preferredPhrase: Unternehmenskreditlinie
+        aliases: []
+      - conceptId: finance_banking.lending_credit.nonperforming_loan_ratio
+        preferredPhrase: Quote notleidender Kredite
+        aliases: []
+      - conceptId: finance_banking.lending_credit.loan_loss_provision
+        preferredPhrase: Risikovorsorge für Kreditausfälle
+        aliases: []
+      - conceptId: finance_banking.lending_credit.debt_service_coverage
+        preferredPhrase: Schuldendienstdeckungsgrad
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.customer_deposit_base
+        preferredPhrase: Kundeneinlagenbasis
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.liquidity_coverage_ratio
+        preferredPhrase: Liquiditätsdeckungsquote
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.net_stable_funding
+        preferredPhrase: stabile Nettofinanzierung
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.deposit_interest_rate
+        preferredPhrase: Einlagenzinssatz
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.cash_reserve_requirement
+        preferredPhrase: Mindestreserveanforderung
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.liquidity_stress_testing
+        preferredPhrase: Liquiditätsstresstest
+        aliases: []
+      - conceptId: finance_banking.risk_capital.capital_adequacy_ratio
+        preferredPhrase: Kapitaladäquanzquote
+        aliases: []
+      - conceptId: finance_banking.risk_capital.risk_weighted_assets
+        preferredPhrase: risikogewichtete Aktiva
+        aliases: []
+      - conceptId: finance_banking.risk_capital.common_equity_tier
+        preferredPhrase: hartes Kernkapital
+        aliases: []
+      - conceptId: finance_banking.risk_capital.market_risk_exposure
+        preferredPhrase: Marktrisikoposition
+        aliases: []
+      - conceptId: finance_banking.risk_capital.operational_risk_capital
+        preferredPhrase: Kapital für operationelles Risiko
+        aliases: []
+      - conceptId: finance_banking.risk_capital.internal_capital_assessment
+        preferredPhrase: interne Kapitaladäquanzbewertung
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.payment_settlement_system
+        preferredPhrase: Zahlungsabwicklungssystem
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.anti_money_laundering
+        preferredPhrase: Geldwäscheprävention
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.know_your_customer
+        preferredPhrase: Kundenidentifizierung
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.suspicious_transaction_monitoring
+        preferredPhrase: Überwachung verdächtiger Transaktionen
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.cross_border_payment
+        preferredPhrase: grenzüberschreitende Zahlung
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.payment_fraud_detection
+        preferredPhrase: Erkennung von Zahlungsbetrug
+        aliases: []
+
+      - conceptId: insurance.underwriting_pricing.insurance_underwriting_process
+        preferredPhrase: Versicherungsprüfungsprozess
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.risk_based_pricing
+        preferredPhrase: risikobasierte Preisgestaltung
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.actuarial_pricing_model
+        preferredPhrase: versicherungsmathematisches Preismodell
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.policy_coverage_limit
+        preferredPhrase: Deckungsgrenze der Police
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.insurance_premium_calculation
+        preferredPhrase: Berechnung der Versicherungsprämie
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.underwriting_risk_appetite
+        preferredPhrase: Risikobereitschaft im Underwriting
+        aliases: []
+      - conceptId: insurance.claims_management.insurance_claim_assessment
+        preferredPhrase: Bewertung des Versicherungsanspruchs
+        aliases: []
+      - conceptId: insurance.claims_management.claims_settlement_process
+        preferredPhrase: Schadenregulierungsprozess
+        aliases: []
+      - conceptId: insurance.claims_management.loss_adjustment_expense
+        preferredPhrase: Schadenregulierungskosten
+        aliases: []
+      - conceptId: insurance.claims_management.fraudulent_claim_detection
+        preferredPhrase: Erkennung betrügerischer Ansprüche
+        aliases: []
+      - conceptId: insurance.claims_management.claim_reserve_estimate
+        preferredPhrase: Schätzung der Schadenreserve
+        aliases: []
+      - conceptId: insurance.claims_management.claims_handling_procedure
+        preferredPhrase: Verfahren zur Schadenbearbeitung
+        aliases: []
+      - conceptId: insurance.life_health.life_insurance_policy
+        preferredPhrase: Lebensversicherungspolice
+        aliases: []
+      - conceptId: insurance.life_health.health_insurance_coverage
+        preferredPhrase: Krankenversicherungsschutz
+        aliases: []
+      - conceptId: insurance.life_health.mortality_risk_model
+        preferredPhrase: Sterblichkeitsrisikomodell
+        aliases: []
+      - conceptId: insurance.life_health.morbidity_risk_estimate
+        preferredPhrase: Morbiditätsrisikoschätzung
+        aliases: []
+      - conceptId: insurance.life_health.medical_expense_reimbursement
+        preferredPhrase: Erstattung medizinischer Kosten
+        aliases: []
+      - conceptId: insurance.life_health.policyholder_benefit_schedule
+        preferredPhrase: Leistungsplan des Versicherungsnehmers
+        aliases: []
+      - conceptId: insurance.property_casualty.property_damage_coverage
+        preferredPhrase: Sachschadendeckung
+        aliases: []
+      - conceptId: insurance.property_casualty.casualty_insurance_claim
+        preferredPhrase: Haftpflichtversicherungsanspruch
+        aliases: []
+      - conceptId: insurance.property_casualty.catastrophe_risk_model
+        preferredPhrase: Katastrophenrisikomodell
+        aliases: []
+      - conceptId: insurance.property_casualty.business_interruption_coverage
+        preferredPhrase: Betriebsunterbrechungsdeckung
+        aliases: []
+      - conceptId: insurance.property_casualty.liability_coverage_limit
+        preferredPhrase: Haftungsdeckungsgrenze
+        aliases: []
+      - conceptId: insurance.property_casualty.insured_loss_estimate
+        preferredPhrase: Schätzung des versicherten Schadens
+        aliases: []
+
+      - conceptId: energy_utilities.power_generation.electricity_generation_capacity
+        preferredPhrase: Stromerzeugungskapazität
+        aliases: []
+      - conceptId: energy_utilities.power_generation.thermal_power_plant
+        preferredPhrase: Wärmekraftwerk
+        aliases: []
+      - conceptId: energy_utilities.power_generation.combined_cycle_turbine
+        preferredPhrase: Gas und Dampfturbinenanlage
+        aliases: []
+      - conceptId: energy_utilities.power_generation.generation_dispatch_schedule
+        preferredPhrase: Einsatzplan der Stromerzeugung
+        aliases: []
+      - conceptId: energy_utilities.power_generation.power_plant_efficiency
+        preferredPhrase: Kraftwerkswirkungsgrad
+        aliases: []
+      - conceptId: energy_utilities.power_generation.reserve_generation_margin
+        preferredPhrase: Erzeugungsreserve
+        aliases: []
+      - conceptId: energy_utilities.power_grid.transmission_grid_stability
+        preferredPhrase: Stabilität des Übertragungsnetzes
+        aliases: []
+      - conceptId: energy_utilities.power_grid.distribution_network_operator
+        preferredPhrase: Verteilnetzbetreiber
+        aliases: []
+      - conceptId: energy_utilities.power_grid.high_voltage_substation
+        preferredPhrase: Hochspannungsumspannwerk
+        aliases: []
+      - conceptId: energy_utilities.power_grid.grid_frequency_control
+        preferredPhrase: Netzfrequenzregelung
+        aliases: []
+      - conceptId: energy_utilities.power_grid.power_flow_analysis
+        preferredPhrase: Lastflussanalyse
+        aliases: []
+      - conceptId: energy_utilities.power_grid.electricity_network_congestion
+        preferredPhrase: Stromnetzengpass
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.wholesale_electricity_market
+        preferredPhrase: Stromgroßhandelsmarkt
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.day_ahead_market
+        preferredPhrase: Day Ahead Markt
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.balancing_energy_market
+        preferredPhrase: Regelenergiemarkt
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.electricity_tariff_regulation
+        preferredPhrase: Stromtarifregulierung
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.energy_demand_forecast
+        preferredPhrase: Energiebedarfsprognose
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.capacity_market_mechanism
+        preferredPhrase: Kapazitätsmarktmechanismus
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.solar_power_generation
+        preferredPhrase: Solarstromerzeugung
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.wind_power_capacity
+        preferredPhrase: Windkraftkapazität
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_energy_certificate
+        preferredPhrase: Zertifikat für erneuerbare Energie
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.battery_energy_storage
+        preferredPhrase: Batteriespeicherung von Energie
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.grid_scale_storage
+        preferredPhrase: netzgebundener Großspeicher
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_integration_study
+        preferredPhrase: Studie zur Integration erneuerbarer Energien
+        aliases: []
+
+      - conceptId: oil_gas_mining.upstream_operations.oil_reservoir_characterization
+        preferredPhrase: Charakterisierung des Erdöllagerstättenreservoirs
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.hydrocarbon_exploration_program
+        preferredPhrase: Kohlenwasserstoffexplorationsprogramm
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.drilling_operations_plan
+        preferredPhrase: Bohrbetriebsplan
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.well_completion_design
+        preferredPhrase: Bohrlochkomplettierungsdesign
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.enhanced_oil_recovery
+        preferredPhrase: verbesserte Erdölförderung
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.reservoir_pressure_management
+        preferredPhrase: Lagerstättendruckmanagement
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.crude_oil_pipeline
+        preferredPhrase: Rohölpipeline
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.natural_gas_pipeline
+        preferredPhrase: Erdgasleitung
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.gas_processing_facility
+        preferredPhrase: Gasaufbereitungsanlage
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_integrity_management
+        preferredPhrase: Pipelineintegritätsmanagement
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.hydrocarbon_storage_terminal
+        preferredPhrase: Kohlenwasserstofflagerterminal
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.gas_compression_station
+        preferredPhrase: Gasverdichterstation
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.crude_oil_refining
+        preferredPhrase: Rohölraffination
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.petroleum_product_yield
+        preferredPhrase: Ausbeute an Erdölprodukten
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_process_unit
+        preferredPhrase: Raffinerieprozessanlage
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.fuel_blending_specification
+        preferredPhrase: Kraftstoffmischspezifikation
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.petrochemical_feedstock_supply
+        preferredPhrase: Versorgung mit petrochemischem Rohstoff
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_turnaround_maintenance
+        preferredPhrase: Raffineriestillstandsrevision
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mineral_resource_estimate
+        preferredPhrase: Mineralressourcenschätzung
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.open_pit_mining
+        preferredPhrase: Tagebau
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.underground_mine_design
+        preferredPhrase: Untertagebergwerksplanung
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.ore_processing_plant
+        preferredPhrase: Erzaufbereitungsanlage
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mine_tailings_management
+        preferredPhrase: Management von Bergbauabgängen
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mineral_reserve_classification
+        preferredPhrase: Klassifizierung von Mineralreserven
+        aliases: []
+
+      - conceptId: manufacturing.production_systems.production_planning_system
+        preferredPhrase: Produktionsplanungssystem
+        aliases: []
+      - conceptId: manufacturing.production_systems.manufacturing_execution_system
+        preferredPhrase: Fertigungsleitsystem
+        aliases: []
+      - conceptId: manufacturing.production_systems.production_line_balancing
+        preferredPhrase: Produktionslinienausgleich
+        aliases: []
+      - conceptId: manufacturing.production_systems.takt_time_calculation
+        preferredPhrase: Taktzeitberechnung
+        aliases: []
+      - conceptId: manufacturing.production_systems.overall_equipment_effectiveness
+        preferredPhrase: Gesamtanlageneffektivität
+        aliases: []
+      - conceptId: manufacturing.production_systems.batch_production_schedule
+        preferredPhrase: Chargenproduktionsplan
+        aliases: []
+      - conceptId: manufacturing.quality_management.statistical_process_control
+        preferredPhrase: statistische Prozessregelung
+        aliases: []
+      - conceptId: manufacturing.quality_management.quality_management_system
+        preferredPhrase: Qualitätsmanagementsystem
+        aliases: []
+      - conceptId: manufacturing.quality_management.root_cause_analysis
+        preferredPhrase: Ursachenanalyse
+        aliases: []
+      - conceptId: manufacturing.quality_management.nonconformance_corrective_action
+        preferredPhrase: Korrekturmaßnahme bei Nichtkonformität
+        aliases: []
+      - conceptId: manufacturing.quality_management.process_capability_index
+        preferredPhrase: Prozessfähigkeitsindex
+        aliases: []
+      - conceptId: manufacturing.quality_management.incoming_quality_inspection
+        preferredPhrase: Wareneingangsqualitätsprüfung
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.preventive_maintenance_schedule
+        preferredPhrase: vorbeugender Wartungsplan
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.predictive_maintenance_model
+        preferredPhrase: Modell der vorausschauenden Wartung
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.reliability_centered_maintenance
+        preferredPhrase: zuverlässigkeitsorientierte Instandhaltung
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.mean_time_between_failures
+        preferredPhrase: mittlere Zeit zwischen Ausfällen
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.equipment_failure_mode
+        preferredPhrase: Ausfallart der Anlage
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.maintenance_work_order
+        preferredPhrase: Instandhaltungsauftrag
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.industrial_process_automation
+        preferredPhrase: industrielle Prozessautomatisierung
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.programmable_logic_controller
+        preferredPhrase: speicherprogrammierbare Steuerung
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.production_capacity_utilization
+        preferredPhrase: Produktionskapazitätsauslastung
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.industrial_safety_procedure
+        preferredPhrase: industrielles Sicherheitsverfahren
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.plant_operations_management
+        preferredPhrase: Betriebsmanagement der Anlage
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.process_optimization_study
+        preferredPhrase: Prozessoptimierungsstudie
+        aliases: []
+
+      - conceptId: construction_real_estate.design_construction.building_structural_design
+        preferredPhrase: Tragwerksplanung von Gebäuden
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.construction_project_schedule
+        preferredPhrase: Bauprojektterminplan
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.building_information_modeling
+        preferredPhrase: Gebäudedatenmodellierung
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.reinforced_concrete_structure
+        preferredPhrase: Stahlbetonkonstruktion
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.construction_site_management
+        preferredPhrase: Baustellenmanagement
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.building_code_compliance
+        preferredPhrase: Einhaltung der Bauvorschriften
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.commercial_property_valuation
+        preferredPhrase: Bewertung von Gewerbeimmobilien
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.residential_property_market
+        preferredPhrase: Wohnimmobilienmarkt
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.rental_yield_analysis
+        preferredPhrase: Mietrenditeanalyse
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.real_estate_transaction
+        preferredPhrase: Immobilientransaktion
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.property_market_appraisal
+        preferredPhrase: Marktwertbewertung von Immobilien
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.investment_property_return
+        preferredPhrase: Rendite von Anlageimmobilien
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.facility_maintenance_plan
+        preferredPhrase: Instandhaltungsplan der Anlage
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.building_energy_performance
+        preferredPhrase: Energieeffizienz des Gebäudes
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.property_asset_management
+        preferredPhrase: Immobilienvermögensverwaltung
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.preventive_facility_maintenance
+        preferredPhrase: vorbeugende Gebäudeinstandhaltung
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.building_occupancy_management
+        preferredPhrase: Gebäudebelegungsmanagement
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.facilities_service_contract
+        preferredPhrase: Gebäudedienstleistungsvertrag
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.construction_cost_estimate
+        preferredPhrase: Baukostenschätzung
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.earned_value_management
+        preferredPhrase: Earned Value Management
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.project_schedule_variance
+        preferredPhrase: Terminplanabweichung des Projekts
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.construction_risk_register
+        preferredPhrase: Baurisikoregister
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.contractor_progress_payment
+        preferredPhrase: Abschlagszahlung an Auftragnehmer
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.change_order_management
+        preferredPhrase: Nachtragsmanagement
+        aliases: []
+
+      - conceptId: transport_logistics.freight_transport.freight_transportation_network
+        preferredPhrase: Güterverkehrsnetz
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.intermodal_freight_terminal
+        preferredPhrase: intermodales Güterterminal
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.cargo_transport_capacity
+        preferredPhrase: Gütertransportkapazität
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.rail_freight_service
+        preferredPhrase: Schienengüterverkehrsdienst
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.road_freight_operation
+        preferredPhrase: Straßengüterverkehr
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.air_cargo_handling
+        preferredPhrase: Luftfrachtabfertigung
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_management_system
+        preferredPhrase: Lagerverwaltungssystem
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.distribution_center_operation
+        preferredPhrase: Betrieb des Verteilzentrums
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.inventory_storage_policy
+        preferredPhrase: Bestandslagerungsrichtlinie
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.order_fulfillment_process
+        preferredPhrase: Auftragsabwicklungsprozess
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_picking_strategy
+        preferredPhrase: Kommissionierstrategie im Lager
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.cold_chain_logistics
+        preferredPhrase: Kühlkettenlogistik
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_maintenance_program
+        preferredPhrase: Flottenwartungsprogramm
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_route_optimization
+        preferredPhrase: Fahrzeugroutenoptimierung
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_fuel_efficiency
+        preferredPhrase: Kraftstoffeffizienz der Flotte
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.driver_safety_management
+        preferredPhrase: Fahrersicherheitsmanagement
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_utilization_rate
+        preferredPhrase: Fahrzeugauslastungsquote
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_telematics_system
+        preferredPhrase: Flottentelematiksystem
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supply_chain_disruption
+        preferredPhrase: Lieferkettenunterbrechung
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supplier_lead_time
+        preferredPhrase: Lieferzeit des Lieferanten
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.logistics_network_optimization
+        preferredPhrase: Optimierung des Logistiknetzes
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.demand_supply_planning
+        preferredPhrase: Bedarfs und Lieferplanung
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supply_chain_resilience
+        preferredPhrase: Resilienz der Lieferkette
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.last_mile_delivery
+        preferredPhrase: Zustellung auf der letzten Meile
+        aliases: []
+
+      - conceptId: agriculture_food.crop_science.crop_yield_forecast
+        preferredPhrase: Ertragsprognose für Nutzpflanzen
+        aliases: []
+      - conceptId: agriculture_food.crop_science.soil_nutrient_management
+        preferredPhrase: Nährstoffmanagement des Bodens
+        aliases: []
+      - conceptId: agriculture_food.crop_science.precision_agriculture_system
+        preferredPhrase: Präzisionslandwirtschaftssystem
+        aliases: []
+      - conceptId: agriculture_food.crop_science.integrated_pest_management
+        preferredPhrase: integrierter Pflanzenschutz
+        aliases: []
+      - conceptId: agriculture_food.crop_science.irrigation_scheduling_model
+        preferredPhrase: Bewässerungsplanungsmodell
+        aliases: []
+      - conceptId: agriculture_food.crop_science.crop_disease_monitoring
+        preferredPhrase: Überwachung von Pflanzenkrankheiten
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.livestock_health_management
+        preferredPhrase: Tiergesundheitsmanagement
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.animal_feed_formulation
+        preferredPhrase: Tierfutterformulierung
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.dairy_production_system
+        preferredPhrase: Milchproduktionssystem
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.herd_reproductive_performance
+        preferredPhrase: Reproduktionsleistung der Herde
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.livestock_disease_control
+        preferredPhrase: Kontrolle von Nutztierkrankheiten
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.animal_welfare_standard
+        preferredPhrase: Tierwohlstandard
+        aliases: []
+      - conceptId: agriculture_food.food_processing.food_processing_technology
+        preferredPhrase: Lebensmittelverarbeitungstechnologie
+        aliases: []
+      - conceptId: agriculture_food.food_processing.food_production_line
+        preferredPhrase: Lebensmittelproduktionslinie
+        aliases: []
+      - conceptId: agriculture_food.food_processing.thermal_food_processing
+        preferredPhrase: thermische Lebensmittelverarbeitung
+        aliases: []
+      - conceptId: agriculture_food.food_processing.food_packaging_system
+        preferredPhrase: Lebensmittelverpackungssystem
+        aliases: []
+      - conceptId: agriculture_food.food_processing.shelf_life_evaluation
+        preferredPhrase: Bewertung der Haltbarkeit
+        aliases: []
+      - conceptId: agriculture_food.food_processing.food_quality_control
+        preferredPhrase: Lebensmittelqualitätskontrolle
+        aliases: []
+      - conceptId: agriculture_food.food_safety.food_safety_management
+        preferredPhrase: Lebensmittelsicherheitsmanagement
+        aliases: []
+      - conceptId: agriculture_food.food_safety.hazard_analysis_control
+        preferredPhrase: Gefahrenanalyse und Kontrolle
+        aliases: []
+      - conceptId: agriculture_food.food_safety.microbial_contamination_risk
+        preferredPhrase: Risiko mikrobieller Kontamination
+        aliases: []
+      - conceptId: agriculture_food.food_safety.food_traceability_system
+        preferredPhrase: Rückverfolgbarkeitssystem für Lebensmittel
+        aliases: []
+      - conceptId: agriculture_food.food_safety.allergen_control_program
+        preferredPhrase: Allergenkontrollprogramm
+        aliases: []
+      - conceptId: agriculture_food.food_safety.food_hygiene_standard
+        preferredPhrase: Lebensmittelhygienestandard
+        aliases: []
+
+      - conceptId: mathematics_statistics.probability_statistics.probability_distribution_function
+        preferredPhrase: Wahrscheinlichkeitsverteilungsfunktion
+        aliases: []
+      - conceptId: mathematics_statistics.probability_statistics.statistical_hypothesis_testing
+        preferredPhrase: statistischer Hypothesentest
+        aliases: []
+      - conceptId: mathematics_statistics.probability_statistics.maximum_likelihood_estimation
+        preferredPhrase: Maximum Likelihood Schätzung
+        aliases: []
+      - conceptId: mathematics_statistics.probability_statistics.bayesian_posterior_distribution
+        preferredPhrase: bayessche Posteriorverteilung
+        aliases: []
+      - conceptId: mathematics_statistics.probability_statistics.confidence_interval_estimation
+        preferredPhrase: Konfidenzintervallschätzung
+        aliases: []
+      - conceptId: mathematics_statistics.probability_statistics.stochastic_process_model
+        preferredPhrase: stochastisches Prozessmodell
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.linear_algebra_system
+        preferredPhrase: lineares Algebrasystem
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.eigenvalue_decomposition_method
+        preferredPhrase: Eigenwertzerlegungsverfahren
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.abstract_algebra_structure
+        preferredPhrase: abstrakte algebraische Struktur
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.differential_geometry_manifold
+        preferredPhrase: differentialgeometrische Mannigfaltigkeit
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.matrix_factorization_method
+        preferredPhrase: Matrixfaktorisierungsverfahren
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.vector_space_basis
+        preferredPhrase: Basis des Vektorraums
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.constrained_optimization_problem
+        preferredPhrase: beschränktes Optimierungsproblem
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.convex_optimization_method
+        preferredPhrase: konvexes Optimierungsverfahren
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.integer_programming_model
+        preferredPhrase: ganzzahliges Programmiermodell
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.gradient_descent_algorithm
+        preferredPhrase: Gradientenabstiegsalgorithmus
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.multi_objective_optimization
+        preferredPhrase: Mehrzieloptimierung
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.nonlinear_optimization_solver
+        preferredPhrase: nichtlinearer Optimierungslöser
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.numerical_integration_method
+        preferredPhrase: numerisches Integrationsverfahren
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.finite_difference_scheme
+        preferredPhrase: Finite Differenzen Schema
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.numerical_stability_analysis
+        preferredPhrase: numerische Stabilitätsanalyse
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.iterative_linear_solver
+        preferredPhrase: iterativer linearer Löser
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.differential_equation_solver
+        preferredPhrase: Differentialgleichungslöser
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.numerical_error_estimate
+        preferredPhrase: numerische Fehlerschätzung
+        aliases: []
+
+      - conceptId: physics_astronomy.classical_mechanics.newtonian_motion_equation
+        preferredPhrase: newtonsche Bewegungsgleichung
+        aliases: []
+      - conceptId: physics_astronomy.classical_mechanics.conservation_of_momentum
+        preferredPhrase: Impulserhaltung
+        aliases: []
+      - conceptId: physics_astronomy.classical_mechanics.rigid_body_dynamics
+        preferredPhrase: Starrkörperdynamik
+        aliases: []
+      - conceptId: physics_astronomy.classical_mechanics.harmonic_oscillator_model
+        preferredPhrase: Modell des harmonischen Oszillators
+        aliases: []
+      - conceptId: physics_astronomy.classical_mechanics.rotational_motion_analysis
+        preferredPhrase: Analyse der Rotationsbewegung
+        aliases: []
+      - conceptId: physics_astronomy.classical_mechanics.classical_mechanics_system
+        preferredPhrase: System der klassischen Mechanik
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.thermodynamic_state_variable
+        preferredPhrase: thermodynamische Zustandsvariable
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.heat_transfer_coefficient
+        preferredPhrase: Wärmeübergangskoeffizient
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.entropy_production_rate
+        preferredPhrase: Entropieproduktionsrate
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.phase_equilibrium_condition
+        preferredPhrase: Phasengleichgewichtsbedingung
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.thermodynamic_cycle_efficiency
+        preferredPhrase: Wirkungsgrad des thermodynamischen Kreisprozesses
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.equation_of_state
+        preferredPhrase: Zustandsgleichung
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.electromagnetic_field_equation
+        preferredPhrase: elektromagnetische Feldgleichung
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.electric_potential_difference
+        preferredPhrase: elektrische Potentialdifferenz
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.magnetic_flux_density
+        preferredPhrase: magnetische Flussdichte
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.electromagnetic_wave_propagation
+        preferredPhrase: Ausbreitung elektromagnetischer Wellen
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.maxwell_equation_system
+        preferredPhrase: Maxwell Gleichungssystem
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.electric_field_strength
+        preferredPhrase: elektrische Feldstärke
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.stellar_evolution_model
+        preferredPhrase: Modell der Sternentwicklung
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.galactic_rotation_curve
+        preferredPhrase: galaktische Rotationskurve
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.cosmic_microwave_background
+        preferredPhrase: kosmischer Mikrowellenhintergrund
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.black_hole_accretion
+        preferredPhrase: Akkretion Schwarzer Löcher
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.exoplanet_orbital_period
+        preferredPhrase: Umlaufperiode eines Exoplaneten
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.gravitational_wave_signal
+        preferredPhrase: Gravitationswellensignal
+        aliases: []
+
+      - conceptId: chemistry_materials.organic_chemistry.organic_reaction_mechanism
+        preferredPhrase: organischer Reaktionsmechanismus
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.carbon_carbon_bond
+        preferredPhrase: Kohlenstoff Kohlenstoff Bindung
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.functional_group_transformation
+        preferredPhrase: Umwandlung funktioneller Gruppen
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.stereochemical_reaction_pathway
+        preferredPhrase: stereochemischer Reaktionsweg
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.organic_synthesis_route
+        preferredPhrase: organische Syntheseroute
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.reaction_yield_optimization
+        preferredPhrase: Optimierung der Reaktionsausbeute
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.mass_spectrometry_analysis
+        preferredPhrase: massenspektrometrische Analyse
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.high_performance_chromatography
+        preferredPhrase: Hochleistungschromatographie
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.analytical_detection_limit
+        preferredPhrase: analytische Nachweisgrenze
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.chemical_calibration_curve
+        preferredPhrase: chemische Kalibrierkurve
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.quantitative_chemical_analysis
+        preferredPhrase: quantitative chemische Analyse
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.sample_preparation_method
+        preferredPhrase: Probenvorbereitungsmethode
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.chemical_reaction_kinetics
+        preferredPhrase: chemische Reaktionskinetik
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.molecular_orbital_theory
+        preferredPhrase: Molekülorbitaltheorie
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.thermodynamic_equilibrium_constant
+        preferredPhrase: thermodynamische Gleichgewichtskonstante
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.electrochemical_cell_potential
+        preferredPhrase: elektrochemisches Zellpotential
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.molecular_spectroscopy_analysis
+        preferredPhrase: molekülspektroskopische Analyse
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.surface_adsorption_process
+        preferredPhrase: Oberflächenadsorptionsprozess
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.crystal_structure_analysis
+        preferredPhrase: Kristallstrukturanalyse
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.mechanical_material_property
+        preferredPhrase: mechanische Materialeigenschaft
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.polymer_composite_material
+        preferredPhrase: Polymerverbundwerkstoff
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.corrosion_resistance_testing
+        preferredPhrase: Korrosionsbeständigkeitsprüfung
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.material_phase_transition
+        preferredPhrase: Phasenübergang des Materials
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.nanomaterial_surface_property
+        preferredPhrase: Oberflächeneigenschaft von Nanomaterialien
+        aliases: []
+
+      - conceptId: biology_genetics.molecular_biology.gene_expression_regulation
+        preferredPhrase: Regulation der Genexpression
+        aliases: []
+      - conceptId: biology_genetics.molecular_biology.protein_synthesis_pathway
+        preferredPhrase: Proteinsyntheseweg
+        aliases: []
+      - conceptId: biology_genetics.molecular_biology.dna_replication_process
+        preferredPhrase: DNA Replikationsprozess
+        aliases: []
+      - conceptId: biology_genetics.molecular_biology.rna_transcription_mechanism
+        preferredPhrase: RNA Transkriptionsmechanismus
+        aliases: []
+      - conceptId: biology_genetics.molecular_biology.protein_folding_process
+        preferredPhrase: Proteinfaltungsprozess
+        aliases: []
+      - conceptId: biology_genetics.molecular_biology.cellular_signaling_pathway
+        preferredPhrase: zellulärer Signalweg
+        aliases: []
+      - conceptId: biology_genetics.genetics.genetic_variant_analysis
+        preferredPhrase: Analyse genetischer Varianten
+        aliases: []
+      - conceptId: biology_genetics.genetics.genome_sequencing_data
+        preferredPhrase: Genomsequenzierungsdaten
+        aliases: []
+      - conceptId: biology_genetics.genetics.mendelian_inheritance_pattern
+        preferredPhrase: mendelsches Vererbungsmuster
+        aliases: []
+      - conceptId: biology_genetics.genetics.population_genetic_structure
+        preferredPhrase: populationsgenetische Struktur
+        aliases: []
+      - conceptId: biology_genetics.genetics.genetic_association_study
+        preferredPhrase: genetische Assoziationsstudie
+        aliases: []
+      - conceptId: biology_genetics.genetics.gene_mutation_frequency
+        preferredPhrase: Genmutationshäufigkeit
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.cell_membrane_transport
+        preferredPhrase: Zellmembrantransport
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.cellular_metabolism_pathway
+        preferredPhrase: zellulärer Stoffwechselweg
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.programmed_cell_death
+        preferredPhrase: programmierter Zelltod
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.cell_cycle_regulation
+        preferredPhrase: Zellzyklusregulation
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.stem_cell_differentiation
+        preferredPhrase: Stammzelldifferenzierung
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.intracellular_signal_transduction
+        preferredPhrase: intrazelluläre Signaltransduktion
+        aliases: []
+      - conceptId: biology_genetics.physiology.cardiovascular_physiological_response
+        preferredPhrase: kardiovaskuläre physiologische Reaktion
+        aliases: []
+      - conceptId: biology_genetics.physiology.respiratory_gas_exchange
+        preferredPhrase: respiratorischer Gasaustausch
+        aliases: []
+      - conceptId: biology_genetics.physiology.renal_filtration_process
+        preferredPhrase: renaler Filtrationsprozess
+        aliases: []
+      - conceptId: biology_genetics.physiology.endocrine_hormone_regulation
+        preferredPhrase: endokrine Hormonregulation
+        aliases: []
+      - conceptId: biology_genetics.physiology.nervous_system_function
+        preferredPhrase: Funktion des Nervensystems
+        aliases: []
+      - conceptId: biology_genetics.physiology.metabolic_homeostasis_mechanism
+        preferredPhrase: Mechanismus der metabolischen Homöostase
+        aliases: []
+
+      - conceptId: computer_science_ai.algorithms_data_structures.graph_traversal_algorithm
+        preferredPhrase: Graphdurchlaufalgorithmus
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.dynamic_programming_algorithm
+        preferredPhrase: Algorithmus der dynamischen Programmierung
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.hash_table_implementation
+        preferredPhrase: Implementierung einer Hashtabelle
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.computational_complexity_analysis
+        preferredPhrase: Analyse der Berechnungskomplexität
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.balanced_search_tree
+        preferredPhrase: balancierter Suchbaum
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.shortest_path_algorithm
+        preferredPhrase: Kürzeste Pfade Algorithmus
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.distributed_system_architecture
+        preferredPhrase: Architektur verteilter Systeme
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.database_transaction_isolation
+        preferredPhrase: Isolation von Datenbanktransaktionen
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.concurrent_programming_model
+        preferredPhrase: Nebenläufigkeitsprogrammiermodell
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.application_programming_interface
+        preferredPhrase: Anwendungsprogrammierschnittstelle
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.fault_tolerant_system
+        preferredPhrase: fehlertolerantes System
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.software_dependency_management
+        preferredPhrase: Verwaltung von Softwareabhängigkeiten
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.machine_learning_model
+        preferredPhrase: Modell des maschinellen Lernens
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.supervised_learning_algorithm
+        preferredPhrase: Algorithmus des überwachten Lernens
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.unsupervised_learning_method
+        preferredPhrase: Methode des unüberwachten Lernens
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.neural_network_architecture
+        preferredPhrase: Architektur neuronaler Netze
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.model_training_pipeline
+        preferredPhrase: Pipeline für Modelltraining
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.feature_engineering_process
+        preferredPhrase: Prozess der Merkmalsentwicklung
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.natural_language_processing
+        preferredPhrase: Verarbeitung natürlicher Sprache
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.semantic_text_representation
+        preferredPhrase: semantische Textdarstellung
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.information_retrieval_system
+        preferredPhrase: Informationsabrufsystem
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.large_language_model
+        preferredPhrase: großes Sprachmodell
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.vector_embedding_model
+        preferredPhrase: Vektoreinbettungsmodell
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.named_entity_recognition
+        preferredPhrase: Erkennung benannter Entitäten
+        aliases: []
+
+      - conceptId: medicine_pharmacology.clinical_diagnosis.differential_diagnosis_process
+        preferredPhrase: Prozess der Differentialdiagnose
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_diagnosis.diagnostic_imaging_finding
+        preferredPhrase: diagnostischer Bildgebungsbefund
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_diagnosis.clinical_laboratory_result
+        preferredPhrase: klinisches Laborergebnis
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_diagnosis.disease_severity_assessment
+        preferredPhrase: Bewertung des Krankheitsschweregrads
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_diagnosis.patient_symptom_profile
+        preferredPhrase: Symptomprofil des Patienten
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_diagnosis.diagnostic_decision_support
+        preferredPhrase: diagnostische Entscheidungsunterstützung
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.drug_dose_adjustment
+        preferredPhrase: Anpassung der Arzneimitteldosis
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.adverse_drug_reaction
+        preferredPhrase: unerwünschte Arzneimittelwirkung
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.drug_drug_interaction
+        preferredPhrase: Arzneimittelwechselwirkung
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.pharmacokinetic_concentration_profile
+        preferredPhrase: pharmakokinetisches Konzentrationsprofil
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.pharmacodynamic_response_model
+        preferredPhrase: pharmakodynamisches Wirkungsmodell
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.therapeutic_drug_monitoring
+        preferredPhrase: therapeutisches Arzneimittelmonitoring
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.randomized_controlled_trial
+        preferredPhrase: randomisierte kontrollierte Studie
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.clinical_trial_endpoint
+        preferredPhrase: Endpunkt der klinischen Studie
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.treatment_effect_estimate
+        preferredPhrase: Schätzung des Behandlungseffekts
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.trial_inclusion_criteria
+        preferredPhrase: Einschlusskriterien der Studie
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.adverse_event_monitoring
+        preferredPhrase: Überwachung unerwünschter Ereignisse
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.clinical_study_protocol
+        preferredPhrase: klinisches Studienprotokoll
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.disease_incidence_rate
+        preferredPhrase: Krankheitsinzidenzrate
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.disease_prevalence_estimate
+        preferredPhrase: Schätzung der Krankheitsprävalenz
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.epidemiological_risk_factor
+        preferredPhrase: epidemiologischer Risikofaktor
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.population_cohort_study
+        preferredPhrase: populationsbasierte Kohortenstudie
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.case_control_study
+        preferredPhrase: Fall Kontroll Studie
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.outbreak_surveillance_system
+        preferredPhrase: Ausbruchsüberwachungssystem
+        aliases: []
+
+      - conceptId: earth_environmental_science.geology.geological_formation_analysis
+        preferredPhrase: Analyse geologischer Formationen
+        aliases: []
+      - conceptId: earth_environmental_science.geology.tectonic_plate_movement
+        preferredPhrase: Bewegung tektonischer Platten
+        aliases: []
+      - conceptId: earth_environmental_science.geology.sedimentary_basin_structure
+        preferredPhrase: Struktur des Sedimentbeckens
+        aliases: []
+      - conceptId: earth_environmental_science.geology.mineral_composition_analysis
+        preferredPhrase: Analyse der Mineralzusammensetzung
+        aliases: []
+      - conceptId: earth_environmental_science.geology.geological_fault_system
+        preferredPhrase: geologisches Störungssystem
+        aliases: []
+      - conceptId: earth_environmental_science.geology.subsurface_stratigraphic_model
+        preferredPhrase: unterirdisches stratigraphisches Modell
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.climate_change_projection
+        preferredPhrase: Klimawandelprojektion
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.global_temperature_anomaly
+        preferredPhrase: globale Temperaturanomalie
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.greenhouse_gas_forcing
+        preferredPhrase: Strahlungsantrieb durch Treibhausgase
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.climate_model_simulation
+        preferredPhrase: Klimamodellsimulation
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.extreme_weather_event
+        preferredPhrase: extremes Wetterereignis
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.atmospheric_circulation_pattern
+        preferredPhrase: atmosphärisches Zirkulationsmuster
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.watershed_runoff_model
+        preferredPhrase: Abflussmodell des Einzugsgebiets
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.groundwater_flow_system
+        preferredPhrase: Grundwasserströmungssystem
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.river_discharge_measurement
+        preferredPhrase: Messung des Flussabflusses
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.flood_frequency_analysis
+        preferredPhrase: Hochwasserhäufigkeitsanalyse
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.water_balance_model
+        preferredPhrase: Wasserbilanzmodell
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.aquifer_recharge_rate
+        preferredPhrase: Grundwasserneubildungsrate
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.environmental_impact_assessment
+        preferredPhrase: Umweltverträglichkeitsprüfung
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.ecological_risk_assessment
+        preferredPhrase: ökologische Risikobewertung
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.air_pollution_monitoring
+        preferredPhrase: Überwachung der Luftverschmutzung
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.water_quality_indicator
+        preferredPhrase: Wasserqualitätsindikator
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.biodiversity_impact_evaluation
+        preferredPhrase: Bewertung der Auswirkungen auf die Biodiversität
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.environmental_remediation_plan
+        preferredPhrase: Umweltsanierungsplan
+        aliases: []
+
+      - conceptId: psychology_sociology.cognitive_psychology.working_memory_capacity
+        preferredPhrase: Arbeitsgedächtniskapazität
+        aliases: []
+      - conceptId: psychology_sociology.cognitive_psychology.cognitive_load_theory
+        preferredPhrase: Theorie der kognitiven Belastung
+        aliases: []
+      - conceptId: psychology_sociology.cognitive_psychology.decision_making_process
+        preferredPhrase: Entscheidungsprozess
+        aliases: []
+      - conceptId: psychology_sociology.cognitive_psychology.selective_attention_mechanism
+        preferredPhrase: Mechanismus selektiver Aufmerksamkeit
+        aliases: []
+      - conceptId: psychology_sociology.cognitive_psychology.cognitive_bias_effect
+        preferredPhrase: Effekt kognitiver Verzerrung
+        aliases: []
+      - conceptId: psychology_sociology.cognitive_psychology.memory_retrieval_process
+        preferredPhrase: Prozess des Gedächtnisabrufs
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.behavioral_reinforcement_schedule
+        preferredPhrase: Verhaltensverstärkungsplan
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.conditioned_behavioral_response
+        preferredPhrase: konditionierte Verhaltensreaktion
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.behavior_modification_program
+        preferredPhrase: Verhaltensänderungsprogramm
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.motivation_behavior_relationship
+        preferredPhrase: Zusammenhang zwischen Motivation und Verhalten
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.habit_formation_process
+        preferredPhrase: Prozess der Gewohnheitsbildung
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.behavioral_intervention_strategy
+        preferredPhrase: Verhaltensinterventionsstrategie
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.social_identity_theory
+        preferredPhrase: Theorie der sozialen Identität
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.group_decision_making
+        preferredPhrase: Gruppenentscheidungsfindung
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.interpersonal_attitude_change
+        preferredPhrase: zwischenmenschliche Einstellungsänderung
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.social_influence_process
+        preferredPhrase: Prozess sozialer Einflussnahme
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.group_conformity_behavior
+        preferredPhrase: Gruppenkonformitätsverhalten
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.stereotype_formation_process
+        preferredPhrase: Prozess der Stereotypbildung
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.social_network_analysis
+        preferredPhrase: soziale Netzwerkanalyse
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.survey_sampling_design
+        preferredPhrase: Stichprobendesign der Umfrage
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.demographic_population_change
+        preferredPhrase: demografische Bevölkerungsveränderung
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.social_stratification_pattern
+        preferredPhrase: Muster sozialer Schichtung
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.qualitative_interview_analysis
+        preferredPhrase: qualitative Interviewanalyse
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.longitudinal_social_study
+        preferredPhrase: soziale Längsschnittstudie
+        aliases: []
