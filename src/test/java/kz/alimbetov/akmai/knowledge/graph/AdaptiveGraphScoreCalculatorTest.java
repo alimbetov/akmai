@@ -100,6 +100,11 @@ class AdaptiveGraphScoreCalculatorTest {
 
         assertThat(withContext.effectiveWeight())
                 .isGreaterThan(withoutContext.effectiveWeight());
+        assertThat(withContext.effectiveWeight())
+                .isCloseTo(
+                        0.5485926323391408,
+                        org.assertj.core.data.Offset.offset(1.0e-12)
+                );
         assertThat(withLargeContext.effectiveWeight())
                 .isGreaterThanOrEqualTo(withContext.effectiveWeight());
         assertThat(withLargeContext.effectiveWeight())
