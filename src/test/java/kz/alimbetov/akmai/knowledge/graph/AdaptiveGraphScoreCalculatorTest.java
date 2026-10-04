@@ -65,7 +65,7 @@ class AdaptiveGraphScoreCalculatorTest {
     }
 
     @Test
-    void contextCountDoesNotDoubleCountDistinctQueryEvidence() {
+    void contextCountContributesBoundedEvidence() {
         AdaptiveGraphScoreCalculator calculator =
                 new AdaptiveGraphScoreCalculator(properties());
         Instant now = Instant.parse("2026-10-03T00:00:00Z");
@@ -75,6 +75,15 @@ class AdaptiveGraphScoreCalculatorTest {
                         AssociationBand.CANDIDATE,
                         4,
                         0,
+                        1,
+                        now,
+                        now
+                );
+        AdaptiveGraphScoreCalculator.ScoreDecision withContext =
+                calculator.evaluate(
+                        AssociationBand.CANDIDATE,
+                        4,
+                        4,
                         1,
                         now,
                         now
@@ -89,8 +98,12 @@ class AdaptiveGraphScoreCalculatorTest {
                         now
                 );
 
+        assertThat(withContext.effectiveWeight())
+                .isGreaterThan(withoutContext.effectiveWeight());
         assertThat(withLargeContext.effectiveWeight())
-                .isEqualTo(withoutContext.effectiveWeight());
+                .isGreaterThanOrEqualTo(withContext.effectiveWeight());
+        assertThat(withLargeContext.effectiveWeight())
+                .isLessThanOrEqualTo(1.0);
     }
 
     @Test
