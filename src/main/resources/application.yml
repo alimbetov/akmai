@@ -41,6 +41,9 @@ akmai:
     max-source-chars: ${AKMAI_API_MAX_SOURCE_CHARS:1000}
   idempotency:
     lease-duration: ${AKMAI_IDEMPOTENCY_LEASE_DURATION:10m}
+  app-parameters:
+    cache-ttl: ${AKMAI_APP_PARAMETER_CACHE_TTL:2s}
+    cache-maximum-size: ${AKMAI_APP_PARAMETER_CACHE_MAX_SIZE:128}
   security:
     enabled: ${AKMAI_SECURITY_ENABLED:false}
     api-key: ${AKMAI_SECURITY_API_KEY:}
