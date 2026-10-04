@@ -6,9 +6,15 @@ Adaptive Chunk Graph parameters are capacity and quality controls derived from m
 
 The subsystem uses a gated loop:
 
-    measure -> calibrate -> replay/load validate -> approve -> canary
+    shadow measure
+      -> calibration candidate
+      -> independent replay
+      -> quality gate
+      -> canary
+      -> explicit approval
+      -> production
 
-Runtime traffic must never rewrite its own degree, activation, decay, partition or maintenance limits automatically. That would create a self-validating feedback loop.
+Runtime traffic must never rewrite its own degree, activation, decay, partition or maintenance limits automatically. That would create a self-validating feedback loop. Calibration is advisory and produces versioned candidate parameters only.
 
 ## Separate authoritative and adaptive measurements
 
@@ -24,9 +30,14 @@ Reference degree is therefore only a cold-start structural prior. Once shadow le
 
     BOOTSTRAP
       -> SHADOW
-      -> CALIBRATED
+      -> REPLAY_CANDIDATE
+      -> REPLAY_VALIDATED
+      -> CANARY_ELIGIBLE
+      -> CANARY
       -> APPROVED
-      -> CANARY / PRODUCTION
+      -> PRODUCTION
+
+Calibration and replay must use different observations. Prefer a temporal split so the threshold is selected on an older interval and validated on a later holdout interval. A threshold that only works on the calibration set is rejected.
 
 Every calibration report records the measured interval, graph version, ontology version when present, retrieval configuration, measurements, candidate parameters, quality results and capacity results.
 
@@ -126,13 +137,84 @@ Activation should depend on independent evidence dimensions:
 
 Calibration procedure:
 
-1. collect CANDIDATE edges in shadow mode;
-2. replay later queries without allowing graph expansion to affect retrieval;
-3. label whether each candidate neighbour would have been useful;
-4. evaluate precision/recall for activation thresholds;
-5. choose the lowest threshold that meets the required precision and graph growth bounds.
+1. collect CANDIDATE/WARM/HOT graph candidates in shadow mode without changing user-visible context;
+2. record the graph candidate score and deterministic replay inputs;
+3. split observations into a calibration interval and a later holdout replay interval;
+4. sweep candidate score thresholds on the calibration interval;
+5. for every threshold, compare graph-enabled replay with the graph-disabled baseline;
+6. choose the lowest threshold that satisfies the pre-declared utility, confidence, regression, latency and safety gates;
+7. evaluate that threshold unchanged on the holdout replay interval;
+8. only a holdout result that passes the same gates becomes CANARY_ELIGIBLE.
 
-A temporary bootstrap threshold is allowed, but it is explicitly provisional.
+A temporary bootstrap threshold is allowed, but it is explicitly provisional. User feedback is not part of this contract.
+
+## Measured graph utility without user feedback
+
+The primary learning signal is system-observed retrieval utility, not thumbs-up/down or other explicit user feedback.
+
+Each shadow/replay observation contains at minimum:
+
+    graph_score
+    utility_delta
+    latency_delta_ms
+    safety_violation
+
+`utility_delta` is computed by the replay harness as graph-enabled quality minus the graph-disabled baseline for the same request. The utility definition must be declared before calibration. It may combine deterministic retrieval/citation quality metrics, but the weights must not be retuned on the same observations used to select the threshold.
+
+A request is a measurable benefit only when:
+
+    utility_delta >= minimum_meaningful_utility_delta
+
+For threshold `T`, calibration evaluates only observations where:
+
+    graph_score >= T
+
+For those observations it records:
+
+- sample count;
+- mean utility lift;
+- benefit rate;
+- regression rate;
+- p95 latency delta;
+- safety violations.
+
+The probability gate uses a Wilson lower confidence bound rather than raw benefit rate. This prevents a threshold supported by one or two lucky observations from looking production-ready.
+
+Conceptually:
+
+    benefit_probability = beneficial_requests / eligible_requests
+    conservative_probability = WilsonLowerBound(
+        beneficial_requests,
+        eligible_requests,
+        confidence_z
+    )
+
+A threshold passes only when all configured gates hold:
+
+    samples >= minimum_samples
+    mean_utility_delta >= minimum_mean_utility_lift
+    conservative_probability >= minimum_benefit_probability
+    regression_rate <= maximum_regression_rate
+    p95_latency_delta <= maximum_latency_regression
+    safety_violations == 0
+
+Among passing thresholds, select the lowest one. This maximizes useful coverage while preserving the declared safety/quality contract.
+
+The Java reference implementation is `AdaptiveGraphThresholdCalibrator`. It has two separate operations:
+
+    calibrate(calibration_set)
+        -> REPLAY_CANDIDATE
+
+    validateReplay(holdout_set, candidate_threshold)
+        -> CANARY_ELIGIBLE | REJECTED | INSUFFICIENT_DATA
+
+Neither operation changes runtime configuration.
+
+### Canary and approval
+
+CANARY_ELIGIBLE is not production approval. Canary runs the already-selected threshold on bounded traffic and measures the same quality, safety, capacity and latency invariants. The threshold must not be retuned from canary traffic in place.
+
+Final approval is an explicit versioned configuration decision. A failed canary returns to shadow/replay calibration; it never silently lowers the gate.
 
 ## Per-band degree calibration
 
@@ -205,16 +287,24 @@ Quota enforcement must be idempotent and deterministic.
 
 Do not use an unbounded counter.
 
-Conceptually:
+The implemented evidence score uses the three configured evidence dimensions explicitly:
 
-    support   = saturating(independent positive evidence)
-    quality   = bounded(citation/context evidence)
-    diversity = bounded(distinct semantic query fingerprints)
-    freshness = exp(-lambda * age)
+    distinct = saturating(distinct_query_support, distinct_query_scale)
+    context  = saturating(context_count, context_scale)
+    citation = saturating(citation_count, citation_scale)
 
-    weight = clamp(support * quality * diversity * freshness, 0, 1)
+    evidence =
+        (
+            distinct_query_weight * distinct
+          + context_weight        * context
+          + citation_weight       * citation
+        )
+        / total_evidence_weight
 
-The functional form is architecture. Coefficients are calibration data.
+    freshness = 0.5 ^ age_in_half_lives
+    weight = clamp(evidence * freshness, 0, 1)
+
+Context co-occurrence remains a weaker signal by configuration, but it must not be declared in configuration and then omitted from the actual score. The functional form is architecture; coefficients are calibration data.
 
 ## Decay and half-life
 
@@ -299,13 +389,19 @@ Conceptual fields:
     capacityEvaluation
     decision
 
-Decision states:
+Calibration decision states:
+
+    INSUFFICIENT_DATA
+    REJECTED
+    REPLAY_CANDIDATE
+
+Independent replay decision states:
 
     INSUFFICIENT_DATA
     REJECTED
     CANARY_ELIGIBLE
 
-Only CANARY_ELIGIBLE can be promoted.
+Only CANARY_ELIGIBLE can enter a bounded canary. Canary success still requires explicit approval before production.
 
 ## Candidate configuration
 
