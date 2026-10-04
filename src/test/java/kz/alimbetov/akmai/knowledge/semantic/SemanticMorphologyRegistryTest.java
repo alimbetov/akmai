@@ -1,7 +1,6 @@
 package kz.alimbetov.akmai.knowledge.semantic;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +21,7 @@ class SemanticMorphologyRegistryTest {
         assertThat(registry.supports("pt")).isTrue();
         assertThat(registry.supports("it")).isTrue();
         assertThat(registry.supports("tr")).isTrue();
-        assertThat(registry.supports("el")).isFalse();
+        assertThat(registry.supports("el")).isTrue();
         assertThat(registry.require("en").language()).isEqualTo("en");
         assertThat(registry.require("ru").language()).isEqualTo("ru");
         assertThat(registry.require("kk").language()).isEqualTo("kk");
@@ -33,9 +32,6 @@ class SemanticMorphologyRegistryTest {
         assertThat(registry.require("pt").language()).isEqualTo("pt");
         assertThat(registry.require("it").language()).isEqualTo("it");
         assertThat(registry.require("tr").language()).isEqualTo("tr");
-
-        assertThatThrownBy(() -> registry.require("el"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("No semantic morphology normalizer");
+        assertThat(registry.require("el").language()).isEqualTo("el");
     }
 }
