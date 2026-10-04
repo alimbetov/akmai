@@ -386,3 +386,195 @@ languages:
         preferredPhrase: πρόγραμμα ελέγχου αλλεργιογόνων
       - conceptId: agriculture_food.food_safety.food_hygiene_standard
         preferredPhrase: πρότυπο υγιεινής τροφίμων
+      - conceptId: mathematics_statistics.probability_statistics.probability_distribution_function
+        preferredPhrase: συνάρτηση κατανομής πιθανότητας
+      - conceptId: mathematics_statistics.probability_statistics.statistical_hypothesis_testing
+        preferredPhrase: στατιστικός έλεγχος υπόθεσης
+      - conceptId: mathematics_statistics.probability_statistics.maximum_likelihood_estimation
+        preferredPhrase: εκτίμηση μέγιστης πιθανοφάνειας
+      - conceptId: mathematics_statistics.probability_statistics.bayesian_posterior_distribution
+        preferredPhrase: μπεϋζιανή εκ των υστέρων κατανομή
+      - conceptId: mathematics_statistics.probability_statistics.confidence_interval_estimation
+        preferredPhrase: εκτίμηση διαστήματος εμπιστοσύνης
+      - conceptId: mathematics_statistics.probability_statistics.stochastic_process_model
+        preferredPhrase: μοντέλο στοχαστικής διεργασίας
+      - conceptId: mathematics_statistics.algebra_geometry.linear_algebra_system
+        preferredPhrase: σύστημα γραμμικής άλγεβρας
+      - conceptId: mathematics_statistics.algebra_geometry.eigenvalue_decomposition_method
+        preferredPhrase: μέθοδος αποσύνθεσης ιδιοτιμών
+      - conceptId: mathematics_statistics.algebra_geometry.abstract_algebra_structure
+        preferredPhrase: αφηρημένη αλγεβρική δομή
+      - conceptId: mathematics_statistics.algebra_geometry.differential_geometry_manifold
+        preferredPhrase: πολλαπλότητα διαφορικής γεωμετρίας
+      - conceptId: mathematics_statistics.algebra_geometry.matrix_factorization_method
+        preferredPhrase: μέθοδος παραγοντοποίησης μητρώου
+      - conceptId: mathematics_statistics.algebra_geometry.vector_space_basis
+        preferredPhrase: βάση διανυσματικού χώρου
+      - conceptId: mathematics_statistics.optimization.constrained_optimization_problem
+        preferredPhrase: πρόβλημα βελτιστοποίησης με περιορισμούς
+      - conceptId: mathematics_statistics.optimization.convex_optimization_method
+        preferredPhrase: μέθοδος κυρτής βελτιστοποίησης
+      - conceptId: mathematics_statistics.optimization.integer_programming_model
+        preferredPhrase: μοντέλο ακέραιου προγραμματισμού
+      - conceptId: mathematics_statistics.optimization.gradient_descent_algorithm
+        preferredPhrase: αλγόριθμος καθόδου κλίσης
+      - conceptId: mathematics_statistics.optimization.multi_objective_optimization
+        preferredPhrase: πολυκριτηριακή βελτιστοποίηση
+      - conceptId: mathematics_statistics.optimization.nonlinear_optimization_solver
+        preferredPhrase: επιλυτής μη γραμμικής βελτιστοποίησης
+      - conceptId: mathematics_statistics.numerical_methods.numerical_integration_method
+        preferredPhrase: μέθοδος αριθμητικής ολοκλήρωσης
+      - conceptId: mathematics_statistics.numerical_methods.finite_difference_scheme
+        preferredPhrase: σχήμα πεπερασμένων διαφορών
+      - conceptId: mathematics_statistics.numerical_methods.numerical_stability_analysis
+        preferredPhrase: ανάλυση αριθμητικής ευστάθειας
+      - conceptId: mathematics_statistics.numerical_methods.iterative_linear_solver
+        preferredPhrase: επαναληπτικός γραμμικός επιλυτής
+      - conceptId: mathematics_statistics.numerical_methods.differential_equation_solver
+        preferredPhrase: επιλυτής διαφορικών εξισώσεων
+      - conceptId: mathematics_statistics.numerical_methods.numerical_error_estimate
+        preferredPhrase: εκτίμηση αριθμητικού σφάλματος
+      - conceptId: physics_astronomy.classical_mechanics.newtonian_motion_equation
+        preferredPhrase: νευτώνεια εξίσωση κίνησης
+      - conceptId: physics_astronomy.classical_mechanics.conservation_of_momentum
+        preferredPhrase: διατήρηση ορμής
+      - conceptId: physics_astronomy.classical_mechanics.rigid_body_dynamics
+        preferredPhrase: δυναμική στερεού σώματος
+      - conceptId: physics_astronomy.classical_mechanics.harmonic_oscillator_model
+        preferredPhrase: μοντέλο αρμονικού ταλαντωτή
+      - conceptId: physics_astronomy.classical_mechanics.rotational_motion_analysis
+        preferredPhrase: ανάλυση περιστροφικής κίνησης
+      - conceptId: physics_astronomy.classical_mechanics.classical_mechanics_system
+        preferredPhrase: σύστημα κλασικής μηχανικής
+      - conceptId: physics_astronomy.thermodynamics.thermodynamic_state_variable
+        preferredPhrase: θερμοδυναμική μεταβλητή κατάστασης
+      - conceptId: physics_astronomy.thermodynamics.heat_transfer_coefficient
+        preferredPhrase: συντελεστής μεταφοράς θερμότητας
+      - conceptId: physics_astronomy.thermodynamics.entropy_production_rate
+        preferredPhrase: ρυθμός παραγωγής εντροπίας
+      - conceptId: physics_astronomy.thermodynamics.phase_equilibrium_condition
+        preferredPhrase: συνθήκη ισορροπίας φάσεων
+      - conceptId: physics_astronomy.thermodynamics.thermodynamic_cycle_efficiency
+        preferredPhrase: απόδοση θερμοδυναμικού κύκλου
+      - conceptId: physics_astronomy.thermodynamics.equation_of_state
+        preferredPhrase: εξίσωση κατάστασης
+      - conceptId: physics_astronomy.electromagnetism.electromagnetic_field_equation
+        preferredPhrase: εξίσωση ηλεκτρομαγνητικού πεδίου
+      - conceptId: physics_astronomy.electromagnetism.electric_potential_difference
+        preferredPhrase: διαφορά ηλεκτρικού δυναμικού
+      - conceptId: physics_astronomy.electromagnetism.magnetic_flux_density
+        preferredPhrase: πυκνότητα μαγνητικής ροής
+      - conceptId: physics_astronomy.electromagnetism.electromagnetic_wave_propagation
+        preferredPhrase: διάδοση ηλεκτρομαγνητικού κύματος
+      - conceptId: physics_astronomy.electromagnetism.maxwell_equation_system
+        preferredPhrase: σύστημα εξισώσεων Maxwell
+      - conceptId: physics_astronomy.electromagnetism.electric_field_strength
+        preferredPhrase: ένταση ηλεκτρικού πεδίου
+      - conceptId: physics_astronomy.astrophysics.stellar_evolution_model
+        preferredPhrase: μοντέλο αστρικής εξέλιξης
+      - conceptId: physics_astronomy.astrophysics.galactic_rotation_curve
+        preferredPhrase: καμπύλη γαλαξιακής περιστροφής
+      - conceptId: physics_astronomy.astrophysics.cosmic_microwave_background
+        preferredPhrase: κοσμική μικροκυματική ακτινοβολία υποβάθρου
+      - conceptId: physics_astronomy.astrophysics.black_hole_accretion
+        preferredPhrase: προσαύξηση ύλης σε μαύρη τρύπα
+      - conceptId: physics_astronomy.astrophysics.exoplanet_orbital_period
+        preferredPhrase: τροχιακή περίοδος εξωπλανήτη
+      - conceptId: physics_astronomy.astrophysics.gravitational_wave_signal
+        preferredPhrase: σήμα βαρυτικού κύματος
+      - conceptId: chemistry_materials.organic_chemistry.organic_reaction_mechanism
+        preferredPhrase: μηχανισμός οργανικής αντίδρασης
+      - conceptId: chemistry_materials.organic_chemistry.carbon_carbon_bond
+        preferredPhrase: δεσμός άνθρακα άνθρακα
+      - conceptId: chemistry_materials.organic_chemistry.functional_group_transformation
+        preferredPhrase: μετατροπή λειτουργικής ομάδας
+      - conceptId: chemistry_materials.organic_chemistry.stereochemical_reaction_pathway
+        preferredPhrase: στερεοχημική πορεία αντίδρασης
+      - conceptId: chemistry_materials.organic_chemistry.organic_synthesis_route
+        preferredPhrase: οδός οργανικής σύνθεσης
+      - conceptId: chemistry_materials.organic_chemistry.reaction_yield_optimization
+        preferredPhrase: βελτιστοποίηση απόδοσης αντίδρασης
+      - conceptId: chemistry_materials.analytical_chemistry.mass_spectrometry_analysis
+        preferredPhrase: ανάλυση φασματομετρίας μάζας
+      - conceptId: chemistry_materials.analytical_chemistry.high_performance_chromatography
+        preferredPhrase: χρωματογραφία υψηλής απόδοσης
+      - conceptId: chemistry_materials.analytical_chemistry.analytical_detection_limit
+        preferredPhrase: αναλυτικό όριο ανίχνευσης
+      - conceptId: chemistry_materials.analytical_chemistry.chemical_calibration_curve
+        preferredPhrase: καμπύλη χημικής βαθμονόμησης
+      - conceptId: chemistry_materials.analytical_chemistry.quantitative_chemical_analysis
+        preferredPhrase: ποσοτική χημική ανάλυση
+      - conceptId: chemistry_materials.analytical_chemistry.sample_preparation_method
+        preferredPhrase: μέθοδος προετοιμασίας δείγματος
+      - conceptId: chemistry_materials.physical_chemistry.chemical_reaction_kinetics
+        preferredPhrase: κινητική χημικής αντίδρασης
+      - conceptId: chemistry_materials.physical_chemistry.molecular_orbital_theory
+        preferredPhrase: θεωρία μοριακών τροχιακών
+      - conceptId: chemistry_materials.physical_chemistry.thermodynamic_equilibrium_constant
+        preferredPhrase: θερμοδυναμική σταθερά ισορροπίας
+      - conceptId: chemistry_materials.physical_chemistry.electrochemical_cell_potential
+        preferredPhrase: δυναμικό ηλεκτροχημικής κυψέλης
+      - conceptId: chemistry_materials.physical_chemistry.molecular_spectroscopy_analysis
+        preferredPhrase: ανάλυση μοριακής φασματοσκοπίας
+      - conceptId: chemistry_materials.physical_chemistry.surface_adsorption_process
+        preferredPhrase: διεργασία επιφανειακής προσρόφησης
+      - conceptId: chemistry_materials.materials_science.crystal_structure_analysis
+        preferredPhrase: ανάλυση κρυσταλλικής δομής
+      - conceptId: chemistry_materials.materials_science.mechanical_material_property
+        preferredPhrase: μηχανική ιδιότητα υλικού
+      - conceptId: chemistry_materials.materials_science.polymer_composite_material
+        preferredPhrase: πολυμερές σύνθετο υλικό
+      - conceptId: chemistry_materials.materials_science.corrosion_resistance_testing
+        preferredPhrase: δοκιμή αντοχής στη διάβρωση
+      - conceptId: chemistry_materials.materials_science.material_phase_transition
+        preferredPhrase: μετάβαση φάσης υλικού
+      - conceptId: chemistry_materials.materials_science.nanomaterial_surface_property
+        preferredPhrase: επιφανειακή ιδιότητα νανοϋλικού
+      - conceptId: biology_genetics.molecular_biology.gene_expression_regulation
+        preferredPhrase: ρύθμιση γονιδιακής έκφρασης
+      - conceptId: biology_genetics.molecular_biology.protein_synthesis_pathway
+        preferredPhrase: οδός σύνθεσης πρωτεϊνών
+      - conceptId: biology_genetics.molecular_biology.dna_replication_process
+        preferredPhrase: διαδικασία αντιγραφής DNA
+      - conceptId: biology_genetics.molecular_biology.rna_transcription_mechanism
+        preferredPhrase: μηχανισμός μεταγραφής RNA
+      - conceptId: biology_genetics.molecular_biology.protein_folding_process
+        preferredPhrase: διαδικασία αναδίπλωσης πρωτεΐνης
+      - conceptId: biology_genetics.molecular_biology.cellular_signaling_pathway
+        preferredPhrase: οδός κυτταρικής σηματοδότησης
+      - conceptId: biology_genetics.genetics.genetic_variant_analysis
+        preferredPhrase: ανάλυση γενετικών παραλλαγών
+      - conceptId: biology_genetics.genetics.genome_sequencing_data
+        preferredPhrase: δεδομένα αλληλούχησης γονιδιώματος
+      - conceptId: biology_genetics.genetics.mendelian_inheritance_pattern
+        preferredPhrase: πρότυπο μεντελικής κληρονόμησης
+      - conceptId: biology_genetics.genetics.population_genetic_structure
+        preferredPhrase: γενετική δομή πληθυσμού
+      - conceptId: biology_genetics.genetics.genetic_association_study
+        preferredPhrase: μελέτη γενετικής συσχέτισης
+      - conceptId: biology_genetics.genetics.gene_mutation_frequency
+        preferredPhrase: συχνότητα γονιδιακής μετάλλαξης
+      - conceptId: biology_genetics.cell_biology.cell_membrane_transport
+        preferredPhrase: μεταφορά μέσω κυτταρικής μεμβράνης
+      - conceptId: biology_genetics.cell_biology.cellular_metabolism_pathway
+        preferredPhrase: οδός κυτταρικού μεταβολισμού
+      - conceptId: biology_genetics.cell_biology.programmed_cell_death
+        preferredPhrase: προγραμματισμένος κυτταρικός θάνατος
+      - conceptId: biology_genetics.cell_biology.cell_cycle_regulation
+        preferredPhrase: ρύθμιση κυτταρικού κύκλου
+      - conceptId: biology_genetics.cell_biology.stem_cell_differentiation
+        preferredPhrase: διαφοροποίηση βλαστοκυττάρων
+      - conceptId: biology_genetics.cell_biology.intracellular_signal_transduction
+        preferredPhrase: ενδοκυτταρική μεταγωγή σήματος
+      - conceptId: biology_genetics.physiology.cardiovascular_physiological_response
+        preferredPhrase: καρδιαγγειακή φυσιολογική απόκριση
+      - conceptId: biology_genetics.physiology.respiratory_gas_exchange
+        preferredPhrase: αναπνευστική ανταλλαγή αερίων
+      - conceptId: biology_genetics.physiology.renal_filtration_process
+        preferredPhrase: διαδικασία νεφρικής διήθησης
+      - conceptId: biology_genetics.physiology.endocrine_hormone_regulation
+        preferredPhrase: ενδοκρινική ορμονική ρύθμιση
+      - conceptId: biology_genetics.physiology.nervous_system_function
+        preferredPhrase: λειτουργία νευρικού συστήματος
+      - conceptId: biology_genetics.physiology.metabolic_homeostasis_mechanism
+        preferredPhrase: μηχανισμός μεταβολικής ομοιόστασης
