@@ -11,10 +11,10 @@ import kz.alimbetov.akmai.config.AdaptiveGraphCompetitionProperties;
 /**
  * Offline/shadow-only threshold calibration for adaptive graph serving.
  *
- * <p>The replay harness must execute every candidate threshold against a
- * graph-disabled baseline on an independent request cohort. This calibrator
- * evaluates those measured request-level outcomes; it does not infer
- * counterfactual utility by filtering one replay run.</p>
+ * <p>The replay harness must evaluate the same request cohort in three modes:
+ * BASE_ONLY, GRAPH_APPEND_ONLY and GRAPH_COMPETITIVE(T). This calibrator uses
+ * the resulting paired deltas; it never infers counterfactual utility by
+ * filtering one replay run.</p>
  *
  * <p>The calibrated threshold targets
  * {@code akmai.adaptive-graph.competition.min-graph-score}, which is applied
@@ -26,6 +26,8 @@ import kz.alimbetov.akmai.config.AdaptiveGraphCompetitionProperties;
  * configuration and never promotes a graph version by itself.</p>
  */
 public final class AdaptiveGraphThresholdCalibrator {
+
+    private static final double DELTA_EPSILON = 1.0e-9;
 
     public static final String TARGET_PARAMETER =
             AdaptiveGraphCompetitionProperties.MIN_GRAPH_SCORE_PROPERTY;
@@ -158,6 +160,8 @@ public final class AdaptiveGraphThresholdCalibrator {
                     0.0,
                     0.0,
                     0.0,
+                    0.0,
+                    0.0,
                     true,
                     false
             );
@@ -166,25 +170,35 @@ public final class AdaptiveGraphThresholdCalibrator {
         int benefitCount = 0;
         int regressionCount = 0;
         boolean safetyGatePassed = true;
-        double utilityTotal = 0.0;
+        double overallUtilityTotal = 0.0;
+        double appendOnlyUtilityTotal = 0.0;
+        double competitionUtilityTotal = 0.0;
         List<Double> latencyDeltas = new ArrayList<>(sampleCount);
 
         for (ReplayObservation observation : included) {
-            utilityTotal += observation.utilityDelta();
+            overallUtilityTotal += observation.overallUtilityDelta();
+            appendOnlyUtilityTotal += observation.appendOnlyUtilityDelta();
+            competitionUtilityTotal += observation.competitionUtilityDelta();
             latencyDeltas.add(observation.latencyDeltaMillis());
+
             if (observation.safetyViolation()) {
                 safetyGatePassed = false;
             }
-            if (observation.utilityDelta()
-                    >= policy.minimumMeaningfulUtilityDelta()) {
+            if (observation.competitionUtilityDelta()
+                    >= policy.minimumMeaningfulCompetitionDelta()) {
                 benefitCount++;
-            } else if (observation.utilityDelta()
-                    <= -policy.minimumMeaningfulUtilityDelta()) {
+            } else if (observation.competitionUtilityDelta()
+                    <= -policy.minimumMeaningfulCompetitionDelta()) {
                 regressionCount++;
             }
         }
 
-        double meanUtilityDelta = utilityTotal / sampleCount;
+        double meanOverallUtilityDelta =
+                overallUtilityTotal / sampleCount;
+        double meanAppendOnlyUtilityDelta =
+                appendOnlyUtilityTotal / sampleCount;
+        double meanCompetitionUtilityDelta =
+                competitionUtilityTotal / sampleCount;
         double benefitProbability = (double) benefitCount / sampleCount;
         double benefitProbabilityLowerBound = wilsonLowerBound(
                 benefitCount,
@@ -196,8 +210,12 @@ public final class AdaptiveGraphThresholdCalibrator {
 
         boolean qualityGatePassed =
                 sampleCount >= policy.minimumSamples()
-                        && meanUtilityDelta
-                        >= policy.minimumMeanUtilityLift()
+                        && meanAppendOnlyUtilityDelta
+                        >= policy.minimumMeanAppendOnlyUtilityLift()
+                        && meanOverallUtilityDelta
+                        >= policy.minimumMeanOverallUtilityLift()
+                        && meanCompetitionUtilityDelta
+                        >= policy.minimumMeanCompetitionUtilityLift()
                         && benefitProbabilityLowerBound
                         >= policy.minimumBenefitProbabilityLowerBound()
                         && regressionRate
@@ -210,7 +228,9 @@ public final class AdaptiveGraphThresholdCalibrator {
                 sampleCount,
                 benefitCount,
                 regressionCount,
-                meanUtilityDelta,
+                meanOverallUtilityDelta,
+                meanAppendOnlyUtilityDelta,
+                meanCompetitionUtilityDelta,
                 benefitProbability,
                 benefitProbabilityLowerBound,
                 regressionRate,
@@ -315,7 +335,9 @@ public final class AdaptiveGraphThresholdCalibrator {
     public record ReplayObservation(
             String replayKey,
             double candidateThreshold,
-            double utilityDelta,
+            double overallUtilityDelta,
+            double appendOnlyUtilityDelta,
+            double competitionUtilityDelta,
             double latencyDeltaMillis,
             boolean safetyViolation
     ) {
@@ -329,14 +351,24 @@ public final class AdaptiveGraphThresholdCalibrator {
                     "candidateThreshold",
                     candidateThreshold
             );
-            if (!Double.isFinite(utilityDelta)) {
+            requireFinite("overallUtilityDelta", overallUtilityDelta);
+            requireFinite(
+                    "appendOnlyUtilityDelta",
+                    appendOnlyUtilityDelta
+            );
+            requireFinite(
+                    "competitionUtilityDelta",
+                    competitionUtilityDelta
+            );
+            requireFinite("latencyDeltaMillis", latencyDeltaMillis);
+
+            double reconstructed = appendOnlyUtilityDelta
+                    + competitionUtilityDelta;
+            if (Math.abs(overallUtilityDelta - reconstructed)
+                    > DELTA_EPSILON) {
                 throw new IllegalArgumentException(
-                        "utilityDelta must be finite"
-                );
-            }
-            if (!Double.isFinite(latencyDeltaMillis)) {
-                throw new IllegalArgumentException(
-                        "latencyDeltaMillis must be finite"
+                        "overall utility delta must equal append-only "
+                                + "plus competition utility delta"
                 );
             }
         }
@@ -344,8 +376,10 @@ public final class AdaptiveGraphThresholdCalibrator {
 
     public record CalibrationPolicy(
             int minimumSamples,
-            double minimumMeaningfulUtilityDelta,
-            double minimumMeanUtilityLift,
+            double minimumMeaningfulCompetitionDelta,
+            double minimumMeanAppendOnlyUtilityLift,
+            double minimumMeanOverallUtilityLift,
+            double minimumMeanCompetitionUtilityLift,
             double minimumBenefitProbabilityLowerBound,
             double confidenceZ,
             double maximumRegressionRate,
@@ -357,17 +391,24 @@ public final class AdaptiveGraphThresholdCalibrator {
                         "minimumSamples must be positive"
                 );
             }
-            if (!Double.isFinite(minimumMeaningfulUtilityDelta)
-                    || minimumMeaningfulUtilityDelta <= 0.0) {
+            if (!Double.isFinite(minimumMeaningfulCompetitionDelta)
+                    || minimumMeaningfulCompetitionDelta <= 0.0) {
                 throw new IllegalArgumentException(
-                        "minimumMeaningfulUtilityDelta must be positive"
+                        "minimumMeaningfulCompetitionDelta must be positive"
                 );
             }
-            if (!Double.isFinite(minimumMeanUtilityLift)) {
-                throw new IllegalArgumentException(
-                        "minimumMeanUtilityLift must be finite"
-                );
-            }
+            requireFinite(
+                    "minimumMeanAppendOnlyUtilityLift",
+                    minimumMeanAppendOnlyUtilityLift
+            );
+            requireFinite(
+                    "minimumMeanOverallUtilityLift",
+                    minimumMeanOverallUtilityLift
+            );
+            requireFinite(
+                    "minimumMeanCompetitionUtilityLift",
+                    minimumMeanCompetitionUtilityLift
+            );
             requireUnitInterval(
                     "minimumBenefitProbabilityLowerBound",
                     minimumBenefitProbabilityLowerBound
@@ -396,7 +437,9 @@ public final class AdaptiveGraphThresholdCalibrator {
             int sampleCount,
             int benefitCount,
             int regressionCount,
-            double meanUtilityDelta,
+            double meanOverallUtilityDelta,
+            double meanAppendOnlyUtilityDelta,
+            double meanCompetitionUtilityDelta,
             double benefitProbability,
             double benefitProbabilityLowerBound,
             double regressionRate,
@@ -443,6 +486,14 @@ public final class AdaptiveGraphThresholdCalibrator {
     ) {
         public String targetParameter() {
             return TARGET_PARAMETER;
+        }
+    }
+
+    private static void requireFinite(String name, double value) {
+        if (!Double.isFinite(value)) {
+            throw new IllegalArgumentException(
+                    name + " must be finite"
+            );
         }
     }
 }
