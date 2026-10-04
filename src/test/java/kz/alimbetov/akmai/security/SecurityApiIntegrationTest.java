@@ -14,7 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 class SecurityApiIntegrationTest {
 
     private static final String API_KEY =
-            API_KEY;
+            "0123456789abcdef0123456789abcdef";
     private static final String ADMIN_KEY =
             "abcdef0123456789abcdef0123456789";
 
@@ -205,7 +205,7 @@ class SecurityApiIntegrationTest {
         );
         request.addHeader(
                 "Authorization",
-                "Bearer 0123456789abcdef0123456789abcdef"
+                "Bearer " + API_KEY
         );
         MockHttpServletResponse response = new MockHttpServletResponse();
 
