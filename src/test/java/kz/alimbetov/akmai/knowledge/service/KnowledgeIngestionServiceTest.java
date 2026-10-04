@@ -19,6 +19,7 @@ import kz.alimbetov.akmai.knowledge.idempotency.CanonicalRequestFingerprint;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyRepository;
 import kz.alimbetov.akmai.knowledge.ingestion.ParallelIngestionExecutor;
 import kz.alimbetov.akmai.knowledge.ingestion.PersistenceCoordinator;
+import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDocument;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import org.junit.jupiter.api.Test;
@@ -31,7 +32,7 @@ class KnowledgeIngestionServiceTest {
         SemanticChunker chunker = mock(SemanticChunker.class);
         ParallelIngestionExecutor executor = mock(ParallelIngestionExecutor.class);
         PersistenceCoordinator persistence = mock(PersistenceCoordinator.class);
-        when(chunker.chunk(any())).thenReturn(List.of());
+        when(chunker.chunk(any())).thenReturn(List.of(chunk()));
         when(executor.execute(anyList())).thenReturn(List.of());
 
         KnowledgeIngestionService service = new KnowledgeIngestionService(
@@ -75,7 +76,7 @@ class KnowledgeIngestionServiceTest {
                 mock(ParallelIngestionExecutor.class);
         PersistenceCoordinator persistence =
                 mock(PersistenceCoordinator.class);
-        when(chunker.chunk(any())).thenReturn(List.of());
+        when(chunker.chunk(any())).thenReturn(List.of(chunk()));
         when(executor.execute(anyList())).thenReturn(List.of());
 
         KnowledgeIngestionService service = new KnowledgeIngestionService(
@@ -141,6 +142,24 @@ class KnowledgeIngestionServiceTest {
                 any(),
                 any(),
                 any(Long.class)
+        );
+    }
+
+    private KnowledgeChunk chunk() {
+        return new KnowledgeChunk(
+                "chunk-1",
+                "doc",
+                null,
+                0,
+                "Text",
+                "Text",
+                "Text",
+                "Title",
+                "",
+                "en",
+                KnowledgeDomain.GENERAL,
+                List.of(),
+                Map.of()
         );
     }
 
