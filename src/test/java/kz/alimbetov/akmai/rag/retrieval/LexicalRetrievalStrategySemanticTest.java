@@ -15,11 +15,30 @@ import java.util.Set;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
+import kz.alimbetov.akmai.knowledge.semantic.ChineseSemanticMorphologyNormalizer;
+import kz.alimbetov.akmai.knowledge.semantic.EnglishSemanticConceptCatalog;
+import kz.alimbetov.akmai.knowledge.semantic.EnglishSemanticMorphologyNormalizer;
+import kz.alimbetov.akmai.knowledge.semantic.FrenchSemanticMorphologyNormalizer;
+import kz.alimbetov.akmai.knowledge.semantic.GermanSemanticMorphologyNormalizer;
+import kz.alimbetov.akmai.knowledge.semantic.GreekSemanticMorphologyNormalizer;
+import kz.alimbetov.akmai.knowledge.semantic.ItalianSemanticMorphologyNormalizer;
+import kz.alimbetov.akmai.knowledge.semantic.KazakhSemanticMorphologyNormalizer;
+import kz.alimbetov.akmai.knowledge.semantic.PortugueseSemanticMorphologyNormalizer;
+import kz.alimbetov.akmai.knowledge.semantic.RussianSemanticMorphologyNormalizer;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticConceptMatch;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticConceptMatcher;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticConceptSurfaceRegistry;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticDomainCatalog;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticDomainRouter;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticMatchMode;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticMorphologyNormalizer;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticMorphologyRegistry;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalysis;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalyzer;
+import kz.alimbetov.akmai.knowledge.semantic.SpanishSemanticMorphologyNormalizer;
+import kz.alimbetov.akmai.knowledge.semantic.TurkishSemanticMorphologyNormalizer;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
+import kz.alimbetov.akmai.rag.query.QueryLanguageDetector;
 import org.junit.jupiter.api.Test;
 
 class LexicalRetrievalStrategySemanticTest {
@@ -86,6 +105,75 @@ class LexicalRetrievalStrategySemanticTest {
                 );
         assertThat(result.getLast().metadata())
                 .containsEntry("semanticLexicalExpansion", true);
+    }
+
+    @Test
+    void realMatcherFeedsMorphologyDerivedExpansionsForRuKkEn() {
+        List<RealCase> cases = List.of(
+                new RealCase(
+                        "en",
+                        "risk weighted asset exposure",
+                        "risk weighted assets"
+                ),
+                new RealCase(
+                        "ru",
+                        "Расчет коэффициента достаточности капитала обязателен.",
+                        "коэффициент достаточности капитала"
+                ),
+                new RealCase(
+                        "kk",
+                        "құрылыстың құнын бағалау",
+                        "құрылыс құнын бағалау"
+                )
+        );
+
+        for (RealCase value : cases) {
+            PublishedSearchProjectionReader repository =
+                    mock(PublishedSearchProjectionReader.class);
+            LexicalRetrievalStrategy strategy =
+                    new LexicalRetrievalStrategy(
+                            repository,
+                            properties(),
+                            realAnalyzer()
+                    );
+
+            when(repository.searchLexical(
+                    value.query(),
+                    value.language(),
+                    List.of(),
+                    SCOPE,
+                    4
+            )).thenReturn(List.of(
+                    projection("base-1", 0, value.language()),
+                    projection("base-2", 1, value.language()),
+                    projection("base-3", 2, value.language())
+            ));
+            when(repository.searchLexical(
+                    value.expectedExpansion(),
+                    value.language(),
+                    List.of(),
+                    SCOPE,
+                    4
+            )).thenReturn(List.of(
+                    projection("semantic", 3, value.language())
+            ));
+
+            List<RetrievalHit> result = strategy.retrieve(
+                    query(value.query(), value.language()),
+                    new RetrievalContext(List.of(), SCOPE)
+            );
+
+            assertThat(result)
+                    .as(value.language())
+                    .extracting(RetrievalHit::chunkId)
+                    .contains("semantic");
+            assertThat(result.stream()
+                    .filter(hit -> hit.chunkId().equals("semantic"))
+                    .findFirst()
+                    .orElseThrow()
+                    .metadata())
+                    .containsEntry("semanticLexicalExpansion", true);
+        }
     }
 
     @Test
@@ -232,9 +320,49 @@ class LexicalRetrievalStrategySemanticTest {
         );
     }
 
+    private SemanticQueryAnalyzer realAnalyzer() {
+        SemanticDomainCatalog domains =
+                new SemanticDomainCatalog();
+        SemanticMorphologyRegistry morphology =
+                new SemanticMorphologyRegistry(List.of(
+                        new EnglishSemanticMorphologyNormalizer(),
+                        new RussianSemanticMorphologyNormalizer(),
+                        new KazakhSemanticMorphologyNormalizer(),
+                        new ChineseSemanticMorphologyNormalizer(),
+                        new GermanSemanticMorphologyNormalizer(),
+                        new FrenchSemanticMorphologyNormalizer(),
+                        new SpanishSemanticMorphologyNormalizer(),
+                        new PortugueseSemanticMorphologyNormalizer(),
+                        new ItalianSemanticMorphologyNormalizer(),
+                        new TurkishSemanticMorphologyNormalizer(),
+                        new GreekSemanticMorphologyNormalizer()
+                ));
+        SemanticConceptMatcher matcher =
+                new SemanticConceptMatcher(
+                        new SemanticConceptSurfaceRegistry(
+                                new EnglishSemanticConceptCatalog(domains),
+                                morphology
+                        ),
+                        morphology
+                );
+        return new SemanticQueryAnalyzer(
+                new QueryLanguageDetector(),
+                matcher,
+                new SemanticDomainRouter(domains)
+        );
+    }
+
     private SearchProjection projection(
             String chunkId,
             int chunkIndex
+    ) {
+        return projection(chunkId, chunkIndex, "en");
+    }
+
+    private SearchProjection projection(
+            String chunkId,
+            int chunkIndex,
+            String language
     ) {
         return new SearchProjection(
                 chunkId,
@@ -245,7 +373,7 @@ class LexicalRetrievalStrategySemanticTest {
                 chunkIndex,
                 "text " + chunkId,
                 "embedding " + chunkId,
-                "en",
+                language,
                 KnowledgeDomain.GENERAL,
                 "section",
                 List.of(),
@@ -253,5 +381,12 @@ class LexicalRetrievalStrategySemanticTest {
                 Map.of(),
                 1
         );
+    }
+
+    private record RealCase(
+            String language,
+            String query,
+            String expectedExpansion
+    ) {
     }
 }
