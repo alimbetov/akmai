@@ -16,7 +16,8 @@ class SemanticConceptSurfaceRegistryTest {
                     List.of(
                             new EnglishSemanticMorphologyNormalizer(),
                             new RussianSemanticMorphologyNormalizer(),
-                            new KazakhSemanticMorphologyNormalizer()
+                            new KazakhSemanticMorphologyNormalizer(),
+                            new ChineseSemanticMorphologyNormalizer()
                     )
             );
     private final SemanticConceptSurfaceRegistry registry =
@@ -31,7 +32,7 @@ class SemanticConceptSurfaceRegistryTest {
                 .map(SemanticConcept::id)
                 .toList();
 
-        for (String language : List.of("en", "ru", "kk")) {
+        for (String language : List.of("en", "ru", "kk", "zh")) {
             assertThat(registry.surfaces(language))
                     .as(language)
                     .hasSameSizeAs(conceptCatalog.concepts());
@@ -58,7 +59,7 @@ class SemanticConceptSurfaceRegistryTest {
                 .distinct()
                 .toList();
 
-        for (String language : List.of("ru", "kk")) {
+        for (String language : List.of("ru", "kk", "zh")) {
             assertThat(registry.surfaces(language))
                     .extracting(SemanticConceptSurface::domainId)
                     .containsAll(canonicalDomains);
@@ -79,7 +80,7 @@ class SemanticConceptSurfaceRegistryTest {
 
     @Test
     void everyCompletedSurfaceKeepsMultiTokenLemmaAndStemSequences() {
-        for (String language : List.of("en", "ru", "kk")) {
+        for (String language : List.of("en", "ru", "kk", "zh")) {
             assertThat(registry.surfaces(language))
                     .as(language)
                     .allSatisfy(surface -> {
@@ -115,12 +116,14 @@ class SemanticConceptSurfaceRegistryTest {
                 .isEqualTo("semantic-surfaces-ru-v1");
         assertThat(registry.version("kk"))
                 .isEqualTo("semantic-surfaces-kk-v1");
+        assertThat(registry.version("zh"))
+                .isEqualTo("semantic-surfaces-zh-v1");
     }
 
     @Test
     void languagesWithoutTranslatedConceptPacksStayUnsupported() {
-        assertThat(registry.surfaces("zh")).isEmpty();
         assertThat(registry.surfaces("de")).isEmpty();
-        assertThat(registry.version("zh")).isNull();
+        assertThat(registry.surfaces("fr")).isEmpty();
+        assertThat(registry.version("de")).isNull();
     }
 }
