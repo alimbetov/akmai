@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import kz.alimbetov.akmai.config.AdaptiveGraphCompetitionProperties;
 
 /**
  * Offline/shadow-only threshold calibration for adaptive graph serving.
@@ -27,7 +28,7 @@ import java.util.Set;
 public final class AdaptiveGraphThresholdCalibrator {
 
     public static final String TARGET_PARAMETER =
-            "akmai.adaptive-graph.competition.min-graph-score";
+            AdaptiveGraphCompetitionProperties.MIN_GRAPH_SCORE_PROPERTY;
 
     public CalibrationReport calibrate(
             List<ReplayObservation> calibrationObservations,
