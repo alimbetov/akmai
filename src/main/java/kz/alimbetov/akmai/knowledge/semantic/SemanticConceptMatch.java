@@ -5,6 +5,7 @@ public record SemanticConceptMatch(
         String domainId,
         String subdomainId,
         String phrase,
-        double weight
+        double weight,
+        SemanticMatchMode matchMode
 ) {
 }
