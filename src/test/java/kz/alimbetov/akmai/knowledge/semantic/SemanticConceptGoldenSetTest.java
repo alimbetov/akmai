@@ -43,6 +43,12 @@ class SemanticConceptGoldenSetTest {
         assertThat(golden.cases())
                 .extracting(GoldenCase::caseId)
                 .doesNotHaveDuplicates();
+        assertThat(golden.cases().stream()
+                .map(value -> value.expectedConceptId().split("\\.")[0])
+                .distinct()
+                .toList())
+                .as("root-domain coverage")
+                .hasSize(16);
 
         for (GoldenCase value : golden.cases()) {
             SemanticQueryAnalysis analysis =
