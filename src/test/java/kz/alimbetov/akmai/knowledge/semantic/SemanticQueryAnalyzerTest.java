@@ -105,6 +105,10 @@ class SemanticQueryAnalyzerTest {
                 .isEqualTo(
                         "finance_banking.risk_capital.capital_adequacy_ratio"
                 );
+        assertThat(conceptId("sermaye yeterlilik oranı"))
+                .isEqualTo(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                );
     }
 
     @Test
