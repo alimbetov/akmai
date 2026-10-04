@@ -42,6 +42,7 @@ public class PublishedVectorSearchRepository {
             EmbeddingModel embeddingModel,
             EmbeddingProfileService profileService,
             EmbeddingProfileStorageManager storageManager,
+            @Qualifier("retrievalTransactionTemplate")
             TransactionTemplate transactionTemplate
     ) {
         this.jdbcTemplate = jdbcTemplate;
