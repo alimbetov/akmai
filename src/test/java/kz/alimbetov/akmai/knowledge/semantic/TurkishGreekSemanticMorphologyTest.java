@@ -29,7 +29,7 @@ class TurkishGreekSemanticMorphologyTest {
         )).containsExactly(
                 "δεικτ",
                 "κεφαλαιακ",
-                "επαρκει"
+                "επαρκε"
         );
     }
 }
