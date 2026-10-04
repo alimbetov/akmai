@@ -182,6 +182,40 @@ class MultilingualSemanticConceptMatcherTest {
     }
 
     @Test
+    void greekPhraseMapsToCanonicalConceptId() {
+        var match = matcher.match(
+                        "Ο δείκτης κεφαλαιακής επάρκειας παραμένει ισχυρός.",
+                        "el"
+                )
+                .stream()
+                .filter(value -> value.conceptId().equals(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                ))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(match.matchMode())
+                .isEqualTo(SemanticMatchMode.EXACT);
+    }
+
+    @Test
+    void greekInflectionMatchesThroughAccentInsensitiveLemmaSequence() {
+        var match = matcher.match(
+                        "Οι δείκτες κεφαλαιακής επάρκειας παρακολουθούνται.",
+                        "el"
+                )
+                .stream()
+                .filter(value -> value.conceptId().equals(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                ))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(match.matchMode())
+                .isEqualTo(SemanticMatchMode.LEMMA);
+    }
+
+    @Test
     void unsupportedLanguageCannotFallBackToAnotherSurfacePack() {
         assertThat(matcher.match(
                 "коэффициент достаточности капитала",
