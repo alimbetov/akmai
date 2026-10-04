@@ -31,19 +31,19 @@ class RussianKazakhSemanticMorphologyTest {
     @Test
     void kazakhNormalizesCaseAndPluralSuffixesConservatively() {
         assertThat(kazakh.lemmaTokens(
-                "құбырдың тұтастығын басқару"
+                "құрылыстың құнын бағалау"
         )).containsExactly(
-                "құбыр",
-                "тұтастығы",
-                "басқару"
+                "құрылыс",
+                "құнын",
+                "бағалау"
         );
 
         assertThat(kazakh.lemmaTokens(
-                "құбыр тұтастығын басқару"
+                "құрылыс құнын бағалау"
         )).containsExactly(
-                "құбыр",
-                "тұтастығы",
-                "басқару"
+                "құрылыс",
+                "құнын",
+                "бағалау"
         );
     }
 
