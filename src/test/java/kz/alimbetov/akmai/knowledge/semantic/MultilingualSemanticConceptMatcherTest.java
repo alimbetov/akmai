@@ -63,6 +63,24 @@ class MultilingualSemanticConceptMatcherTest {
     }
 
     @Test
+    void chineseContinuousTextMatchesSegmentedCanonicalPhrase() {
+        var match = matcher.match(
+                        "银行必须持续满足资本充足率监管要求。",
+                        "zh"
+                )
+                .stream()
+                .filter(value -> value.conceptId().equals(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                ))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(match.matchMode())
+                .isEqualTo(SemanticMatchMode.EXACT);
+        assertThat(match.domainId()).isEqualTo("finance_banking");
+    }
+
+    @Test
     void unsupportedLanguageCannotFallBackToAnotherSurfacePack() {
         assertThat(matcher.match(
                 "коэффициент достаточности капитала",
@@ -93,7 +111,8 @@ class MultilingualSemanticConceptMatcherTest {
                         List.of(
                                 new EnglishSemanticMorphologyNormalizer(),
                                 new RussianSemanticMorphologyNormalizer(),
-                                new KazakhSemanticMorphologyNormalizer()
+                                new KazakhSemanticMorphologyNormalizer(),
+                                new ChineseSemanticMorphologyNormalizer()
                         )
                 );
         return new SemanticConceptMatcher(
