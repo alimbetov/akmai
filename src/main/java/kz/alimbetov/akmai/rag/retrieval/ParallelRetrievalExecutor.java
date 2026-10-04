@@ -350,7 +350,9 @@ public class ParallelRetrievalExecutor {
         metadata.put("queryChunkId", queryChunkId);
         return new RetrievalHit(
                 hit.type(),
+                hit.accessLevel(),
                 hit.documentId(),
+                hit.generation(),
                 hit.chunkId(),
                 hit.text(),
                 metadata,
