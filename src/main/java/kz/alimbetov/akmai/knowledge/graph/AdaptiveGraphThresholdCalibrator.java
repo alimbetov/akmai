@@ -15,10 +15,19 @@ import java.util.Set;
  * evaluates those measured request-level outcomes; it does not infer
  * counterfactual utility by filtering one replay run.</p>
  *
+ * <p>The calibrated threshold targets
+ * {@code akmai.adaptive-graph.competition.min-graph-score}, which is applied
+ * to the aggregated adaptive graph candidate score by
+ * {@link AdaptiveGraphCompetitiveAdmission}. It does not calibrate edge
+ * lifecycle promotion thresholds or adjacency minimum weights.</p>
+ *
  * <p>The calibrator is deliberately advisory. It never mutates runtime
  * configuration and never promotes a graph version by itself.</p>
  */
 public final class AdaptiveGraphThresholdCalibrator {
+
+    public static final String TARGET_PARAMETER =
+            "akmai.adaptive-graph.competition.min-graph-score";
 
     public CalibrationReport calibrate(
             List<ReplayObservation> calibrationObservations,
@@ -43,6 +52,11 @@ public final class AdaptiveGraphThresholdCalibrator {
                     List.of()
             );
         }
+
+        requireSameRequestCohort(
+                calibrationObservations,
+                thresholds
+        );
 
         List<ThresholdEvaluation> evaluations =
                 new ArrayList<>(thresholds.size());
@@ -203,6 +217,42 @@ public final class AdaptiveGraphThresholdCalibrator {
                 safetyGatePassed,
                 qualityGatePassed
         );
+    }
+
+    private void requireSameRequestCohort(
+            List<ReplayObservation> observations,
+            List<Double> thresholds
+    ) {
+        Set<String> expected = null;
+        for (double threshold : thresholds) {
+            Set<String> actual = new HashSet<>();
+            for (ReplayObservation observation : observations) {
+                if (Double.compare(
+                        observation.candidateThreshold(),
+                        threshold
+                ) != 0) {
+                    continue;
+                }
+                if (!actual.add(observation.replayKey())) {
+                    throw new IllegalArgumentException(
+                            "duplicate replayKey at threshold "
+                                    + threshold
+                                    + ": "
+                                    + observation.replayKey()
+                    );
+                }
+            }
+
+            if (expected == null) {
+                expected = Set.copyOf(actual);
+                continue;
+            }
+            if (!actual.equals(expected)) {
+                throw new IllegalArgumentException(
+                        "threshold sweep must use the same replayKey cohort"
+                );
+            }
+        }
     }
 
     private void requireIndependentRequests(
