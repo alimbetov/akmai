@@ -37,6 +37,8 @@ public class SemanticConceptSurfaceRegistry {
     ) {
         return new SemanticConceptSurface(
                 concept.id(),
+                concept.domainId(),
+                concept.subdomainId(),
                 "en",
                 concept.preferredPhrase(),
                 normalizer.lemmaPhrase(concept.preferredPhrase()),
