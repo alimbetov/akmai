@@ -12,11 +12,13 @@ class EuropeanSemanticMorphologyNormalizerTest {
         var french = new FrenchSemanticMorphologyNormalizer();
         var spanish = new SpanishSemanticMorphologyNormalizer();
         var portuguese = new PortugueseSemanticMorphologyNormalizer();
+        var italian = new ItalianSemanticMorphologyNormalizer();
 
         assertThat(german.language()).isEqualTo("de");
         assertThat(french.language()).isEqualTo("fr");
         assertThat(spanish.language()).isEqualTo("es");
         assertThat(portuguese.language()).isEqualTo("pt");
+        assertThat(italian.language()).isEqualTo("it");
 
         assertThat(german.lemmaTokens("risikogewichteten Aktiva"))
                 .containsExactly("risikogewichtet", "aktiva");
@@ -26,5 +28,7 @@ class EuropeanSemanticMorphologyNormalizerTest {
                 .containsExactly("activ", "ponderad");
         assertThat(portuguese.lemmaTokens("ativos ponderados"))
                 .containsExactly("ativ", "ponderad");
+        assertThat(italian.lemmaTokens("attivi ponderati"))
+                .containsExactly("attiv", "ponderat");
     }
 }
