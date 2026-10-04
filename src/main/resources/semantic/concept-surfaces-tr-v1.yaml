@@ -1,0 +1,787 @@
+version: semantic-surfaces-tr-v1
+languages:
+  - language: tr
+    surfaces:
+      - conceptId: finance_banking.lending_credit.credit_risk_assessment
+        preferredPhrase: kredi riski değerlendirmesi
+      - conceptId: finance_banking.lending_credit.consumer_loan_underwriting
+        preferredPhrase: tüketici kredisi tahsis değerlendirmesi
+      - conceptId: finance_banking.lending_credit.corporate_credit_facility
+        preferredPhrase: kurumsal kredi limiti
+      - conceptId: finance_banking.lending_credit.nonperforming_loan_ratio
+        preferredPhrase: takipteki kredi oranı
+      - conceptId: finance_banking.lending_credit.loan_loss_provision
+        preferredPhrase: kredi zarar karşılığı
+      - conceptId: finance_banking.lending_credit.debt_service_coverage
+        preferredPhrase: borç servisi karşılama oranı
+      - conceptId: finance_banking.deposits_liquidity.customer_deposit_base
+        preferredPhrase: müşteri mevduat tabanı
+      - conceptId: finance_banking.deposits_liquidity.liquidity_coverage_ratio
+        preferredPhrase: likidite karşılama oranı
+      - conceptId: finance_banking.deposits_liquidity.net_stable_funding
+        preferredPhrase: net istikrarlı fonlama
+      - conceptId: finance_banking.deposits_liquidity.deposit_interest_rate
+        preferredPhrase: mevduat faiz oranı
+      - conceptId: finance_banking.deposits_liquidity.cash_reserve_requirement
+        preferredPhrase: zorunlu karşılık gereksinimi
+      - conceptId: finance_banking.deposits_liquidity.liquidity_stress_testing
+        preferredPhrase: likidite stres testi
+      - conceptId: finance_banking.risk_capital.capital_adequacy_ratio
+        preferredPhrase: sermaye yeterlilik oranı
+      - conceptId: finance_banking.risk_capital.risk_weighted_assets
+        preferredPhrase: risk ağırlıklı varlıklar
+      - conceptId: finance_banking.risk_capital.common_equity_tier
+        preferredPhrase: çekirdek ana sermaye
+      - conceptId: finance_banking.risk_capital.market_risk_exposure
+        preferredPhrase: piyasa riski maruziyeti
+      - conceptId: finance_banking.risk_capital.operational_risk_capital
+        preferredPhrase: operasyonel risk sermayesi
+      - conceptId: finance_banking.risk_capital.internal_capital_assessment
+        preferredPhrase: içsel sermaye yeterliliği değerlendirmesi
+      - conceptId: finance_banking.payments_compliance.payment_settlement_system
+        preferredPhrase: ödeme mutabakat sistemi
+      - conceptId: finance_banking.payments_compliance.anti_money_laundering
+        preferredPhrase: kara para aklamayla mücadele
+      - conceptId: finance_banking.payments_compliance.know_your_customer
+        preferredPhrase: müşterini tanı süreci
+      - conceptId: finance_banking.payments_compliance.suspicious_transaction_monitoring
+        preferredPhrase: şüpheli işlem izleme
+      - conceptId: finance_banking.payments_compliance.cross_border_payment
+        preferredPhrase: sınır ötesi ödeme
+      - conceptId: finance_banking.payments_compliance.payment_fraud_detection
+        preferredPhrase: ödeme dolandırıcılığı tespiti
+
+      - conceptId: insurance.underwriting_pricing.insurance_underwriting_process
+        preferredPhrase: sigorta risk kabul süreci
+      - conceptId: insurance.underwriting_pricing.risk_based_pricing
+        preferredPhrase: riske dayalı fiyatlandırma
+      - conceptId: insurance.underwriting_pricing.actuarial_pricing_model
+        preferredPhrase: aktüeryal fiyatlandırma modeli
+      - conceptId: insurance.underwriting_pricing.policy_coverage_limit
+        preferredPhrase: poliçe teminat limiti
+      - conceptId: insurance.underwriting_pricing.insurance_premium_calculation
+        preferredPhrase: sigorta primi hesaplaması
+      - conceptId: insurance.underwriting_pricing.underwriting_risk_appetite
+        preferredPhrase: risk kabul iştahı
+      - conceptId: insurance.claims_management.insurance_claim_assessment
+        preferredPhrase: sigorta hasar değerlendirmesi
+      - conceptId: insurance.claims_management.claims_settlement_process
+        preferredPhrase: hasar tazmin süreci
+      - conceptId: insurance.claims_management.loss_adjustment_expense
+        preferredPhrase: hasar düzenleme gideri
+      - conceptId: insurance.claims_management.fraudulent_claim_detection
+        preferredPhrase: sahte hasar tespiti
+      - conceptId: insurance.claims_management.claim_reserve_estimate
+        preferredPhrase: hasar rezerv tahmini
+      - conceptId: insurance.claims_management.claims_handling_procedure
+        preferredPhrase: hasar yönetim prosedürü
+      - conceptId: insurance.life_health.life_insurance_policy
+        preferredPhrase: hayat sigortası poliçesi
+      - conceptId: insurance.life_health.health_insurance_coverage
+        preferredPhrase: sağlık sigortası teminatı
+      - conceptId: insurance.life_health.mortality_risk_model
+        preferredPhrase: ölüm riski modeli
+      - conceptId: insurance.life_health.morbidity_risk_estimate
+        preferredPhrase: hastalanma riski tahmini
+      - conceptId: insurance.life_health.medical_expense_reimbursement
+        preferredPhrase: tıbbi gider geri ödemesi
+      - conceptId: insurance.life_health.policyholder_benefit_schedule
+        preferredPhrase: sigortalı fayda ödeme planı
+      - conceptId: insurance.property_casualty.property_damage_coverage
+        preferredPhrase: mal hasarı teminatı
+      - conceptId: insurance.property_casualty.casualty_insurance_claim
+        preferredPhrase: sorumluluk sigortası hasarı
+      - conceptId: insurance.property_casualty.catastrophe_risk_model
+        preferredPhrase: katastrofik risk modeli
+      - conceptId: insurance.property_casualty.business_interruption_coverage
+        preferredPhrase: iş durması teminatı
+      - conceptId: insurance.property_casualty.liability_coverage_limit
+        preferredPhrase: sorumluluk teminat limiti
+      - conceptId: insurance.property_casualty.insured_loss_estimate
+        preferredPhrase: sigortalı zarar tahmini
+
+      - conceptId: energy_utilities.power_generation.electricity_generation_capacity
+        preferredPhrase: elektrik üretim kapasitesi
+      - conceptId: energy_utilities.power_generation.thermal_power_plant
+        preferredPhrase: termik santral
+      - conceptId: energy_utilities.power_generation.combined_cycle_turbine
+        preferredPhrase: kombine çevrim türbini
+      - conceptId: energy_utilities.power_generation.generation_dispatch_schedule
+        preferredPhrase: üretim yük tevzi planı
+      - conceptId: energy_utilities.power_generation.power_plant_efficiency
+        preferredPhrase: santral verimliliği
+      - conceptId: energy_utilities.power_generation.reserve_generation_margin
+        preferredPhrase: üretim yedek marjı
+      - conceptId: energy_utilities.power_grid.transmission_grid_stability
+        preferredPhrase: iletim şebekesi kararlılığı
+      - conceptId: energy_utilities.power_grid.distribution_network_operator
+        preferredPhrase: dağıtım şebekesi işletmecisi
+      - conceptId: energy_utilities.power_grid.high_voltage_substation
+        preferredPhrase: yüksek gerilim trafo merkezi
+      - conceptId: energy_utilities.power_grid.grid_frequency_control
+        preferredPhrase: şebeke frekans kontrolü
+      - conceptId: energy_utilities.power_grid.power_flow_analysis
+        preferredPhrase: güç akışı analizi
+      - conceptId: energy_utilities.power_grid.electricity_network_congestion
+        preferredPhrase: elektrik şebekesi tıkanıklığı
+      - conceptId: energy_utilities.energy_markets.wholesale_electricity_market
+        preferredPhrase: toptan elektrik piyasası
+      - conceptId: energy_utilities.energy_markets.day_ahead_market
+        preferredPhrase: gün öncesi piyasası
+      - conceptId: energy_utilities.energy_markets.balancing_energy_market
+        preferredPhrase: dengeleme güç piyasası
+      - conceptId: energy_utilities.energy_markets.electricity_tariff_regulation
+        preferredPhrase: elektrik tarife düzenlemesi
+      - conceptId: energy_utilities.energy_markets.energy_demand_forecast
+        preferredPhrase: enerji talep tahmini
+      - conceptId: energy_utilities.energy_markets.capacity_market_mechanism
+        preferredPhrase: kapasite piyasası mekanizması
+      - conceptId: energy_utilities.renewable_energy.solar_power_generation
+        preferredPhrase: güneş enerjisi üretimi
+      - conceptId: energy_utilities.renewable_energy.wind_power_capacity
+        preferredPhrase: rüzgar enerjisi kapasitesi
+      - conceptId: energy_utilities.renewable_energy.renewable_energy_certificate
+        preferredPhrase: yenilenebilir enerji sertifikası
+      - conceptId: energy_utilities.renewable_energy.battery_energy_storage
+        preferredPhrase: batarya enerji depolama
+      - conceptId: energy_utilities.renewable_energy.grid_scale_storage
+        preferredPhrase: şebeke ölçekli enerji depolama
+      - conceptId: energy_utilities.renewable_energy.renewable_integration_study
+        preferredPhrase: yenilenebilir enerji entegrasyon çalışması
+
+      - conceptId: oil_gas_mining.upstream_operations.oil_reservoir_characterization
+        preferredPhrase: petrol rezervuar karakterizasyonu
+      - conceptId: oil_gas_mining.upstream_operations.hydrocarbon_exploration_program
+        preferredPhrase: hidrokarbon arama programı
+      - conceptId: oil_gas_mining.upstream_operations.drilling_operations_plan
+        preferredPhrase: sondaj operasyon planı
+      - conceptId: oil_gas_mining.upstream_operations.well_completion_design
+        preferredPhrase: kuyu tamamlama tasarımı
+      - conceptId: oil_gas_mining.upstream_operations.enhanced_oil_recovery
+        preferredPhrase: gelişmiş petrol kazanımı
+      - conceptId: oil_gas_mining.upstream_operations.reservoir_pressure_management
+        preferredPhrase: rezervuar basınç yönetimi
+      - conceptId: oil_gas_mining.midstream_operations.crude_oil_pipeline
+        preferredPhrase: ham petrol boru hattı
+      - conceptId: oil_gas_mining.midstream_operations.natural_gas_pipeline
+        preferredPhrase: doğal gaz boru hattı
+      - conceptId: oil_gas_mining.midstream_operations.gas_processing_facility
+        preferredPhrase: gaz işleme tesisi
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_integrity_management
+        preferredPhrase: boru hattı bütünlük yönetimi
+      - conceptId: oil_gas_mining.midstream_operations.hydrocarbon_storage_terminal
+        preferredPhrase: hidrokarbon depolama terminali
+      - conceptId: oil_gas_mining.midstream_operations.gas_compression_station
+        preferredPhrase: gaz kompresör istasyonu
+      - conceptId: oil_gas_mining.downstream_operations.crude_oil_refining
+        preferredPhrase: ham petrol rafinasyonu
+      - conceptId: oil_gas_mining.downstream_operations.petroleum_product_yield
+        preferredPhrase: petrol ürünü verimi
+      - conceptId: oil_gas_mining.downstream_operations.refinery_process_unit
+        preferredPhrase: rafineri proses ünitesi
+      - conceptId: oil_gas_mining.downstream_operations.fuel_blending_specification
+        preferredPhrase: yakıt harmanlama şartnamesi
+      - conceptId: oil_gas_mining.downstream_operations.petrochemical_feedstock_supply
+        preferredPhrase: petrokimya hammaddesi tedariki
+      - conceptId: oil_gas_mining.downstream_operations.refinery_turnaround_maintenance
+        preferredPhrase: rafineri büyük bakım duruşu
+      - conceptId: oil_gas_mining.mining_operations.mineral_resource_estimate
+        preferredPhrase: maden kaynağı tahmini
+      - conceptId: oil_gas_mining.mining_operations.open_pit_mining
+        preferredPhrase: açık ocak madenciliği
+      - conceptId: oil_gas_mining.mining_operations.underground_mine_design
+        preferredPhrase: yeraltı maden tasarımı
+      - conceptId: oil_gas_mining.mining_operations.ore_processing_plant
+        preferredPhrase: cevher işleme tesisi
+      - conceptId: oil_gas_mining.mining_operations.mine_tailings_management
+        preferredPhrase: maden atık yönetimi
+      - conceptId: oil_gas_mining.mining_operations.mineral_reserve_classification
+        preferredPhrase: maden rezerv sınıflandırması
+
+      - conceptId: manufacturing.production_systems.production_planning_system
+        preferredPhrase: üretim planlama sistemi
+      - conceptId: manufacturing.production_systems.manufacturing_execution_system
+        preferredPhrase: üretim yürütme sistemi
+      - conceptId: manufacturing.production_systems.production_line_balancing
+        preferredPhrase: üretim hattı dengeleme
+      - conceptId: manufacturing.production_systems.takt_time_calculation
+        preferredPhrase: takt süresi hesaplaması
+      - conceptId: manufacturing.production_systems.overall_equipment_effectiveness
+        preferredPhrase: toplam ekipman etkinliği
+      - conceptId: manufacturing.production_systems.batch_production_schedule
+        preferredPhrase: parti üretim programı
+      - conceptId: manufacturing.quality_management.statistical_process_control
+        preferredPhrase: istatistiksel proses kontrolü
+      - conceptId: manufacturing.quality_management.quality_management_system
+        preferredPhrase: kalite yönetim sistemi
+      - conceptId: manufacturing.quality_management.root_cause_analysis
+        preferredPhrase: kök neden analizi
+      - conceptId: manufacturing.quality_management.nonconformance_corrective_action
+        preferredPhrase: uygunsuzluk düzeltici faaliyeti
+      - conceptId: manufacturing.quality_management.process_capability_index
+        preferredPhrase: proses yeterlilik indeksi
+      - conceptId: manufacturing.quality_management.incoming_quality_inspection
+        preferredPhrase: giriş kalite kontrolü
+      - conceptId: manufacturing.maintenance_reliability.preventive_maintenance_schedule
+        preferredPhrase: önleyici bakım programı
+      - conceptId: manufacturing.maintenance_reliability.predictive_maintenance_model
+        preferredPhrase: kestirimci bakım modeli
+      - conceptId: manufacturing.maintenance_reliability.reliability_centered_maintenance
+        preferredPhrase: güvenilirlik merkezli bakım
+      - conceptId: manufacturing.maintenance_reliability.mean_time_between_failures
+        preferredPhrase: arızalar arası ortalama süre
+      - conceptId: manufacturing.maintenance_reliability.equipment_failure_mode
+        preferredPhrase: ekipman arıza modu
+      - conceptId: manufacturing.maintenance_reliability.maintenance_work_order
+        preferredPhrase: bakım iş emri
+      - conceptId: manufacturing.industrial_operations.industrial_process_automation
+        preferredPhrase: endüstriyel proses otomasyonu
+      - conceptId: manufacturing.industrial_operations.programmable_logic_controller
+        preferredPhrase: programlanabilir mantık denetleyicisi
+      - conceptId: manufacturing.industrial_operations.production_capacity_utilization
+        preferredPhrase: üretim kapasitesi kullanım oranı
+      - conceptId: manufacturing.industrial_operations.industrial_safety_procedure
+        preferredPhrase: endüstriyel güvenlik prosedürü
+      - conceptId: manufacturing.industrial_operations.plant_operations_management
+        preferredPhrase: tesis operasyon yönetimi
+      - conceptId: manufacturing.industrial_operations.process_optimization_study
+        preferredPhrase: proses optimizasyon çalışması
+
+      - conceptId: construction_real_estate.design_construction.building_structural_design
+        preferredPhrase: bina taşıyıcı sistem tasarımı
+      - conceptId: construction_real_estate.design_construction.construction_project_schedule
+        preferredPhrase: inşaat proje takvimi
+      - conceptId: construction_real_estate.design_construction.building_information_modeling
+        preferredPhrase: yapı bilgi modellemesi
+      - conceptId: construction_real_estate.design_construction.reinforced_concrete_structure
+        preferredPhrase: betonarme yapı
+      - conceptId: construction_real_estate.design_construction.construction_site_management
+        preferredPhrase: şantiye yönetimi
+      - conceptId: construction_real_estate.design_construction.building_code_compliance
+        preferredPhrase: yapı yönetmeliği uyumu
+      - conceptId: construction_real_estate.real_estate_market.commercial_property_valuation
+        preferredPhrase: ticari gayrimenkul değerlemesi
+      - conceptId: construction_real_estate.real_estate_market.residential_property_market
+        preferredPhrase: konut gayrimenkul piyasası
+      - conceptId: construction_real_estate.real_estate_market.rental_yield_analysis
+        preferredPhrase: kira getirisi analizi
+      - conceptId: construction_real_estate.real_estate_market.real_estate_transaction
+        preferredPhrase: gayrimenkul işlemi
+      - conceptId: construction_real_estate.real_estate_market.property_market_appraisal
+        preferredPhrase: gayrimenkul piyasa değerlemesi
+      - conceptId: construction_real_estate.real_estate_market.investment_property_return
+        preferredPhrase: yatırım gayrimenkul getirisi
+      - conceptId: construction_real_estate.facilities_management.facility_maintenance_plan
+        preferredPhrase: tesis bakım planı
+      - conceptId: construction_real_estate.facilities_management.building_energy_performance
+        preferredPhrase: bina enerji performansı
+      - conceptId: construction_real_estate.facilities_management.property_asset_management
+        preferredPhrase: gayrimenkul varlık yönetimi
+      - conceptId: construction_real_estate.facilities_management.preventive_facility_maintenance
+        preferredPhrase: önleyici tesis bakımı
+      - conceptId: construction_real_estate.facilities_management.building_occupancy_management
+        preferredPhrase: bina doluluk yönetimi
+      - conceptId: construction_real_estate.facilities_management.facilities_service_contract
+        preferredPhrase: tesis hizmet sözleşmesi
+      - conceptId: construction_real_estate.project_controls.construction_cost_estimate
+        preferredPhrase: inşaat maliyet tahmini
+      - conceptId: construction_real_estate.project_controls.earned_value_management
+        preferredPhrase: kazanılmış değer yönetimi
+      - conceptId: construction_real_estate.project_controls.project_schedule_variance
+        preferredPhrase: proje takvim sapması
+      - conceptId: construction_real_estate.project_controls.construction_risk_register
+        preferredPhrase: inşaat risk kaydı
+      - conceptId: construction_real_estate.project_controls.contractor_progress_payment
+        preferredPhrase: yüklenici hakediş ödemesi
+      - conceptId: construction_real_estate.project_controls.change_order_management
+        preferredPhrase: değişiklik emri yönetimi
+
+      - conceptId: transport_logistics.freight_transport.freight_transportation_network
+        preferredPhrase: yük taşıma ağı
+      - conceptId: transport_logistics.freight_transport.intermodal_freight_terminal
+        preferredPhrase: intermodal yük terminali
+      - conceptId: transport_logistics.freight_transport.cargo_transport_capacity
+        preferredPhrase: yük taşıma kapasitesi
+      - conceptId: transport_logistics.freight_transport.rail_freight_service
+        preferredPhrase: demiryolu yük taşımacılığı hizmeti
+      - conceptId: transport_logistics.freight_transport.road_freight_operation
+        preferredPhrase: karayolu yük taşımacılığı
+      - conceptId: transport_logistics.freight_transport.air_cargo_handling
+        preferredPhrase: hava kargo elleçleme
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_management_system
+        preferredPhrase: depo yönetim sistemi
+      - conceptId: transport_logistics.warehousing_distribution.distribution_center_operation
+        preferredPhrase: dağıtım merkezi operasyonu
+      - conceptId: transport_logistics.warehousing_distribution.inventory_storage_policy
+        preferredPhrase: stok depolama politikası
+      - conceptId: transport_logistics.warehousing_distribution.order_fulfillment_process
+        preferredPhrase: sipariş karşılama süreci
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_picking_strategy
+        preferredPhrase: depo toplama stratejisi
+      - conceptId: transport_logistics.warehousing_distribution.cold_chain_logistics
+        preferredPhrase: soğuk zincir lojistiği
+      - conceptId: transport_logistics.fleet_operations.fleet_maintenance_program
+        preferredPhrase: filo bakım programı
+      - conceptId: transport_logistics.fleet_operations.vehicle_route_optimization
+        preferredPhrase: araç rota optimizasyonu
+      - conceptId: transport_logistics.fleet_operations.fleet_fuel_efficiency
+        preferredPhrase: filo yakıt verimliliği
+      - conceptId: transport_logistics.fleet_operations.driver_safety_management
+        preferredPhrase: sürücü güvenliği yönetimi
+      - conceptId: transport_logistics.fleet_operations.vehicle_utilization_rate
+        preferredPhrase: araç kullanım oranı
+      - conceptId: transport_logistics.fleet_operations.fleet_telematics_system
+        preferredPhrase: filo telematik sistemi
+      - conceptId: transport_logistics.supply_chain.supply_chain_disruption
+        preferredPhrase: tedarik zinciri kesintisi
+      - conceptId: transport_logistics.supply_chain.supplier_lead_time
+        preferredPhrase: tedarikçi teslim süresi
+      - conceptId: transport_logistics.supply_chain.logistics_network_optimization
+        preferredPhrase: lojistik ağ optimizasyonu
+      - conceptId: transport_logistics.supply_chain.demand_supply_planning
+        preferredPhrase: talep tedarik planlaması
+      - conceptId: transport_logistics.supply_chain.supply_chain_resilience
+        preferredPhrase: tedarik zinciri dayanıklılığı
+      - conceptId: transport_logistics.supply_chain.last_mile_delivery
+        preferredPhrase: son kilometre teslimatı
+
+      - conceptId: agriculture_food.crop_science.crop_yield_forecast
+        preferredPhrase: ürün verimi tahmini
+      - conceptId: agriculture_food.crop_science.soil_nutrient_management
+        preferredPhrase: toprak besin yönetimi
+      - conceptId: agriculture_food.crop_science.precision_agriculture_system
+        preferredPhrase: hassas tarım sistemi
+      - conceptId: agriculture_food.crop_science.integrated_pest_management
+        preferredPhrase: entegre zararlı yönetimi
+      - conceptId: agriculture_food.crop_science.irrigation_scheduling_model
+        preferredPhrase: sulama planlama modeli
+      - conceptId: agriculture_food.crop_science.crop_disease_monitoring
+        preferredPhrase: bitki hastalığı izleme
+      - conceptId: agriculture_food.livestock_production.livestock_health_management
+        preferredPhrase: hayvan sağlığı yönetimi
+      - conceptId: agriculture_food.livestock_production.animal_feed_formulation
+        preferredPhrase: hayvan yemi formülasyonu
+      - conceptId: agriculture_food.livestock_production.dairy_production_system
+        preferredPhrase: süt üretim sistemi
+      - conceptId: agriculture_food.livestock_production.herd_reproductive_performance
+        preferredPhrase: sürü üreme performansı
+      - conceptId: agriculture_food.livestock_production.livestock_disease_control
+        preferredPhrase: hayvan hastalığı kontrolü
+      - conceptId: agriculture_food.livestock_production.animal_welfare_standard
+        preferredPhrase: hayvan refah standardı
+      - conceptId: agriculture_food.food_processing.food_processing_technology
+        preferredPhrase: gıda işleme teknolojisi
+      - conceptId: agriculture_food.food_processing.food_production_line
+        preferredPhrase: gıda üretim hattı
+      - conceptId: agriculture_food.food_processing.thermal_food_processing
+        preferredPhrase: termal gıda işleme
+      - conceptId: agriculture_food.food_processing.food_packaging_system
+        preferredPhrase: gıda ambalajlama sistemi
+      - conceptId: agriculture_food.food_processing.shelf_life_evaluation
+        preferredPhrase: raf ömrü değerlendirmesi
+      - conceptId: agriculture_food.food_processing.food_quality_control
+        preferredPhrase: gıda kalite kontrolü
+      - conceptId: agriculture_food.food_safety.food_safety_management
+        preferredPhrase: gıda güvenliği yönetimi
+      - conceptId: agriculture_food.food_safety.hazard_analysis_control
+        preferredPhrase: tehlike analizi kontrolü
+      - conceptId: agriculture_food.food_safety.microbial_contamination_risk
+        preferredPhrase: mikrobiyal bulaşma riski
+      - conceptId: agriculture_food.food_safety.food_traceability_system
+        preferredPhrase: gıda izlenebilirlik sistemi
+      - conceptId: agriculture_food.food_safety.allergen_control_program
+        preferredPhrase: alerjen kontrol programı
+      - conceptId: agriculture_food.food_safety.food_hygiene_standard
+        preferredPhrase: gıda hijyen standardı
+
+      - conceptId: mathematics_statistics.probability_statistics.probability_distribution_function
+        preferredPhrase: olasılık dağılım fonksiyonu
+      - conceptId: mathematics_statistics.probability_statistics.statistical_hypothesis_testing
+        preferredPhrase: istatistiksel hipotez testi
+      - conceptId: mathematics_statistics.probability_statistics.maximum_likelihood_estimation
+        preferredPhrase: maksimum olabilirlik tahmini
+      - conceptId: mathematics_statistics.probability_statistics.bayesian_posterior_distribution
+        preferredPhrase: bayesçi sonsal dağılım
+      - conceptId: mathematics_statistics.probability_statistics.confidence_interval_estimation
+        preferredPhrase: güven aralığı tahmini
+      - conceptId: mathematics_statistics.probability_statistics.stochastic_process_model
+        preferredPhrase: stokastik süreç modeli
+      - conceptId: mathematics_statistics.algebra_geometry.linear_algebra_system
+        preferredPhrase: doğrusal cebir sistemi
+      - conceptId: mathematics_statistics.algebra_geometry.eigenvalue_decomposition_method
+        preferredPhrase: özdeğer ayrıştırma yöntemi
+      - conceptId: mathematics_statistics.algebra_geometry.abstract_algebra_structure
+        preferredPhrase: soyut cebir yapısı
+      - conceptId: mathematics_statistics.algebra_geometry.differential_geometry_manifold
+        preferredPhrase: diferansiyel geometri manifoldu
+      - conceptId: mathematics_statistics.algebra_geometry.matrix_factorization_method
+        preferredPhrase: matris çarpanlara ayırma yöntemi
+      - conceptId: mathematics_statistics.algebra_geometry.vector_space_basis
+        preferredPhrase: vektör uzayı bazı
+      - conceptId: mathematics_statistics.optimization.constrained_optimization_problem
+        preferredPhrase: kısıtlı optimizasyon problemi
+      - conceptId: mathematics_statistics.optimization.convex_optimization_method
+        preferredPhrase: konveks optimizasyon yöntemi
+      - conceptId: mathematics_statistics.optimization.integer_programming_model
+        preferredPhrase: tamsayılı programlama modeli
+      - conceptId: mathematics_statistics.optimization.gradient_descent_algorithm
+        preferredPhrase: gradyan iniş algoritması
+      - conceptId: mathematics_statistics.optimization.multi_objective_optimization
+        preferredPhrase: çok amaçlı optimizasyon
+      - conceptId: mathematics_statistics.optimization.nonlinear_optimization_solver
+        preferredPhrase: doğrusal olmayan optimizasyon çözücüsü
+      - conceptId: mathematics_statistics.numerical_methods.numerical_integration_method
+        preferredPhrase: sayısal integrasyon yöntemi
+      - conceptId: mathematics_statistics.numerical_methods.finite_difference_scheme
+        preferredPhrase: sonlu fark şeması
+      - conceptId: mathematics_statistics.numerical_methods.numerical_stability_analysis
+        preferredPhrase: sayısal kararlılık analizi
+      - conceptId: mathematics_statistics.numerical_methods.iterative_linear_solver
+        preferredPhrase: yinelemeli doğrusal çözücü
+      - conceptId: mathematics_statistics.numerical_methods.differential_equation_solver
+        preferredPhrase: diferansiyel denklem çözücüsü
+      - conceptId: mathematics_statistics.numerical_methods.numerical_error_estimate
+        preferredPhrase: sayısal hata tahmini
+
+      - conceptId: physics_astronomy.classical_mechanics.newtonian_motion_equation
+        preferredPhrase: newton hareket denklemi
+      - conceptId: physics_astronomy.classical_mechanics.conservation_of_momentum
+        preferredPhrase: momentum korunumu
+      - conceptId: physics_astronomy.classical_mechanics.rigid_body_dynamics
+        preferredPhrase: katı cisim dinamiği
+      - conceptId: physics_astronomy.classical_mechanics.harmonic_oscillator_model
+        preferredPhrase: harmonik osilatör modeli
+      - conceptId: physics_astronomy.classical_mechanics.rotational_motion_analysis
+        preferredPhrase: dönme hareketi analizi
+      - conceptId: physics_astronomy.classical_mechanics.classical_mechanics_system
+        preferredPhrase: klasik mekanik sistemi
+      - conceptId: physics_astronomy.thermodynamics.thermodynamic_state_variable
+        preferredPhrase: termodinamik durum değişkeni
+      - conceptId: physics_astronomy.thermodynamics.heat_transfer_coefficient
+        preferredPhrase: ısı transfer katsayısı
+      - conceptId: physics_astronomy.thermodynamics.entropy_production_rate
+        preferredPhrase: entropi üretim hızı
+      - conceptId: physics_astronomy.thermodynamics.phase_equilibrium_condition
+        preferredPhrase: faz denge koşulu
+      - conceptId: physics_astronomy.thermodynamics.thermodynamic_cycle_efficiency
+        preferredPhrase: termodinamik çevrim verimliliği
+      - conceptId: physics_astronomy.thermodynamics.equation_of_state
+        preferredPhrase: durum denklemi
+      - conceptId: physics_astronomy.electromagnetism.electromagnetic_field_equation
+        preferredPhrase: elektromanyetik alan denklemi
+      - conceptId: physics_astronomy.electromagnetism.electric_potential_difference
+        preferredPhrase: elektrik potansiyel farkı
+      - conceptId: physics_astronomy.electromagnetism.magnetic_flux_density
+        preferredPhrase: manyetik akı yoğunluğu
+      - conceptId: physics_astronomy.electromagnetism.electromagnetic_wave_propagation
+        preferredPhrase: elektromanyetik dalga yayılımı
+      - conceptId: physics_astronomy.electromagnetism.maxwell_equation_system
+        preferredPhrase: maxwell denklem sistemi
+      - conceptId: physics_astronomy.electromagnetism.electric_field_strength
+        preferredPhrase: elektrik alan şiddeti
+      - conceptId: physics_astronomy.astrophysics.stellar_evolution_model
+        preferredPhrase: yıldız evrimi modeli
+      - conceptId: physics_astronomy.astrophysics.galactic_rotation_curve
+        preferredPhrase: galaktik dönme eğrisi
+      - conceptId: physics_astronomy.astrophysics.cosmic_microwave_background
+        preferredPhrase: kozmik mikrodalga arka planı
+      - conceptId: physics_astronomy.astrophysics.black_hole_accretion
+        preferredPhrase: kara delik yığılması
+      - conceptId: physics_astronomy.astrophysics.exoplanet_orbital_period
+        preferredPhrase: ötegezegen yörünge periyodu
+      - conceptId: physics_astronomy.astrophysics.gravitational_wave_signal
+        preferredPhrase: kütleçekim dalgası sinyali
+
+      - conceptId: chemistry_materials.organic_chemistry.organic_reaction_mechanism
+        preferredPhrase: organik reaksiyon mekanizması
+      - conceptId: chemistry_materials.organic_chemistry.carbon_carbon_bond
+        preferredPhrase: karbon karbon bağı
+      - conceptId: chemistry_materials.organic_chemistry.functional_group_transformation
+        preferredPhrase: fonksiyonel grup dönüşümü
+      - conceptId: chemistry_materials.organic_chemistry.stereochemical_reaction_pathway
+        preferredPhrase: stereokimyasal reaksiyon yolu
+      - conceptId: chemistry_materials.organic_chemistry.organic_synthesis_route
+        preferredPhrase: organik sentez rotası
+      - conceptId: chemistry_materials.organic_chemistry.reaction_yield_optimization
+        preferredPhrase: reaksiyon verimi optimizasyonu
+      - conceptId: chemistry_materials.analytical_chemistry.mass_spectrometry_analysis
+        preferredPhrase: kütle spektrometrisi analizi
+      - conceptId: chemistry_materials.analytical_chemistry.high_performance_chromatography
+        preferredPhrase: yüksek performanslı kromatografi
+      - conceptId: chemistry_materials.analytical_chemistry.analytical_detection_limit
+        preferredPhrase: analitik tespit limiti
+      - conceptId: chemistry_materials.analytical_chemistry.chemical_calibration_curve
+        preferredPhrase: kimyasal kalibrasyon eğrisi
+      - conceptId: chemistry_materials.analytical_chemistry.quantitative_chemical_analysis
+        preferredPhrase: nicel kimyasal analiz
+      - conceptId: chemistry_materials.analytical_chemistry.sample_preparation_method
+        preferredPhrase: numune hazırlama yöntemi
+      - conceptId: chemistry_materials.physical_chemistry.chemical_reaction_kinetics
+        preferredPhrase: kimyasal reaksiyon kinetiği
+      - conceptId: chemistry_materials.physical_chemistry.molecular_orbital_theory
+        preferredPhrase: moleküler orbital teorisi
+      - conceptId: chemistry_materials.physical_chemistry.thermodynamic_equilibrium_constant
+        preferredPhrase: termodinamik denge sabiti
+      - conceptId: chemistry_materials.physical_chemistry.electrochemical_cell_potential
+        preferredPhrase: elektrokimyasal hücre potansiyeli
+      - conceptId: chemistry_materials.physical_chemistry.molecular_spectroscopy_analysis
+        preferredPhrase: moleküler spektroskopi analizi
+      - conceptId: chemistry_materials.physical_chemistry.surface_adsorption_process
+        preferredPhrase: yüzey adsorpsiyon süreci
+      - conceptId: chemistry_materials.materials_science.crystal_structure_analysis
+        preferredPhrase: kristal yapı analizi
+      - conceptId: chemistry_materials.materials_science.mechanical_material_property
+        preferredPhrase: mekanik malzeme özelliği
+      - conceptId: chemistry_materials.materials_science.polymer_composite_material
+        preferredPhrase: polimer kompozit malzeme
+      - conceptId: chemistry_materials.materials_science.corrosion_resistance_testing
+        preferredPhrase: korozyon direnci testi
+      - conceptId: chemistry_materials.materials_science.material_phase_transition
+        preferredPhrase: malzeme faz geçişi
+      - conceptId: chemistry_materials.materials_science.nanomaterial_surface_property
+        preferredPhrase: nanomalzeme yüzey özelliği
+
+      - conceptId: biology_genetics.molecular_biology.gene_expression_regulation
+        preferredPhrase: gen ifadesi düzenlenmesi
+      - conceptId: biology_genetics.molecular_biology.protein_synthesis_pathway
+        preferredPhrase: protein sentez yolu
+      - conceptId: biology_genetics.molecular_biology.dna_replication_process
+        preferredPhrase: DNA replikasyon süreci
+      - conceptId: biology_genetics.molecular_biology.rna_transcription_mechanism
+        preferredPhrase: RNA transkripsiyon mekanizması
+      - conceptId: biology_genetics.molecular_biology.protein_folding_process
+        preferredPhrase: protein katlanma süreci
+      - conceptId: biology_genetics.molecular_biology.cellular_signaling_pathway
+        preferredPhrase: hücresel sinyal yolu
+      - conceptId: biology_genetics.genetics.genetic_variant_analysis
+        preferredPhrase: genetik varyant analizi
+      - conceptId: biology_genetics.genetics.genome_sequencing_data
+        preferredPhrase: genom dizileme verileri
+      - conceptId: biology_genetics.genetics.mendelian_inheritance_pattern
+        preferredPhrase: mendel kalıtım örüntüsü
+      - conceptId: biology_genetics.genetics.population_genetic_structure
+        preferredPhrase: popülasyon genetik yapısı
+      - conceptId: biology_genetics.genetics.genetic_association_study
+        preferredPhrase: genetik ilişkilendirme çalışması
+      - conceptId: biology_genetics.genetics.gene_mutation_frequency
+        preferredPhrase: gen mutasyon sıklığı
+      - conceptId: biology_genetics.cell_biology.cell_membrane_transport
+        preferredPhrase: hücre zarı taşınımı
+      - conceptId: biology_genetics.cell_biology.cellular_metabolism_pathway
+        preferredPhrase: hücresel metabolizma yolu
+      - conceptId: biology_genetics.cell_biology.programmed_cell_death
+        preferredPhrase: programlı hücre ölümü
+      - conceptId: biology_genetics.cell_biology.cell_cycle_regulation
+        preferredPhrase: hücre döngüsü düzenlenmesi
+      - conceptId: biology_genetics.cell_biology.stem_cell_differentiation
+        preferredPhrase: kök hücre farklılaşması
+      - conceptId: biology_genetics.cell_biology.intracellular_signal_transduction
+        preferredPhrase: hücre içi sinyal iletimi
+      - conceptId: biology_genetics.physiology.cardiovascular_physiological_response
+        preferredPhrase: kardiyovasküler fizyolojik yanıt
+      - conceptId: biology_genetics.physiology.respiratory_gas_exchange
+        preferredPhrase: solunum gaz değişimi
+      - conceptId: biology_genetics.physiology.renal_filtration_process
+        preferredPhrase: böbrek filtrasyon süreci
+      - conceptId: biology_genetics.physiology.endocrine_hormone_regulation
+        preferredPhrase: endokrin hormon düzenlenmesi
+      - conceptId: biology_genetics.physiology.nervous_system_function
+        preferredPhrase: sinir sistemi işlevi
+      - conceptId: biology_genetics.physiology.metabolic_homeostasis_mechanism
+        preferredPhrase: metabolik homeostaz mekanizması
+
+      - conceptId: computer_science_ai.algorithms_data_structures.graph_traversal_algorithm
+        preferredPhrase: grafik dolaşma algoritması
+      - conceptId: computer_science_ai.algorithms_data_structures.dynamic_programming_algorithm
+        preferredPhrase: dinamik programlama algoritması
+      - conceptId: computer_science_ai.algorithms_data_structures.hash_table_implementation
+        preferredPhrase: karma tablo uygulaması
+      - conceptId: computer_science_ai.algorithms_data_structures.computational_complexity_analysis
+        preferredPhrase: hesaplama karmaşıklığı analizi
+      - conceptId: computer_science_ai.algorithms_data_structures.balanced_search_tree
+        preferredPhrase: dengeli arama ağacı
+      - conceptId: computer_science_ai.algorithms_data_structures.shortest_path_algorithm
+        preferredPhrase: en kısa yol algoritması
+      - conceptId: computer_science_ai.software_systems.distributed_system_architecture
+        preferredPhrase: dağıtık sistem mimarisi
+      - conceptId: computer_science_ai.software_systems.database_transaction_isolation
+        preferredPhrase: veritabanı işlem yalıtımı
+      - conceptId: computer_science_ai.software_systems.concurrent_programming_model
+        preferredPhrase: eşzamanlı programlama modeli
+      - conceptId: computer_science_ai.software_systems.application_programming_interface
+        preferredPhrase: uygulama programlama arayüzü
+      - conceptId: computer_science_ai.software_systems.fault_tolerant_system
+        preferredPhrase: hata toleranslı sistem
+      - conceptId: computer_science_ai.software_systems.software_dependency_management
+        preferredPhrase: yazılım bağımlılık yönetimi
+      - conceptId: computer_science_ai.machine_learning.machine_learning_model
+        preferredPhrase: makine öğrenmesi modeli
+      - conceptId: computer_science_ai.machine_learning.supervised_learning_algorithm
+        preferredPhrase: denetimli öğrenme algoritması
+      - conceptId: computer_science_ai.machine_learning.unsupervised_learning_method
+        preferredPhrase: denetimsiz öğrenme yöntemi
+      - conceptId: computer_science_ai.machine_learning.neural_network_architecture
+        preferredPhrase: sinir ağı mimarisi
+      - conceptId: computer_science_ai.machine_learning.model_training_pipeline
+        preferredPhrase: model eğitim işlem hattı
+      - conceptId: computer_science_ai.machine_learning.feature_engineering_process
+        preferredPhrase: özellik mühendisliği süreci
+      - conceptId: computer_science_ai.data_nlp.natural_language_processing
+        preferredPhrase: doğal dil işleme
+      - conceptId: computer_science_ai.data_nlp.semantic_text_representation
+        preferredPhrase: anlamsal metin gösterimi
+      - conceptId: computer_science_ai.data_nlp.information_retrieval_system
+        preferredPhrase: bilgi erişim sistemi
+      - conceptId: computer_science_ai.data_nlp.large_language_model
+        preferredPhrase: büyük dil modeli
+      - conceptId: computer_science_ai.data_nlp.vector_embedding_model
+        preferredPhrase: vektör gömme modeli
+      - conceptId: computer_science_ai.data_nlp.named_entity_recognition
+        preferredPhrase: adlandırılmış varlık tanıma
+
+      - conceptId: medicine_pharmacology.clinical_diagnosis.differential_diagnosis_process
+        preferredPhrase: ayırıcı tanı süreci
+      - conceptId: medicine_pharmacology.clinical_diagnosis.diagnostic_imaging_finding
+        preferredPhrase: tanısal görüntüleme bulgusu
+      - conceptId: medicine_pharmacology.clinical_diagnosis.clinical_laboratory_result
+        preferredPhrase: klinik laboratuvar sonucu
+      - conceptId: medicine_pharmacology.clinical_diagnosis.disease_severity_assessment
+        preferredPhrase: hastalık şiddeti değerlendirmesi
+      - conceptId: medicine_pharmacology.clinical_diagnosis.patient_symptom_profile
+        preferredPhrase: hasta semptom profili
+      - conceptId: medicine_pharmacology.clinical_diagnosis.diagnostic_decision_support
+        preferredPhrase: tanısal karar desteği
+      - conceptId: medicine_pharmacology.pharmacology.drug_dose_adjustment
+        preferredPhrase: ilaç doz ayarlaması
+      - conceptId: medicine_pharmacology.pharmacology.adverse_drug_reaction
+        preferredPhrase: advers ilaç reaksiyonu
+      - conceptId: medicine_pharmacology.pharmacology.drug_drug_interaction
+        preferredPhrase: ilaç ilaç etkileşimi
+      - conceptId: medicine_pharmacology.pharmacology.pharmacokinetic_concentration_profile
+        preferredPhrase: farmakokinetik konsantrasyon profili
+      - conceptId: medicine_pharmacology.pharmacology.pharmacodynamic_response_model
+        preferredPhrase: farmakodinamik yanıt modeli
+      - conceptId: medicine_pharmacology.pharmacology.therapeutic_drug_monitoring
+        preferredPhrase: terapötik ilaç izlemi
+      - conceptId: medicine_pharmacology.clinical_trials.randomized_controlled_trial
+        preferredPhrase: randomize kontrollü çalışma
+      - conceptId: medicine_pharmacology.clinical_trials.clinical_trial_endpoint
+        preferredPhrase: klinik çalışma sonlanım noktası
+      - conceptId: medicine_pharmacology.clinical_trials.treatment_effect_estimate
+        preferredPhrase: tedavi etkisi tahmini
+      - conceptId: medicine_pharmacology.clinical_trials.trial_inclusion_criteria
+        preferredPhrase: çalışma dahil etme kriterleri
+      - conceptId: medicine_pharmacology.clinical_trials.adverse_event_monitoring
+        preferredPhrase: advers olay izlemi
+      - conceptId: medicine_pharmacology.clinical_trials.clinical_study_protocol
+        preferredPhrase: klinik çalışma protokolü
+      - conceptId: medicine_pharmacology.epidemiology.disease_incidence_rate
+        preferredPhrase: hastalık insidans hızı
+      - conceptId: medicine_pharmacology.epidemiology.disease_prevalence_estimate
+        preferredPhrase: hastalık prevalans tahmini
+      - conceptId: medicine_pharmacology.epidemiology.epidemiological_risk_factor
+        preferredPhrase: epidemiyolojik risk faktörü
+      - conceptId: medicine_pharmacology.epidemiology.population_cohort_study
+        preferredPhrase: popülasyon kohort çalışması
+      - conceptId: medicine_pharmacology.epidemiology.case_control_study
+        preferredPhrase: olgu kontrol çalışması
+      - conceptId: medicine_pharmacology.epidemiology.outbreak_surveillance_system
+        preferredPhrase: salgın sürveyans sistemi
+
+      - conceptId: earth_environmental_science.geology.geological_formation_analysis
+        preferredPhrase: jeolojik formasyon analizi
+      - conceptId: earth_environmental_science.geology.tectonic_plate_movement
+        preferredPhrase: tektonik plaka hareketi
+      - conceptId: earth_environmental_science.geology.sedimentary_basin_structure
+        preferredPhrase: sedimanter havza yapısı
+      - conceptId: earth_environmental_science.geology.mineral_composition_analysis
+        preferredPhrase: mineral bileşim analizi
+      - conceptId: earth_environmental_science.geology.geological_fault_system
+        preferredPhrase: jeolojik fay sistemi
+      - conceptId: earth_environmental_science.geology.subsurface_stratigraphic_model
+        preferredPhrase: yeraltı stratigrafik modeli
+      - conceptId: earth_environmental_science.climate_science.climate_change_projection
+        preferredPhrase: iklim değişikliği projeksiyonu
+      - conceptId: earth_environmental_science.climate_science.global_temperature_anomaly
+        preferredPhrase: küresel sıcaklık anomalisi
+      - conceptId: earth_environmental_science.climate_science.greenhouse_gas_forcing
+        preferredPhrase: sera gazı ışınımsal zorlaması
+      - conceptId: earth_environmental_science.climate_science.climate_model_simulation
+        preferredPhrase: iklim modeli simülasyonu
+      - conceptId: earth_environmental_science.climate_science.extreme_weather_event
+        preferredPhrase: aşırı hava olayı
+      - conceptId: earth_environmental_science.climate_science.atmospheric_circulation_pattern
+        preferredPhrase: atmosferik dolaşım deseni
+      - conceptId: earth_environmental_science.hydrology.watershed_runoff_model
+        preferredPhrase: havza yüzey akış modeli
+      - conceptId: earth_environmental_science.hydrology.groundwater_flow_system
+        preferredPhrase: yeraltı suyu akış sistemi
+      - conceptId: earth_environmental_science.hydrology.river_discharge_measurement
+        preferredPhrase: nehir debisi ölçümü
+      - conceptId: earth_environmental_science.hydrology.flood_frequency_analysis
+        preferredPhrase: taşkın frekans analizi
+      - conceptId: earth_environmental_science.hydrology.water_balance_model
+        preferredPhrase: su bütçesi modeli
+      - conceptId: earth_environmental_science.hydrology.aquifer_recharge_rate
+        preferredPhrase: akifer beslenme hızı
+      - conceptId: earth_environmental_science.environmental_assessment.environmental_impact_assessment
+        preferredPhrase: çevresel etki değerlendirmesi
+      - conceptId: earth_environmental_science.environmental_assessment.ecological_risk_assessment
+        preferredPhrase: ekolojik risk değerlendirmesi
+      - conceptId: earth_environmental_science.environmental_assessment.air_pollution_monitoring
+        preferredPhrase: hava kirliliği izleme
+      - conceptId: earth_environmental_science.environmental_assessment.water_quality_indicator
+        preferredPhrase: su kalitesi göstergesi
+      - conceptId: earth_environmental_science.environmental_assessment.biodiversity_impact_evaluation
+        preferredPhrase: biyolojik çeşitlilik etki değerlendirmesi
+      - conceptId: earth_environmental_science.environmental_assessment.environmental_remediation_plan
+        preferredPhrase: çevresel iyileştirme planı
+
+      - conceptId: psychology_sociology.cognitive_psychology.working_memory_capacity
+        preferredPhrase: çalışma belleği kapasitesi
+      - conceptId: psychology_sociology.cognitive_psychology.cognitive_load_theory
+        preferredPhrase: bilişsel yük kuramı
+      - conceptId: psychology_sociology.cognitive_psychology.decision_making_process
+        preferredPhrase: karar verme süreci
+      - conceptId: psychology_sociology.cognitive_psychology.selective_attention_mechanism
+        preferredPhrase: seçici dikkat mekanizması
+      - conceptId: psychology_sociology.cognitive_psychology.cognitive_bias_effect
+        preferredPhrase: bilişsel yanlılık etkisi
+      - conceptId: psychology_sociology.cognitive_psychology.memory_retrieval_process
+        preferredPhrase: bellekten geri çağırma süreci
+      - conceptId: psychology_sociology.behavioral_psychology.behavioral_reinforcement_schedule
+        preferredPhrase: davranışsal pekiştirme programı
+      - conceptId: psychology_sociology.behavioral_psychology.conditioned_behavioral_response
+        preferredPhrase: koşullanmış davranışsal yanıt
+      - conceptId: psychology_sociology.behavioral_psychology.behavior_modification_program
+        preferredPhrase: davranış değiştirme programı
+      - conceptId: psychology_sociology.behavioral_psychology.motivation_behavior_relationship
+        preferredPhrase: motivasyon davranış ilişkisi
+      - conceptId: psychology_sociology.behavioral_psychology.habit_formation_process
+        preferredPhrase: alışkanlık oluşum süreci
+      - conceptId: psychology_sociology.behavioral_psychology.behavioral_intervention_strategy
+        preferredPhrase: davranışsal müdahale stratejisi
+      - conceptId: psychology_sociology.social_psychology.social_identity_theory
+        preferredPhrase: sosyal kimlik kuramı
+      - conceptId: psychology_sociology.social_psychology.group_decision_making
+        preferredPhrase: grup karar verme
+      - conceptId: psychology_sociology.social_psychology.interpersonal_attitude_change
+        preferredPhrase: kişilerarası tutum değişimi
+      - conceptId: psychology_sociology.social_psychology.social_influence_process
+        preferredPhrase: sosyal etki süreci
+      - conceptId: psychology_sociology.social_psychology.group_conformity_behavior
+        preferredPhrase: grup uyum davranışı
+      - conceptId: psychology_sociology.social_psychology.stereotype_formation_process
+        preferredPhrase: kalıp yargı oluşum süreci
+      - conceptId: psychology_sociology.sociology_methods.social_network_analysis
+        preferredPhrase: sosyal ağ analizi
+      - conceptId: psychology_sociology.sociology_methods.survey_sampling_design
+        preferredPhrase: anket örnekleme tasarımı
+      - conceptId: psychology_sociology.sociology_methods.demographic_population_change
+        preferredPhrase: demografik nüfus değişimi
+      - conceptId: psychology_sociology.sociology_methods.social_stratification_pattern
+        preferredPhrase: sosyal tabakalaşma örüntüsü
+      - conceptId: psychology_sociology.sociology_methods.qualitative_interview_analysis
+        preferredPhrase: nitel görüşme analizi
+      - conceptId: psychology_sociology.sociology_methods.longitudinal_social_study
+        preferredPhrase: boylamsal sosyal çalışma
