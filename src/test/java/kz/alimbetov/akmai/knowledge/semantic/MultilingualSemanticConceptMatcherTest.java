@@ -80,6 +80,40 @@ class MultilingualSemanticConceptMatcherTest {
     }
 
     @Test
+    void germanCompoundMapsToCanonicalConceptId() {
+        var match = matcher.match(
+                        "Die Kapitaladäquanzquote bleibt über dem Mindestwert.",
+                        "de"
+                )
+                .stream()
+                .filter(value -> value.conceptId().equals(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                ))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(match.matchMode())
+                .isEqualTo(SemanticMatchMode.EXACT);
+    }
+
+    @Test
+    void frenchPhraseMapsToSameCanonicalConceptId() {
+        var match = matcher.match(
+                        "Le ratio adéquation des fonds propres reste solide.",
+                        "fr"
+                )
+                .stream()
+                .filter(value -> value.conceptId().equals(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                ))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(match.matchMode())
+                .isEqualTo(SemanticMatchMode.EXACT);
+    }
+
+    @Test
     void unsupportedLanguageCannotFallBackToAnotherSurfacePack() {
         assertThat(matcher.match(
                 "коэффициент достаточности капитала",
