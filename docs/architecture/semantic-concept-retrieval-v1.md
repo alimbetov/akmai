@@ -51,6 +51,10 @@ The existing semantic golden set remains the recognition gate:
 - 40 KK;
 - all 16 root semantic domains.
 
-The next evaluation increment should compare baseline and concept-channel
-Recall@K / MRR on a retrieval golden set where relevant chunks are known, not
-only concept recognition.
+A retrieval-level golden gate now reuses all 120 recognition cases and requires
+the canonical concept channel to retrieve the expected cross-language chunk at
+Recall@5 = 1.0 for EN, RU and KK. It also enforces aggregate MRR >= 0.75.
+
+The next measurement increment should compare baseline-only versus
+concept-enabled retrieval on a representative persisted corpus to quantify
+incremental Recall@K rather than only channel correctness.
