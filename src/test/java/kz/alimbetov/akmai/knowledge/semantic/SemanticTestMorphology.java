@@ -19,7 +19,8 @@ final class SemanticTestMorphology {
                         new SpanishSemanticMorphologyNormalizer(),
                         new PortugueseSemanticMorphologyNormalizer(),
                         new ItalianSemanticMorphologyNormalizer(),
-                        new TurkishSemanticMorphologyNormalizer()
+                        new TurkishSemanticMorphologyNormalizer(),
+                        new GreekSemanticMorphologyNormalizer()
                 )
         );
     }
