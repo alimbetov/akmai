@@ -2,6 +2,8 @@ package kz.alimbetov.akmai.knowledge.semantic;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
@@ -11,11 +13,21 @@ import org.springframework.stereotype.Component;
 public class SemanticChunkAnnotator {
 
     private static final int MAX_DOMAINS = 3;
+    private static final int MAX_CONCEPTS = 12;
 
     private final SemanticDomainRouter router;
+    private final EnglishSemanticConceptMatcher conceptMatcher;
 
     public SemanticChunkAnnotator(SemanticDomainRouter router) {
+        this(router, null);
+    }
+
+    public SemanticChunkAnnotator(
+            SemanticDomainRouter router,
+            EnglishSemanticConceptMatcher conceptMatcher
+    ) {
         this.router = router;
+        this.conceptMatcher = conceptMatcher;
     }
 
     public KnowledgeChunk annotate(KnowledgeChunk chunk) {
@@ -27,30 +39,91 @@ public class SemanticChunkAnnotator {
                 chunk.rawText(),
                 chunk.language()
         );
-        if (profile.domains().isEmpty()) {
+        List<SemanticConceptMatch> conceptMatches =
+                "en".equals(chunk.language()) && conceptMatcher != null
+                        ? conceptMatcher.match(chunk.rawText())
+                        : List.of();
+
+        if (profile.domains().isEmpty() && conceptMatches.isEmpty()) {
             return chunk;
         }
 
-        List<SemanticDomainScore> selected = profile.domains().stream()
+        LinkedHashMap<String, Double> domainScores =
+                new LinkedHashMap<>();
+        profile.domains().forEach(domain ->
+                domainScores.merge(
+                        domain.domainId(),
+                        domain.score(),
+                        Double::sum
+                )
+        );
+        conceptMatches.forEach(match ->
+                domainScores.merge(
+                        match.domainId(),
+                        match.weight(),
+                        Double::sum
+                )
+        );
+
+        List<String> selectedDomains = domainScores.entrySet().stream()
+                .sorted(
+                        Map.Entry.<String, Double>comparingByValue()
+                                .reversed()
+                                .thenComparing(Map.Entry::getKey)
+                )
                 .limit(MAX_DOMAINS)
+                .map(Map.Entry::getKey)
                 .toList();
 
         Map<String, Object> metadata = new HashMap<>(
                 chunk.metadata() == null ? Map.of() : chunk.metadata()
         );
         metadata.put("semanticOntologyVersion", profile.ontologyVersion());
+        metadata.put("semanticDomains", selectedDomains);
+
+        LinkedHashMap<String, Double> selectedScores =
+                new LinkedHashMap<>();
+        selectedDomains.forEach(domainId ->
+                selectedScores.put(domainId, domainScores.get(domainId))
+        );
         metadata.put(
-                "semanticDomains",
-                selected.stream()
-                        .map(SemanticDomainScore::domainId)
-                        .toList()
+                "semanticDomainScores",
+                Map.copyOf(selectedScores)
         );
 
-        LinkedHashMap<String, Double> scores = new LinkedHashMap<>();
-        selected.forEach(domain ->
-                scores.put(domain.domainId(), domain.score())
-        );
-        metadata.put("semanticDomainScores", Map.copyOf(scores));
+        if (!conceptMatches.isEmpty()) {
+            List<SemanticConceptMatch> selectedConcepts =
+                    new ArrayList<>(conceptMatches);
+            selectedConcepts.sort(
+                    Comparator.comparingDouble(
+                                    SemanticConceptMatch::weight
+                            )
+                            .reversed()
+                            .thenComparing(
+                                    SemanticConceptMatch::conceptId
+                            )
+            );
+            selectedConcepts = selectedConcepts.stream()
+                    .limit(MAX_CONCEPTS)
+                    .toList();
+
+            metadata.put(
+                    "semanticConceptVersion",
+                    conceptMatcher.version()
+            );
+            metadata.put(
+                    "semanticConcepts",
+                    selectedConcepts.stream()
+                            .map(SemanticConceptMatch::conceptId)
+                            .toList()
+            );
+            metadata.put(
+                    "semanticConceptPhrases",
+                    selectedConcepts.stream()
+                            .map(SemanticConceptMatch::phrase)
+                            .toList()
+            );
+        }
 
         return new KnowledgeChunk(
                 chunk.chunkId(),
