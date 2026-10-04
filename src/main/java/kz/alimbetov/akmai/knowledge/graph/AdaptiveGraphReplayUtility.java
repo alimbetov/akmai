@@ -33,7 +33,9 @@ public final class AdaptiveGraphReplayUtility {
         double competitiveScore = score(competitive, weights);
 
         boolean safetyViolation =
-                competitive.recallAt5() + 1.0e-12
+                appendOnly.recallAt5() + 1.0e-12
+                        < baseOnly.recallAt5()
+                || competitive.recallAt5() + 1.0e-12
                         < baseOnly.recallAt5();
 
         return new Evaluation(
