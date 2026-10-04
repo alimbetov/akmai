@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.RejectedExecutionException;
 import kz.alimbetov.akmai.knowledge.idempotency.IdempotencyConflictException;
 import kz.alimbetov.akmai.security.AccessLevelForbiddenException;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterConflictException;
 import kz.alimbetov.akmai.rag.service.AnswerGenerationException;
 import kz.alimbetov.akmai.rag.service.RetrievalUnavailableException;
 import org.springframework.http.HttpStatus;
@@ -44,6 +45,20 @@ public class GlobalApiExceptionHandler {
         return response(
                 HttpStatus.FORBIDDEN,
                 "ACCESS_LEVEL_FORBIDDEN",
+                exception.getMessage(),
+                request,
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(AppParameterConflictException.class)
+    public ResponseEntity<ApiErrorResponse> appParameterConflict(
+            AppParameterConflictException exception,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.CONFLICT,
+                "APP_PARAMETER_CONFLICT",
                 exception.getMessage(),
                 request,
                 Map.of()
