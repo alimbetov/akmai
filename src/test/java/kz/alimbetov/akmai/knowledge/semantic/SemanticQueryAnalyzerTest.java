@@ -84,6 +84,18 @@ class SemanticQueryAnalyzerTest {
     }
 
     @Test
+    void resolvesGermanAndFrenchProfessionalPhrases() {
+        assertThat(conceptId("Kapitaladäquanzquote"))
+                .isEqualTo(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                );
+        assertThat(conceptId("ratio adéquation des fonds propres"))
+                .isEqualTo(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                );
+    }
+
+    @Test
     void genericTextDoesNotInventSemanticConcept() {
         SemanticQueryAnalysis analysis =
                 analyzer.analyze(
