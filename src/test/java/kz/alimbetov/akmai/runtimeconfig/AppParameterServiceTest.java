@@ -59,7 +59,7 @@ class AppParameterServiceTest {
         AdaptiveGraphCompetitionProperties competition =
                 mock(AdaptiveGraphCompetitionProperties.class);
         AppParameter updated = parameter(
-                AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED,
+                AppParameterKey.ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED,
                 true,
                 1L
         );
@@ -77,7 +77,7 @@ class AppParameterServiceTest {
         );
 
         ResolvedAppParameter result = service.updateBoolean(
-                AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED,
+                AppParameterKey.ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED,
                 true,
                 0L,
                 "operator"
@@ -86,7 +86,7 @@ class AppParameterServiceTest {
         assertThat(result.value()).isTrue();
         assertThat(result.version()).isEqualTo(1L);
         assertThat(service.isEnabled(
-                AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED
+                AppParameterKey.ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED
         )).isTrue();
         verify(repository).updateBoolean(
                 updated.key(),
@@ -142,7 +142,38 @@ class AppParameterServiceTest {
 
         assertThatThrownBy(() -> service.getAuthoritative(
                 AppParameterKey.ADAPTIVE_GRAPH_COMPETITION_ENABLED
-        )).isInstanceOf(DataAccessResourceFailureException.class);
+        )).isInstanceOf(AppParameterUnavailableException.class);
+    }
+
+    @Test
+    void rejectsCompetitionUntilOnlineExpansionIsEnabled() {
+        AppParameterRepository repository =
+                mock(AppParameterRepository.class);
+        AdaptiveGraphProperties graph =
+                mock(AdaptiveGraphProperties.class);
+        AdaptiveGraphCompetitionProperties competition =
+                mock(AdaptiveGraphCompetitionProperties.class);
+        when(repository.find(
+                AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED.key()
+        )).thenReturn(Optional.of(parameter(
+                AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED,
+                false,
+                0L
+        )));
+        AppParameterService service = service(
+                repository,
+                graph,
+                competition
+        );
+
+        assertThatThrownBy(() -> service.updateBoolean(
+                AppParameterKey.ADAPTIVE_GRAPH_COMPETITION_ENABLED,
+                true,
+                0L,
+                "operator"
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("requires online expansion");
     }
 
     @Test
@@ -155,7 +186,7 @@ class AppParameterServiceTest {
                 mock(AdaptiveGraphCompetitionProperties.class)
         );
         AppParameterKey key =
-                AppParameterKey.ADAPTIVE_GRAPH_LEARNING_ENABLED;
+                AppParameterKey.ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED;
         when(repository.updateBoolean(
                 key.key(),
                 true,
