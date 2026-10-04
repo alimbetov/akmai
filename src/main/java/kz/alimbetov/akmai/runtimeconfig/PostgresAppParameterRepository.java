@@ -45,19 +45,21 @@ public class PostgresAppParameterRepository
                 ", ",
                 java.util.Collections.nCopies(keys.size(), "?")
         );
+        String sql =
+                "SELECT parameter_key, "
+                        + "parameter_type, "
+                        + "parameter_value, "
+                        + "row_version, "
+                        + "updated_at, "
+                        + "updated_by "
+                        + "FROM app_parameter "
+                        + "WHERE parameter_key IN ("
+                        + placeholders
+                        + ") "
+                        + "ORDER BY parameter_key "
+                        + "FOR UPDATE";
         return jdbcTemplate.query(
-                """
-                SELECT parameter_key,
-                       parameter_type,
-                       parameter_value,
-                       row_version,
-                       updated_at,
-                       updated_by
-                FROM app_parameter
-                WHERE parameter_key IN (""" + placeholders + """)
-                ORDER BY parameter_key
-                FOR UPDATE
-                """,
+                sql,
                 (rs, rowNum) -> map(rs),
                 keys.toArray()
         );
