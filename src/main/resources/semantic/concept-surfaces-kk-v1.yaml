@@ -1,0 +1,1171 @@
+version: semantic-surfaces-kk-v1
+languages:
+  - language: kk
+    surfaces:
+      - conceptId: finance_banking.lending_credit.credit_risk_assessment
+        preferredPhrase: кредиттік тәуекелді бағалау
+        aliases: []
+      - conceptId: finance_banking.lending_credit.consumer_loan_underwriting
+        preferredPhrase: тұтынушылық кредит андеррайтингі
+        aliases: []
+      - conceptId: finance_banking.lending_credit.corporate_credit_facility
+        preferredPhrase: корпоративтік кредит желісі
+        aliases: []
+      - conceptId: finance_banking.lending_credit.nonperforming_loan_ratio
+        preferredPhrase: жұмыс істемейтін кредиттер коэффициенті
+        aliases: []
+      - conceptId: finance_banking.lending_credit.loan_loss_provision
+        preferredPhrase: кредиттік шығындар резерві
+        aliases: []
+      - conceptId: finance_banking.lending_credit.debt_service_coverage
+        preferredPhrase: борышты өтеуді жабу
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.customer_deposit_base
+        preferredPhrase: клиенттік депозиттік база
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.liquidity_coverage_ratio
+        preferredPhrase: өтімділікті жабу коэффициенті
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.net_stable_funding
+        preferredPhrase: таза тұрақты қаржыландыру
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.deposit_interest_rate
+        preferredPhrase: депозиттік пайыздық мөлшерлеме
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.cash_reserve_requirement
+        preferredPhrase: міндетті резерв нормативі
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.liquidity_stress_testing
+        preferredPhrase: өтімділікті стресс тестілеу
+        aliases: []
+      - conceptId: finance_banking.risk_capital.capital_adequacy_ratio
+        preferredPhrase: капитал жеткіліктілігінің коэффициенті
+        aliases: [капитал жеткіліктілігі нормативі]
+      - conceptId: finance_banking.risk_capital.risk_weighted_assets
+        preferredPhrase: тәуекелмен өлшенген активтер
+        aliases: []
+      - conceptId: finance_banking.risk_capital.common_equity_tier
+        preferredPhrase: негізгі бірінші деңгей капиталы
+        aliases: []
+      - conceptId: finance_banking.risk_capital.market_risk_exposure
+        preferredPhrase: нарықтық тәуекелге ұшырау
+        aliases: []
+      - conceptId: finance_banking.risk_capital.operational_risk_capital
+        preferredPhrase: операциялық тәуекел капиталы
+        aliases: []
+      - conceptId: finance_banking.risk_capital.internal_capital_assessment
+        preferredPhrase: капитал жеткіліктілігін ішкі бағалау
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.payment_settlement_system
+        preferredPhrase: төлем есеп айырысу жүйесі
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.anti_money_laundering
+        preferredPhrase: ақшаны жылыстатуға қарсы іс қимыл
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.know_your_customer
+        preferredPhrase: клиентті тану рәсімі
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.suspicious_transaction_monitoring
+        preferredPhrase: күдікті транзакцияларды мониторингтеу
+        aliases: [күдікті операцияларды бақылау]
+      - conceptId: finance_banking.payments_compliance.cross_border_payment
+        preferredPhrase: трансшекаралық төлем операциясы
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.payment_fraud_detection
+        preferredPhrase: төлем алаяқтығын анықтау
+        aliases: []
+
+      - conceptId: insurance.underwriting_pricing.insurance_underwriting_process
+        preferredPhrase: сақтандыру андеррайтингі процесі
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.risk_based_pricing
+        preferredPhrase: тәуекелге негізделген баға белгілеу
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.actuarial_pricing_model
+        preferredPhrase: актуарлық баға белгілеу моделі
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.policy_coverage_limit
+        preferredPhrase: сақтандыру өтемінің лимиті
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.insurance_premium_calculation
+        preferredPhrase: сақтандыру сыйлықақысын есептеу
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.underwriting_risk_appetite
+        preferredPhrase: андеррайтингтік тәуекел тәбеті
+        aliases: []
+      - conceptId: insurance.claims_management.insurance_claim_assessment
+        preferredPhrase: сақтандыру талабын бағалау
+        aliases: [сақтандыру жағдайын бағалау]
+      - conceptId: insurance.claims_management.claims_settlement_process
+        preferredPhrase: сақтандыру талаптарын реттеу процесі
+        aliases: []
+      - conceptId: insurance.claims_management.loss_adjustment_expense
+        preferredPhrase: залалды реттеу шығындары
+        aliases: []
+      - conceptId: insurance.claims_management.fraudulent_claim_detection
+        preferredPhrase: алаяқтық сақтандыру талабын анықтау
+        aliases: []
+      - conceptId: insurance.claims_management.claim_reserve_estimate
+        preferredPhrase: сақтандыру резервін бағалау
+        aliases: []
+      - conceptId: insurance.claims_management.claims_handling_procedure
+        preferredPhrase: сақтандыру талаптарын өңдеу рәсімі
+        aliases: []
+      - conceptId: insurance.life_health.life_insurance_policy
+        preferredPhrase: өмірді сақтандыру полисі
+        aliases: []
+      - conceptId: insurance.life_health.health_insurance_coverage
+        preferredPhrase: медициналық сақтандыру өтемі
+        aliases: []
+      - conceptId: insurance.life_health.mortality_risk_model
+        preferredPhrase: өлім тәуекелі моделі
+        aliases: []
+      - conceptId: insurance.life_health.morbidity_risk_estimate
+        preferredPhrase: сырқаттанушылық тәуекелін бағалау
+        aliases: []
+      - conceptId: insurance.life_health.medical_expense_reimbursement
+        preferredPhrase: медициналық шығындарды өтеу
+        aliases: []
+      - conceptId: insurance.life_health.policyholder_benefit_schedule
+        preferredPhrase: сақтанушы төлемдерінің кестесі
+        aliases: []
+      - conceptId: insurance.property_casualty.property_damage_coverage
+        preferredPhrase: мүліктік залалды өтеу
+        aliases: []
+      - conceptId: insurance.property_casualty.casualty_insurance_claim
+        preferredPhrase: жауапкершілікті сақтандыру талабы
+        aliases: []
+      - conceptId: insurance.property_casualty.catastrophe_risk_model
+        preferredPhrase: апат тәуекелінің моделі
+        aliases: [катастрофалық тәуекел моделі]
+      - conceptId: insurance.property_casualty.business_interruption_coverage
+        preferredPhrase: қызмет үзілісін сақтандыру өтемі
+        aliases: []
+      - conceptId: insurance.property_casualty.liability_coverage_limit
+        preferredPhrase: жауапкершілік өтемінің лимиті
+        aliases: []
+      - conceptId: insurance.property_casualty.insured_loss_estimate
+        preferredPhrase: сақтандырылған залалды бағалау
+        aliases: []
+
+      - conceptId: energy_utilities.power_generation.electricity_generation_capacity
+        preferredPhrase: электр өндіру қуаты
+        aliases: []
+      - conceptId: energy_utilities.power_generation.thermal_power_plant
+        preferredPhrase: жылу электр станциясы
+        aliases: []
+      - conceptId: energy_utilities.power_generation.combined_cycle_turbine
+        preferredPhrase: бу газ турбиналық қондырғы
+        aliases: []
+      - conceptId: energy_utilities.power_generation.generation_dispatch_schedule
+        preferredPhrase: генерация диспетчерлік кестесі
+        aliases: []
+      - conceptId: energy_utilities.power_generation.power_plant_efficiency
+        preferredPhrase: электр станциясының тиімділігі
+        aliases: []
+      - conceptId: energy_utilities.power_generation.reserve_generation_margin
+        preferredPhrase: генерация қуатының резерві
+        aliases: []
+      - conceptId: energy_utilities.power_grid.transmission_grid_stability
+        preferredPhrase: электр беру желісінің тұрақтылығы
+        aliases: []
+      - conceptId: energy_utilities.power_grid.distribution_network_operator
+        preferredPhrase: тарату желісінің операторы
+        aliases: []
+      - conceptId: energy_utilities.power_grid.high_voltage_substation
+        preferredPhrase: жоғары кернеулі қосалқы станция
+        aliases: []
+      - conceptId: energy_utilities.power_grid.grid_frequency_control
+        preferredPhrase: электр желісінің жиілігін реттеу
+        aliases: [энергожүйе жиілігін бақылау]
+      - conceptId: energy_utilities.power_grid.power_flow_analysis
+        preferredPhrase: қуат ағынын талдау
+        aliases: []
+      - conceptId: energy_utilities.power_grid.electricity_network_congestion
+        preferredPhrase: электр желісінің шамадан тыс жүктелуі
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.wholesale_electricity_market
+        preferredPhrase: электр энергиясының көтерме нарығы
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.day_ahead_market
+        preferredPhrase: бір күн бұрынғы нарық
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.balancing_energy_market
+        preferredPhrase: теңгерімдеуші энергия нарығы
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.electricity_tariff_regulation
+        preferredPhrase: электр тарифін реттеу
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.energy_demand_forecast
+        preferredPhrase: энергия сұранысын болжау
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.capacity_market_mechanism
+        preferredPhrase: қуат нарығының механизмі
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.solar_power_generation
+        preferredPhrase: күн электр энергиясын өндіру
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.wind_power_capacity
+        preferredPhrase: жел энергетикасының қуаты
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_energy_certificate
+        preferredPhrase: жаңартылатын энергия сертификаты
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.battery_energy_storage
+        preferredPhrase: аккумуляторлық энергия сақтау
+        aliases: [энергия жинақтау жүйесі]
+      - conceptId: energy_utilities.renewable_energy.grid_scale_storage
+        preferredPhrase: желілік ауқымдағы энергия сақтау
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_integration_study
+        preferredPhrase: жаңартылатын энергия интеграциясын зерттеу
+        aliases: []
+
+      - conceptId: oil_gas_mining.upstream_operations.oil_reservoir_characterization
+        preferredPhrase: мұнай қабатын сипаттау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.hydrocarbon_exploration_program
+        preferredPhrase: көмірсутектерді барлау бағдарламасы
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.drilling_operations_plan
+        preferredPhrase: бұрғылау жұмыстарының жоспары
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.well_completion_design
+        preferredPhrase: ұңғыманы аяқтау жобасы
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.enhanced_oil_recovery
+        preferredPhrase: мұнай бергіштігін арттыру
+        aliases: [қабаттың мұнай бергіштігін арттыру]
+      - conceptId: oil_gas_mining.upstream_operations.reservoir_pressure_management
+        preferredPhrase: қабат қысымын басқару
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.crude_oil_pipeline
+        preferredPhrase: шикі мұнай құбыры
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.natural_gas_pipeline
+        preferredPhrase: табиғи газ құбыры
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.gas_processing_facility
+        preferredPhrase: газ өңдеу қондырғысы
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_integrity_management
+        preferredPhrase: құбыр тұтастығын басқару
+        aliases: [құбыр желісінің тұтастығын бақылау]
+      - conceptId: oil_gas_mining.midstream_operations.hydrocarbon_storage_terminal
+        preferredPhrase: көмірсутек сақтау терминалы
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.gas_compression_station
+        preferredPhrase: газ компрессор станциясы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.crude_oil_refining
+        preferredPhrase: шикі мұнайды өңдеу
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.petroleum_product_yield
+        preferredPhrase: мұнай өнімдерінің шығымы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_process_unit
+        preferredPhrase: мұнай өңдеу технологиялық қондырғысы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.fuel_blending_specification
+        preferredPhrase: отынды араластыру спецификациясы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.petrochemical_feedstock_supply
+        preferredPhrase: мұнай химиясы шикізатын жеткізу
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_turnaround_maintenance
+        preferredPhrase: мұнай өңдеу зауытын жоспарлы жөндеу
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mineral_resource_estimate
+        preferredPhrase: минералдық ресурстарды бағалау
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.open_pit_mining
+        preferredPhrase: ашық кен өндіру
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.underground_mine_design
+        preferredPhrase: жерасты кенішін жобалау
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.ore_processing_plant
+        preferredPhrase: кен байыту фабрикасы
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mine_tailings_management
+        preferredPhrase: кен қалдықтарын басқару
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mineral_reserve_classification
+        preferredPhrase: пайдалы қазбалар қорларын жіктеу
+        aliases: []
+
+      - conceptId: manufacturing.production_systems.production_planning_system
+        preferredPhrase: өндірісті жоспарлау жүйесі
+        aliases: []
+      - conceptId: manufacturing.production_systems.manufacturing_execution_system
+        preferredPhrase: өндірісті орындауды басқару жүйесі
+        aliases: []
+      - conceptId: manufacturing.production_systems.production_line_balancing
+        preferredPhrase: өндірістік желіні теңгеру
+        aliases: []
+      - conceptId: manufacturing.production_systems.takt_time_calculation
+        preferredPhrase: такт уақытын есептеу
+        aliases: []
+      - conceptId: manufacturing.production_systems.overall_equipment_effectiveness
+        preferredPhrase: жабдықтың жалпы тиімділігі
+        aliases: []
+      - conceptId: manufacturing.production_systems.batch_production_schedule
+        preferredPhrase: сериялық өндіріс кестесі
+        aliases: []
+      - conceptId: manufacturing.quality_management.statistical_process_control
+        preferredPhrase: процесті статистикалық бақылау
+        aliases: [статистикалық процесс бақылауы]
+      - conceptId: manufacturing.quality_management.quality_management_system
+        preferredPhrase: сапа менеджменті жүйесі
+        aliases: []
+      - conceptId: manufacturing.quality_management.root_cause_analysis
+        preferredPhrase: түпкі себептерді талдау
+        aliases: []
+      - conceptId: manufacturing.quality_management.nonconformance_corrective_action
+        preferredPhrase: сәйкессіздік бойынша түзету әрекеті
+        aliases: []
+      - conceptId: manufacturing.quality_management.process_capability_index
+        preferredPhrase: процесс қабілеттілігінің индексі
+        aliases: []
+      - conceptId: manufacturing.quality_management.incoming_quality_inspection
+        preferredPhrase: кіріс сапа бақылауы
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.preventive_maintenance_schedule
+        preferredPhrase: профилактикалық қызмет көрсету кестесі
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.predictive_maintenance_model
+        preferredPhrase: болжамды техникалық қызмет көрсету моделі
+        aliases: [предиктивті қызмет көрсету моделі]
+      - conceptId: manufacturing.maintenance_reliability.reliability_centered_maintenance
+        preferredPhrase: сенімділікке бағытталған техникалық қызмет
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.mean_time_between_failures
+        preferredPhrase: ақаулар арасындағы орташа уақыт
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.equipment_failure_mode
+        preferredPhrase: жабдықтың істен шығу режимі
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.maintenance_work_order
+        preferredPhrase: техникалық қызмет көрсету тапсырмасы
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.industrial_process_automation
+        preferredPhrase: өнеркәсіптік процесті автоматтандыру
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.programmable_logic_controller
+        preferredPhrase: бағдарламаланатын логикалық контроллер
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.production_capacity_utilization
+        preferredPhrase: өндірістік қуатты пайдалану
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.industrial_safety_procedure
+        preferredPhrase: өнеркәсіптік қауіпсіздік рәсімі
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.plant_operations_management
+        preferredPhrase: кәсіпорын операцияларын басқару
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.process_optimization_study
+        preferredPhrase: процесті оңтайландыру зерттеуі
+        aliases: []
+
+      - conceptId: construction_real_estate.design_construction.building_structural_design
+        preferredPhrase: ғимарат құрылымын жобалау
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.construction_project_schedule
+        preferredPhrase: құрылыс жобасының кестесі
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.building_information_modeling
+        preferredPhrase: ғимараттарды ақпараттық модельдеу
+        aliases: [құрылыс ақпараттық модельдеуі]
+      - conceptId: construction_real_estate.design_construction.reinforced_concrete_structure
+        preferredPhrase: темірбетон құрылымы
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.construction_site_management
+        preferredPhrase: құрылыс алаңын басқару
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.building_code_compliance
+        preferredPhrase: құрылыс нормаларына сәйкестік
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.commercial_property_valuation
+        preferredPhrase: коммерциялық жылжымайтын мүлікті бағалау
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.residential_property_market
+        preferredPhrase: тұрғын үй нарығы
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.rental_yield_analysis
+        preferredPhrase: жалдау табыстылығын талдау
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.real_estate_transaction
+        preferredPhrase: жылжымайтын мүлік мәмілесі
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.property_market_appraisal
+        preferredPhrase: мүліктің нарықтық бағалауы
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.investment_property_return
+        preferredPhrase: инвестициялық мүлік табыстылығы
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.facility_maintenance_plan
+        preferredPhrase: нысанға қызмет көрсету жоспары
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.building_energy_performance
+        preferredPhrase: ғимараттың энергия тиімділігі
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.property_asset_management
+        preferredPhrase: жылжымайтын мүлік активтерін басқару
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.preventive_facility_maintenance
+        preferredPhrase: нысанды профилактикалық қызмет көрсету
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.building_occupancy_management
+        preferredPhrase: ғимаратты пайдалану басқармасы
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.facilities_service_contract
+        preferredPhrase: нысандарды қызмет көрсету шарты
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.construction_cost_estimate
+        preferredPhrase: құрылыс құнын бағалау
+        aliases: [құрылыстың сметалық құны]
+      - conceptId: construction_real_estate.project_controls.earned_value_management
+        preferredPhrase: игерілген көлемді басқару
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.project_schedule_variance
+        preferredPhrase: жоба кестесінің ауытқуы
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.construction_risk_register
+        preferredPhrase: құрылыс тәуекелдері тізілімі
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.contractor_progress_payment
+        preferredPhrase: мердігерге аралық төлем
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.change_order_management
+        preferredPhrase: өзгерту тапсырыстарын басқару
+        aliases: []
+
+      - conceptId: transport_logistics.freight_transport.freight_transportation_network
+        preferredPhrase: жүк тасымалдау желісі
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.intermodal_freight_terminal
+        preferredPhrase: интермодальдық жүк терминалы
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.cargo_transport_capacity
+        preferredPhrase: жүк тасымалдау өткізу қабілеті
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.rail_freight_service
+        preferredPhrase: теміржол жүк тасымалы қызметі
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.road_freight_operation
+        preferredPhrase: автомобиль жүк тасымалы
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.air_cargo_handling
+        preferredPhrase: әуе жүгін өңдеу
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_management_system
+        preferredPhrase: қойманы басқару жүйесі
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.distribution_center_operation
+        preferredPhrase: тарату орталығының жұмысы
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.inventory_storage_policy
+        preferredPhrase: қорларды сақтау саясаты
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.order_fulfillment_process
+        preferredPhrase: тапсырысты орындау процесі
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_picking_strategy
+        preferredPhrase: қоймада жинақтау стратегиясы
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.cold_chain_logistics
+        preferredPhrase: салқын тізбек логистикасы
+        aliases: [суық тізбек логистикасы]
+      - conceptId: transport_logistics.fleet_operations.fleet_maintenance_program
+        preferredPhrase: автопаркке қызмет көрсету бағдарламасы
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_route_optimization
+        preferredPhrase: көлік бағытын оңтайландыру
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_fuel_efficiency
+        preferredPhrase: автопарктің отын тиімділігі
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.driver_safety_management
+        preferredPhrase: жүргізуші қауіпсіздігін басқару
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_utilization_rate
+        preferredPhrase: көлікті пайдалану коэффициенті
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_telematics_system
+        preferredPhrase: автопарк телематика жүйесі
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supply_chain_disruption
+        preferredPhrase: жеткізу тізбегінің бұзылуы
+        aliases: [жеткізу тізбегіндегі үзіліс]
+      - conceptId: transport_logistics.supply_chain.supplier_lead_time
+        preferredPhrase: жеткізушінің жеткізу мерзімі
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.logistics_network_optimization
+        preferredPhrase: логистикалық желіні оңтайландыру
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.demand_supply_planning
+        preferredPhrase: сұраныс пен ұсынысты жоспарлау
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supply_chain_resilience
+        preferredPhrase: жеткізу тізбегінің тұрақтылығы
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.last_mile_delivery
+        preferredPhrase: соңғы миль жеткізуі
+        aliases: []
+
+      - conceptId: agriculture_food.crop_science.crop_yield_forecast
+        preferredPhrase: ауыл шаруашылығы дақылдарының өнімділігін болжау
+        aliases: []
+      - conceptId: agriculture_food.crop_science.soil_nutrient_management
+        preferredPhrase: топырақ қоректік заттарын басқару
+        aliases: []
+      - conceptId: agriculture_food.crop_science.precision_agriculture_system
+        preferredPhrase: дәлме дәл егіншілік жүйесі
+        aliases: [нақты егіншілік жүйесі]
+      - conceptId: agriculture_food.crop_science.integrated_pest_management
+        preferredPhrase: зиянкестермен интеграцияланған күрес
+        aliases: []
+      - conceptId: agriculture_food.crop_science.irrigation_scheduling_model
+        preferredPhrase: суару кестесін жоспарлау моделі
+        aliases: []
+      - conceptId: agriculture_food.crop_science.crop_disease_monitoring
+        preferredPhrase: өсімдік ауруларын мониторингтеу
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.livestock_health_management
+        preferredPhrase: мал денсаулығын басқару
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.animal_feed_formulation
+        preferredPhrase: мал азығы құрамын әзірлеу
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.dairy_production_system
+        preferredPhrase: сүт өндіру жүйесі
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.herd_reproductive_performance
+        preferredPhrase: табынның репродуктивтік тиімділігі
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.livestock_disease_control
+        preferredPhrase: мал ауруларын бақылау
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.animal_welfare_standard
+        preferredPhrase: жануарлар әл ауқаты стандарты
+        aliases: []
+      - conceptId: agriculture_food.food_processing.food_processing_technology
+        preferredPhrase: азық түлікті өңдеу технологиясы
+        aliases: []
+      - conceptId: agriculture_food.food_processing.food_production_line
+        preferredPhrase: азық түлік өндіріс желісі
+        aliases: []
+      - conceptId: agriculture_food.food_processing.thermal_food_processing
+        preferredPhrase: азық түлікті жылумен өңдеу
+        aliases: []
+      - conceptId: agriculture_food.food_processing.food_packaging_system
+        preferredPhrase: азық түлік қаптау жүйесі
+        aliases: []
+      - conceptId: agriculture_food.food_processing.shelf_life_evaluation
+        preferredPhrase: жарамдылық мерзімін бағалау
+        aliases: []
+      - conceptId: agriculture_food.food_processing.food_quality_control
+        preferredPhrase: азық түлік сапасын бақылау
+        aliases: []
+      - conceptId: agriculture_food.food_safety.food_safety_management
+        preferredPhrase: азық түлік қауіпсіздігін басқару
+        aliases: [тағам қауіпсіздігі жүйесі]
+      - conceptId: agriculture_food.food_safety.hazard_analysis_control
+        preferredPhrase: қауіптерді талдау бақылауы
+        aliases: []
+      - conceptId: agriculture_food.food_safety.microbial_contamination_risk
+        preferredPhrase: микробтық ластану тәуекелі
+        aliases: []
+      - conceptId: agriculture_food.food_safety.food_traceability_system
+        preferredPhrase: азық түлік қадағалау жүйесі
+        aliases: []
+      - conceptId: agriculture_food.food_safety.allergen_control_program
+        preferredPhrase: аллергендерді бақылау бағдарламасы
+        aliases: []
+      - conceptId: agriculture_food.food_safety.food_hygiene_standard
+        preferredPhrase: тағам гигиенасы стандарты
+        aliases: []
+
+      - conceptId: mathematics_statistics.probability_statistics.probability_distribution_function
+        preferredPhrase: ықтималдық үлестірім функциясы
+        aliases: []
+      - conceptId: mathematics_statistics.probability_statistics.statistical_hypothesis_testing
+        preferredPhrase: статистикалық гипотезаларды тексеру
+        aliases: [статистикалық гипотеза тестілеуі]
+      - conceptId: mathematics_statistics.probability_statistics.maximum_likelihood_estimation
+        preferredPhrase: ең үлкен ықтималдық бағасы
+        aliases: []
+      - conceptId: mathematics_statistics.probability_statistics.bayesian_posterior_distribution
+        preferredPhrase: байестік апостериорлық үлестірім
+        aliases: []
+      - conceptId: mathematics_statistics.probability_statistics.confidence_interval_estimation
+        preferredPhrase: сенімділік аралығын бағалау
+        aliases: []
+      - conceptId: mathematics_statistics.probability_statistics.stochastic_process_model
+        preferredPhrase: стохастикалық процесс моделі
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.linear_algebra_system
+        preferredPhrase: сызықтық алгебра жүйесі
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.eigenvalue_decomposition_method
+        preferredPhrase: меншікті мәндер бойынша жіктеу әдісі
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.abstract_algebra_structure
+        preferredPhrase: абстрактілі алгебра құрылымы
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.differential_geometry_manifold
+        preferredPhrase: дифференциалдық геометрия көптүрлілігі
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.matrix_factorization_method
+        preferredPhrase: матрицаны факторлау әдісі
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.vector_space_basis
+        preferredPhrase: векторлық кеңістік базисі
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.constrained_optimization_problem
+        preferredPhrase: шектеулі оңтайландыру есебі
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.convex_optimization_method
+        preferredPhrase: дөңес оңтайландыру әдісі
+        aliases: [дөңес оптимизация әдісі]
+      - conceptId: mathematics_statistics.optimization.integer_programming_model
+        preferredPhrase: бүтін санды бағдарламалау моделі
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.gradient_descent_algorithm
+        preferredPhrase: градиенттік түсу алгоритмі
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.multi_objective_optimization
+        preferredPhrase: көпмақсатты оңтайландыру
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.nonlinear_optimization_solver
+        preferredPhrase: сызықтық емес оңтайландыру шешушісі
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.numerical_integration_method
+        preferredPhrase: сандық интегралдау әдісі
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.finite_difference_scheme
+        preferredPhrase: ақырлы айырымдар схемасы
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.numerical_stability_analysis
+        preferredPhrase: сандық орнықтылықты талдау
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.iterative_linear_solver
+        preferredPhrase: итерациялық сызықтық шешуші
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.differential_equation_solver
+        preferredPhrase: дифференциалдық теңдеулер шешушісі
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.numerical_error_estimate
+        preferredPhrase: сандық қателікті бағалау
+        aliases: []
+
+      - conceptId: physics_astronomy.classical_mechanics.newtonian_motion_equation
+        preferredPhrase: ньютондық қозғалыс теңдеуі
+        aliases: []
+      - conceptId: physics_astronomy.classical_mechanics.conservation_of_momentum
+        preferredPhrase: импульстің сақталу заңы
+        aliases: [импульсті сақтау заңы]
+      - conceptId: physics_astronomy.classical_mechanics.rigid_body_dynamics
+        preferredPhrase: қатты дене динамикасы
+        aliases: []
+      - conceptId: physics_astronomy.classical_mechanics.harmonic_oscillator_model
+        preferredPhrase: гармониялық осциллятор моделі
+        aliases: []
+      - conceptId: physics_astronomy.classical_mechanics.rotational_motion_analysis
+        preferredPhrase: айналмалы қозғалысты талдау
+        aliases: []
+      - conceptId: physics_astronomy.classical_mechanics.classical_mechanics_system
+        preferredPhrase: классикалық механика жүйесі
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.thermodynamic_state_variable
+        preferredPhrase: термодинамикалық күй айнымалысы
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.heat_transfer_coefficient
+        preferredPhrase: жылу беру коэффициенті
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.entropy_production_rate
+        preferredPhrase: энтропия өндіру жылдамдығы
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.phase_equilibrium_condition
+        preferredPhrase: фазалық тепе теңдік шарты
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.thermodynamic_cycle_efficiency
+        preferredPhrase: термодинамикалық цикл тиімділігі
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.equation_of_state
+        preferredPhrase: күй теңдеуі
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.electromagnetic_field_equation
+        preferredPhrase: электромагниттік өріс теңдеуі
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.electric_potential_difference
+        preferredPhrase: электр потенциалдарының айырмасы
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.magnetic_flux_density
+        preferredPhrase: магнит ағынының тығыздығы
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.electromagnetic_wave_propagation
+        preferredPhrase: электромагниттік толқынның таралуы
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.maxwell_equation_system
+        preferredPhrase: Максвелл теңдеулер жүйесі
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.electric_field_strength
+        preferredPhrase: электр өрісінің кернеулігі
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.stellar_evolution_model
+        preferredPhrase: жұлдыз эволюциясы моделі
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.galactic_rotation_curve
+        preferredPhrase: галактика айналу қисығы
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.cosmic_microwave_background
+        preferredPhrase: ғарыштық микротолқынды фон
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.black_hole_accretion
+        preferredPhrase: қара құрдым аккрециясы
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.exoplanet_orbital_period
+        preferredPhrase: экзопланетаның орбиталық периоды
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.gravitational_wave_signal
+        preferredPhrase: гравитациялық толқын сигналы
+        aliases: [гравитациялық толқынның сигналы]
+
+      - conceptId: chemistry_materials.organic_chemistry.organic_reaction_mechanism
+        preferredPhrase: органикалық реакция механизмі
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.carbon_carbon_bond
+        preferredPhrase: көміртек көміртек байланысы
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.functional_group_transformation
+        preferredPhrase: функционалдық топтың түрленуі
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.stereochemical_reaction_pathway
+        preferredPhrase: стереохимиялық реакция жолы
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.organic_synthesis_route
+        preferredPhrase: органикалық синтез бағыты
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.reaction_yield_optimization
+        preferredPhrase: реакция шығымын оңтайландыру
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.mass_spectrometry_analysis
+        preferredPhrase: масс спектрометриялық талдау
+        aliases: [масс спектрометрия әдісімен талдау]
+      - conceptId: chemistry_materials.analytical_chemistry.high_performance_chromatography
+        preferredPhrase: жоғары тиімді хроматография
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.analytical_detection_limit
+        preferredPhrase: аналитикалық анықтау шегі
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.chemical_calibration_curve
+        preferredPhrase: химиялық калибрлеу қисығы
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.quantitative_chemical_analysis
+        preferredPhrase: сандық химиялық талдау
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.sample_preparation_method
+        preferredPhrase: үлгіні дайындау әдісі
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.chemical_reaction_kinetics
+        preferredPhrase: химиялық реакция кинетикасы
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.molecular_orbital_theory
+        preferredPhrase: молекулалық орбитальдар теориясы
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.thermodynamic_equilibrium_constant
+        preferredPhrase: термодинамикалық тепе теңдік тұрақтысы
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.electrochemical_cell_potential
+        preferredPhrase: электрохимиялық ұяшық потенциалы
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.molecular_spectroscopy_analysis
+        preferredPhrase: молекулалық спектроскопия талдауы
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.surface_adsorption_process
+        preferredPhrase: беттік адсорбция процесі
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.crystal_structure_analysis
+        preferredPhrase: кристалдық құрылымды талдау
+        aliases: [кристалдық құрылым талдауы]
+      - conceptId: chemistry_materials.materials_science.mechanical_material_property
+        preferredPhrase: материалдың механикалық қасиеті
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.polymer_composite_material
+        preferredPhrase: полимерлік композиттік материал
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.corrosion_resistance_testing
+        preferredPhrase: коррозияға төзімділікті сынау
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.material_phase_transition
+        preferredPhrase: материалдың фазалық ауысуы
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.nanomaterial_surface_property
+        preferredPhrase: наноматериалдың беттік қасиеті
+        aliases: []
+
+      - conceptId: biology_genetics.molecular_biology.gene_expression_regulation
+        preferredPhrase: ген экспрессиясын реттеу
+        aliases: [гендер экспрессиясын басқару]
+      - conceptId: biology_genetics.molecular_biology.protein_synthesis_pathway
+        preferredPhrase: ақуыз синтезінің жолы
+        aliases: []
+      - conceptId: biology_genetics.molecular_biology.dna_replication_process
+        preferredPhrase: ДНҚ репликация процесі
+        aliases: []
+      - conceptId: biology_genetics.molecular_biology.rna_transcription_mechanism
+        preferredPhrase: РНҚ транскрипция механизмі
+        aliases: []
+      - conceptId: biology_genetics.molecular_biology.protein_folding_process
+        preferredPhrase: ақуыздың бүктелу процесі
+        aliases: []
+      - conceptId: biology_genetics.molecular_biology.cellular_signaling_pathway
+        preferredPhrase: жасушалық сигнал беру жолы
+        aliases: []
+      - conceptId: biology_genetics.genetics.genetic_variant_analysis
+        preferredPhrase: генетикалық вариантты талдау
+        aliases: []
+      - conceptId: biology_genetics.genetics.genome_sequencing_data
+        preferredPhrase: геном секвенирлеу деректері
+        aliases: []
+      - conceptId: biology_genetics.genetics.mendelian_inheritance_pattern
+        preferredPhrase: мендельдік тұқым қуалау үлгісі
+        aliases: []
+      - conceptId: biology_genetics.genetics.population_genetic_structure
+        preferredPhrase: популяциялық генетикалық құрылым
+        aliases: []
+      - conceptId: biology_genetics.genetics.genetic_association_study
+        preferredPhrase: генетикалық ассоциация зерттеуі
+        aliases: []
+      - conceptId: biology_genetics.genetics.gene_mutation_frequency
+        preferredPhrase: ген мутациясының жиілігі
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.cell_membrane_transport
+        preferredPhrase: жасуша мембранасы арқылы тасымал
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.cellular_metabolism_pathway
+        preferredPhrase: жасушалық метаболизм жолы
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.programmed_cell_death
+        preferredPhrase: бағдарламаланған жасуша өлімі
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.cell_cycle_regulation
+        preferredPhrase: жасушалық циклді реттеу
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.stem_cell_differentiation
+        preferredPhrase: дің жасушаларының дифференциациясы
+        aliases: [дің жасушаларын жіктеу]
+      - conceptId: biology_genetics.cell_biology.intracellular_signal_transduction
+        preferredPhrase: жасушаішілік сигнал беру
+        aliases: []
+      - conceptId: biology_genetics.physiology.cardiovascular_physiological_response
+        preferredPhrase: жүрек қан тамыр физиологиялық реакциясы
+        aliases: []
+      - conceptId: biology_genetics.physiology.respiratory_gas_exchange
+        preferredPhrase: тыныс алу газ алмасуы
+        aliases: []
+      - conceptId: biology_genetics.physiology.renal_filtration_process
+        preferredPhrase: бүйректік сүзу процесі
+        aliases: []
+      - conceptId: biology_genetics.physiology.endocrine_hormone_regulation
+        preferredPhrase: эндокриндік гормондарды реттеу
+        aliases: []
+      - conceptId: biology_genetics.physiology.nervous_system_function
+        preferredPhrase: жүйке жүйесінің қызметі
+        aliases: []
+      - conceptId: biology_genetics.physiology.metabolic_homeostasis_mechanism
+        preferredPhrase: метаболикалық гомеостаз механизмі
+        aliases: []
+
+      - conceptId: computer_science_ai.algorithms_data_structures.graph_traversal_algorithm
+        preferredPhrase: графты аралау алгоритмі
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.dynamic_programming_algorithm
+        preferredPhrase: динамикалық бағдарламалау алгоритмі
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.hash_table_implementation
+        preferredPhrase: хеш кестені іске асыру
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.computational_complexity_analysis
+        preferredPhrase: есептеу күрделілігін талдау
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.balanced_search_tree
+        preferredPhrase: теңгерілген іздеу ағашы
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.shortest_path_algorithm
+        preferredPhrase: ең қысқа жол алгоритмі
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.distributed_system_architecture
+        preferredPhrase: үлестірілген жүйе архитектурасы
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.database_transaction_isolation
+        preferredPhrase: дерекқор транзакцияларын оқшаулау
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.concurrent_programming_model
+        preferredPhrase: параллель бағдарламалау моделі
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.application_programming_interface
+        preferredPhrase: қолданбалы бағдарламалау интерфейсі
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.fault_tolerant_system
+        preferredPhrase: ақауға төзімді жүйе
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.software_dependency_management
+        preferredPhrase: бағдарламалық тәуелділіктерді басқару
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.machine_learning_model
+        preferredPhrase: машиналық оқыту моделі
+        aliases: [машинамен оқыту моделі]
+      - conceptId: computer_science_ai.machine_learning.supervised_learning_algorithm
+        preferredPhrase: мұғаліммен оқыту алгоритмі
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.unsupervised_learning_method
+        preferredPhrase: мұғалімсіз оқыту әдісі
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.neural_network_architecture
+        preferredPhrase: нейрондық желі архитектурасы
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.model_training_pipeline
+        preferredPhrase: модельді оқыту конвейері
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.feature_engineering_process
+        preferredPhrase: белгілерді құрастыру процесі
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.natural_language_processing
+        preferredPhrase: табиғи тілді өңдеу
+        aliases: [табиғи тіл өңдеуі]
+      - conceptId: computer_science_ai.data_nlp.semantic_text_representation
+        preferredPhrase: мәтіннің семантикалық көрінісі
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.information_retrieval_system
+        preferredPhrase: ақпараттық іздеу жүйесі
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.large_language_model
+        preferredPhrase: үлкен тілдік модель
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.vector_embedding_model
+        preferredPhrase: векторлық ендіру моделі
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.named_entity_recognition
+        preferredPhrase: атаулы нысандарды тану
+        aliases: []
+
+      - conceptId: medicine_pharmacology.clinical_diagnosis.differential_diagnosis_process
+        preferredPhrase: дифференциалды диагностика процесі
+        aliases: [дифференциалдық диагностика]
+      - conceptId: medicine_pharmacology.clinical_diagnosis.diagnostic_imaging_finding
+        preferredPhrase: диагностикалық бейнелеу нәтижесі
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_diagnosis.clinical_laboratory_result
+        preferredPhrase: клиникалық зертхана нәтижесі
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_diagnosis.disease_severity_assessment
+        preferredPhrase: ауру ауырлығын бағалау
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_diagnosis.patient_symptom_profile
+        preferredPhrase: пациент симптомдарының профилі
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_diagnosis.diagnostic_decision_support
+        preferredPhrase: диагностикалық шешімді қолдау
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.drug_dose_adjustment
+        preferredPhrase: дәрі дозасын түзету
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.adverse_drug_reaction
+        preferredPhrase: дәріге жағымсыз реакция
+        aliases: [дәрілік препараттың жағымсыз әсері]
+      - conceptId: medicine_pharmacology.pharmacology.drug_drug_interaction
+        preferredPhrase: дәрілердің өзара әрекеттесуі
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.pharmacokinetic_concentration_profile
+        preferredPhrase: фармакокинетикалық концентрация профилі
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.pharmacodynamic_response_model
+        preferredPhrase: фармакодинамикалық жауап моделі
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.therapeutic_drug_monitoring
+        preferredPhrase: дәрілік терапиялық мониторинг
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.randomized_controlled_trial
+        preferredPhrase: рандомизацияланған бақыланатын зерттеу
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.clinical_trial_endpoint
+        preferredPhrase: клиникалық зерттеудің соңғы нүктесі
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.treatment_effect_estimate
+        preferredPhrase: емдеу әсерін бағалау
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.trial_inclusion_criteria
+        preferredPhrase: зерттеуге қосу критерийлері
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.adverse_event_monitoring
+        preferredPhrase: жағымсыз құбылыстарды мониторингтеу
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.clinical_study_protocol
+        preferredPhrase: клиникалық зерттеу хаттамасы
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.disease_incidence_rate
+        preferredPhrase: аурушаңдық көрсеткіші
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.disease_prevalence_estimate
+        preferredPhrase: ауру таралуын бағалау
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.epidemiological_risk_factor
+        preferredPhrase: эпидемиологиялық тәуекел факторы
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.population_cohort_study
+        preferredPhrase: популяциялық когорттық зерттеу
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.case_control_study
+        preferredPhrase: жағдай бақылау зерттеуі
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.outbreak_surveillance_system
+        preferredPhrase: індет ошағын қадағалау жүйесі
+        aliases: []
+
+      - conceptId: earth_environmental_science.geology.geological_formation_analysis
+        preferredPhrase: геологиялық формацияны талдау
+        aliases: []
+      - conceptId: earth_environmental_science.geology.tectonic_plate_movement
+        preferredPhrase: тектоникалық плитаның қозғалысы
+        aliases: []
+      - conceptId: earth_environmental_science.geology.sedimentary_basin_structure
+        preferredPhrase: шөгінді бассейн құрылымы
+        aliases: []
+      - conceptId: earth_environmental_science.geology.mineral_composition_analysis
+        preferredPhrase: минералдық құрамды талдау
+        aliases: []
+      - conceptId: earth_environmental_science.geology.geological_fault_system
+        preferredPhrase: геологиялық жарылымдар жүйесі
+        aliases: []
+      - conceptId: earth_environmental_science.geology.subsurface_stratigraphic_model
+        preferredPhrase: жерасты стратиграфиялық моделі
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.climate_change_projection
+        preferredPhrase: климат өзгерісінің болжамы
+        aliases: [климат өзгерісін болжау]
+      - conceptId: earth_environmental_science.climate_science.global_temperature_anomaly
+        preferredPhrase: ғаламдық температура аномалиясы
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.greenhouse_gas_forcing
+        preferredPhrase: парниктік газдардың радиациялық әсері
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.climate_model_simulation
+        preferredPhrase: климат моделін симуляциялау
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.extreme_weather_event
+        preferredPhrase: экстремалды ауа райы құбылысы
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.atmospheric_circulation_pattern
+        preferredPhrase: атмосфералық циркуляция үлгісі
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.watershed_runoff_model
+        preferredPhrase: су жинау алабы ағынының моделі
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.groundwater_flow_system
+        preferredPhrase: жерасты суы ағынының жүйесі
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.river_discharge_measurement
+        preferredPhrase: өзен ағынын өлшеу
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.flood_frequency_analysis
+        preferredPhrase: су тасқыны жиілігін талдау
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.water_balance_model
+        preferredPhrase: су балансы моделі
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.aquifer_recharge_rate
+        preferredPhrase: сулы қабаттың толығу жылдамдығы
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.environmental_impact_assessment
+        preferredPhrase: қоршаған ортаға әсерді бағалау
+        aliases: [экологиялық әсерді бағалау]
+      - conceptId: earth_environmental_science.environmental_assessment.ecological_risk_assessment
+        preferredPhrase: экологиялық тәуекелді бағалау
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.air_pollution_monitoring
+        preferredPhrase: ауа ластануын мониторингтеу
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.water_quality_indicator
+        preferredPhrase: су сапасының көрсеткіші
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.biodiversity_impact_evaluation
+        preferredPhrase: биоалуантүрлілікке әсерді бағалау
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.environmental_remediation_plan
+        preferredPhrase: қоршаған ортаны қалпына келтіру жоспары
+        aliases: []
+
+      - conceptId: psychology_sociology.cognitive_psychology.working_memory_capacity
+        preferredPhrase: жұмыс жадысының сыйымдылығы
+        aliases: []
+      - conceptId: psychology_sociology.cognitive_psychology.cognitive_load_theory
+        preferredPhrase: когнитивтік жүктеме теориясы
+        aliases: [ақыл ой жүктемесі теориясы]
+      - conceptId: psychology_sociology.cognitive_psychology.decision_making_process
+        preferredPhrase: шешім қабылдау процесі
+        aliases: []
+      - conceptId: psychology_sociology.cognitive_psychology.selective_attention_mechanism
+        preferredPhrase: таңдаулы зейін механизмі
+        aliases: []
+      - conceptId: psychology_sociology.cognitive_psychology.cognitive_bias_effect
+        preferredPhrase: когнитивтік бұрмалау әсері
+        aliases: []
+      - conceptId: psychology_sociology.cognitive_psychology.memory_retrieval_process
+        preferredPhrase: жадтан ақпаратты шығару процесі
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.behavioral_reinforcement_schedule
+        preferredPhrase: мінез құлықты нығайту кестесі
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.conditioned_behavioral_response
+        preferredPhrase: шартты мінез құлық реакциясы
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.behavior_modification_program
+        preferredPhrase: мінез құлықты өзгерту бағдарламасы
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.motivation_behavior_relationship
+        preferredPhrase: мотивация мен мінез құлық байланысы
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.habit_formation_process
+        preferredPhrase: әдет қалыптастыру процесі
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.behavioral_intervention_strategy
+        preferredPhrase: мінез құлық араласу стратегиясы
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.social_identity_theory
+        preferredPhrase: әлеуметтік сәйкестік теориясы
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.group_decision_making
+        preferredPhrase: топтық шешім қабылдау
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.interpersonal_attitude_change
+        preferredPhrase: тұлғааралық ұстанымның өзгеруі
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.social_influence_process
+        preferredPhrase: әлеуметтік ықпал процесі
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.group_conformity_behavior
+        preferredPhrase: топтық конформды мінез құлық
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.stereotype_formation_process
+        preferredPhrase: стереотип қалыптастыру процесі
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.social_network_analysis
+        preferredPhrase: әлеуметтік желілерді талдау
+        aliases: [әлеуметтік желі талдауы]
+      - conceptId: psychology_sociology.sociology_methods.survey_sampling_design
+        preferredPhrase: сауалнама іріктемесін жобалау
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.demographic_population_change
+        preferredPhrase: халықтың демографиялық өзгерісі
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.social_stratification_pattern
+        preferredPhrase: әлеуметтік стратификация құрылымы
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.qualitative_interview_analysis
+        preferredPhrase: сұхбатты сапалық талдау
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.longitudinal_social_study
+        preferredPhrase: бойлық әлеуметтік зерттеу
+        aliases: []
