@@ -1,0 +1,196 @@
+version: semantic-surfaces-el-v1
+languages:
+  - language: el
+    surfaces:
+      - conceptId: finance_banking.lending_credit.credit_risk_assessment
+        preferredPhrase: αξιολόγηση πιστωτικού κινδύνου
+      - conceptId: finance_banking.lending_credit.consumer_loan_underwriting
+        preferredPhrase: αξιολόγηση καταναλωτικού δανείου
+      - conceptId: finance_banking.lending_credit.corporate_credit_facility
+        preferredPhrase: πιστωτική γραμμή επιχειρήσεων
+      - conceptId: finance_banking.lending_credit.nonperforming_loan_ratio
+        preferredPhrase: δείκτης μη εξυπηρετούμενων δανείων
+      - conceptId: finance_banking.lending_credit.loan_loss_provision
+        preferredPhrase: πρόβλεψη ζημιών από δάνεια
+      - conceptId: finance_banking.lending_credit.debt_service_coverage
+        preferredPhrase: δείκτης κάλυψης εξυπηρέτησης χρέους
+      - conceptId: finance_banking.deposits_liquidity.customer_deposit_base
+        preferredPhrase: βάση καταθέσεων πελατών
+      - conceptId: finance_banking.deposits_liquidity.liquidity_coverage_ratio
+        preferredPhrase: δείκτης κάλυψης ρευστότητας
+      - conceptId: finance_banking.deposits_liquidity.net_stable_funding
+        preferredPhrase: καθαρή σταθερή χρηματοδότηση
+      - conceptId: finance_banking.deposits_liquidity.deposit_interest_rate
+        preferredPhrase: επιτόκιο καταθέσεων
+      - conceptId: finance_banking.deposits_liquidity.cash_reserve_requirement
+        preferredPhrase: απαίτηση υποχρεωτικών αποθεματικών
+      - conceptId: finance_banking.deposits_liquidity.liquidity_stress_testing
+        preferredPhrase: δοκιμή αντοχής ρευστότητας
+      - conceptId: finance_banking.risk_capital.capital_adequacy_ratio
+        preferredPhrase: δείκτης κεφαλαιακής επάρκειας
+      - conceptId: finance_banking.risk_capital.risk_weighted_assets
+        preferredPhrase: σταθμισμένα στοιχεία ενεργητικού ως προς τον κίνδυνο
+      - conceptId: finance_banking.risk_capital.common_equity_tier
+        preferredPhrase: βασικά ίδια κεφάλαια κατηγορίας ένα
+      - conceptId: finance_banking.risk_capital.market_risk_exposure
+        preferredPhrase: έκθεση σε κίνδυνο αγοράς
+      - conceptId: finance_banking.risk_capital.operational_risk_capital
+        preferredPhrase: κεφάλαιο λειτουργικού κινδύνου
+      - conceptId: finance_banking.risk_capital.internal_capital_assessment
+        preferredPhrase: εσωτερική αξιολόγηση κεφαλαιακής επάρκειας
+      - conceptId: finance_banking.payments_compliance.payment_settlement_system
+        preferredPhrase: σύστημα διακανονισμού πληρωμών
+      - conceptId: finance_banking.payments_compliance.anti_money_laundering
+        preferredPhrase: καταπολέμηση νομιμοποίησης παράνομων εσόδων
+      - conceptId: finance_banking.payments_compliance.know_your_customer
+        preferredPhrase: ταυτοποίηση και γνώση πελάτη
+      - conceptId: finance_banking.payments_compliance.suspicious_transaction_monitoring
+        preferredPhrase: παρακολούθηση ύποπτων συναλλαγών
+      - conceptId: finance_banking.payments_compliance.cross_border_payment
+        preferredPhrase: διασυνοριακή πληρωμή
+      - conceptId: finance_banking.payments_compliance.payment_fraud_detection
+        preferredPhrase: ανίχνευση απάτης πληρωμών
+      - conceptId: insurance.underwriting_pricing.insurance_underwriting_process
+        preferredPhrase: διαδικασία ανάληψης ασφαλιστικού κινδύνου
+      - conceptId: insurance.underwriting_pricing.risk_based_pricing
+        preferredPhrase: τιμολόγηση βάσει κινδύνου
+      - conceptId: insurance.underwriting_pricing.actuarial_pricing_model
+        preferredPhrase: αναλογιστικό μοντέλο τιμολόγησης
+      - conceptId: insurance.underwriting_pricing.policy_coverage_limit
+        preferredPhrase: όριο κάλυψης ασφαλιστηρίου
+      - conceptId: insurance.underwriting_pricing.insurance_premium_calculation
+        preferredPhrase: υπολογισμός ασφαλίστρου
+      - conceptId: insurance.underwriting_pricing.underwriting_risk_appetite
+        preferredPhrase: διάθεση ανάληψης ασφαλιστικού κινδύνου
+      - conceptId: insurance.claims_management.insurance_claim_assessment
+        preferredPhrase: αξιολόγηση ασφαλιστικής απαίτησης
+      - conceptId: insurance.claims_management.claims_settlement_process
+        preferredPhrase: διαδικασία διακανονισμού ζημιών
+      - conceptId: insurance.claims_management.loss_adjustment_expense
+        preferredPhrase: έξοδο εκτίμησης και διακανονισμού ζημιάς
+      - conceptId: insurance.claims_management.fraudulent_claim_detection
+        preferredPhrase: ανίχνευση δόλιας ασφαλιστικής απαίτησης
+      - conceptId: insurance.claims_management.claim_reserve_estimate
+        preferredPhrase: εκτίμηση αποθέματος ζημιών
+      - conceptId: insurance.claims_management.claims_handling_procedure
+        preferredPhrase: διαδικασία διαχείρισης ασφαλιστικών απαιτήσεων
+      - conceptId: insurance.life_health.life_insurance_policy
+        preferredPhrase: ασφαλιστήριο ζωής
+      - conceptId: insurance.life_health.health_insurance_coverage
+        preferredPhrase: κάλυψη ασφάλισης υγείας
+      - conceptId: insurance.life_health.mortality_risk_model
+        preferredPhrase: μοντέλο κινδύνου θνησιμότητας
+      - conceptId: insurance.life_health.morbidity_risk_estimate
+        preferredPhrase: εκτίμηση κινδύνου νοσηρότητας
+      - conceptId: insurance.life_health.medical_expense_reimbursement
+        preferredPhrase: αποζημίωση ιατρικών εξόδων
+      - conceptId: insurance.life_health.policyholder_benefit_schedule
+        preferredPhrase: πρόγραμμα παροχών ασφαλισμένου
+      - conceptId: insurance.property_casualty.property_damage_coverage
+        preferredPhrase: κάλυψη υλικών ζημιών
+      - conceptId: insurance.property_casualty.casualty_insurance_claim
+        preferredPhrase: απαίτηση ασφάλισης αστικής ευθύνης
+      - conceptId: insurance.property_casualty.catastrophe_risk_model
+        preferredPhrase: μοντέλο καταστροφικού κινδύνου
+      - conceptId: insurance.property_casualty.business_interruption_coverage
+        preferredPhrase: κάλυψη διακοπής επιχειρηματικής δραστηριότητας
+      - conceptId: insurance.property_casualty.liability_coverage_limit
+        preferredPhrase: όριο κάλυψης αστικής ευθύνης
+      - conceptId: insurance.property_casualty.insured_loss_estimate
+        preferredPhrase: εκτίμηση ασφαλισμένης ζημιάς
+      - conceptId: energy_utilities.power_generation.electricity_generation_capacity
+        preferredPhrase: ικανότητα παραγωγής ηλεκτρικής ενέργειας
+      - conceptId: energy_utilities.power_generation.thermal_power_plant
+        preferredPhrase: θερμικός σταθμός ηλεκτροπαραγωγής
+      - conceptId: energy_utilities.power_generation.combined_cycle_turbine
+        preferredPhrase: στρόβιλος συνδυασμένου κύκλου
+      - conceptId: energy_utilities.power_generation.generation_dispatch_schedule
+        preferredPhrase: πρόγραμμα κατανομής ηλεκτροπαραγωγής
+      - conceptId: energy_utilities.power_generation.power_plant_efficiency
+        preferredPhrase: απόδοση σταθμού ηλεκτροπαραγωγής
+      - conceptId: energy_utilities.power_generation.reserve_generation_margin
+        preferredPhrase: περιθώριο εφεδρείας παραγωγής
+      - conceptId: energy_utilities.power_grid.transmission_grid_stability
+        preferredPhrase: ευστάθεια δικτύου μεταφοράς
+      - conceptId: energy_utilities.power_grid.distribution_network_operator
+        preferredPhrase: διαχειριστής δικτύου διανομής
+      - conceptId: energy_utilities.power_grid.high_voltage_substation
+        preferredPhrase: υποσταθμός υψηλής τάσης
+      - conceptId: energy_utilities.power_grid.grid_frequency_control
+        preferredPhrase: έλεγχος συχνότητας δικτύου
+      - conceptId: energy_utilities.power_grid.power_flow_analysis
+        preferredPhrase: ανάλυση ροής ισχύος
+      - conceptId: energy_utilities.power_grid.electricity_network_congestion
+        preferredPhrase: συμφόρηση ηλεκτρικού δικτύου
+      - conceptId: energy_utilities.energy_markets.wholesale_electricity_market
+        preferredPhrase: χονδρεμπορική αγορά ηλεκτρικής ενέργειας
+      - conceptId: energy_utilities.energy_markets.day_ahead_market
+        preferredPhrase: αγορά επόμενης ημέρας
+      - conceptId: energy_utilities.energy_markets.balancing_energy_market
+        preferredPhrase: αγορά ενέργειας εξισορρόπησης
+      - conceptId: energy_utilities.energy_markets.electricity_tariff_regulation
+        preferredPhrase: ρύθμιση τιμολογίων ηλεκτρικής ενέργειας
+      - conceptId: energy_utilities.energy_markets.energy_demand_forecast
+        preferredPhrase: πρόβλεψη ενεργειακής ζήτησης
+      - conceptId: energy_utilities.energy_markets.capacity_market_mechanism
+        preferredPhrase: μηχανισμός αγοράς ισχύος
+      - conceptId: energy_utilities.renewable_energy.solar_power_generation
+        preferredPhrase: παραγωγή ηλιακής ενέργειας
+      - conceptId: energy_utilities.renewable_energy.wind_power_capacity
+        preferredPhrase: εγκατεστημένη ισχύς αιολικής ενέργειας
+      - conceptId: energy_utilities.renewable_energy.renewable_energy_certificate
+        preferredPhrase: πιστοποιητικό ανανεώσιμης ενέργειας
+      - conceptId: energy_utilities.renewable_energy.battery_energy_storage
+        preferredPhrase: αποθήκευση ενέργειας με μπαταρίες
+      - conceptId: energy_utilities.renewable_energy.grid_scale_storage
+        preferredPhrase: αποθήκευση ενέργειας σε κλίμακα δικτύου
+      - conceptId: energy_utilities.renewable_energy.renewable_integration_study
+        preferredPhrase: μελέτη ενσωμάτωσης ανανεώσιμων πηγών
+      - conceptId: oil_gas_mining.upstream_operations.oil_reservoir_characterization
+        preferredPhrase: χαρακτηρισμός πετρελαϊκού ταμιευτήρα
+      - conceptId: oil_gas_mining.upstream_operations.hydrocarbon_exploration_program
+        preferredPhrase: πρόγραμμα έρευνας υδρογονανθράκων
+      - conceptId: oil_gas_mining.upstream_operations.drilling_operations_plan
+        preferredPhrase: σχέδιο εργασιών γεώτρησης
+      - conceptId: oil_gas_mining.upstream_operations.well_completion_design
+        preferredPhrase: σχεδιασμός ολοκλήρωσης γεώτρησης
+      - conceptId: oil_gas_mining.upstream_operations.enhanced_oil_recovery
+        preferredPhrase: ενισχυμένη ανάκτηση πετρελαίου
+      - conceptId: oil_gas_mining.upstream_operations.reservoir_pressure_management
+        preferredPhrase: διαχείριση πίεσης ταμιευτήρα
+      - conceptId: oil_gas_mining.midstream_operations.crude_oil_pipeline
+        preferredPhrase: αγωγός αργού πετρελαίου
+      - conceptId: oil_gas_mining.midstream_operations.natural_gas_pipeline
+        preferredPhrase: αγωγός φυσικού αερίου
+      - conceptId: oil_gas_mining.midstream_operations.gas_processing_facility
+        preferredPhrase: μονάδα επεξεργασίας φυσικού αερίου
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_integrity_management
+        preferredPhrase: διαχείριση ακεραιότητας αγωγών
+      - conceptId: oil_gas_mining.midstream_operations.hydrocarbon_storage_terminal
+        preferredPhrase: τερματικός σταθμός αποθήκευσης υδρογονανθράκων
+      - conceptId: oil_gas_mining.midstream_operations.gas_compression_station
+        preferredPhrase: σταθμός συμπίεσης φυσικού αερίου
+      - conceptId: oil_gas_mining.downstream_operations.crude_oil_refining
+        preferredPhrase: διύλιση αργού πετρελαίου
+      - conceptId: oil_gas_mining.downstream_operations.petroleum_product_yield
+        preferredPhrase: απόδοση προϊόντων πετρελαίου
+      - conceptId: oil_gas_mining.downstream_operations.refinery_process_unit
+        preferredPhrase: μονάδα διεργασίας διυλιστηρίου
+      - conceptId: oil_gas_mining.downstream_operations.fuel_blending_specification
+        preferredPhrase: προδιαγραφή ανάμειξης καυσίμου
+      - conceptId: oil_gas_mining.downstream_operations.petrochemical_feedstock_supply
+        preferredPhrase: εφοδιασμός πετροχημικής πρώτης ύλης
+      - conceptId: oil_gas_mining.downstream_operations.refinery_turnaround_maintenance
+        preferredPhrase: γενική συντήρηση διακοπής διυλιστηρίου
+      - conceptId: oil_gas_mining.mining_operations.mineral_resource_estimate
+        preferredPhrase: εκτίμηση ορυκτών πόρων
+      - conceptId: oil_gas_mining.mining_operations.open_pit_mining
+        preferredPhrase: εξόρυξη ανοικτού ορύγματος
+      - conceptId: oil_gas_mining.mining_operations.underground_mine_design
+        preferredPhrase: σχεδιασμός υπόγειου μεταλλείου
+      - conceptId: oil_gas_mining.mining_operations.ore_processing_plant
+        preferredPhrase: μονάδα επεξεργασίας μεταλλεύματος
+      - conceptId: oil_gas_mining.mining_operations.mine_tailings_management
+        preferredPhrase: διαχείριση μεταλλευτικών αποβλήτων
+      - conceptId: oil_gas_mining.mining_operations.mineral_reserve_classification
+        preferredPhrase: ταξινόμηση ορυκτών αποθεμάτων
