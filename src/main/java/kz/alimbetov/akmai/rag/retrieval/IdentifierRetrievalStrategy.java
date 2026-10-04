@@ -165,13 +165,11 @@ public class IdentifierRetrievalStrategy implements RetrievalStrategy {
             DocumentIdentifier identifier,
             Set<Long> allowed
     ) {
-        if (identifier.accessLevel() > 0) {
-            return allowed.contains(identifier.accessLevel())
-                    ? identifier.accessLevel()
-                    : 0L;
+        if (identifier.accessLevel() <= 0) {
+            return 0L;
         }
-        return allowed.size() == 1
-                ? allowed.iterator().next()
+        return allowed.contains(identifier.accessLevel())
+                ? identifier.accessLevel()
                 : 0L;
     }
 
