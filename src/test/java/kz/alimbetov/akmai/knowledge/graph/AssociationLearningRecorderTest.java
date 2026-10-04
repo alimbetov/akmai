@@ -53,7 +53,8 @@ class AssociationLearningRecorderTest {
     void runtimeParameterCanEnableLearningWithoutRestart() {
         AdaptiveChunkGraphRepository repository =
                 mock(AdaptiveChunkGraphRepository.class);
-        AdaptiveGraphProperties properties = properties(false);
+        AdaptiveGraphProperties properties =
+                properties(false, SECRET);
         AppParameterService appParameters =
                 mock(AppParameterService.class);
         when(appParameters.isEnabled(
@@ -224,6 +225,16 @@ class AssociationLearningRecorderTest {
     }
 
     private AdaptiveGraphProperties properties(boolean enabled) {
+        return properties(
+                enabled,
+                enabled ? SECRET : ""
+        );
+    }
+
+    private AdaptiveGraphProperties properties(
+            boolean enabled,
+            String fingerprintSecret
+    ) {
         return new AdaptiveGraphProperties(
                 enabled,
                 false,
@@ -233,7 +244,7 @@ class AssociationLearningRecorderTest {
                 new AdaptiveGraphProperties.Learning(
                         8,
                         32,
-                        enabled ? SECRET : ""
+                        fingerprintSecret
                 ),
                 AdaptiveGraphTestProperties.create(
                         new AdaptiveGraphProperties.BandQuotas(8, 8, 16)
