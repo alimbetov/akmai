@@ -33,7 +33,7 @@ class MultilingualSemanticConceptAnnotationTest {
         assertThat(annotated.metadata())
                 .containsEntry(
                         "semanticConceptVersion",
-                        "semantic-surfaces-ru-kk-v1"
+                        "semantic-surfaces-ru-v1"
                 );
     }
 
@@ -52,6 +52,11 @@ class MultilingualSemanticConceptAnnotationTest {
         assertThat(annotated.metadata().get("semanticDomains"))
                 .asList()
                 .contains("computer_science_ai");
+        assertThat(annotated.metadata())
+                .containsEntry(
+                        "semanticConceptVersion",
+                        "semantic-surfaces-kk-v1"
+                );
     }
 
     private SemanticConceptMatcher matcher() {
