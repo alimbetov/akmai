@@ -15,6 +15,7 @@ import kz.alimbetov.akmai.rag.retrieval.ContextBudget;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.KnowledgeExpansion;
 import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
+import kz.alimbetov.akmai.rag.retrieval.PublishedContextRevalidator;
 import kz.alimbetov.akmai.rag.retrieval.Reranker;
 import kz.alimbetov.akmai.rag.retrieval.ResultFusion;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalExecutionResult;
@@ -36,6 +37,7 @@ public class RagQuestionService {
     private final Reranker reranker;
     private final KnowledgeExpansion knowledgeExpansion;
     private final ContextBudget contextBudget;
+    private final PublishedContextRevalidator contextRevalidator;
     private final ContextAssembler contextAssembler;
     private final CitationValidator citationValidator;
     private final AnswerGenerationService answerGenerationService;
@@ -53,6 +55,7 @@ public class RagQuestionService {
             Reranker reranker,
             KnowledgeExpansion knowledgeExpansion,
             ContextBudget contextBudget,
+            PublishedContextRevalidator contextRevalidator,
             ContextAssembler contextAssembler,
             CitationValidator citationValidator,
             AnswerGenerationService answerGenerationService,
@@ -69,6 +72,7 @@ public class RagQuestionService {
         this.reranker = reranker;
         this.knowledgeExpansion = knowledgeExpansion;
         this.contextBudget = contextBudget;
+        this.contextRevalidator = contextRevalidator;
         this.contextAssembler = contextAssembler;
         this.citationValidator = citationValidator;
         this.answerGenerationService = answerGenerationService;
@@ -116,17 +120,22 @@ public class RagQuestionService {
 
         List<RetrievalHit> bounded =
                 contextBudget.apply(competitive, question);
+        List<RetrievalHit> finalContext =
+                contextRevalidator.revalidate(
+                        bounded,
+                        accessLevels
+                );
 
-        if (bounded.isEmpty()) {
+        if (finalContext.isEmpty()) {
             return insufficientInformation();
         }
 
-        String context = contextAssembler.assemble(bounded);
+        String context = contextAssembler.assemble(finalContext);
         String answer = answerGenerationService.generate(question, context);
 
         CitationValidator.CitationValidation validation =
-                citationValidator.validate(answer, bounded);
-        adaptiveGraphUtilityRecorder.record(bounded, validation);
+                citationValidator.validate(answer, finalContext);
+        adaptiveGraphUtilityRecorder.record(finalContext, validation);
 
         if (validation.answer().isBlank()
                 || validation.citedSources().isEmpty()) {
@@ -136,7 +145,7 @@ public class RagQuestionService {
         associationLearningRecorder.record(
                 queryChunks,
                 accessLevels,
-                bounded,
+                finalContext,
                 validation
         );
 
