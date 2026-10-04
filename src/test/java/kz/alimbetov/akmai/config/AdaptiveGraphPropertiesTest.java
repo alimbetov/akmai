@@ -73,6 +73,32 @@ class AdaptiveGraphPropertiesTest {
     }
 
     @Test
+    void rejectsHotSupportGateBelowWarmSupportGate() {
+        assertThatThrownBy(() ->
+                new AdaptiveGraphProperties.Scoring(
+                        0.45,
+                        0.20,
+                        0.35,
+                        4.0,
+                        4.0,
+                        2.0,
+                        Duration.ofDays(30),
+                        Duration.ofHours(1),
+                        Duration.ofDays(30),
+                        Duration.ofDays(14),
+                        0.35,
+                        0.20,
+                        0.65,
+                        0.50,
+                        4,
+                        2,
+                        1
+                ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("minimumDistinctQuerySupportHot");
+    }
+
+    @Test
     void rejectsStorageShapeThatDoesNotMatchSchemaVersion() {
         assertThatThrownBy(() ->
                 properties(
