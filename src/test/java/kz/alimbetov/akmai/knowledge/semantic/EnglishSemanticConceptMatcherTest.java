@@ -20,9 +20,67 @@ class EnglishSemanticConceptMatcherTest {
         );
 
         assertThat(matches)
+                .filteredOn(match ->
+                        match.conceptId().equals(
+                                "finance_banking.risk_capital.capital_adequacy_ratio"
+                        )
+                )
+                .singleElement()
+                .satisfies(match -> {
+                    assertThat(match.matchMode())
+                            .isEqualTo(SemanticMatchMode.EXACT);
+                    assertThat(match.weight()).isEqualTo(3.0);
+                });
+    }
+
+    @Test
+    void matchesInflectedPhraseThroughLemmaSequence() {
+        var match = matcher.match(
+                        "The bank reported lower risk weighted asset exposure."
+                )
+                .stream()
+                .filter(value ->
+                        value.conceptId().equals(
+                                "finance_banking.risk_capital.risk_weighted_assets"
+                        )
+                )
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(match.matchMode())
+                .isEqualTo(SemanticMatchMode.LEMMA);
+        assertThat(match.weight()).isEqualTo(2.7);
+    }
+
+    @Test
+    void matchesDerivationalVariantOnlyThroughBoundedStemSequence() {
+        var match = matcher.match(
+                        "The system supports payment fraud detecting workflows."
+                )
+                .stream()
+                .filter(value ->
+                        value.conceptId().equals(
+                                "finance_banking.payments_compliance.payment_fraud_detection"
+                        )
+                )
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(match.matchMode())
+                .isEqualTo(SemanticMatchMode.STEM);
+        assertThat(match.weight()).isEqualTo(1.95);
+    }
+
+    @Test
+    void isolatedRootCannotTriggerPhraseConcept() {
+        var matches = matcher.match(
+                "Payment risk remains elevated."
+        );
+
+        assertThat(matches)
                 .extracting(SemanticConceptMatch::conceptId)
-                .contains(
-                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                .doesNotContain(
+                        "finance_banking.payments_compliance.payment_fraud_detection"
                 );
     }
 
