@@ -216,14 +216,14 @@ class MultilingualRetrievalQualityRegressionTest {
             ReferenceGraphRepository referenceRepository =
                     mock(ReferenceGraphRepository.class);
 
-            when(projectionRepository.findByDocumentGenerationAndChunkIds(
-                    anyString(),
-                    anyLong(),
+            when(projectionRepository.findPublishedByKeys(
                     anyList(),
                     anySet()
             )).thenAnswer(invocation -> {
-                List<String> ids = invocation.getArgument(2);
-                return ids.stream()
+                List<PublishedSearchProjectionReader.ProjectionKey> keys =
+                        invocation.getArgument(0);
+                return keys.stream()
+                        .map(PublishedSearchProjectionReader.ProjectionKey::chunkId)
                         .map(projectionsByChunk::get)
                         .filter(java.util.Objects::nonNull)
                         .toList();
@@ -385,6 +385,7 @@ class MultilingualRetrievalQualityRegressionTest {
                     java.util.UUID.nameUUIDFromBytes(
                             chunkId.getBytes(java.nio.charset.StandardCharsets.UTF_8)
                     ).toString(),
+                    1L,
                     "quality-doc",
                     1L,
                     chunkId,
@@ -404,6 +405,7 @@ class MultilingualRetrievalQualityRegressionTest {
             return new SearchProjection(
                     chunkId,
                     "quality-doc",
+                    1L,
                     1L,
                     null,
                     Math.floorMod(chunkId.hashCode(), 1000),
