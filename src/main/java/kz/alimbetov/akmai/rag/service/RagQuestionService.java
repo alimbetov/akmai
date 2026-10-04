@@ -10,6 +10,7 @@ import kz.alimbetov.akmai.knowledge.graph.AssociationLearningRecorder;
 import kz.alimbetov.akmai.rag.api.RagResponse;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
+import kz.alimbetov.akmai.rag.retrieval.AnswerGroundingVerifier;
 import kz.alimbetov.akmai.rag.retrieval.ContextAssembler;
 import kz.alimbetov.akmai.rag.retrieval.ContextBudget;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
@@ -18,6 +19,7 @@ import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
 import kz.alimbetov.akmai.rag.retrieval.PublishedContextRevalidator;
 import kz.alimbetov.akmai.rag.retrieval.Reranker;
 import kz.alimbetov.akmai.rag.retrieval.ResultFusion;
+import kz.alimbetov.akmai.rag.retrieval.TemporalAuthorityFilter;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalExecutionResult;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
@@ -39,9 +41,11 @@ public class RagQuestionService {
     private final Reranker reranker;
     private final KnowledgeExpansion knowledgeExpansion;
     private final ContextBudget contextBudget;
+    private final TemporalAuthorityFilter temporalAuthorityFilter;
     private final PublishedContextRevalidator contextRevalidator;
     private final ContextAssembler contextAssembler;
     private final CitationValidator citationValidator;
+    private final AnswerGroundingVerifier answerGroundingVerifier;
     private final AnswerGenerationService answerGenerationService;
     private final AssociationLearningRecorder associationLearningRecorder;
     private final AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion;
@@ -57,9 +61,11 @@ public class RagQuestionService {
             Reranker reranker,
             KnowledgeExpansion knowledgeExpansion,
             ContextBudget contextBudget,
+            TemporalAuthorityFilter temporalAuthorityFilter,
             PublishedContextRevalidator contextRevalidator,
             ContextAssembler contextAssembler,
             CitationValidator citationValidator,
+            AnswerGroundingVerifier answerGroundingVerifier,
             AnswerGenerationService answerGenerationService,
             AssociationLearningRecorder associationLearningRecorder,
             AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion,
@@ -74,9 +80,11 @@ public class RagQuestionService {
         this.reranker = reranker;
         this.knowledgeExpansion = knowledgeExpansion;
         this.contextBudget = contextBudget;
+        this.temporalAuthorityFilter = temporalAuthorityFilter;
         this.contextRevalidator = contextRevalidator;
         this.contextAssembler = contextAssembler;
         this.citationValidator = citationValidator;
+        this.answerGroundingVerifier = answerGroundingVerifier;
         this.answerGenerationService = answerGenerationService;
         this.associationLearningRecorder = associationLearningRecorder;
         this.adaptiveGraphShadowExpansion = adaptiveGraphShadowExpansion;
@@ -128,8 +136,10 @@ public class RagQuestionService {
                             graphExpanded
                     );
 
+            List<RetrievalHit> authorityEligible =
+                    temporalAuthorityFilter.filter(competitive);
             List<RetrievalHit> bounded =
-                    contextBudget.apply(competitive, question);
+                    contextBudget.apply(authorityEligible, question);
             finalContext = contextRevalidator.revalidate(
                     bounded,
                     accessLevels
@@ -154,6 +164,15 @@ public class RagQuestionService {
 
         if (validation.answer().isBlank()
                 || validation.citedSources().isEmpty()) {
+            return insufficientInformation();
+        }
+
+        AnswerGroundingVerifier.GroundingValidation grounding =
+                answerGroundingVerifier.verify(
+                        validation.answer(),
+                        finalContext
+                );
+        if (!grounding.grounded()) {
             return insufficientInformation();
         }
 
