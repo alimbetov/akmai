@@ -14,8 +14,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class SemanticConceptSurfaceRegistry {
 
-    private static final String MULTILINGUAL_RESOURCE =
-            "semantic/concept-surfaces-ru-kk-v1.yaml";
+    private static final List<String> MULTILINGUAL_RESOURCES = List.of(
+            "semantic/concept-surfaces-ru-v1.yaml",
+            "semantic/concept-surfaces-kk-v1.yaml"
+    );
 
     private final EnglishSemanticConceptCatalog catalog;
     private final Map<String, List<SemanticConceptSurface>> byLanguage;
@@ -28,7 +30,7 @@ public class SemanticConceptSurfaceRegistry {
         this(
                 catalog,
                 new SemanticMorphologyRegistry(List.of(normalizer)),
-                null
+                List.of()
         );
     }
 
@@ -37,13 +39,17 @@ public class SemanticConceptSurfaceRegistry {
             EnglishSemanticConceptCatalog catalog,
             SemanticMorphologyRegistry morphologyRegistry
     ) {
-        this(catalog, morphologyRegistry, loadMultilingualDefinition());
+        this(
+                catalog,
+                morphologyRegistry,
+                loadMultilingualDefinitions()
+        );
     }
 
     SemanticConceptSurfaceRegistry(
             EnglishSemanticConceptCatalog catalog,
             SemanticMorphologyRegistry morphologyRegistry,
-            MultilingualConceptSurfaceDefinition definition
+            List<MultilingualConceptSurfaceDefinition> definitions
     ) {
         this.catalog = catalog;
 
@@ -70,9 +76,24 @@ public class SemanticConceptSurfaceRegistry {
         );
         versions.put("en", catalog.version());
 
-        if (definition != null) {
+        for (MultilingualConceptSurfaceDefinition definition :
+                definitions == null ? List.<MultilingualConceptSurfaceDefinition>of()
+                        : definitions) {
+            if (definition == null
+                    || definition.version() == null
+                    || definition.version().isBlank()) {
+                throw new IllegalArgumentException(
+                        "Semantic surface version is required"
+                );
+            }
+
             for (var languagePack : definition.languages()) {
                 String language = languagePack.language();
+                if (language == null || language.isBlank()) {
+                    throw new IllegalArgumentException(
+                            "Semantic surface language is required"
+                    );
+                }
                 if (surfaces.containsKey(language)) {
                     throw new IllegalArgumentException(
                             "Duplicate semantic surface language: "
@@ -117,6 +138,7 @@ public class SemanticConceptSurfaceRegistry {
                                     + language
                     );
                 }
+
                 surfaces.put(
                         language,
                         List.copyOf(unique.values())
@@ -182,12 +204,19 @@ public class SemanticConceptSurfaceRegistry {
         );
     }
 
-    private static MultilingualConceptSurfaceDefinition
-            loadMultilingualDefinition() {
+    private static List<MultilingualConceptSurfaceDefinition>
+            loadMultilingualDefinitions() {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        try (var input = new ClassPathResource(
-                MULTILINGUAL_RESOURCE
-        ).getInputStream()) {
+        return MULTILINGUAL_RESOURCES.stream()
+                .map(resource -> loadDefinition(mapper, resource))
+                .toList();
+    }
+
+    private static MultilingualConceptSurfaceDefinition loadDefinition(
+            ObjectMapper mapper,
+            String resource
+    ) {
+        try (var input = new ClassPathResource(resource).getInputStream()) {
             return mapper.readValue(
                     input,
                     MultilingualConceptSurfaceDefinition.class
@@ -195,7 +224,7 @@ public class SemanticConceptSurfaceRegistry {
         } catch (IOException exception) {
             throw new UncheckedIOException(
                     "Cannot load multilingual semantic surfaces "
-                            + MULTILINGUAL_RESOURCE,
+                            + resource,
                     exception
             );
         }
