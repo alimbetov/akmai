@@ -12,14 +12,7 @@ class SemanticConceptSurfaceRegistryTest {
     private final EnglishSemanticConceptCatalog conceptCatalog =
             new EnglishSemanticConceptCatalog(domainCatalog);
     private final SemanticMorphologyRegistry morphology =
-            new SemanticMorphologyRegistry(
-                    List.of(
-                            new EnglishSemanticMorphologyNormalizer(),
-                            new RussianSemanticMorphologyNormalizer(),
-                            new KazakhSemanticMorphologyNormalizer(),
-                            new ChineseSemanticMorphologyNormalizer()
-                    )
-            );
+            SemanticTestMorphology.registry();
     private final SemanticConceptSurfaceRegistry registry =
             new SemanticConceptSurfaceRegistry(
                     conceptCatalog,
