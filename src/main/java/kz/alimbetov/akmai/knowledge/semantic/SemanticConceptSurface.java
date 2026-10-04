@@ -4,6 +4,8 @@ import java.util.List;
 
 public record SemanticConceptSurface(
         String conceptId,
+        String domainId,
+        String subdomainId,
         String language,
         String preferredPhrase,
         String lemmaPhrase,
@@ -13,6 +15,12 @@ public record SemanticConceptSurface(
     public SemanticConceptSurface {
         if (conceptId == null || conceptId.isBlank()) {
             throw new IllegalArgumentException("conceptId is required");
+        }
+        if (domainId == null || domainId.isBlank()) {
+            throw new IllegalArgumentException("domainId is required");
+        }
+        if (subdomainId == null || subdomainId.isBlank()) {
+            throw new IllegalArgumentException("subdomainId is required");
         }
         if (language == null || language.isBlank()) {
             throw new IllegalArgumentException("language is required");
