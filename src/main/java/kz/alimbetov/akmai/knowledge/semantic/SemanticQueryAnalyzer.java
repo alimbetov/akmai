@@ -170,8 +170,15 @@ public class SemanticQueryAnalyzer {
                         Character.UnicodeScript.of(codePoint)
                                 == Character.UnicodeScript.LATIN
                 );
-        if (latin && conceptMatcher.supports("en")) {
-            return List.of("en");
+        if (latin) {
+            List<String> result = new ArrayList<>();
+            for (String language :
+                    List.of("en", "de", "fr", "es", "pt", "it", "tr")) {
+                if (conceptMatcher.supports(language)) {
+                    result.add(language);
+                }
+            }
+            return List.copyOf(result);
         }
         return List.of();
     }
