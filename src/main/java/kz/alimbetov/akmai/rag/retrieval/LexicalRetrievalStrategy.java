@@ -200,7 +200,7 @@ public class LexicalRetrievalStrategy implements RetrievalStrategy {
                 ? 0
                 : Math.min(
                         MAX_SEMANTIC_RESULT_SLOTS,
-                        Math.max(1, limit / 4)
+                        limit / 4
                 );
         int baselinePrefix = Math.max(0, limit - semanticSlots);
 
@@ -275,7 +275,8 @@ public class LexicalRetrievalStrategy implements RetrievalStrategy {
             List<String> documentIds,
             Set<Long> accessLevels
     ) {
-        LinkedHashMap<String, SearchProjection> merged = new LinkedHashMap<>();
+        LinkedHashMap<ProjectionKey, SearchProjection> merged =
+                new LinkedHashMap<>();
         List<SearchProjection> values = new ArrayList<>();
         values.addAll(repository.searchLexical(
                 query,
@@ -293,9 +294,7 @@ public class LexicalRetrievalStrategy implements RetrievalStrategy {
         ));
         for (SearchProjection projection : values) {
             merged.putIfAbsent(
-                    projection.documentId()
-                            + "\u0000"
-                            + projection.chunkId(),
+                    ProjectionKey.of(projection),
                     projection
             );
             if (merged.size() >= properties.lexicalLimit()) {
