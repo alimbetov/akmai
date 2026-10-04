@@ -291,7 +291,7 @@ public class AppParameterService {
             }
             lastKnownGood.put(key, resolved);
             return resolved;
-        } catch (RuntimeException exception) {
+        } catch (DataAccessException exception) {
             LOGGER.warn(
                     "app_parameter_read event=fallback key={} errorType={}",
                     key.key(),
