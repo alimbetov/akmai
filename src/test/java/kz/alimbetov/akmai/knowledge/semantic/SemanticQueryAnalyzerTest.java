@@ -70,7 +70,7 @@ class SemanticQueryAnalyzerTest {
     }
 
     @Test
-    void fourLanguagesResolveToSameCanonicalConcept() {
+    void allSupportedLanguagesResolveToSameCanonicalConcept() {
         String en = conceptId("capital adequacy ratio");
         String ru = conceptId(
                 "коэффициент достаточности капитала"
@@ -80,7 +80,25 @@ class SemanticQueryAnalyzerTest {
         );
         String zh = conceptId("资本充足率");
 
-        assertThat(en).isEqualTo(ru).isEqualTo(kk).isEqualTo(zh);
+        String de = conceptId("Kapitaladäquanzquote");
+        String fr = conceptId("ratio adéquation des fonds propres");
+        String es = conceptId("ratio de adecuación de capital");
+        String pt = conceptId("índice de adequação de capital");
+        String it = conceptId("coefficiente di adeguatezza patrimoniale");
+        String tr = conceptId("sermaye yeterlilik oranı");
+        String el = conceptId("δείκτης κεφαλαιακής επάρκειας");
+
+        assertThat(en)
+                .isEqualTo(ru)
+                .isEqualTo(kk)
+                .isEqualTo(zh)
+                .isEqualTo(de)
+                .isEqualTo(fr)
+                .isEqualTo(es)
+                .isEqualTo(pt)
+                .isEqualTo(it)
+                .isEqualTo(tr)
+                .isEqualTo(el);
     }
 
     @Test
@@ -106,6 +124,10 @@ class SemanticQueryAnalyzerTest {
                         "finance_banking.risk_capital.capital_adequacy_ratio"
                 );
         assertThat(conceptId("sermaye yeterlilik oranı"))
+                .isEqualTo(
+                        "finance_banking.risk_capital.capital_adequacy_ratio"
+                );
+        assertThat(conceptId("δείκτης κεφαλαιακής επάρκειας"))
                 .isEqualTo(
                         "finance_banking.risk_capital.capital_adequacy_ratio"
                 );
