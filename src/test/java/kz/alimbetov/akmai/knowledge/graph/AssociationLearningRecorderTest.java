@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,8 @@ import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterKey;
+import kz.alimbetov.akmai.runtimeconfig.AppParameterService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -44,6 +47,36 @@ class AssociationLearningRecorderTest {
         );
 
         verify(repository, never()).reinforceSymmetricBatch(anyList());
+    }
+
+    @Test
+    void runtimeParameterCanEnableLearningWithoutRestart() {
+        AdaptiveChunkGraphRepository repository =
+                mock(AdaptiveChunkGraphRepository.class);
+        AdaptiveGraphProperties properties = properties(false);
+        AppParameterService appParameters =
+                mock(AppParameterService.class);
+        when(appParameters.isEnabled(
+                AppParameterKey.ADAPTIVE_GRAPH_LEARNING_ENABLED
+        )).thenReturn(true);
+
+        AssociationLearningRecorder recorder =
+                new AssociationLearningRecorder(
+                        properties,
+                        repository,
+                        new PrivacySafeQueryFingerprint(properties),
+                        mock(AkmaiMetrics.class),
+                        appParameters
+                );
+
+        recorder.record(
+                List.of(query()),
+                Set.of(1L),
+                List.of(hit("a", "ca", 0.9), hit("b", "cb", 0.8)),
+                validation(1, 2)
+        );
+
+        verify(repository).reinforceSymmetricBatch(anyList());
     }
 
     @Test
