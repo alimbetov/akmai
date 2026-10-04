@@ -47,6 +47,14 @@ class AdaptiveGraphThresholdCalibratorTest {
     }
 
     @Test
+    void targetsCompetitionMinGraphScore() {
+        assertThat(AdaptiveGraphThresholdCalibrator.TARGET_PARAMETER)
+                .isEqualTo(
+                        "akmai.adaptive-graph.competition.min-graph-score"
+                );
+    }
+
+    @Test
     void independentReplayMustPassBeforeQualityGateCandidate() {
         AdaptiveGraphThresholdCalibrator.ReplayValidationReport passing =
                 calibrator.validateReplay(
@@ -136,6 +144,23 @@ class AdaptiveGraphThresholdCalibratorTest {
                                 .CalibrationDecision.INSUFFICIENT_DATA
                 );
         assertThat(report.selectedThreshold()).isNull();
+    }
+
+    @Test
+    void rejectsThresholdSweepWithDifferentRequestCohorts() {
+        List<AdaptiveGraphThresholdCalibrator.ReplayObservation> observations =
+                List.of(
+                        observation("q1", 0.50, 0.10, 2.0),
+                        observation("q2", 0.50, 0.11, 2.0),
+                        observation("q1", 0.60, 0.10, 2.0),
+                        observation("q3", 0.60, 0.11, 2.0)
+                );
+
+        assertThatThrownBy(() ->
+                calibrator.calibrate(observations, policy())
+        )
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("same replayKey cohort");
     }
 
     @Test
