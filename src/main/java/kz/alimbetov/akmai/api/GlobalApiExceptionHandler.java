@@ -89,10 +89,23 @@ public class GlobalApiExceptionHandler {
                 .body(result.getBody());
     }
 
+    @ExceptionHandler(AppParameterUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> appParameterUnavailable(
+            AppParameterUnavailableException exception,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "APP_PARAMETER_STORE_UNAVAILABLE",
+                exception.getMessage(),
+                request,
+                Map.of()
+        );
+    }
+
     @ExceptionHandler({
         RetrievalUnavailableException.class,
-        AnswerGenerationException.class,
-        AppParameterUnavailableException.class
+        AnswerGenerationException.class
     })
     public ResponseEntity<ApiErrorResponse> dependencyUnavailable(
             RuntimeException exception,
