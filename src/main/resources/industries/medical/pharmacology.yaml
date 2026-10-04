@@ -1,0 +1,49 @@
+id: pharmacology
+domain: MEDICAL
+names:
+  kk: Фармакология
+  ru: Фармакология
+  en: Pharmacology
+  zh: 药理学
+  de: Pharmakologie
+  fr: Pharmacologie
+  es: Farmacología
+  pt: Farmacologia
+  it: Farmacologia
+  tr: Farmakoloji
+  el: Φαρμακολογία
+headings: {}
+semanticTypes:
+  kk:
+    DOSAGE:
+      - '(?iu)(ұсынылатын доза|дозаны түзету)'
+  ru:
+    DOSAGE:
+      - '(?iu)(рекомендуемая доза|коррекц(?:ия|ии) доз)'
+  en:
+    DOSAGE:
+      - '(?iu)(recommended dose|dose adjustment)'
+  zh:
+    DOSAGE:
+      - '(推荐剂量|剂量调整)'
+  de:
+    DOSAGE:
+      - '(?iu)(empfohlene dosis|dosisanpassung)'
+  fr:
+    DOSAGE:
+      - '(?iu)(dose recommandée|ajustement de la dose)'
+  es:
+    DOSAGE:
+      - '(?iu)(dosis recomendada|ajuste de dosis)'
+  pt:
+    DOSAGE:
+      - '(?iu)(dose recomendada|ajuste da dose)'
+  it:
+    DOSAGE:
+      - '(?iu)(dose raccomandata|aggiustamento della dose)'
+  tr:
+    DOSAGE:
+      - '(?iu)(önerilen doz|doz ayarlaması)'
+  el:
+    DOSAGE:
+      - '(?iu)(συνιστώμενη δόση|προσαρμογή της δόσης)'
