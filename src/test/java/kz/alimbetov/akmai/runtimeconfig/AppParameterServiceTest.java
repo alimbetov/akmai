@@ -159,6 +159,34 @@ class AppParameterServiceTest {
     }
 
     @Test
+    void runtimeReadDoesNotMaskCorruptPersistedValueAsAvailabilityFallback() {
+        AppParameterRepository repository =
+                mock(AppParameterRepository.class);
+        AppParameterKey key =
+                AppParameterKey.ADAPTIVE_GRAPH_MAINTENANCE_ENABLED;
+        AppParameter corrupt = new AppParameter(
+                key.key(),
+                AppParameterType.BOOLEAN,
+                "not-a-boolean",
+                2L,
+                Instant.parse("2026-10-04T08:00:00Z"),
+                "operator"
+        );
+        when(repository.find(key.key()))
+                .thenReturn(Optional.of(corrupt));
+
+        AppParameterService service = service(
+                repository,
+                mock(AdaptiveGraphProperties.class),
+                mock(AdaptiveGraphCompetitionProperties.class)
+        );
+
+        assertThatThrownBy(() -> service.get(key))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Invalid BOOLEAN value");
+    }
+
+    @Test
     void authoritativeAdminReadDoesNotHideDatabaseFailure() {
         AppParameterRepository repository =
                 mock(AppParameterRepository.class);
