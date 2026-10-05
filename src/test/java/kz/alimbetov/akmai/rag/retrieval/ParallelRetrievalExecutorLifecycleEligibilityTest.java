@@ -25,7 +25,8 @@ class ParallelRetrievalExecutorLifecycleEligibilityTest {
             RetrievalType.LEXICAL,
             RetrievalType.CONCEPT,
             RetrievalType.IDENTIFIER,
-            RetrievalType.REFERENCE
+            RetrievalType.REFERENCE,
+            RetrievalType.GRAPH
     );
 
     @Test
