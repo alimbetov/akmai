@@ -1,0 +1,1171 @@
+version: semantic-surfaces-zh-v1
+languages:
+  - language: zh
+    surfaces:
+      - conceptId: finance_banking.lending_credit.credit_risk_assessment
+        preferredPhrase: 信用风险评估
+        aliases: []
+      - conceptId: finance_banking.lending_credit.consumer_loan_underwriting
+        preferredPhrase: 消费贷款审批
+        aliases: []
+      - conceptId: finance_banking.lending_credit.corporate_credit_facility
+        preferredPhrase: 公司授信额度
+        aliases: []
+      - conceptId: finance_banking.lending_credit.nonperforming_loan_ratio
+        preferredPhrase: 不良贷款率
+        aliases: []
+      - conceptId: finance_banking.lending_credit.loan_loss_provision
+        preferredPhrase: 贷款损失准备
+        aliases: []
+      - conceptId: finance_banking.lending_credit.debt_service_coverage
+        preferredPhrase: 债务偿付覆盖
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.customer_deposit_base
+        preferredPhrase: 客户存款基础
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.liquidity_coverage_ratio
+        preferredPhrase: 流动性覆盖率
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.net_stable_funding
+        preferredPhrase: 净稳定资金
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.deposit_interest_rate
+        preferredPhrase: 存款利率
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.cash_reserve_requirement
+        preferredPhrase: 法定准备金要求
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.liquidity_stress_testing
+        preferredPhrase: 流动性压力测试
+        aliases: []
+      - conceptId: finance_banking.risk_capital.capital_adequacy_ratio
+        preferredPhrase: 资本充足率
+        aliases: []
+      - conceptId: finance_banking.risk_capital.risk_weighted_assets
+        preferredPhrase: 风险加权资产
+        aliases: []
+      - conceptId: finance_banking.risk_capital.common_equity_tier
+        preferredPhrase: 普通股一级资本
+        aliases: []
+      - conceptId: finance_banking.risk_capital.market_risk_exposure
+        preferredPhrase: 市场风险敞口
+        aliases: []
+      - conceptId: finance_banking.risk_capital.operational_risk_capital
+        preferredPhrase: 操作风险资本
+        aliases: []
+      - conceptId: finance_banking.risk_capital.internal_capital_assessment
+        preferredPhrase: 内部资本评估
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.payment_settlement_system
+        preferredPhrase: 支付结算系统
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.anti_money_laundering
+        preferredPhrase: 反洗钱管理
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.know_your_customer
+        preferredPhrase: 客户身份识别
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.suspicious_transaction_monitoring
+        preferredPhrase: 可疑交易监测
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.cross_border_payment
+        preferredPhrase: 跨境支付
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.payment_fraud_detection
+        preferredPhrase: 支付欺诈检测
+        aliases: []
+
+      - conceptId: insurance.underwriting_pricing.insurance_underwriting_process
+        preferredPhrase: 保险核保流程
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.risk_based_pricing
+        preferredPhrase: 风险定价
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.actuarial_pricing_model
+        preferredPhrase: 精算定价模型
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.policy_coverage_limit
+        preferredPhrase: 保单保障限额
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.insurance_premium_calculation
+        preferredPhrase: 保险费计算
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.underwriting_risk_appetite
+        preferredPhrase: 核保风险偏好
+        aliases: []
+      - conceptId: insurance.claims_management.insurance_claim_assessment
+        preferredPhrase: 保险理赔评估
+        aliases: []
+      - conceptId: insurance.claims_management.claims_settlement_process
+        preferredPhrase: 理赔结算流程
+        aliases: []
+      - conceptId: insurance.claims_management.loss_adjustment_expense
+        preferredPhrase: 损失理算费用
+        aliases: []
+      - conceptId: insurance.claims_management.fraudulent_claim_detection
+        preferredPhrase: 欺诈理赔检测
+        aliases: []
+      - conceptId: insurance.claims_management.claim_reserve_estimate
+        preferredPhrase: 理赔准备金估算
+        aliases: []
+      - conceptId: insurance.claims_management.claims_handling_procedure
+        preferredPhrase: 理赔处理程序
+        aliases: []
+      - conceptId: insurance.life_health.life_insurance_policy
+        preferredPhrase: 人寿保险保单
+        aliases: []
+      - conceptId: insurance.life_health.health_insurance_coverage
+        preferredPhrase: 健康保险保障
+        aliases: []
+      - conceptId: insurance.life_health.mortality_risk_model
+        preferredPhrase: 死亡风险模型
+        aliases: []
+      - conceptId: insurance.life_health.morbidity_risk_estimate
+        preferredPhrase: 发病风险估计
+        aliases: []
+      - conceptId: insurance.life_health.medical_expense_reimbursement
+        preferredPhrase: 医疗费用报销
+        aliases: []
+      - conceptId: insurance.life_health.policyholder_benefit_schedule
+        preferredPhrase: 保单持有人给付计划
+        aliases: []
+      - conceptId: insurance.property_casualty.property_damage_coverage
+        preferredPhrase: 财产损失保障
+        aliases: []
+      - conceptId: insurance.property_casualty.casualty_insurance_claim
+        preferredPhrase: 责任保险理赔
+        aliases: []
+      - conceptId: insurance.property_casualty.catastrophe_risk_model
+        preferredPhrase: 巨灾风险模型
+        aliases: []
+      - conceptId: insurance.property_casualty.business_interruption_coverage
+        preferredPhrase: 营业中断保障
+        aliases: []
+      - conceptId: insurance.property_casualty.liability_coverage_limit
+        preferredPhrase: 责任保障限额
+        aliases: []
+      - conceptId: insurance.property_casualty.insured_loss_estimate
+        preferredPhrase: 保险损失估计
+        aliases: []
+
+      - conceptId: energy_utilities.power_generation.electricity_generation_capacity
+        preferredPhrase: 发电容量
+        aliases: []
+      - conceptId: energy_utilities.power_generation.thermal_power_plant
+        preferredPhrase: 火力发电厂
+        aliases: []
+      - conceptId: energy_utilities.power_generation.combined_cycle_turbine
+        preferredPhrase: 联合循环燃气轮机
+        aliases: []
+      - conceptId: energy_utilities.power_generation.generation_dispatch_schedule
+        preferredPhrase: 发电调度计划
+        aliases: []
+      - conceptId: energy_utilities.power_generation.power_plant_efficiency
+        preferredPhrase: 电厂效率
+        aliases: []
+      - conceptId: energy_utilities.power_generation.reserve_generation_margin
+        preferredPhrase: 发电备用裕度
+        aliases: []
+      - conceptId: energy_utilities.power_grid.transmission_grid_stability
+        preferredPhrase: 输电网稳定性
+        aliases: []
+      - conceptId: energy_utilities.power_grid.distribution_network_operator
+        preferredPhrase: 配电网运营商
+        aliases: []
+      - conceptId: energy_utilities.power_grid.high_voltage_substation
+        preferredPhrase: 高压变电站
+        aliases: []
+      - conceptId: energy_utilities.power_grid.grid_frequency_control
+        preferredPhrase: 电网频率控制
+        aliases: []
+      - conceptId: energy_utilities.power_grid.power_flow_analysis
+        preferredPhrase: 潮流分析
+        aliases: []
+      - conceptId: energy_utilities.power_grid.electricity_network_congestion
+        preferredPhrase: 电网拥塞
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.wholesale_electricity_market
+        preferredPhrase: 电力批发市场
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.day_ahead_market
+        preferredPhrase: 日前市场
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.balancing_energy_market
+        preferredPhrase: 平衡电力市场
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.electricity_tariff_regulation
+        preferredPhrase: 电价监管
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.energy_demand_forecast
+        preferredPhrase: 能源需求预测
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.capacity_market_mechanism
+        preferredPhrase: 容量市场机制
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.solar_power_generation
+        preferredPhrase: 太阳能发电
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.wind_power_capacity
+        preferredPhrase: 风电装机容量
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_energy_certificate
+        preferredPhrase: 可再生能源证书
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.battery_energy_storage
+        preferredPhrase: 电池储能
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.grid_scale_storage
+        preferredPhrase: 电网规模储能
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_integration_study
+        preferredPhrase: 可再生能源并网研究
+        aliases: []
+
+      - conceptId: oil_gas_mining.upstream_operations.oil_reservoir_characterization
+        preferredPhrase: 油藏表征
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.hydrocarbon_exploration_program
+        preferredPhrase: 油气勘探计划
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.drilling_operations_plan
+        preferredPhrase: 钻井作业计划
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.well_completion_design
+        preferredPhrase: 完井设计
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.enhanced_oil_recovery
+        preferredPhrase: 提高采收率
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.reservoir_pressure_management
+        preferredPhrase: 油藏压力管理
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.crude_oil_pipeline
+        preferredPhrase: 原油管道
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.natural_gas_pipeline
+        preferredPhrase: 天然气管道
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.gas_processing_facility
+        preferredPhrase: 天然气处理设施
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_integrity_management
+        preferredPhrase: 管道完整性管理
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.hydrocarbon_storage_terminal
+        preferredPhrase: 油气储存终端
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.gas_compression_station
+        preferredPhrase: 天然气压缩站
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.crude_oil_refining
+        preferredPhrase: 原油炼制
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.petroleum_product_yield
+        preferredPhrase: 石油产品收率
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_process_unit
+        preferredPhrase: 炼油工艺装置
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.fuel_blending_specification
+        preferredPhrase: 燃料调和规范
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.petrochemical_feedstock_supply
+        preferredPhrase: 石化原料供应
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_turnaround_maintenance
+        preferredPhrase: 炼油厂停工检修
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mineral_resource_estimate
+        preferredPhrase: 矿产资源估算
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.open_pit_mining
+        preferredPhrase: 露天开采
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.underground_mine_design
+        preferredPhrase: 地下矿山设计
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.ore_processing_plant
+        preferredPhrase: 矿石加工厂
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mine_tailings_management
+        preferredPhrase: 矿山尾矿管理
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mineral_reserve_classification
+        preferredPhrase: 矿产储量分类
+        aliases: []
+
+      - conceptId: manufacturing.production_systems.production_planning_system
+        preferredPhrase: 生产计划系统
+        aliases: []
+      - conceptId: manufacturing.production_systems.manufacturing_execution_system
+        preferredPhrase: 制造执行系统
+        aliases: []
+      - conceptId: manufacturing.production_systems.production_line_balancing
+        preferredPhrase: 生产线平衡
+        aliases: []
+      - conceptId: manufacturing.production_systems.takt_time_calculation
+        preferredPhrase: 节拍时间计算
+        aliases: []
+      - conceptId: manufacturing.production_systems.overall_equipment_effectiveness
+        preferredPhrase: 设备综合效率
+        aliases: []
+      - conceptId: manufacturing.production_systems.batch_production_schedule
+        preferredPhrase: 批量生产计划
+        aliases: []
+      - conceptId: manufacturing.quality_management.statistical_process_control
+        preferredPhrase: 统计过程控制
+        aliases: []
+      - conceptId: manufacturing.quality_management.quality_management_system
+        preferredPhrase: 质量管理体系
+        aliases: []
+      - conceptId: manufacturing.quality_management.root_cause_analysis
+        preferredPhrase: 根本原因分析
+        aliases: []
+      - conceptId: manufacturing.quality_management.nonconformance_corrective_action
+        preferredPhrase: 不符合项纠正措施
+        aliases: []
+      - conceptId: manufacturing.quality_management.process_capability_index
+        preferredPhrase: 过程能力指数
+        aliases: []
+      - conceptId: manufacturing.quality_management.incoming_quality_inspection
+        preferredPhrase: 来料质量检验
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.preventive_maintenance_schedule
+        preferredPhrase: 预防性维护计划
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.predictive_maintenance_model
+        preferredPhrase: 预测性维护模型
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.reliability_centered_maintenance
+        preferredPhrase: 以可靠性为中心的维护
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.mean_time_between_failures
+        preferredPhrase: 平均故障间隔时间
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.equipment_failure_mode
+        preferredPhrase: 设备故障模式
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.maintenance_work_order
+        preferredPhrase: 维护工单
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.industrial_process_automation
+        preferredPhrase: 工业过程自动化
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.programmable_logic_controller
+        preferredPhrase: 可编程逻辑控制器
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.production_capacity_utilization
+        preferredPhrase: 产能利用率
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.industrial_safety_procedure
+        preferredPhrase: 工业安全程序
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.plant_operations_management
+        preferredPhrase: 工厂运营管理
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.process_optimization_study
+        preferredPhrase: 工艺优化研究
+        aliases: []
+
+      - conceptId: construction_real_estate.design_construction.building_structural_design
+        preferredPhrase: 建筑结构设计
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.construction_project_schedule
+        preferredPhrase: 建设项目进度计划
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.building_information_modeling
+        preferredPhrase: 建筑信息模型
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.reinforced_concrete_structure
+        preferredPhrase: 钢筋混凝土结构
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.construction_site_management
+        preferredPhrase: 施工现场管理
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.building_code_compliance
+        preferredPhrase: 建筑规范合规
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.commercial_property_valuation
+        preferredPhrase: 商业地产估值
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.residential_property_market
+        preferredPhrase: 住宅房地产市场
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.rental_yield_analysis
+        preferredPhrase: 租金收益率分析
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.real_estate_transaction
+        preferredPhrase: 房地产交易
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.property_market_appraisal
+        preferredPhrase: 房地产市场评估
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.investment_property_return
+        preferredPhrase: 投资性房地产回报
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.facility_maintenance_plan
+        preferredPhrase: 设施维护计划
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.building_energy_performance
+        preferredPhrase: 建筑能源性能
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.property_asset_management
+        preferredPhrase: 房地产资产管理
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.preventive_facility_maintenance
+        preferredPhrase: 设施预防性维护
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.building_occupancy_management
+        preferredPhrase: 建筑使用管理
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.facilities_service_contract
+        preferredPhrase: 设施服务合同
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.construction_cost_estimate
+        preferredPhrase: 建设成本估算
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.earned_value_management
+        preferredPhrase: 挣值管理
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.project_schedule_variance
+        preferredPhrase: 项目进度偏差
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.construction_risk_register
+        preferredPhrase: 建设风险登记册
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.contractor_progress_payment
+        preferredPhrase: 承包商进度付款
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.change_order_management
+        preferredPhrase: 变更订单管理
+        aliases: []
+
+      - conceptId: transport_logistics.freight_transport.freight_transportation_network
+        preferredPhrase: 货运网络
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.intermodal_freight_terminal
+        preferredPhrase: 多式联运货运站
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.cargo_transport_capacity
+        preferredPhrase: 货物运输能力
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.rail_freight_service
+        preferredPhrase: 铁路货运服务
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.road_freight_operation
+        preferredPhrase: 公路货运运营
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.air_cargo_handling
+        preferredPhrase: 航空货物处理
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_management_system
+        preferredPhrase: 仓库管理系统
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.distribution_center_operation
+        preferredPhrase: 配送中心运营
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.inventory_storage_policy
+        preferredPhrase: 库存储存策略
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.order_fulfillment_process
+        preferredPhrase: 订单履行流程
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_picking_strategy
+        preferredPhrase: 仓库拣选策略
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.cold_chain_logistics
+        preferredPhrase: 冷链物流
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_maintenance_program
+        preferredPhrase: 车队维护计划
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_route_optimization
+        preferredPhrase: 车辆路线优化
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_fuel_efficiency
+        preferredPhrase: 车队燃油效率
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.driver_safety_management
+        preferredPhrase: 驾驶员安全管理
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_utilization_rate
+        preferredPhrase: 车辆利用率
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_telematics_system
+        preferredPhrase: 车队远程信息系统
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supply_chain_disruption
+        preferredPhrase: 供应链中断
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supplier_lead_time
+        preferredPhrase: 供应商交付周期
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.logistics_network_optimization
+        preferredPhrase: 物流网络优化
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.demand_supply_planning
+        preferredPhrase: 供需计划
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supply_chain_resilience
+        preferredPhrase: 供应链韧性
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.last_mile_delivery
+        preferredPhrase: 最后一公里配送
+        aliases: []
+
+      - conceptId: agriculture_food.crop_science.crop_yield_forecast
+        preferredPhrase: 作物产量预测
+        aliases: []
+      - conceptId: agriculture_food.crop_science.soil_nutrient_management
+        preferredPhrase: 土壤养分管理
+        aliases: []
+      - conceptId: agriculture_food.crop_science.precision_agriculture_system
+        preferredPhrase: 精准农业系统
+        aliases: []
+      - conceptId: agriculture_food.crop_science.integrated_pest_management
+        preferredPhrase: 综合虫害管理
+        aliases: []
+      - conceptId: agriculture_food.crop_science.irrigation_scheduling_model
+        preferredPhrase: 灌溉调度模型
+        aliases: []
+      - conceptId: agriculture_food.crop_science.crop_disease_monitoring
+        preferredPhrase: 作物病害监测
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.livestock_health_management
+        preferredPhrase: 牲畜健康管理
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.animal_feed_formulation
+        preferredPhrase: 动物饲料配方
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.dairy_production_system
+        preferredPhrase: 乳品生产系统
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.herd_reproductive_performance
+        preferredPhrase: 畜群繁殖性能
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.livestock_disease_control
+        preferredPhrase: 牲畜疾病控制
+        aliases: []
+      - conceptId: agriculture_food.livestock_production.animal_welfare_standard
+        preferredPhrase: 动物福利标准
+        aliases: []
+      - conceptId: agriculture_food.food_processing.food_processing_technology
+        preferredPhrase: 食品加工技术
+        aliases: []
+      - conceptId: agriculture_food.food_processing.food_production_line
+        preferredPhrase: 食品生产线
+        aliases: []
+      - conceptId: agriculture_food.food_processing.thermal_food_processing
+        preferredPhrase: 食品热加工
+        aliases: []
+      - conceptId: agriculture_food.food_processing.food_packaging_system
+        preferredPhrase: 食品包装系统
+        aliases: []
+      - conceptId: agriculture_food.food_processing.shelf_life_evaluation
+        preferredPhrase: 保质期评估
+        aliases: []
+      - conceptId: agriculture_food.food_processing.food_quality_control
+        preferredPhrase: 食品质量控制
+        aliases: []
+      - conceptId: agriculture_food.food_safety.food_safety_management
+        preferredPhrase: 食品安全管理
+        aliases: []
+      - conceptId: agriculture_food.food_safety.hazard_analysis_control
+        preferredPhrase: 危害分析控制
+        aliases: []
+      - conceptId: agriculture_food.food_safety.microbial_contamination_risk
+        preferredPhrase: 微生物污染风险
+        aliases: []
+      - conceptId: agriculture_food.food_safety.food_traceability_system
+        preferredPhrase: 食品追溯系统
+        aliases: []
+      - conceptId: agriculture_food.food_safety.allergen_control_program
+        preferredPhrase: 过敏原控制计划
+        aliases: []
+      - conceptId: agriculture_food.food_safety.food_hygiene_standard
+        preferredPhrase: 食品卫生标准
+        aliases: []
+
+      - conceptId: mathematics_statistics.probability_statistics.probability_distribution_function
+        preferredPhrase: 概率分布函数
+        aliases: []
+      - conceptId: mathematics_statistics.probability_statistics.statistical_hypothesis_testing
+        preferredPhrase: 统计假设检验
+        aliases: []
+      - conceptId: mathematics_statistics.probability_statistics.maximum_likelihood_estimation
+        preferredPhrase: 最大似然估计
+        aliases: []
+      - conceptId: mathematics_statistics.probability_statistics.bayesian_posterior_distribution
+        preferredPhrase: 贝叶斯后验分布
+        aliases: []
+      - conceptId: mathematics_statistics.probability_statistics.confidence_interval_estimation
+        preferredPhrase: 置信区间估计
+        aliases: []
+      - conceptId: mathematics_statistics.probability_statistics.stochastic_process_model
+        preferredPhrase: 随机过程模型
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.linear_algebra_system
+        preferredPhrase: 线性代数系统
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.eigenvalue_decomposition_method
+        preferredPhrase: 特征值分解方法
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.abstract_algebra_structure
+        preferredPhrase: 抽象代数结构
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.differential_geometry_manifold
+        preferredPhrase: 微分几何流形
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.matrix_factorization_method
+        preferredPhrase: 矩阵分解方法
+        aliases: []
+      - conceptId: mathematics_statistics.algebra_geometry.vector_space_basis
+        preferredPhrase: 向量空间基
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.constrained_optimization_problem
+        preferredPhrase: 约束优化问题
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.convex_optimization_method
+        preferredPhrase: 凸优化方法
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.integer_programming_model
+        preferredPhrase: 整数规划模型
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.gradient_descent_algorithm
+        preferredPhrase: 梯度下降算法
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.multi_objective_optimization
+        preferredPhrase: 多目标优化
+        aliases: []
+      - conceptId: mathematics_statistics.optimization.nonlinear_optimization_solver
+        preferredPhrase: 非线性优化求解器
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.numerical_integration_method
+        preferredPhrase: 数值积分方法
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.finite_difference_scheme
+        preferredPhrase: 有限差分格式
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.numerical_stability_analysis
+        preferredPhrase: 数值稳定性分析
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.iterative_linear_solver
+        preferredPhrase: 迭代线性求解器
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.differential_equation_solver
+        preferredPhrase: 微分方程求解器
+        aliases: []
+      - conceptId: mathematics_statistics.numerical_methods.numerical_error_estimate
+        preferredPhrase: 数值误差估计
+        aliases: []
+
+      - conceptId: physics_astronomy.classical_mechanics.newtonian_motion_equation
+        preferredPhrase: 牛顿运动方程
+        aliases: []
+      - conceptId: physics_astronomy.classical_mechanics.conservation_of_momentum
+        preferredPhrase: 动量守恒
+        aliases: []
+      - conceptId: physics_astronomy.classical_mechanics.rigid_body_dynamics
+        preferredPhrase: 刚体动力学
+        aliases: []
+      - conceptId: physics_astronomy.classical_mechanics.harmonic_oscillator_model
+        preferredPhrase: 简谐振子模型
+        aliases: []
+      - conceptId: physics_astronomy.classical_mechanics.rotational_motion_analysis
+        preferredPhrase: 转动运动分析
+        aliases: []
+      - conceptId: physics_astronomy.classical_mechanics.classical_mechanics_system
+        preferredPhrase: 经典力学系统
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.thermodynamic_state_variable
+        preferredPhrase: 热力学状态变量
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.heat_transfer_coefficient
+        preferredPhrase: 传热系数
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.entropy_production_rate
+        preferredPhrase: 熵产生速率
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.phase_equilibrium_condition
+        preferredPhrase: 相平衡条件
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.thermodynamic_cycle_efficiency
+        preferredPhrase: 热力循环效率
+        aliases: []
+      - conceptId: physics_astronomy.thermodynamics.equation_of_state
+        preferredPhrase: 状态方程
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.electromagnetic_field_equation
+        preferredPhrase: 电磁场方程
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.electric_potential_difference
+        preferredPhrase: 电势差
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.magnetic_flux_density
+        preferredPhrase: 磁通密度
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.electromagnetic_wave_propagation
+        preferredPhrase: 电磁波传播
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.maxwell_equation_system
+        preferredPhrase: 麦克斯韦方程组
+        aliases: []
+      - conceptId: physics_astronomy.electromagnetism.electric_field_strength
+        preferredPhrase: 电场强度
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.stellar_evolution_model
+        preferredPhrase: 恒星演化模型
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.galactic_rotation_curve
+        preferredPhrase: 星系旋转曲线
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.cosmic_microwave_background
+        preferredPhrase: 宇宙微波背景
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.black_hole_accretion
+        preferredPhrase: 黑洞吸积
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.exoplanet_orbital_period
+        preferredPhrase: 系外行星轨道周期
+        aliases: []
+      - conceptId: physics_astronomy.astrophysics.gravitational_wave_signal
+        preferredPhrase: 引力波信号
+        aliases: []
+
+      - conceptId: chemistry_materials.organic_chemistry.organic_reaction_mechanism
+        preferredPhrase: 有机反应机理
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.carbon_carbon_bond
+        preferredPhrase: 碳碳键
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.functional_group_transformation
+        preferredPhrase: 官能团转化
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.stereochemical_reaction_pathway
+        preferredPhrase: 立体化学反应路径
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.organic_synthesis_route
+        preferredPhrase: 有机合成路线
+        aliases: []
+      - conceptId: chemistry_materials.organic_chemistry.reaction_yield_optimization
+        preferredPhrase: 反应收率优化
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.mass_spectrometry_analysis
+        preferredPhrase: 质谱分析
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.high_performance_chromatography
+        preferredPhrase: 高效色谱
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.analytical_detection_limit
+        preferredPhrase: 分析检测限
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.chemical_calibration_curve
+        preferredPhrase: 化学校准曲线
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.quantitative_chemical_analysis
+        preferredPhrase: 定量化学分析
+        aliases: []
+      - conceptId: chemistry_materials.analytical_chemistry.sample_preparation_method
+        preferredPhrase: 样品制备方法
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.chemical_reaction_kinetics
+        preferredPhrase: 化学反应动力学
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.molecular_orbital_theory
+        preferredPhrase: 分子轨道理论
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.thermodynamic_equilibrium_constant
+        preferredPhrase: 热力学平衡常数
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.electrochemical_cell_potential
+        preferredPhrase: 电化学电池电势
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.molecular_spectroscopy_analysis
+        preferredPhrase: 分子光谱分析
+        aliases: []
+      - conceptId: chemistry_materials.physical_chemistry.surface_adsorption_process
+        preferredPhrase: 表面吸附过程
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.crystal_structure_analysis
+        preferredPhrase: 晶体结构分析
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.mechanical_material_property
+        preferredPhrase: 材料机械性能
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.polymer_composite_material
+        preferredPhrase: 聚合物复合材料
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.corrosion_resistance_testing
+        preferredPhrase: 耐腐蚀性能测试
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.material_phase_transition
+        preferredPhrase: 材料相变
+        aliases: []
+      - conceptId: chemistry_materials.materials_science.nanomaterial_surface_property
+        preferredPhrase: 纳米材料表面性质
+        aliases: []
+
+      - conceptId: biology_genetics.molecular_biology.gene_expression_regulation
+        preferredPhrase: 基因表达调控
+        aliases: []
+      - conceptId: biology_genetics.molecular_biology.protein_synthesis_pathway
+        preferredPhrase: 蛋白质合成途径
+        aliases: []
+      - conceptId: biology_genetics.molecular_biology.dna_replication_process
+        preferredPhrase: DNA复制过程
+        aliases: []
+      - conceptId: biology_genetics.molecular_biology.rna_transcription_mechanism
+        preferredPhrase: RNA转录机制
+        aliases: []
+      - conceptId: biology_genetics.molecular_biology.protein_folding_process
+        preferredPhrase: 蛋白质折叠过程
+        aliases: []
+      - conceptId: biology_genetics.molecular_biology.cellular_signaling_pathway
+        preferredPhrase: 细胞信号通路
+        aliases: []
+      - conceptId: biology_genetics.genetics.genetic_variant_analysis
+        preferredPhrase: 遗传变异分析
+        aliases: []
+      - conceptId: biology_genetics.genetics.genome_sequencing_data
+        preferredPhrase: 基因组测序数据
+        aliases: []
+      - conceptId: biology_genetics.genetics.mendelian_inheritance_pattern
+        preferredPhrase: 孟德尔遗传模式
+        aliases: []
+      - conceptId: biology_genetics.genetics.population_genetic_structure
+        preferredPhrase: 群体遗传结构
+        aliases: []
+      - conceptId: biology_genetics.genetics.genetic_association_study
+        preferredPhrase: 遗传关联研究
+        aliases: []
+      - conceptId: biology_genetics.genetics.gene_mutation_frequency
+        preferredPhrase: 基因突变频率
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.cell_membrane_transport
+        preferredPhrase: 细胞膜运输
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.cellular_metabolism_pathway
+        preferredPhrase: 细胞代谢途径
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.programmed_cell_death
+        preferredPhrase: 程序性细胞死亡
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.cell_cycle_regulation
+        preferredPhrase: 细胞周期调控
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.stem_cell_differentiation
+        preferredPhrase: 干细胞分化
+        aliases: []
+      - conceptId: biology_genetics.cell_biology.intracellular_signal_transduction
+        preferredPhrase: 细胞内信号转导
+        aliases: []
+      - conceptId: biology_genetics.physiology.cardiovascular_physiological_response
+        preferredPhrase: 心血管生理反应
+        aliases: []
+      - conceptId: biology_genetics.physiology.respiratory_gas_exchange
+        preferredPhrase: 呼吸气体交换
+        aliases: []
+      - conceptId: biology_genetics.physiology.renal_filtration_process
+        preferredPhrase: 肾脏过滤过程
+        aliases: []
+      - conceptId: biology_genetics.physiology.endocrine_hormone_regulation
+        preferredPhrase: 内分泌激素调节
+        aliases: []
+      - conceptId: biology_genetics.physiology.nervous_system_function
+        preferredPhrase: 神经系统功能
+        aliases: []
+      - conceptId: biology_genetics.physiology.metabolic_homeostasis_mechanism
+        preferredPhrase: 代谢稳态机制
+        aliases: []
+
+      - conceptId: computer_science_ai.algorithms_data_structures.graph_traversal_algorithm
+        preferredPhrase: 图遍历算法
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.dynamic_programming_algorithm
+        preferredPhrase: 动态规划算法
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.hash_table_implementation
+        preferredPhrase: 哈希表实现
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.computational_complexity_analysis
+        preferredPhrase: 计算复杂度分析
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.balanced_search_tree
+        preferredPhrase: 平衡搜索树
+        aliases: []
+      - conceptId: computer_science_ai.algorithms_data_structures.shortest_path_algorithm
+        preferredPhrase: 最短路径算法
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.distributed_system_architecture
+        preferredPhrase: 分布式系统架构
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.database_transaction_isolation
+        preferredPhrase: 数据库事务隔离
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.concurrent_programming_model
+        preferredPhrase: 并发编程模型
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.application_programming_interface
+        preferredPhrase: 应用程序编程接口
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.fault_tolerant_system
+        preferredPhrase: 容错系统
+        aliases: []
+      - conceptId: computer_science_ai.software_systems.software_dependency_management
+        preferredPhrase: 软件依赖管理
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.machine_learning_model
+        preferredPhrase: 机器学习模型
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.supervised_learning_algorithm
+        preferredPhrase: 监督学习算法
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.unsupervised_learning_method
+        preferredPhrase: 无监督学习方法
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.neural_network_architecture
+        preferredPhrase: 神经网络架构
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.model_training_pipeline
+        preferredPhrase: 模型训练流水线
+        aliases: []
+      - conceptId: computer_science_ai.machine_learning.feature_engineering_process
+        preferredPhrase: 特征工程过程
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.natural_language_processing
+        preferredPhrase: 自然语言处理
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.semantic_text_representation
+        preferredPhrase: 语义文本表示
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.information_retrieval_system
+        preferredPhrase: 信息检索系统
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.large_language_model
+        preferredPhrase: 大语言模型
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.vector_embedding_model
+        preferredPhrase: 向量嵌入模型
+        aliases: []
+      - conceptId: computer_science_ai.data_nlp.named_entity_recognition
+        preferredPhrase: 命名实体识别
+        aliases: []
+
+      - conceptId: medicine_pharmacology.clinical_diagnosis.differential_diagnosis_process
+        preferredPhrase: 鉴别诊断过程
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_diagnosis.diagnostic_imaging_finding
+        preferredPhrase: 诊断影像发现
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_diagnosis.clinical_laboratory_result
+        preferredPhrase: 临床实验室结果
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_diagnosis.disease_severity_assessment
+        preferredPhrase: 疾病严重程度评估
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_diagnosis.patient_symptom_profile
+        preferredPhrase: 患者症状特征
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_diagnosis.diagnostic_decision_support
+        preferredPhrase: 诊断决策支持
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.drug_dose_adjustment
+        preferredPhrase: 药物剂量调整
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.adverse_drug_reaction
+        preferredPhrase: 药物不良反应
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.drug_drug_interaction
+        preferredPhrase: 药物相互作用
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.pharmacokinetic_concentration_profile
+        preferredPhrase: 药代动力学浓度曲线
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.pharmacodynamic_response_model
+        preferredPhrase: 药效动力学反应模型
+        aliases: []
+      - conceptId: medicine_pharmacology.pharmacology.therapeutic_drug_monitoring
+        preferredPhrase: 治疗药物监测
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.randomized_controlled_trial
+        preferredPhrase: 随机对照试验
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.clinical_trial_endpoint
+        preferredPhrase: 临床试验终点
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.treatment_effect_estimate
+        preferredPhrase: 治疗效果估计
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.trial_inclusion_criteria
+        preferredPhrase: 试验纳入标准
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.adverse_event_monitoring
+        preferredPhrase: 不良事件监测
+        aliases: []
+      - conceptId: medicine_pharmacology.clinical_trials.clinical_study_protocol
+        preferredPhrase: 临床研究方案
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.disease_incidence_rate
+        preferredPhrase: 疾病发病率
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.disease_prevalence_estimate
+        preferredPhrase: 疾病患病率估计
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.epidemiological_risk_factor
+        preferredPhrase: 流行病学风险因素
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.population_cohort_study
+        preferredPhrase: 人群队列研究
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.case_control_study
+        preferredPhrase: 病例对照研究
+        aliases: []
+      - conceptId: medicine_pharmacology.epidemiology.outbreak_surveillance_system
+        preferredPhrase: 疫情暴发监测系统
+        aliases: []
+
+      - conceptId: earth_environmental_science.geology.geological_formation_analysis
+        preferredPhrase: 地质构造分析
+        aliases: []
+      - conceptId: earth_environmental_science.geology.tectonic_plate_movement
+        preferredPhrase: 构造板块运动
+        aliases: []
+      - conceptId: earth_environmental_science.geology.sedimentary_basin_structure
+        preferredPhrase: 沉积盆地结构
+        aliases: []
+      - conceptId: earth_environmental_science.geology.mineral_composition_analysis
+        preferredPhrase: 矿物组成分析
+        aliases: []
+      - conceptId: earth_environmental_science.geology.geological_fault_system
+        preferredPhrase: 地质断层系统
+        aliases: []
+      - conceptId: earth_environmental_science.geology.subsurface_stratigraphic_model
+        preferredPhrase: 地下地层模型
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.climate_change_projection
+        preferredPhrase: 气候变化预测
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.global_temperature_anomaly
+        preferredPhrase: 全球温度异常
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.greenhouse_gas_forcing
+        preferredPhrase: 温室气体辐射强迫
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.climate_model_simulation
+        preferredPhrase: 气候模型模拟
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.extreme_weather_event
+        preferredPhrase: 极端天气事件
+        aliases: []
+      - conceptId: earth_environmental_science.climate_science.atmospheric_circulation_pattern
+        preferredPhrase: 大气环流模式
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.watershed_runoff_model
+        preferredPhrase: 流域径流模型
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.groundwater_flow_system
+        preferredPhrase: 地下水流系统
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.river_discharge_measurement
+        preferredPhrase: 河流流量测量
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.flood_frequency_analysis
+        preferredPhrase: 洪水频率分析
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.water_balance_model
+        preferredPhrase: 水量平衡模型
+        aliases: []
+      - conceptId: earth_environmental_science.hydrology.aquifer_recharge_rate
+        preferredPhrase: 含水层补给速率
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.environmental_impact_assessment
+        preferredPhrase: 环境影响评价
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.ecological_risk_assessment
+        preferredPhrase: 生态风险评估
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.air_pollution_monitoring
+        preferredPhrase: 空气污染监测
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.water_quality_indicator
+        preferredPhrase: 水质指标
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.biodiversity_impact_evaluation
+        preferredPhrase: 生物多样性影响评价
+        aliases: []
+      - conceptId: earth_environmental_science.environmental_assessment.environmental_remediation_plan
+        preferredPhrase: 环境修复计划
+        aliases: []
+
+      - conceptId: psychology_sociology.cognitive_psychology.working_memory_capacity
+        preferredPhrase: 工作记忆容量
+        aliases: []
+      - conceptId: psychology_sociology.cognitive_psychology.cognitive_load_theory
+        preferredPhrase: 认知负荷理论
+        aliases: []
+      - conceptId: psychology_sociology.cognitive_psychology.decision_making_process
+        preferredPhrase: 决策过程
+        aliases: []
+      - conceptId: psychology_sociology.cognitive_psychology.selective_attention_mechanism
+        preferredPhrase: 选择性注意机制
+        aliases: []
+      - conceptId: psychology_sociology.cognitive_psychology.cognitive_bias_effect
+        preferredPhrase: 认知偏差效应
+        aliases: []
+      - conceptId: psychology_sociology.cognitive_psychology.memory_retrieval_process
+        preferredPhrase: 记忆提取过程
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.behavioral_reinforcement_schedule
+        preferredPhrase: 行为强化计划
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.conditioned_behavioral_response
+        preferredPhrase: 条件性行为反应
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.behavior_modification_program
+        preferredPhrase: 行为矫正方案
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.motivation_behavior_relationship
+        preferredPhrase: 动机行为关系
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.habit_formation_process
+        preferredPhrase: 习惯形成过程
+        aliases: []
+      - conceptId: psychology_sociology.behavioral_psychology.behavioral_intervention_strategy
+        preferredPhrase: 行为干预策略
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.social_identity_theory
+        preferredPhrase: 社会认同理论
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.group_decision_making
+        preferredPhrase: 群体决策
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.interpersonal_attitude_change
+        preferredPhrase: 人际态度变化
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.social_influence_process
+        preferredPhrase: 社会影响过程
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.group_conformity_behavior
+        preferredPhrase: 群体从众行为
+        aliases: []
+      - conceptId: psychology_sociology.social_psychology.stereotype_formation_process
+        preferredPhrase: 刻板印象形成过程
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.social_network_analysis
+        preferredPhrase: 社会网络分析
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.survey_sampling_design
+        preferredPhrase: 调查抽样设计
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.demographic_population_change
+        preferredPhrase: 人口统计变化
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.social_stratification_pattern
+        preferredPhrase: 社会分层模式
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.qualitative_interview_analysis
+        preferredPhrase: 定性访谈分析
+        aliases: []
+      - conceptId: psychology_sociology.sociology_methods.longitudinal_social_study
+        preferredPhrase: 纵向社会研究
+        aliases: []

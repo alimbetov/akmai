@@ -10,6 +10,7 @@ import kz.alimbetov.akmai.knowledge.graph.AssociationLearningRecorder;
 import kz.alimbetov.akmai.rag.api.RagResponse;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
+import kz.alimbetov.akmai.rag.retrieval.AnswerGroundingVerifier;
 import kz.alimbetov.akmai.rag.retrieval.ContextAssembler;
 import kz.alimbetov.akmai.rag.retrieval.ContextBudget;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
@@ -18,6 +19,7 @@ import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
 import kz.alimbetov.akmai.rag.retrieval.PublishedContextRevalidator;
 import kz.alimbetov.akmai.rag.retrieval.Reranker;
 import kz.alimbetov.akmai.rag.retrieval.ResultFusion;
+import kz.alimbetov.akmai.rag.retrieval.TemporalAuthorityFilter;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalExecutionResult;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
@@ -29,19 +31,19 @@ import org.springframework.transaction.TransactionException;
 @Service
 public class RagQuestionService {
 
-    private static final String INSUFFICIENT_INFORMATION =
-            "В базе знаний недостаточно информации.";
-
     private final QueryChunker queryChunker;
+    private final RagFallbackMessages fallbackMessages;
     private final RetrievalPlanner retrievalPlanner;
     private final ParallelRetrievalExecutor retrievalExecutor;
     private final ResultFusion resultFusion;
     private final Reranker reranker;
     private final KnowledgeExpansion knowledgeExpansion;
     private final ContextBudget contextBudget;
+    private final TemporalAuthorityFilter temporalAuthorityFilter;
     private final PublishedContextRevalidator contextRevalidator;
     private final ContextAssembler contextAssembler;
     private final CitationValidator citationValidator;
+    private final AnswerGroundingVerifier answerGroundingVerifier;
     private final AnswerGenerationService answerGenerationService;
     private final AssociationLearningRecorder associationLearningRecorder;
     private final AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion;
@@ -51,15 +53,18 @@ public class RagQuestionService {
 
     public RagQuestionService(
             QueryChunker queryChunker,
+            RagFallbackMessages fallbackMessages,
             RetrievalPlanner retrievalPlanner,
             ParallelRetrievalExecutor retrievalExecutor,
             ResultFusion resultFusion,
             Reranker reranker,
             KnowledgeExpansion knowledgeExpansion,
             ContextBudget contextBudget,
+            TemporalAuthorityFilter temporalAuthorityFilter,
             PublishedContextRevalidator contextRevalidator,
             ContextAssembler contextAssembler,
             CitationValidator citationValidator,
+            AnswerGroundingVerifier answerGroundingVerifier,
             AnswerGenerationService answerGenerationService,
             AssociationLearningRecorder associationLearningRecorder,
             AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion,
@@ -68,15 +73,18 @@ public class RagQuestionService {
             AdaptiveGraphUtilityRecorder adaptiveGraphUtilityRecorder
     ) {
         this.queryChunker = queryChunker;
+        this.fallbackMessages = fallbackMessages;
         this.retrievalPlanner = retrievalPlanner;
         this.retrievalExecutor = retrievalExecutor;
         this.resultFusion = resultFusion;
         this.reranker = reranker;
         this.knowledgeExpansion = knowledgeExpansion;
         this.contextBudget = contextBudget;
+        this.temporalAuthorityFilter = temporalAuthorityFilter;
         this.contextRevalidator = contextRevalidator;
         this.contextAssembler = contextAssembler;
         this.citationValidator = citationValidator;
+        this.answerGroundingVerifier = answerGroundingVerifier;
         this.answerGenerationService = answerGenerationService;
         this.associationLearningRecorder = associationLearningRecorder;
         this.adaptiveGraphShadowExpansion = adaptiveGraphShadowExpansion;
@@ -88,7 +96,7 @@ public class RagQuestionService {
 
     public RagResponse ask(String question, Set<Long> accessLevels) {
         if (accessLevels == null || accessLevels.isEmpty()) {
-            return insufficientInformation();
+            return insufficientInformation(question);
         }
 
         List<QueryChunk> queryChunks = queryChunker.chunk(question);
@@ -128,8 +136,10 @@ public class RagQuestionService {
                             graphExpanded
                     );
 
+            List<RetrievalHit> authorityEligible =
+                    temporalAuthorityFilter.filter(competitive);
             List<RetrievalHit> bounded =
-                    contextBudget.apply(competitive, question);
+                    contextBudget.apply(authorityEligible, question);
             finalContext = contextRevalidator.revalidate(
                     bounded,
                     accessLevels
@@ -142,7 +152,7 @@ public class RagQuestionService {
         }
 
         if (finalContext.isEmpty()) {
-            return insufficientInformation();
+            return insufficientInformation(question);
         }
 
         String context = contextAssembler.assemble(finalContext);
@@ -150,11 +160,29 @@ public class RagQuestionService {
 
         CitationValidator.CitationValidation validation =
                 citationValidator.validate(answer, finalContext);
-        adaptiveGraphUtilityRecorder.record(finalContext, validation);
 
         if (validation.answer().isBlank()
                 || validation.citedSources().isEmpty()) {
-            return insufficientInformation();
+            adaptiveGraphUtilityRecorder.record(
+                    finalContext,
+                    validation,
+                    false
+            );
+            return insufficientInformation(question);
+        }
+
+        AnswerGroundingVerifier.GroundingValidation grounding =
+                answerGroundingVerifier.verify(
+                        validation.answer(),
+                        finalContext
+                );
+        adaptiveGraphUtilityRecorder.record(
+                finalContext,
+                validation,
+                grounding.grounded()
+        );
+        if (!grounding.grounded()) {
+            return insufficientInformation(question);
         }
 
         associationLearningRecorder.record(
@@ -179,7 +207,10 @@ public class RagQuestionService {
         return new RagResponse(validation.answer(), sources);
     }
 
-    private RagResponse insufficientInformation() {
-        return new RagResponse(INSUFFICIENT_INFORMATION, List.of());
+    private RagResponse insufficientInformation(String question) {
+        return new RagResponse(
+                fallbackMessages.insufficientInformation(question),
+                List.of()
+        );
     }
 }

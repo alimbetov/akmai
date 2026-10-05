@@ -7,21 +7,31 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticConceptMatch;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalysis;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalyzer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 @Component
 public class Reranker {
 
+    private static final double CONCEPT_BOOST_PER_MATCH = 0.02;
+    private static final double MAX_CONCEPT_BOOST = 0.06;
+
     private final SemanticRerankScorer scorer;
     private final RetrievalProperties properties;
     private final RetrievalObserver observer;
     private final ExecutorService executor;
+    private final SemanticQueryAnalyzer semanticQueryAnalyzer;
 
     public Reranker(
             SemanticRerankScorer scorer,
@@ -29,10 +39,28 @@ public class Reranker {
             RetrievalObserver observer,
             @Qualifier("rerankerExecutor") ExecutorService executor
     ) {
+        this(
+                scorer,
+                properties,
+                observer,
+                executor,
+                null
+        );
+    }
+
+    @Autowired
+    public Reranker(
+            SemanticRerankScorer scorer,
+            RetrievalProperties properties,
+            RetrievalObserver observer,
+            @Qualifier("rerankerExecutor") ExecutorService executor,
+            SemanticQueryAnalyzer semanticQueryAnalyzer
+    ) {
         this.scorer = scorer;
         this.properties = properties;
         this.observer = observer;
         this.executor = executor;
+        this.semanticQueryAnalyzer = semanticQueryAnalyzer;
     }
 
     public List<RetrievalHit> rerank(List<RetrievalHit> hits, String question) {
@@ -88,6 +116,15 @@ public class Reranker {
                 .filter(Double::isFinite)
                 .max()
                 .orElse(0.0);
+        SemanticQueryAnalysis semanticQuery =
+                analyzeSemanticQuery(question);
+        Set<String> queryConceptIds =
+                semanticQuery == null
+                        ? Set.of()
+                        : semanticQuery.concepts().stream()
+                                .map(SemanticConceptMatch::conceptId)
+                                .collect(Collectors.toUnmodifiableSet());
+
         List<Double> semanticScores = scorer.score(question, candidates);
         if (semanticScores.size() != candidates.size()) {
             throw new IllegalStateException(
@@ -100,10 +137,16 @@ public class Reranker {
             if (!Double.isFinite(semantic)) {
                 throw new IllegalStateException("Rerank scorer returned non-finite score");
             }
+            ConceptBoost conceptBoost = conceptBoost(
+                    candidates.get(i),
+                    semanticQuery,
+                    queryConceptIds
+            );
             scored.add(withRerankScore(
                     candidates.get(i),
                     semantic,
-                    maxFused
+                    maxFused,
+                    conceptBoost
             ));
         }
         return scored.stream()
@@ -121,19 +164,32 @@ public class Reranker {
     private RetrievalHit withRerankScore(
             RetrievalHit hit,
             double semanticScore,
-            double maxFused
+            double maxFused,
+            ConceptBoost conceptBoost
     ) {
         double normalizedFused = maxFused <= 0.0
                 ? 0.0
                 : hit.fusedScore() / maxFused;
         double weight = properties.rerankerFusedWeight();
-        double combined = semanticScore * (1.0 - weight)
+        double base = semanticScore * (1.0 - weight)
                 + normalizedFused * weight;
+        double combined = Math.max(
+                -1.0,
+                Math.min(1.0, base + conceptBoost.value())
+        );
         if (!Double.isFinite(combined)) {
             throw new IllegalStateException("Combined rerank score is not finite");
         }
         Map<String, Object> metadata = new HashMap<>(hit.metadata());
         metadata.put("rerankSemanticScore", semanticScore);
+        metadata.put(
+                "rerankConceptOverlap",
+                conceptBoost.overlapCount()
+        );
+        metadata.put(
+                "rerankConceptBoost",
+                conceptBoost.value()
+        );
         metadata.put("rerankScore", combined);
         return new RetrievalHit(
                 hit.type(),
@@ -148,11 +204,65 @@ public class Reranker {
         );
     }
 
+    private SemanticQueryAnalysis analyzeSemanticQuery(
+            String question
+    ) {
+        if (semanticQueryAnalyzer == null) {
+            return null;
+        }
+        try {
+            return semanticQueryAnalyzer.analyze(question);
+        } catch (RuntimeException exception) {
+            return null;
+        }
+    }
+
+    private ConceptBoost conceptBoost(
+            RetrievalHit hit,
+            SemanticQueryAnalysis semanticQuery,
+            Set<String> queryConceptIds
+    ) {
+        if (semanticQuery == null
+                || queryConceptIds.isEmpty()) {
+            return ConceptBoost.NONE;
+        }
+
+        Object raw = hit.metadata().get("semanticConcepts");
+        if (!(raw instanceof Iterable<?> values)) {
+            return ConceptBoost.NONE;
+        }
+
+        int overlap = 0;
+        for (Object value : values) {
+            if (value instanceof String conceptId
+                    && queryConceptIds.contains(conceptId)) {
+                overlap++;
+            }
+        }
+        if (overlap == 0) {
+            return ConceptBoost.NONE;
+        }
+
+        double confidence = Math.max(
+                0.0,
+                Math.min(1.0, semanticQuery.confidence())
+        );
+        double boost = Math.min(
+                MAX_CONCEPT_BOOST,
+                overlap * CONCEPT_BOOST_PER_MATCH
+        ) * confidence;
+        return new ConceptBoost(overlap, boost);
+    }
+
     private int authorityTier(RetrievalHit hit) {
         Object tier = hit.metadata().get("authorityTier");
         return tier instanceof Number number
                 ? Math.max(0, number.intValue())
                 : 2;
+    }
+
+    private record ConceptBoost(int overlapCount, double value) {
+        private static final ConceptBoost NONE = new ConceptBoost(0, 0.0);
     }
 
     private double rerankScore(RetrievalHit hit) {

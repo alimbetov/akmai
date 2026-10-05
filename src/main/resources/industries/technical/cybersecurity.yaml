@@ -1,0 +1,49 @@
+id: cybersecurity
+domain: TECHNICAL
+names:
+  kk: Киберқауіпсіздік
+  ru: Кибербезопасность
+  en: Cybersecurity
+  zh: 网络安全
+  de: Cybersicherheit
+  fr: Cybersécurité
+  es: Ciberseguridad
+  pt: Cibersegurança
+  it: Cybersicurezza
+  tr: Siber güvenlik
+  el: Κυβερνοασφάλεια
+headings: {}
+semanticTypes:
+  kk:
+    RULE:
+      - '(?iu)(көп факторлы аутентификация|қолжетімділікті басқару)'
+  ru:
+    RULE:
+      - '(?iu)(многофакторная аутентификация|контроль доступа)'
+  en:
+    RULE:
+      - '(?iu)(multi-factor authentication|multifactor authentication|access control)'
+  zh:
+    RULE:
+      - '(多因素认证|访问控制)'
+  de:
+    RULE:
+      - '(?iu)(mehrfaktor-authentifizierung|zugriffskontrolle)'
+  fr:
+    RULE:
+      - "(?iu)(authentification multifacteur|contrôle d'accès)"
+  es:
+    RULE:
+      - '(?iu)(autenticación multifactor|control de acceso)'
+  pt:
+    RULE:
+      - '(?iu)(autenticação multifator|controlo de acesso|controle de acesso)'
+  it:
+    RULE:
+      - '(?iu)(autenticazione multifattore|controllo degli accessi)'
+  tr:
+    RULE:
+      - '(?iu)(çok faktörlü kimlik doğrulama|erişim kontrolü)'
+  el:
+    RULE:
+      - '(?iu)(πολυπαραγοντικός έλεγχος ταυτότητας|έλεγχος πρόσβασης)'

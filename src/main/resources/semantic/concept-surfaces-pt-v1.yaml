@@ -1,0 +1,787 @@
+version: semantic-surfaces-pt-v1
+languages:
+  - language: pt
+    surfaces:
+      - conceptId: finance_banking.lending_credit.credit_risk_assessment
+        preferredPhrase: avaliação de risco de crédito
+      - conceptId: finance_banking.lending_credit.consumer_loan_underwriting
+        preferredPhrase: subscrição de crédito ao consumidor
+      - conceptId: finance_banking.lending_credit.corporate_credit_facility
+        preferredPhrase: linha de crédito corporativa
+      - conceptId: finance_banking.lending_credit.nonperforming_loan_ratio
+        preferredPhrase: índice de empréstimos inadimplentes
+      - conceptId: finance_banking.lending_credit.loan_loss_provision
+        preferredPhrase: provisão para perdas de crédito
+      - conceptId: finance_banking.lending_credit.debt_service_coverage
+        preferredPhrase: cobertura do serviço da dívida
+      - conceptId: finance_banking.deposits_liquidity.customer_deposit_base
+        preferredPhrase: base de depósitos de clientes
+      - conceptId: finance_banking.deposits_liquidity.liquidity_coverage_ratio
+        preferredPhrase: índice de cobertura de liquidez
+      - conceptId: finance_banking.deposits_liquidity.net_stable_funding
+        preferredPhrase: financiamento estável líquido
+      - conceptId: finance_banking.deposits_liquidity.deposit_interest_rate
+        preferredPhrase: taxa de juros de depósitos
+      - conceptId: finance_banking.deposits_liquidity.cash_reserve_requirement
+        preferredPhrase: requisito de reserva obrigatória
+      - conceptId: finance_banking.deposits_liquidity.liquidity_stress_testing
+        preferredPhrase: teste de estresse de liquidez
+      - conceptId: finance_banking.risk_capital.capital_adequacy_ratio
+        preferredPhrase: índice de adequação de capital
+      - conceptId: finance_banking.risk_capital.risk_weighted_assets
+        preferredPhrase: ativos ponderados pelo risco
+      - conceptId: finance_banking.risk_capital.common_equity_tier
+        preferredPhrase: capital principal de nível um
+      - conceptId: finance_banking.risk_capital.market_risk_exposure
+        preferredPhrase: exposição ao risco de mercado
+      - conceptId: finance_banking.risk_capital.operational_risk_capital
+        preferredPhrase: capital para risco operacional
+      - conceptId: finance_banking.risk_capital.internal_capital_assessment
+        preferredPhrase: avaliação interna de capital
+      - conceptId: finance_banking.payments_compliance.payment_settlement_system
+        preferredPhrase: sistema de liquidação de pagamentos
+      - conceptId: finance_banking.payments_compliance.anti_money_laundering
+        preferredPhrase: prevenção à lavagem de dinheiro
+      - conceptId: finance_banking.payments_compliance.know_your_customer
+        preferredPhrase: conhecimento do cliente
+      - conceptId: finance_banking.payments_compliance.suspicious_transaction_monitoring
+        preferredPhrase: monitoramento de transações suspeitas
+      - conceptId: finance_banking.payments_compliance.cross_border_payment
+        preferredPhrase: pagamento transfronteiriço
+      - conceptId: finance_banking.payments_compliance.payment_fraud_detection
+        preferredPhrase: detecção de fraude em pagamentos
+
+      - conceptId: insurance.underwriting_pricing.insurance_underwriting_process
+        preferredPhrase: processo de subscrição de seguros
+      - conceptId: insurance.underwriting_pricing.risk_based_pricing
+        preferredPhrase: precificação baseada em risco
+      - conceptId: insurance.underwriting_pricing.actuarial_pricing_model
+        preferredPhrase: modelo atuarial de precificação
+      - conceptId: insurance.underwriting_pricing.policy_coverage_limit
+        preferredPhrase: limite de cobertura da apólice
+      - conceptId: insurance.underwriting_pricing.insurance_premium_calculation
+        preferredPhrase: cálculo do prêmio de seguro
+      - conceptId: insurance.underwriting_pricing.underwriting_risk_appetite
+        preferredPhrase: apetite de risco de subscrição
+      - conceptId: insurance.claims_management.insurance_claim_assessment
+        preferredPhrase: avaliação de sinistro de seguro
+      - conceptId: insurance.claims_management.claims_settlement_process
+        preferredPhrase: processo de liquidação de sinistros
+      - conceptId: insurance.claims_management.loss_adjustment_expense
+        preferredPhrase: despesa de regulação de sinistros
+      - conceptId: insurance.claims_management.fraudulent_claim_detection
+        preferredPhrase: detecção de sinistros fraudulentos
+      - conceptId: insurance.claims_management.claim_reserve_estimate
+        preferredPhrase: estimativa de reserva de sinistros
+      - conceptId: insurance.claims_management.claims_handling_procedure
+        preferredPhrase: procedimento de tratamento de sinistros
+      - conceptId: insurance.life_health.life_insurance_policy
+        preferredPhrase: apólice de seguro de vida
+      - conceptId: insurance.life_health.health_insurance_coverage
+        preferredPhrase: cobertura de seguro saúde
+      - conceptId: insurance.life_health.mortality_risk_model
+        preferredPhrase: modelo de risco de mortalidade
+      - conceptId: insurance.life_health.morbidity_risk_estimate
+        preferredPhrase: estimativa de risco de morbidade
+      - conceptId: insurance.life_health.medical_expense_reimbursement
+        preferredPhrase: reembolso de despesas médicas
+      - conceptId: insurance.life_health.policyholder_benefit_schedule
+        preferredPhrase: cronograma de benefícios do segurado
+      - conceptId: insurance.property_casualty.property_damage_coverage
+        preferredPhrase: cobertura de danos materiais
+      - conceptId: insurance.property_casualty.casualty_insurance_claim
+        preferredPhrase: sinistro de seguro de responsabilidade
+      - conceptId: insurance.property_casualty.catastrophe_risk_model
+        preferredPhrase: modelo de risco catastrófico
+      - conceptId: insurance.property_casualty.business_interruption_coverage
+        preferredPhrase: cobertura de interrupção de negócios
+      - conceptId: insurance.property_casualty.liability_coverage_limit
+        preferredPhrase: limite de cobertura de responsabilidade
+      - conceptId: insurance.property_casualty.insured_loss_estimate
+        preferredPhrase: estimativa de perda segurada
+
+      - conceptId: energy_utilities.power_generation.electricity_generation_capacity
+        preferredPhrase: capacidade de geração elétrica
+      - conceptId: energy_utilities.power_generation.thermal_power_plant
+        preferredPhrase: usina termelétrica
+      - conceptId: energy_utilities.power_generation.combined_cycle_turbine
+        preferredPhrase: turbina de ciclo combinado
+      - conceptId: energy_utilities.power_generation.generation_dispatch_schedule
+        preferredPhrase: programação de despacho de geração
+      - conceptId: energy_utilities.power_generation.power_plant_efficiency
+        preferredPhrase: eficiência da usina elétrica
+      - conceptId: energy_utilities.power_generation.reserve_generation_margin
+        preferredPhrase: margem de reserva de geração
+      - conceptId: energy_utilities.power_grid.transmission_grid_stability
+        preferredPhrase: estabilidade da rede de transmissão
+      - conceptId: energy_utilities.power_grid.distribution_network_operator
+        preferredPhrase: operador da rede de distribuição
+      - conceptId: energy_utilities.power_grid.high_voltage_substation
+        preferredPhrase: subestação de alta tensão
+      - conceptId: energy_utilities.power_grid.grid_frequency_control
+        preferredPhrase: controle de frequência da rede
+      - conceptId: energy_utilities.power_grid.power_flow_analysis
+        preferredPhrase: análise de fluxo de potência
+      - conceptId: energy_utilities.power_grid.electricity_network_congestion
+        preferredPhrase: congestionamento da rede elétrica
+      - conceptId: energy_utilities.energy_markets.wholesale_electricity_market
+        preferredPhrase: mercado atacadista de eletricidade
+      - conceptId: energy_utilities.energy_markets.day_ahead_market
+        preferredPhrase: mercado do dia seguinte
+      - conceptId: energy_utilities.energy_markets.balancing_energy_market
+        preferredPhrase: mercado de energia de balanceamento
+      - conceptId: energy_utilities.energy_markets.electricity_tariff_regulation
+        preferredPhrase: regulação de tarifas elétricas
+      - conceptId: energy_utilities.energy_markets.energy_demand_forecast
+        preferredPhrase: previsão de demanda de energia
+      - conceptId: energy_utilities.energy_markets.capacity_market_mechanism
+        preferredPhrase: mecanismo do mercado de capacidade
+      - conceptId: energy_utilities.renewable_energy.solar_power_generation
+        preferredPhrase: geração de energia solar
+      - conceptId: energy_utilities.renewable_energy.wind_power_capacity
+        preferredPhrase: capacidade de energia eólica
+      - conceptId: energy_utilities.renewable_energy.renewable_energy_certificate
+        preferredPhrase: certificado de energia renovável
+      - conceptId: energy_utilities.renewable_energy.battery_energy_storage
+        preferredPhrase: armazenamento de energia em baterias
+      - conceptId: energy_utilities.renewable_energy.grid_scale_storage
+        preferredPhrase: armazenamento em escala de rede
+      - conceptId: energy_utilities.renewable_energy.renewable_integration_study
+        preferredPhrase: estudo de integração de renováveis
+
+      - conceptId: oil_gas_mining.upstream_operations.oil_reservoir_characterization
+        preferredPhrase: caracterização de reservatório de petróleo
+      - conceptId: oil_gas_mining.upstream_operations.hydrocarbon_exploration_program
+        preferredPhrase: programa de exploração de hidrocarbonetos
+      - conceptId: oil_gas_mining.upstream_operations.drilling_operations_plan
+        preferredPhrase: plano de operações de perfuração
+      - conceptId: oil_gas_mining.upstream_operations.well_completion_design
+        preferredPhrase: projeto de completação de poço
+      - conceptId: oil_gas_mining.upstream_operations.enhanced_oil_recovery
+        preferredPhrase: recuperação avançada de petróleo
+      - conceptId: oil_gas_mining.upstream_operations.reservoir_pressure_management
+        preferredPhrase: gestão da pressão do reservatório
+      - conceptId: oil_gas_mining.midstream_operations.crude_oil_pipeline
+        preferredPhrase: oleoduto de petróleo bruto
+      - conceptId: oil_gas_mining.midstream_operations.natural_gas_pipeline
+        preferredPhrase: gasoduto de gás natural
+      - conceptId: oil_gas_mining.midstream_operations.gas_processing_facility
+        preferredPhrase: instalação de processamento de gás
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_integrity_management
+        preferredPhrase: gestão da integridade de dutos
+      - conceptId: oil_gas_mining.midstream_operations.hydrocarbon_storage_terminal
+        preferredPhrase: terminal de armazenamento de hidrocarbonetos
+      - conceptId: oil_gas_mining.midstream_operations.gas_compression_station
+        preferredPhrase: estação de compressão de gás
+      - conceptId: oil_gas_mining.downstream_operations.crude_oil_refining
+        preferredPhrase: refino de petróleo bruto
+      - conceptId: oil_gas_mining.downstream_operations.petroleum_product_yield
+        preferredPhrase: rendimento de produtos petrolíferos
+      - conceptId: oil_gas_mining.downstream_operations.refinery_process_unit
+        preferredPhrase: unidade de processo de refinaria
+      - conceptId: oil_gas_mining.downstream_operations.fuel_blending_specification
+        preferredPhrase: especificação de mistura de combustíveis
+      - conceptId: oil_gas_mining.downstream_operations.petrochemical_feedstock_supply
+        preferredPhrase: fornecimento de matéria prima petroquímica
+      - conceptId: oil_gas_mining.downstream_operations.refinery_turnaround_maintenance
+        preferredPhrase: manutenção de parada de refinaria
+      - conceptId: oil_gas_mining.mining_operations.mineral_resource_estimate
+        preferredPhrase: estimativa de recursos minerais
+      - conceptId: oil_gas_mining.mining_operations.open_pit_mining
+        preferredPhrase: mineração a céu aberto
+      - conceptId: oil_gas_mining.mining_operations.underground_mine_design
+        preferredPhrase: projeto de mina subterrânea
+      - conceptId: oil_gas_mining.mining_operations.ore_processing_plant
+        preferredPhrase: planta de processamento de minério
+      - conceptId: oil_gas_mining.mining_operations.mine_tailings_management
+        preferredPhrase: gestão de rejeitos de mineração
+      - conceptId: oil_gas_mining.mining_operations.mineral_reserve_classification
+        preferredPhrase: classificação de reservas minerais
+
+      - conceptId: manufacturing.production_systems.production_planning_system
+        preferredPhrase: sistema de planejamento da produção
+      - conceptId: manufacturing.production_systems.manufacturing_execution_system
+        preferredPhrase: sistema de execução da manufatura
+      - conceptId: manufacturing.production_systems.production_line_balancing
+        preferredPhrase: balanceamento da linha de produção
+      - conceptId: manufacturing.production_systems.takt_time_calculation
+        preferredPhrase: cálculo do tempo takt
+      - conceptId: manufacturing.production_systems.overall_equipment_effectiveness
+        preferredPhrase: eficiência global dos equipamentos
+      - conceptId: manufacturing.production_systems.batch_production_schedule
+        preferredPhrase: cronograma de produção em lotes
+      - conceptId: manufacturing.quality_management.statistical_process_control
+        preferredPhrase: controle estatístico de processo
+      - conceptId: manufacturing.quality_management.quality_management_system
+        preferredPhrase: sistema de gestão da qualidade
+      - conceptId: manufacturing.quality_management.root_cause_analysis
+        preferredPhrase: análise de causa raiz
+      - conceptId: manufacturing.quality_management.nonconformance_corrective_action
+        preferredPhrase: ação corretiva de não conformidade
+      - conceptId: manufacturing.quality_management.process_capability_index
+        preferredPhrase: índice de capacidade do processo
+      - conceptId: manufacturing.quality_management.incoming_quality_inspection
+        preferredPhrase: inspeção de qualidade de recebimento
+      - conceptId: manufacturing.maintenance_reliability.preventive_maintenance_schedule
+        preferredPhrase: cronograma de manutenção preventiva
+      - conceptId: manufacturing.maintenance_reliability.predictive_maintenance_model
+        preferredPhrase: modelo de manutenção preditiva
+      - conceptId: manufacturing.maintenance_reliability.reliability_centered_maintenance
+        preferredPhrase: manutenção centrada em confiabilidade
+      - conceptId: manufacturing.maintenance_reliability.mean_time_between_failures
+        preferredPhrase: tempo médio entre falhas
+      - conceptId: manufacturing.maintenance_reliability.equipment_failure_mode
+        preferredPhrase: modo de falha do equipamento
+      - conceptId: manufacturing.maintenance_reliability.maintenance_work_order
+        preferredPhrase: ordem de trabalho de manutenção
+      - conceptId: manufacturing.industrial_operations.industrial_process_automation
+        preferredPhrase: automação de processos industriais
+      - conceptId: manufacturing.industrial_operations.programmable_logic_controller
+        preferredPhrase: controlador lógico programável
+      - conceptId: manufacturing.industrial_operations.production_capacity_utilization
+        preferredPhrase: utilização da capacidade produtiva
+      - conceptId: manufacturing.industrial_operations.industrial_safety_procedure
+        preferredPhrase: procedimento de segurança industrial
+      - conceptId: manufacturing.industrial_operations.plant_operations_management
+        preferredPhrase: gestão das operações da planta
+      - conceptId: manufacturing.industrial_operations.process_optimization_study
+        preferredPhrase: estudo de otimização de processos
+
+      - conceptId: construction_real_estate.design_construction.building_structural_design
+        preferredPhrase: projeto estrutural de edifícios
+      - conceptId: construction_real_estate.design_construction.construction_project_schedule
+        preferredPhrase: cronograma do projeto de construção
+      - conceptId: construction_real_estate.design_construction.building_information_modeling
+        preferredPhrase: modelagem de informações da construção
+      - conceptId: construction_real_estate.design_construction.reinforced_concrete_structure
+        preferredPhrase: estrutura de concreto armado
+      - conceptId: construction_real_estate.design_construction.construction_site_management
+        preferredPhrase: gestão do canteiro de obras
+      - conceptId: construction_real_estate.design_construction.building_code_compliance
+        preferredPhrase: conformidade com código de construção
+      - conceptId: construction_real_estate.real_estate_market.commercial_property_valuation
+        preferredPhrase: avaliação de imóvel comercial
+      - conceptId: construction_real_estate.real_estate_market.residential_property_market
+        preferredPhrase: mercado imobiliário residencial
+      - conceptId: construction_real_estate.real_estate_market.rental_yield_analysis
+        preferredPhrase: análise de rendimento de aluguel
+      - conceptId: construction_real_estate.real_estate_market.real_estate_transaction
+        preferredPhrase: transação imobiliária
+      - conceptId: construction_real_estate.real_estate_market.property_market_appraisal
+        preferredPhrase: avaliação de mercado imobiliário
+      - conceptId: construction_real_estate.real_estate_market.investment_property_return
+        preferredPhrase: retorno de imóvel de investimento
+      - conceptId: construction_real_estate.facilities_management.facility_maintenance_plan
+        preferredPhrase: plano de manutenção das instalações
+      - conceptId: construction_real_estate.facilities_management.building_energy_performance
+        preferredPhrase: desempenho energético do edifício
+      - conceptId: construction_real_estate.facilities_management.property_asset_management
+        preferredPhrase: gestão de ativos imobiliários
+      - conceptId: construction_real_estate.facilities_management.preventive_facility_maintenance
+        preferredPhrase: manutenção preventiva das instalações
+      - conceptId: construction_real_estate.facilities_management.building_occupancy_management
+        preferredPhrase: gestão de ocupação do edifício
+      - conceptId: construction_real_estate.facilities_management.facilities_service_contract
+        preferredPhrase: contrato de serviços de instalações
+      - conceptId: construction_real_estate.project_controls.construction_cost_estimate
+        preferredPhrase: estimativa de custo de construção
+      - conceptId: construction_real_estate.project_controls.earned_value_management
+        preferredPhrase: gestão do valor agregado
+      - conceptId: construction_real_estate.project_controls.project_schedule_variance
+        preferredPhrase: variação do cronograma do projeto
+      - conceptId: construction_real_estate.project_controls.construction_risk_register
+        preferredPhrase: registro de riscos de construção
+      - conceptId: construction_real_estate.project_controls.contractor_progress_payment
+        preferredPhrase: pagamento de progresso ao empreiteiro
+      - conceptId: construction_real_estate.project_controls.change_order_management
+        preferredPhrase: gestão de ordens de alteração
+
+      - conceptId: transport_logistics.freight_transport.freight_transportation_network
+        preferredPhrase: rede de transporte de cargas
+      - conceptId: transport_logistics.freight_transport.intermodal_freight_terminal
+        preferredPhrase: terminal intermodal de cargas
+      - conceptId: transport_logistics.freight_transport.cargo_transport_capacity
+        preferredPhrase: capacidade de transporte de carga
+      - conceptId: transport_logistics.freight_transport.rail_freight_service
+        preferredPhrase: serviço ferroviário de cargas
+      - conceptId: transport_logistics.freight_transport.road_freight_operation
+        preferredPhrase: operação de transporte rodoviário
+      - conceptId: transport_logistics.freight_transport.air_cargo_handling
+        preferredPhrase: manuseio de carga aérea
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_management_system
+        preferredPhrase: sistema de gestão de armazém
+      - conceptId: transport_logistics.warehousing_distribution.distribution_center_operation
+        preferredPhrase: operação do centro de distribuição
+      - conceptId: transport_logistics.warehousing_distribution.inventory_storage_policy
+        preferredPhrase: política de armazenamento de estoque
+      - conceptId: transport_logistics.warehousing_distribution.order_fulfillment_process
+        preferredPhrase: processo de atendimento de pedidos
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_picking_strategy
+        preferredPhrase: estratégia de separação no armazém
+      - conceptId: transport_logistics.warehousing_distribution.cold_chain_logistics
+        preferredPhrase: logística de cadeia fria
+      - conceptId: transport_logistics.fleet_operations.fleet_maintenance_program
+        preferredPhrase: programa de manutenção da frota
+      - conceptId: transport_logistics.fleet_operations.vehicle_route_optimization
+        preferredPhrase: otimização de rotas de veículos
+      - conceptId: transport_logistics.fleet_operations.fleet_fuel_efficiency
+        preferredPhrase: eficiência de combustível da frota
+      - conceptId: transport_logistics.fleet_operations.driver_safety_management
+        preferredPhrase: gestão da segurança dos motoristas
+      - conceptId: transport_logistics.fleet_operations.vehicle_utilization_rate
+        preferredPhrase: taxa de utilização de veículos
+      - conceptId: transport_logistics.fleet_operations.fleet_telematics_system
+        preferredPhrase: sistema telemático de frota
+      - conceptId: transport_logistics.supply_chain.supply_chain_disruption
+        preferredPhrase: interrupção da cadeia de suprimentos
+      - conceptId: transport_logistics.supply_chain.supplier_lead_time
+        preferredPhrase: prazo de entrega do fornecedor
+      - conceptId: transport_logistics.supply_chain.logistics_network_optimization
+        preferredPhrase: otimização da rede logística
+      - conceptId: transport_logistics.supply_chain.demand_supply_planning
+        preferredPhrase: planejamento de demanda e suprimento
+      - conceptId: transport_logistics.supply_chain.supply_chain_resilience
+        preferredPhrase: resiliência da cadeia de suprimentos
+      - conceptId: transport_logistics.supply_chain.last_mile_delivery
+        preferredPhrase: entrega de última milha
+
+      - conceptId: agriculture_food.crop_science.crop_yield_forecast
+        preferredPhrase: previsão de produtividade das culturas
+      - conceptId: agriculture_food.crop_science.soil_nutrient_management
+        preferredPhrase: gestão de nutrientes do solo
+      - conceptId: agriculture_food.crop_science.precision_agriculture_system
+        preferredPhrase: sistema de agricultura de precisão
+      - conceptId: agriculture_food.crop_science.integrated_pest_management
+        preferredPhrase: manejo integrado de pragas
+      - conceptId: agriculture_food.crop_science.irrigation_scheduling_model
+        preferredPhrase: modelo de programação de irrigação
+      - conceptId: agriculture_food.crop_science.crop_disease_monitoring
+        preferredPhrase: monitoramento de doenças das culturas
+      - conceptId: agriculture_food.livestock_production.livestock_health_management
+        preferredPhrase: gestão da saúde do rebanho
+      - conceptId: agriculture_food.livestock_production.animal_feed_formulation
+        preferredPhrase: formulação de alimentação animal
+      - conceptId: agriculture_food.livestock_production.dairy_production_system
+        preferredPhrase: sistema de produção leiteira
+      - conceptId: agriculture_food.livestock_production.herd_reproductive_performance
+        preferredPhrase: desempenho reprodutivo do rebanho
+      - conceptId: agriculture_food.livestock_production.livestock_disease_control
+        preferredPhrase: controle de doenças do gado
+      - conceptId: agriculture_food.livestock_production.animal_welfare_standard
+        preferredPhrase: padrão de bem estar animal
+      - conceptId: agriculture_food.food_processing.food_processing_technology
+        preferredPhrase: tecnologia de processamento de alimentos
+      - conceptId: agriculture_food.food_processing.food_production_line
+        preferredPhrase: linha de produção de alimentos
+      - conceptId: agriculture_food.food_processing.thermal_food_processing
+        preferredPhrase: processamento térmico de alimentos
+      - conceptId: agriculture_food.food_processing.food_packaging_system
+        preferredPhrase: sistema de embalagem de alimentos
+      - conceptId: agriculture_food.food_processing.shelf_life_evaluation
+        preferredPhrase: avaliação da vida útil
+      - conceptId: agriculture_food.food_processing.food_quality_control
+        preferredPhrase: controle de qualidade de alimentos
+      - conceptId: agriculture_food.food_safety.food_safety_management
+        preferredPhrase: gestão da segurança alimentar
+      - conceptId: agriculture_food.food_safety.hazard_analysis_control
+        preferredPhrase: controle da análise de perigos
+      - conceptId: agriculture_food.food_safety.microbial_contamination_risk
+        preferredPhrase: risco de contaminação microbiana
+      - conceptId: agriculture_food.food_safety.food_traceability_system
+        preferredPhrase: sistema de rastreabilidade de alimentos
+      - conceptId: agriculture_food.food_safety.allergen_control_program
+        preferredPhrase: programa de controle de alérgenos
+      - conceptId: agriculture_food.food_safety.food_hygiene_standard
+        preferredPhrase: padrão de higiene alimentar
+
+      - conceptId: mathematics_statistics.probability_statistics.probability_distribution_function
+        preferredPhrase: função de distribuição de probabilidade
+      - conceptId: mathematics_statistics.probability_statistics.statistical_hypothesis_testing
+        preferredPhrase: teste de hipótese estatística
+      - conceptId: mathematics_statistics.probability_statistics.maximum_likelihood_estimation
+        preferredPhrase: estimativa de máxima verossimilhança
+      - conceptId: mathematics_statistics.probability_statistics.bayesian_posterior_distribution
+        preferredPhrase: distribuição posterior bayesiana
+      - conceptId: mathematics_statistics.probability_statistics.confidence_interval_estimation
+        preferredPhrase: estimativa de intervalo de confiança
+      - conceptId: mathematics_statistics.probability_statistics.stochastic_process_model
+        preferredPhrase: modelo de processo estocástico
+      - conceptId: mathematics_statistics.algebra_geometry.linear_algebra_system
+        preferredPhrase: sistema de álgebra linear
+      - conceptId: mathematics_statistics.algebra_geometry.eigenvalue_decomposition_method
+        preferredPhrase: método de decomposição de autovalores
+      - conceptId: mathematics_statistics.algebra_geometry.abstract_algebra_structure
+        preferredPhrase: estrutura de álgebra abstrata
+      - conceptId: mathematics_statistics.algebra_geometry.differential_geometry_manifold
+        preferredPhrase: variedade de geometria diferencial
+      - conceptId: mathematics_statistics.algebra_geometry.matrix_factorization_method
+        preferredPhrase: método de fatoração matricial
+      - conceptId: mathematics_statistics.algebra_geometry.vector_space_basis
+        preferredPhrase: base de espaço vetorial
+      - conceptId: mathematics_statistics.optimization.constrained_optimization_problem
+        preferredPhrase: problema de otimização restrita
+      - conceptId: mathematics_statistics.optimization.convex_optimization_method
+        preferredPhrase: método de otimização convexa
+      - conceptId: mathematics_statistics.optimization.integer_programming_model
+        preferredPhrase: modelo de programação inteira
+      - conceptId: mathematics_statistics.optimization.gradient_descent_algorithm
+        preferredPhrase: algoritmo de descida de gradiente
+      - conceptId: mathematics_statistics.optimization.multi_objective_optimization
+        preferredPhrase: otimização multiobjetivo
+      - conceptId: mathematics_statistics.optimization.nonlinear_optimization_solver
+        preferredPhrase: solucionador de otimização não linear
+      - conceptId: mathematics_statistics.numerical_methods.numerical_integration_method
+        preferredPhrase: método de integração numérica
+      - conceptId: mathematics_statistics.numerical_methods.finite_difference_scheme
+        preferredPhrase: esquema de diferenças finitas
+      - conceptId: mathematics_statistics.numerical_methods.numerical_stability_analysis
+        preferredPhrase: análise de estabilidade numérica
+      - conceptId: mathematics_statistics.numerical_methods.iterative_linear_solver
+        preferredPhrase: solucionador linear iterativo
+      - conceptId: mathematics_statistics.numerical_methods.differential_equation_solver
+        preferredPhrase: solucionador de equações diferenciais
+      - conceptId: mathematics_statistics.numerical_methods.numerical_error_estimate
+        preferredPhrase: estimativa de erro numérico
+
+      - conceptId: physics_astronomy.classical_mechanics.newtonian_motion_equation
+        preferredPhrase: equação newtoniana do movimento
+      - conceptId: physics_astronomy.classical_mechanics.conservation_of_momentum
+        preferredPhrase: conservação do momento
+      - conceptId: physics_astronomy.classical_mechanics.rigid_body_dynamics
+        preferredPhrase: dinâmica de corpo rígido
+      - conceptId: physics_astronomy.classical_mechanics.harmonic_oscillator_model
+        preferredPhrase: modelo de oscilador harmônico
+      - conceptId: physics_astronomy.classical_mechanics.rotational_motion_analysis
+        preferredPhrase: análise do movimento rotacional
+      - conceptId: physics_astronomy.classical_mechanics.classical_mechanics_system
+        preferredPhrase: sistema de mecânica clássica
+      - conceptId: physics_astronomy.thermodynamics.thermodynamic_state_variable
+        preferredPhrase: variável de estado termodinâmico
+      - conceptId: physics_astronomy.thermodynamics.heat_transfer_coefficient
+        preferredPhrase: coeficiente de transferência de calor
+      - conceptId: physics_astronomy.thermodynamics.entropy_production_rate
+        preferredPhrase: taxa de produção de entropia
+      - conceptId: physics_astronomy.thermodynamics.phase_equilibrium_condition
+        preferredPhrase: condição de equilíbrio de fase
+      - conceptId: physics_astronomy.thermodynamics.thermodynamic_cycle_efficiency
+        preferredPhrase: eficiência do ciclo termodinâmico
+      - conceptId: physics_astronomy.thermodynamics.equation_of_state
+        preferredPhrase: equação de estado
+      - conceptId: physics_astronomy.electromagnetism.electromagnetic_field_equation
+        preferredPhrase: equação do campo eletromagnético
+      - conceptId: physics_astronomy.electromagnetism.electric_potential_difference
+        preferredPhrase: diferença de potencial elétrico
+      - conceptId: physics_astronomy.electromagnetism.magnetic_flux_density
+        preferredPhrase: densidade de fluxo magnético
+      - conceptId: physics_astronomy.electromagnetism.electromagnetic_wave_propagation
+        preferredPhrase: propagação de onda eletromagnética
+      - conceptId: physics_astronomy.electromagnetism.maxwell_equation_system
+        preferredPhrase: sistema de equações de Maxwell
+      - conceptId: physics_astronomy.electromagnetism.electric_field_strength
+        preferredPhrase: intensidade do campo elétrico
+      - conceptId: physics_astronomy.astrophysics.stellar_evolution_model
+        preferredPhrase: modelo de evolução estelar
+      - conceptId: physics_astronomy.astrophysics.galactic_rotation_curve
+        preferredPhrase: curva de rotação galáctica
+      - conceptId: physics_astronomy.astrophysics.cosmic_microwave_background
+        preferredPhrase: fundo cósmico de microondas
+      - conceptId: physics_astronomy.astrophysics.black_hole_accretion
+        preferredPhrase: acreção de buraco negro
+      - conceptId: physics_astronomy.astrophysics.exoplanet_orbital_period
+        preferredPhrase: período orbital de exoplaneta
+      - conceptId: physics_astronomy.astrophysics.gravitational_wave_signal
+        preferredPhrase: sinal de onda gravitacional
+
+      - conceptId: chemistry_materials.organic_chemistry.organic_reaction_mechanism
+        preferredPhrase: mecanismo de reação orgânica
+      - conceptId: chemistry_materials.organic_chemistry.carbon_carbon_bond
+        preferredPhrase: ligação carbono carbono
+      - conceptId: chemistry_materials.organic_chemistry.functional_group_transformation
+        preferredPhrase: transformação de grupo funcional
+      - conceptId: chemistry_materials.organic_chemistry.stereochemical_reaction_pathway
+        preferredPhrase: via de reação estereoquímica
+      - conceptId: chemistry_materials.organic_chemistry.organic_synthesis_route
+        preferredPhrase: rota de síntese orgânica
+      - conceptId: chemistry_materials.organic_chemistry.reaction_yield_optimization
+        preferredPhrase: otimização do rendimento da reação
+      - conceptId: chemistry_materials.analytical_chemistry.mass_spectrometry_analysis
+        preferredPhrase: análise de espectrometria de massa
+      - conceptId: chemistry_materials.analytical_chemistry.high_performance_chromatography
+        preferredPhrase: cromatografia de alto desempenho
+      - conceptId: chemistry_materials.analytical_chemistry.analytical_detection_limit
+        preferredPhrase: limite analítico de detecção
+      - conceptId: chemistry_materials.analytical_chemistry.chemical_calibration_curve
+        preferredPhrase: curva de calibração química
+      - conceptId: chemistry_materials.analytical_chemistry.quantitative_chemical_analysis
+        preferredPhrase: análise química quantitativa
+      - conceptId: chemistry_materials.analytical_chemistry.sample_preparation_method
+        preferredPhrase: método de preparação de amostras
+      - conceptId: chemistry_materials.physical_chemistry.chemical_reaction_kinetics
+        preferredPhrase: cinética de reação química
+      - conceptId: chemistry_materials.physical_chemistry.molecular_orbital_theory
+        preferredPhrase: teoria de orbitais moleculares
+      - conceptId: chemistry_materials.physical_chemistry.thermodynamic_equilibrium_constant
+        preferredPhrase: constante de equilíbrio termodinâmico
+      - conceptId: chemistry_materials.physical_chemistry.electrochemical_cell_potential
+        preferredPhrase: potencial da célula eletroquímica
+      - conceptId: chemistry_materials.physical_chemistry.molecular_spectroscopy_analysis
+        preferredPhrase: análise de espectroscopia molecular
+      - conceptId: chemistry_materials.physical_chemistry.surface_adsorption_process
+        preferredPhrase: processo de adsorção superficial
+      - conceptId: chemistry_materials.materials_science.crystal_structure_analysis
+        preferredPhrase: análise da estrutura cristalina
+      - conceptId: chemistry_materials.materials_science.mechanical_material_property
+        preferredPhrase: propriedade mecânica do material
+      - conceptId: chemistry_materials.materials_science.polymer_composite_material
+        preferredPhrase: material compósito polimérico
+      - conceptId: chemistry_materials.materials_science.corrosion_resistance_testing
+        preferredPhrase: ensaio de resistência à corrosão
+      - conceptId: chemistry_materials.materials_science.material_phase_transition
+        preferredPhrase: transição de fase do material
+      - conceptId: chemistry_materials.materials_science.nanomaterial_surface_property
+        preferredPhrase: propriedade superficial do nanomaterial
+
+      - conceptId: biology_genetics.molecular_biology.gene_expression_regulation
+        preferredPhrase: regulação da expressão gênica
+      - conceptId: biology_genetics.molecular_biology.protein_synthesis_pathway
+        preferredPhrase: via de síntese proteica
+      - conceptId: biology_genetics.molecular_biology.dna_replication_process
+        preferredPhrase: processo de replicação de DNA
+      - conceptId: biology_genetics.molecular_biology.rna_transcription_mechanism
+        preferredPhrase: mecanismo de transcrição de RNA
+      - conceptId: biology_genetics.molecular_biology.protein_folding_process
+        preferredPhrase: processo de dobramento de proteínas
+      - conceptId: biology_genetics.molecular_biology.cellular_signaling_pathway
+        preferredPhrase: via de sinalização celular
+      - conceptId: biology_genetics.genetics.genetic_variant_analysis
+        preferredPhrase: análise de variantes genéticas
+      - conceptId: biology_genetics.genetics.genome_sequencing_data
+        preferredPhrase: dados de sequenciamento do genoma
+      - conceptId: biology_genetics.genetics.mendelian_inheritance_pattern
+        preferredPhrase: padrão de herança mendeliana
+      - conceptId: biology_genetics.genetics.population_genetic_structure
+        preferredPhrase: estrutura genética populacional
+      - conceptId: biology_genetics.genetics.genetic_association_study
+        preferredPhrase: estudo de associação genética
+      - conceptId: biology_genetics.genetics.gene_mutation_frequency
+        preferredPhrase: frequência de mutação genética
+      - conceptId: biology_genetics.cell_biology.cell_membrane_transport
+        preferredPhrase: transporte pela membrana celular
+      - conceptId: biology_genetics.cell_biology.cellular_metabolism_pathway
+        preferredPhrase: via de metabolismo celular
+      - conceptId: biology_genetics.cell_biology.programmed_cell_death
+        preferredPhrase: morte celular programada
+      - conceptId: biology_genetics.cell_biology.cell_cycle_regulation
+        preferredPhrase: regulação do ciclo celular
+      - conceptId: biology_genetics.cell_biology.stem_cell_differentiation
+        preferredPhrase: diferenciação de células tronco
+      - conceptId: biology_genetics.cell_biology.intracellular_signal_transduction
+        preferredPhrase: transdução de sinal intracelular
+      - conceptId: biology_genetics.physiology.cardiovascular_physiological_response
+        preferredPhrase: resposta fisiológica cardiovascular
+      - conceptId: biology_genetics.physiology.respiratory_gas_exchange
+        preferredPhrase: troca gasosa respiratória
+      - conceptId: biology_genetics.physiology.renal_filtration_process
+        preferredPhrase: processo de filtração renal
+      - conceptId: biology_genetics.physiology.endocrine_hormone_regulation
+        preferredPhrase: regulação hormonal endócrina
+      - conceptId: biology_genetics.physiology.nervous_system_function
+        preferredPhrase: função do sistema nervoso
+      - conceptId: biology_genetics.physiology.metabolic_homeostasis_mechanism
+        preferredPhrase: mecanismo de homeostase metabólica
+
+      - conceptId: computer_science_ai.algorithms_data_structures.graph_traversal_algorithm
+        preferredPhrase: algoritmo de travessia de grafos
+      - conceptId: computer_science_ai.algorithms_data_structures.dynamic_programming_algorithm
+        preferredPhrase: algoritmo de programação dinâmica
+      - conceptId: computer_science_ai.algorithms_data_structures.hash_table_implementation
+        preferredPhrase: implementação de tabela hash
+      - conceptId: computer_science_ai.algorithms_data_structures.computational_complexity_analysis
+        preferredPhrase: análise de complexidade computacional
+      - conceptId: computer_science_ai.algorithms_data_structures.balanced_search_tree
+        preferredPhrase: árvore de busca balanceada
+      - conceptId: computer_science_ai.algorithms_data_structures.shortest_path_algorithm
+        preferredPhrase: algoritmo de caminho mais curto
+      - conceptId: computer_science_ai.software_systems.distributed_system_architecture
+        preferredPhrase: arquitetura de sistemas distribuídos
+      - conceptId: computer_science_ai.software_systems.database_transaction_isolation
+        preferredPhrase: isolamento de transações de banco de dados
+      - conceptId: computer_science_ai.software_systems.concurrent_programming_model
+        preferredPhrase: modelo de programação concorrente
+      - conceptId: computer_science_ai.software_systems.application_programming_interface
+        preferredPhrase: interface de programação de aplicações
+      - conceptId: computer_science_ai.software_systems.fault_tolerant_system
+        preferredPhrase: sistema tolerante a falhas
+      - conceptId: computer_science_ai.software_systems.software_dependency_management
+        preferredPhrase: gestão de dependências de software
+      - conceptId: computer_science_ai.machine_learning.machine_learning_model
+        preferredPhrase: modelo de aprendizado de máquina
+      - conceptId: computer_science_ai.machine_learning.supervised_learning_algorithm
+        preferredPhrase: algoritmo de aprendizado supervisionado
+      - conceptId: computer_science_ai.machine_learning.unsupervised_learning_method
+        preferredPhrase: método de aprendizado não supervisionado
+      - conceptId: computer_science_ai.machine_learning.neural_network_architecture
+        preferredPhrase: arquitetura de rede neural
+      - conceptId: computer_science_ai.machine_learning.model_training_pipeline
+        preferredPhrase: pipeline de treinamento de modelos
+      - conceptId: computer_science_ai.machine_learning.feature_engineering_process
+        preferredPhrase: processo de engenharia de atributos
+      - conceptId: computer_science_ai.data_nlp.natural_language_processing
+        preferredPhrase: processamento de linguagem natural
+      - conceptId: computer_science_ai.data_nlp.semantic_text_representation
+        preferredPhrase: representação semântica de texto
+      - conceptId: computer_science_ai.data_nlp.information_retrieval_system
+        preferredPhrase: sistema de recuperação de informação
+      - conceptId: computer_science_ai.data_nlp.large_language_model
+        preferredPhrase: grande modelo de linguagem
+      - conceptId: computer_science_ai.data_nlp.vector_embedding_model
+        preferredPhrase: modelo de incorporação vetorial
+      - conceptId: computer_science_ai.data_nlp.named_entity_recognition
+        preferredPhrase: reconhecimento de entidades nomeadas
+
+      - conceptId: medicine_pharmacology.clinical_diagnosis.differential_diagnosis_process
+        preferredPhrase: processo de diagnóstico diferencial
+      - conceptId: medicine_pharmacology.clinical_diagnosis.diagnostic_imaging_finding
+        preferredPhrase: achado de imagem diagnóstica
+      - conceptId: medicine_pharmacology.clinical_diagnosis.clinical_laboratory_result
+        preferredPhrase: resultado de laboratório clínico
+      - conceptId: medicine_pharmacology.clinical_diagnosis.disease_severity_assessment
+        preferredPhrase: avaliação da gravidade da doença
+      - conceptId: medicine_pharmacology.clinical_diagnosis.patient_symptom_profile
+        preferredPhrase: perfil de sintomas do paciente
+      - conceptId: medicine_pharmacology.clinical_diagnosis.diagnostic_decision_support
+        preferredPhrase: suporte à decisão diagnóstica
+      - conceptId: medicine_pharmacology.pharmacology.drug_dose_adjustment
+        preferredPhrase: ajuste da dose do medicamento
+      - conceptId: medicine_pharmacology.pharmacology.adverse_drug_reaction
+        preferredPhrase: reação adversa a medicamento
+      - conceptId: medicine_pharmacology.pharmacology.drug_drug_interaction
+        preferredPhrase: interação entre medicamentos
+      - conceptId: medicine_pharmacology.pharmacology.pharmacokinetic_concentration_profile
+        preferredPhrase: perfil farmacocinético de concentração
+      - conceptId: medicine_pharmacology.pharmacology.pharmacodynamic_response_model
+        preferredPhrase: modelo de resposta farmacodinâmica
+      - conceptId: medicine_pharmacology.pharmacology.therapeutic_drug_monitoring
+        preferredPhrase: monitoramento terapêutico de medicamentos
+      - conceptId: medicine_pharmacology.clinical_trials.randomized_controlled_trial
+        preferredPhrase: ensaio controlado randomizado
+      - conceptId: medicine_pharmacology.clinical_trials.clinical_trial_endpoint
+        preferredPhrase: desfecho de ensaio clínico
+      - conceptId: medicine_pharmacology.clinical_trials.treatment_effect_estimate
+        preferredPhrase: estimativa do efeito do tratamento
+      - conceptId: medicine_pharmacology.clinical_trials.trial_inclusion_criteria
+        preferredPhrase: critérios de inclusão do ensaio
+      - conceptId: medicine_pharmacology.clinical_trials.adverse_event_monitoring
+        preferredPhrase: monitoramento de eventos adversos
+      - conceptId: medicine_pharmacology.clinical_trials.clinical_study_protocol
+        preferredPhrase: protocolo de estudo clínico
+      - conceptId: medicine_pharmacology.epidemiology.disease_incidence_rate
+        preferredPhrase: taxa de incidência da doença
+      - conceptId: medicine_pharmacology.epidemiology.disease_prevalence_estimate
+        preferredPhrase: estimativa da prevalência da doença
+      - conceptId: medicine_pharmacology.epidemiology.epidemiological_risk_factor
+        preferredPhrase: fator de risco epidemiológico
+      - conceptId: medicine_pharmacology.epidemiology.population_cohort_study
+        preferredPhrase: estudo de coorte populacional
+      - conceptId: medicine_pharmacology.epidemiology.case_control_study
+        preferredPhrase: estudo de caso controle
+      - conceptId: medicine_pharmacology.epidemiology.outbreak_surveillance_system
+        preferredPhrase: sistema de vigilância de surtos
+
+      - conceptId: earth_environmental_science.geology.geological_formation_analysis
+        preferredPhrase: análise de formação geológica
+      - conceptId: earth_environmental_science.geology.tectonic_plate_movement
+        preferredPhrase: movimento de placas tectônicas
+      - conceptId: earth_environmental_science.geology.sedimentary_basin_structure
+        preferredPhrase: estrutura de bacia sedimentar
+      - conceptId: earth_environmental_science.geology.mineral_composition_analysis
+        preferredPhrase: análise de composição mineral
+      - conceptId: earth_environmental_science.geology.geological_fault_system
+        preferredPhrase: sistema de falhas geológicas
+      - conceptId: earth_environmental_science.geology.subsurface_stratigraphic_model
+        preferredPhrase: modelo estratigráfico de subsuperfície
+      - conceptId: earth_environmental_science.climate_science.climate_change_projection
+        preferredPhrase: projeção de mudança climática
+      - conceptId: earth_environmental_science.climate_science.global_temperature_anomaly
+        preferredPhrase: anomalia de temperatura global
+      - conceptId: earth_environmental_science.climate_science.greenhouse_gas_forcing
+        preferredPhrase: forçamento de gases de efeito estufa
+      - conceptId: earth_environmental_science.climate_science.climate_model_simulation
+        preferredPhrase: simulação de modelo climático
+      - conceptId: earth_environmental_science.climate_science.extreme_weather_event
+        preferredPhrase: evento climático extremo
+      - conceptId: earth_environmental_science.climate_science.atmospheric_circulation_pattern
+        preferredPhrase: padrão de circulação atmosférica
+      - conceptId: earth_environmental_science.hydrology.watershed_runoff_model
+        preferredPhrase: modelo de escoamento de bacia hidrográfica
+      - conceptId: earth_environmental_science.hydrology.groundwater_flow_system
+        preferredPhrase: sistema de fluxo de águas subterrâneas
+      - conceptId: earth_environmental_science.hydrology.river_discharge_measurement
+        preferredPhrase: medição de vazão fluvial
+      - conceptId: earth_environmental_science.hydrology.flood_frequency_analysis
+        preferredPhrase: análise de frequência de enchentes
+      - conceptId: earth_environmental_science.hydrology.water_balance_model
+        preferredPhrase: modelo de balanço hídrico
+      - conceptId: earth_environmental_science.hydrology.aquifer_recharge_rate
+        preferredPhrase: taxa de recarga do aquífero
+      - conceptId: earth_environmental_science.environmental_assessment.environmental_impact_assessment
+        preferredPhrase: avaliação de impacto ambiental
+      - conceptId: earth_environmental_science.environmental_assessment.ecological_risk_assessment
+        preferredPhrase: avaliação de risco ecológico
+      - conceptId: earth_environmental_science.environmental_assessment.air_pollution_monitoring
+        preferredPhrase: monitoramento da poluição do ar
+      - conceptId: earth_environmental_science.environmental_assessment.water_quality_indicator
+        preferredPhrase: indicador de qualidade da água
+      - conceptId: earth_environmental_science.environmental_assessment.biodiversity_impact_evaluation
+        preferredPhrase: avaliação de impacto na biodiversidade
+      - conceptId: earth_environmental_science.environmental_assessment.environmental_remediation_plan
+        preferredPhrase: plano de remediação ambiental
+
+      - conceptId: psychology_sociology.cognitive_psychology.working_memory_capacity
+        preferredPhrase: capacidade de memória de trabalho
+      - conceptId: psychology_sociology.cognitive_psychology.cognitive_load_theory
+        preferredPhrase: teoria da carga cognitiva
+      - conceptId: psychology_sociology.cognitive_psychology.decision_making_process
+        preferredPhrase: processo de tomada de decisão
+      - conceptId: psychology_sociology.cognitive_psychology.selective_attention_mechanism
+        preferredPhrase: mecanismo de atenção seletiva
+      - conceptId: psychology_sociology.cognitive_psychology.cognitive_bias_effect
+        preferredPhrase: efeito de viés cognitivo
+      - conceptId: psychology_sociology.cognitive_psychology.memory_retrieval_process
+        preferredPhrase: processo de recuperação da memória
+      - conceptId: psychology_sociology.behavioral_psychology.behavioral_reinforcement_schedule
+        preferredPhrase: programa de reforço comportamental
+      - conceptId: psychology_sociology.behavioral_psychology.conditioned_behavioral_response
+        preferredPhrase: resposta comportamental condicionada
+      - conceptId: psychology_sociology.behavioral_psychology.behavior_modification_program
+        preferredPhrase: programa de modificação comportamental
+      - conceptId: psychology_sociology.behavioral_psychology.motivation_behavior_relationship
+        preferredPhrase: relação entre motivação e comportamento
+      - conceptId: psychology_sociology.behavioral_psychology.habit_formation_process
+        preferredPhrase: processo de formação de hábitos
+      - conceptId: psychology_sociology.behavioral_psychology.behavioral_intervention_strategy
+        preferredPhrase: estratégia de intervenção comportamental
+      - conceptId: psychology_sociology.social_psychology.social_identity_theory
+        preferredPhrase: teoria da identidade social
+      - conceptId: psychology_sociology.social_psychology.group_decision_making
+        preferredPhrase: tomada de decisão em grupo
+      - conceptId: psychology_sociology.social_psychology.interpersonal_attitude_change
+        preferredPhrase: mudança de atitude interpessoal
+      - conceptId: psychology_sociology.social_psychology.social_influence_process
+        preferredPhrase: processo de influência social
+      - conceptId: psychology_sociology.social_psychology.group_conformity_behavior
+        preferredPhrase: comportamento de conformidade do grupo
+      - conceptId: psychology_sociology.social_psychology.stereotype_formation_process
+        preferredPhrase: processo de formação de estereótipos
+      - conceptId: psychology_sociology.sociology_methods.social_network_analysis
+        preferredPhrase: análise de redes sociais
+      - conceptId: psychology_sociology.sociology_methods.survey_sampling_design
+        preferredPhrase: desenho de amostragem de pesquisa
+      - conceptId: psychology_sociology.sociology_methods.demographic_population_change
+        preferredPhrase: mudança demográfica da população
+      - conceptId: psychology_sociology.sociology_methods.social_stratification_pattern
+        preferredPhrase: padrão de estratificação social
+      - conceptId: psychology_sociology.sociology_methods.qualitative_interview_analysis
+        preferredPhrase: análise qualitativa de entrevistas
+      - conceptId: psychology_sociology.sociology_methods.longitudinal_social_study
+        preferredPhrase: estudo social longitudinal

@@ -22,6 +22,14 @@ public class AdaptiveGraphUtilityRecorder {
             List<RetrievalHit> context,
             CitationValidator.CitationValidation validation
     ) {
+        record(context, validation, true);
+    }
+
+    public void record(
+            List<RetrievalHit> context,
+            CitationValidator.CitationValidation validation,
+            boolean acceptedAnswer
+    ) {
         if (context == null || context.isEmpty()) {
             return;
         }
@@ -37,7 +45,9 @@ public class AdaptiveGraphUtilityRecorder {
         }
 
         metrics.adaptiveGraphUtilityRequest("selected");
-        if (validation == null || validation.citedSources().isEmpty()) {
+        if (!acceptedAnswer
+                || validation == null
+                || validation.citedSources().isEmpty()) {
             return;
         }
 

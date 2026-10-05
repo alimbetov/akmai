@@ -10,6 +10,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import kz.alimbetov.akmai.knowledge.identifier.IdentifierExtractor;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticChunkAnnotator;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 public class ParallelIngestionExecutor {
 
     private final IdentifierExtractor identifierExtractor;
+    private final SemanticChunkAnnotator semanticChunkAnnotator;
     private final Executor ingestionExecutor;
     private final int maxInFlight;
 
@@ -24,7 +27,17 @@ public class ParallelIngestionExecutor {
             IdentifierExtractor identifierExtractor,
             @Qualifier("ingestionExecutor") Executor ingestionExecutor
     ) {
+        this(identifierExtractor, ingestionExecutor, null);
+    }
+
+    @Autowired
+    public ParallelIngestionExecutor(
+            IdentifierExtractor identifierExtractor,
+            @Qualifier("ingestionExecutor") Executor ingestionExecutor,
+            SemanticChunkAnnotator semanticChunkAnnotator
+    ) {
         this.identifierExtractor = identifierExtractor;
+        this.semanticChunkAnnotator = semanticChunkAnnotator;
         this.ingestionExecutor = ingestionExecutor;
         this.maxInFlight = ingestionExecutor instanceof ThreadPoolExecutor pool
                 ? safeInFlightWindow(pool)
@@ -120,10 +133,13 @@ public class ParallelIngestionExecutor {
     }
 
     private EnrichedKnowledgeChunk enrich(KnowledgeChunk chunk) {
+        KnowledgeChunk annotated = semanticChunkAnnotator == null
+                ? chunk
+                : semanticChunkAnnotator.annotate(chunk);
         return new EnrichedKnowledgeChunk(
-                chunk,
-                identifierExtractor.extract(chunk.rawText()),
-                chunk.references()
+                annotated,
+                identifierExtractor.extract(annotated.rawText()),
+                annotated.references()
         );
     }
 

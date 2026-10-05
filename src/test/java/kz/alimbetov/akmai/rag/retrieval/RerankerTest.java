@@ -1,6 +1,9 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
@@ -12,6 +15,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticConceptMatch;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticMatchMode;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalysis;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalyzer;
 import org.junit.jupiter.api.Test;
 
 class RerankerTest {
@@ -43,6 +50,148 @@ class RerankerTest {
                     "rerankSemanticScore",
                     "rerankScore"
             );
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void canonicalConceptOverlapBreaksCloseTieWithBoundedBoost() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            String conceptId =
+                    "finance_banking.risk_capital.capital_adequacy_ratio";
+            RetrievalHit baseline = new RetrievalHit(
+                    RetrievalType.VECTOR,
+                    "doc",
+                    "baseline",
+                    "baseline",
+                    Map.of(
+                            "semanticConcepts",
+                            List.of("other.concept")
+                    ),
+                    List.of(),
+                    0.8
+            );
+            RetrievalHit conceptMatch = new RetrievalHit(
+                    RetrievalType.VECTOR,
+                    "doc",
+                    "concept",
+                    "concept",
+                    Map.of(
+                            "semanticConcepts",
+                            List.of(conceptId)
+                    ),
+                    List.of(),
+                    0.8
+            );
+
+            SemanticQueryAnalyzer analyzer =
+                    mock(SemanticQueryAnalyzer.class);
+            when(analyzer.analyze("capital adequacy ratio"))
+                    .thenReturn(new SemanticQueryAnalysis(
+                            "unknown",
+                            "en",
+                            1.0,
+                            List.of("finance_banking"),
+                            List.of(new SemanticConceptMatch(
+                                    conceptId,
+                                    "finance_banking",
+                                    "risk_capital",
+                                    "capital adequacy ratio",
+                                    3.0,
+                                    SemanticMatchMode.EXACT
+                            ))
+                    ));
+
+            Reranker reranker = reranker(
+                    (question, hits) -> List.of(0.5, 0.5),
+                    executor,
+                    Duration.ofSeconds(1),
+                    analyzer
+            );
+
+            List<RetrievalHit> result = reranker.rerank(
+                    List.of(baseline, conceptMatch),
+                    "capital adequacy ratio"
+            );
+
+            assertThat(result)
+                    .extracting(RetrievalHit::chunkId)
+                    .containsExactly("concept", "baseline");
+            assertThat(result.getFirst().metadata())
+                    .containsEntry("rerankConceptOverlap", 1);
+            assertThat(
+                    (double) result.getFirst()
+                            .metadata()
+                            .get("rerankConceptBoost")
+            ).isCloseTo(0.02, within(1.0e-12));
+            assertThat(result.get(1).metadata())
+                    .containsEntry("rerankConceptOverlap", 0)
+                    .containsEntry("rerankConceptBoost", 0.0);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void conceptBoostCannotOverrideAuthorityTier() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            String conceptId =
+                    "finance_banking.risk_capital.capital_adequacy_ratio";
+            RetrievalHit authority = new RetrievalHit(
+                    RetrievalType.IDENTIFIER,
+                    "doc",
+                    "authority",
+                    "authority",
+                    Map.of("authorityTier", 0),
+                    List.of(),
+                    0.4
+            );
+            RetrievalHit conceptMatch = new RetrievalHit(
+                    RetrievalType.VECTOR,
+                    "doc",
+                    "semantic",
+                    "semantic",
+                    Map.of(
+                            "authorityTier", 2,
+                            "semanticConcepts", List.of(conceptId)
+                    ),
+                    List.of(),
+                    0.9
+            );
+
+            SemanticQueryAnalyzer analyzer =
+                    mock(SemanticQueryAnalyzer.class);
+            when(analyzer.analyze("capital adequacy ratio"))
+                    .thenReturn(new SemanticQueryAnalysis(
+                            "en",
+                            "en",
+                            1.0,
+                            List.of("finance_banking"),
+                            List.of(new SemanticConceptMatch(
+                                    conceptId,
+                                    "finance_banking",
+                                    "risk_capital",
+                                    "capital adequacy ratio",
+                                    3.0,
+                                    SemanticMatchMode.EXACT
+                            ))
+                    ));
+
+            Reranker reranker = reranker(
+                    (question, hits) -> List.of(0.01, 0.99),
+                    executor,
+                    Duration.ofSeconds(1),
+                    analyzer
+            );
+
+            assertThat(reranker.rerank(
+                    List.of(authority, conceptMatch),
+                    "capital adequacy ratio"
+            )).extracting(RetrievalHit::chunkId)
+                    .containsExactly("authority", "semantic");
         } finally {
             executor.shutdownNow();
         }
@@ -317,6 +466,42 @@ class RerankerTest {
                 properties,
                 new RetrievalObserver(new SimpleMeterRegistry()),
                 executor
+        );
+    }
+
+    private Reranker reranker(
+            SemanticRerankScorer scorer,
+            ExecutorService executor,
+            Duration timeout,
+            SemanticQueryAnalyzer semanticQueryAnalyzer
+    ) {
+        RetrievalProperties defaults = RetrievalTestProperties.defaults();
+        RetrievalProperties properties = new RetrievalProperties(
+                defaults.parallelism(),
+                defaults.queueCapacity(),
+                defaults.vectorTopK(),
+                defaults.vectorSimilarityThreshold(),
+                defaults.lexicalLimit(),
+                defaults.identifierLimit(),
+                defaults.referenceLimit(),
+                defaults.rrfK(),
+                defaults.expansionSeeds(),
+                defaults.expansionRadius(),
+                defaults.expansionMax(),
+                defaults.contextMaxTokens(),
+                defaults.contextMaxChunks(),
+                defaults.contextMaxChunksPerDocument(),
+                true,
+                20,
+                timeout,
+                0.15
+        );
+        return new Reranker(
+                scorer,
+                properties,
+                new RetrievalObserver(new SimpleMeterRegistry()),
+                executor,
+                semanticQueryAnalyzer
         );
     }
 

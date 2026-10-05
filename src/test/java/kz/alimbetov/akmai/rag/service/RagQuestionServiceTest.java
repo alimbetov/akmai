@@ -18,6 +18,7 @@ import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphUtilityRecorder;
 import kz.alimbetov.akmai.knowledge.graph.AssociationLearningRecorder;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
+import kz.alimbetov.akmai.rag.retrieval.AnswerGroundingVerifier;
 import kz.alimbetov.akmai.rag.retrieval.ContextAssembler;
 import kz.alimbetov.akmai.rag.retrieval.ContextBudget;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
@@ -26,6 +27,7 @@ import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
 import kz.alimbetov.akmai.rag.retrieval.PublishedContextRevalidator;
 import kz.alimbetov.akmai.rag.retrieval.Reranker;
 import kz.alimbetov.akmai.rag.retrieval.ResultFusion;
+import kz.alimbetov.akmai.rag.retrieval.TemporalAuthorityFilter;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalExecutionResult;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
@@ -125,15 +127,20 @@ class RagQuestionServiceTest {
 
         RagQuestionService service = new RagQuestionService(
                 chunker,
+                new RagFallbackMessages(
+                        new kz.alimbetov.akmai.rag.query.QueryLanguageDetector()
+                ),
                 planner,
                 executor,
                 fusion,
                 reranker,
                 expansion,
                 budget,
+                new TemporalAuthorityFilter(),
                 revalidator,
                 assembler,
                 new CitationValidator(),
+                new AnswerGroundingVerifier(),
                 generation,
                 learning,
                 shadowExpansion,
@@ -150,7 +157,8 @@ class RagQuestionServiceTest {
         verify(revalidator).revalidate(List.of(hit), scope);
         verify(utilityRecorder).record(
                 eq(List.of(hit)),
-                any(CitationValidator.CitationValidation.class)
+                any(CitationValidator.CitationValidation.class),
+                eq(false)
         );
     }
 }

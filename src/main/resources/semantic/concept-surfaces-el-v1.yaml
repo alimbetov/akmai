@@ -1,0 +1,772 @@
+version: semantic-surfaces-el-v1
+languages:
+  - language: el
+    surfaces:
+      - conceptId: finance_banking.lending_credit.credit_risk_assessment
+        preferredPhrase: αξιολόγηση πιστωτικού κινδύνου
+      - conceptId: finance_banking.lending_credit.consumer_loan_underwriting
+        preferredPhrase: αξιολόγηση καταναλωτικού δανείου
+      - conceptId: finance_banking.lending_credit.corporate_credit_facility
+        preferredPhrase: πιστωτική γραμμή επιχειρήσεων
+      - conceptId: finance_banking.lending_credit.nonperforming_loan_ratio
+        preferredPhrase: δείκτης μη εξυπηρετούμενων δανείων
+      - conceptId: finance_banking.lending_credit.loan_loss_provision
+        preferredPhrase: πρόβλεψη ζημιών από δάνεια
+      - conceptId: finance_banking.lending_credit.debt_service_coverage
+        preferredPhrase: δείκτης κάλυψης εξυπηρέτησης χρέους
+      - conceptId: finance_banking.deposits_liquidity.customer_deposit_base
+        preferredPhrase: βάση καταθέσεων πελατών
+      - conceptId: finance_banking.deposits_liquidity.liquidity_coverage_ratio
+        preferredPhrase: δείκτης κάλυψης ρευστότητας
+      - conceptId: finance_banking.deposits_liquidity.net_stable_funding
+        preferredPhrase: καθαρή σταθερή χρηματοδότηση
+      - conceptId: finance_banking.deposits_liquidity.deposit_interest_rate
+        preferredPhrase: επιτόκιο καταθέσεων
+      - conceptId: finance_banking.deposits_liquidity.cash_reserve_requirement
+        preferredPhrase: απαίτηση υποχρεωτικών αποθεματικών
+      - conceptId: finance_banking.deposits_liquidity.liquidity_stress_testing
+        preferredPhrase: δοκιμή αντοχής ρευστότητας
+      - conceptId: finance_banking.risk_capital.capital_adequacy_ratio
+        preferredPhrase: δείκτης κεφαλαιακής επάρκειας
+      - conceptId: finance_banking.risk_capital.risk_weighted_assets
+        preferredPhrase: σταθμισμένα στοιχεία ενεργητικού ως προς τον κίνδυνο
+      - conceptId: finance_banking.risk_capital.common_equity_tier
+        preferredPhrase: βασικά ίδια κεφάλαια κατηγορίας ένα
+      - conceptId: finance_banking.risk_capital.market_risk_exposure
+        preferredPhrase: έκθεση σε κίνδυνο αγοράς
+      - conceptId: finance_banking.risk_capital.operational_risk_capital
+        preferredPhrase: κεφάλαιο λειτουργικού κινδύνου
+      - conceptId: finance_banking.risk_capital.internal_capital_assessment
+        preferredPhrase: εσωτερική αξιολόγηση κεφαλαιακής επάρκειας
+      - conceptId: finance_banking.payments_compliance.payment_settlement_system
+        preferredPhrase: σύστημα διακανονισμού πληρωμών
+      - conceptId: finance_banking.payments_compliance.anti_money_laundering
+        preferredPhrase: καταπολέμηση νομιμοποίησης παράνομων εσόδων
+      - conceptId: finance_banking.payments_compliance.know_your_customer
+        preferredPhrase: ταυτοποίηση και γνώση πελάτη
+      - conceptId: finance_banking.payments_compliance.suspicious_transaction_monitoring
+        preferredPhrase: παρακολούθηση ύποπτων συναλλαγών
+      - conceptId: finance_banking.payments_compliance.cross_border_payment
+        preferredPhrase: διασυνοριακή πληρωμή
+      - conceptId: finance_banking.payments_compliance.payment_fraud_detection
+        preferredPhrase: ανίχνευση απάτης πληρωμών
+      - conceptId: insurance.underwriting_pricing.insurance_underwriting_process
+        preferredPhrase: διαδικασία ανάληψης ασφαλιστικού κινδύνου
+      - conceptId: insurance.underwriting_pricing.risk_based_pricing
+        preferredPhrase: τιμολόγηση βάσει κινδύνου
+      - conceptId: insurance.underwriting_pricing.actuarial_pricing_model
+        preferredPhrase: αναλογιστικό μοντέλο τιμολόγησης
+      - conceptId: insurance.underwriting_pricing.policy_coverage_limit
+        preferredPhrase: όριο κάλυψης ασφαλιστηρίου
+      - conceptId: insurance.underwriting_pricing.insurance_premium_calculation
+        preferredPhrase: υπολογισμός ασφαλίστρου
+      - conceptId: insurance.underwriting_pricing.underwriting_risk_appetite
+        preferredPhrase: διάθεση ανάληψης ασφαλιστικού κινδύνου
+      - conceptId: insurance.claims_management.insurance_claim_assessment
+        preferredPhrase: αξιολόγηση ασφαλιστικής απαίτησης
+      - conceptId: insurance.claims_management.claims_settlement_process
+        preferredPhrase: διαδικασία διακανονισμού ζημιών
+      - conceptId: insurance.claims_management.loss_adjustment_expense
+        preferredPhrase: έξοδο εκτίμησης και διακανονισμού ζημιάς
+      - conceptId: insurance.claims_management.fraudulent_claim_detection
+        preferredPhrase: ανίχνευση δόλιας ασφαλιστικής απαίτησης
+      - conceptId: insurance.claims_management.claim_reserve_estimate
+        preferredPhrase: εκτίμηση αποθέματος ζημιών
+      - conceptId: insurance.claims_management.claims_handling_procedure
+        preferredPhrase: διαδικασία διαχείρισης ασφαλιστικών απαιτήσεων
+      - conceptId: insurance.life_health.life_insurance_policy
+        preferredPhrase: ασφαλιστήριο ζωής
+      - conceptId: insurance.life_health.health_insurance_coverage
+        preferredPhrase: κάλυψη ασφάλισης υγείας
+      - conceptId: insurance.life_health.mortality_risk_model
+        preferredPhrase: μοντέλο κινδύνου θνησιμότητας
+      - conceptId: insurance.life_health.morbidity_risk_estimate
+        preferredPhrase: εκτίμηση κινδύνου νοσηρότητας
+      - conceptId: insurance.life_health.medical_expense_reimbursement
+        preferredPhrase: αποζημίωση ιατρικών εξόδων
+      - conceptId: insurance.life_health.policyholder_benefit_schedule
+        preferredPhrase: πρόγραμμα παροχών ασφαλισμένου
+      - conceptId: insurance.property_casualty.property_damage_coverage
+        preferredPhrase: κάλυψη υλικών ζημιών
+      - conceptId: insurance.property_casualty.casualty_insurance_claim
+        preferredPhrase: απαίτηση ασφάλισης αστικής ευθύνης
+      - conceptId: insurance.property_casualty.catastrophe_risk_model
+        preferredPhrase: μοντέλο καταστροφικού κινδύνου
+      - conceptId: insurance.property_casualty.business_interruption_coverage
+        preferredPhrase: κάλυψη διακοπής επιχειρηματικής δραστηριότητας
+      - conceptId: insurance.property_casualty.liability_coverage_limit
+        preferredPhrase: όριο κάλυψης αστικής ευθύνης
+      - conceptId: insurance.property_casualty.insured_loss_estimate
+        preferredPhrase: εκτίμηση ασφαλισμένης ζημιάς
+      - conceptId: energy_utilities.power_generation.electricity_generation_capacity
+        preferredPhrase: ικανότητα παραγωγής ηλεκτρικής ενέργειας
+      - conceptId: energy_utilities.power_generation.thermal_power_plant
+        preferredPhrase: θερμικός σταθμός ηλεκτροπαραγωγής
+      - conceptId: energy_utilities.power_generation.combined_cycle_turbine
+        preferredPhrase: στρόβιλος συνδυασμένου κύκλου
+      - conceptId: energy_utilities.power_generation.generation_dispatch_schedule
+        preferredPhrase: πρόγραμμα κατανομής ηλεκτροπαραγωγής
+      - conceptId: energy_utilities.power_generation.power_plant_efficiency
+        preferredPhrase: απόδοση σταθμού ηλεκτροπαραγωγής
+      - conceptId: energy_utilities.power_generation.reserve_generation_margin
+        preferredPhrase: περιθώριο εφεδρείας παραγωγής
+      - conceptId: energy_utilities.power_grid.transmission_grid_stability
+        preferredPhrase: ευστάθεια δικτύου μεταφοράς
+      - conceptId: energy_utilities.power_grid.distribution_network_operator
+        preferredPhrase: διαχειριστής δικτύου διανομής
+      - conceptId: energy_utilities.power_grid.high_voltage_substation
+        preferredPhrase: υποσταθμός υψηλής τάσης
+      - conceptId: energy_utilities.power_grid.grid_frequency_control
+        preferredPhrase: έλεγχος συχνότητας δικτύου
+      - conceptId: energy_utilities.power_grid.power_flow_analysis
+        preferredPhrase: ανάλυση ροής ισχύος
+      - conceptId: energy_utilities.power_grid.electricity_network_congestion
+        preferredPhrase: συμφόρηση ηλεκτρικού δικτύου
+      - conceptId: energy_utilities.energy_markets.wholesale_electricity_market
+        preferredPhrase: χονδρεμπορική αγορά ηλεκτρικής ενέργειας
+      - conceptId: energy_utilities.energy_markets.day_ahead_market
+        preferredPhrase: αγορά επόμενης ημέρας
+      - conceptId: energy_utilities.energy_markets.balancing_energy_market
+        preferredPhrase: αγορά ενέργειας εξισορρόπησης
+      - conceptId: energy_utilities.energy_markets.electricity_tariff_regulation
+        preferredPhrase: ρύθμιση τιμολογίων ηλεκτρικής ενέργειας
+      - conceptId: energy_utilities.energy_markets.energy_demand_forecast
+        preferredPhrase: πρόβλεψη ενεργειακής ζήτησης
+      - conceptId: energy_utilities.energy_markets.capacity_market_mechanism
+        preferredPhrase: μηχανισμός αγοράς ισχύος
+      - conceptId: energy_utilities.renewable_energy.solar_power_generation
+        preferredPhrase: παραγωγή ηλιακής ενέργειας
+      - conceptId: energy_utilities.renewable_energy.wind_power_capacity
+        preferredPhrase: εγκατεστημένη ισχύς αιολικής ενέργειας
+      - conceptId: energy_utilities.renewable_energy.renewable_energy_certificate
+        preferredPhrase: πιστοποιητικό ανανεώσιμης ενέργειας
+      - conceptId: energy_utilities.renewable_energy.battery_energy_storage
+        preferredPhrase: αποθήκευση ενέργειας με μπαταρίες
+      - conceptId: energy_utilities.renewable_energy.grid_scale_storage
+        preferredPhrase: αποθήκευση ενέργειας σε κλίμακα δικτύου
+      - conceptId: energy_utilities.renewable_energy.renewable_integration_study
+        preferredPhrase: μελέτη ενσωμάτωσης ανανεώσιμων πηγών
+      - conceptId: oil_gas_mining.upstream_operations.oil_reservoir_characterization
+        preferredPhrase: χαρακτηρισμός πετρελαϊκού ταμιευτήρα
+      - conceptId: oil_gas_mining.upstream_operations.hydrocarbon_exploration_program
+        preferredPhrase: πρόγραμμα έρευνας υδρογονανθράκων
+      - conceptId: oil_gas_mining.upstream_operations.drilling_operations_plan
+        preferredPhrase: σχέδιο εργασιών γεώτρησης
+      - conceptId: oil_gas_mining.upstream_operations.well_completion_design
+        preferredPhrase: σχεδιασμός ολοκλήρωσης γεώτρησης
+      - conceptId: oil_gas_mining.upstream_operations.enhanced_oil_recovery
+        preferredPhrase: ενισχυμένη ανάκτηση πετρελαίου
+      - conceptId: oil_gas_mining.upstream_operations.reservoir_pressure_management
+        preferredPhrase: διαχείριση πίεσης ταμιευτήρα
+      - conceptId: oil_gas_mining.midstream_operations.crude_oil_pipeline
+        preferredPhrase: αγωγός αργού πετρελαίου
+      - conceptId: oil_gas_mining.midstream_operations.natural_gas_pipeline
+        preferredPhrase: αγωγός φυσικού αερίου
+      - conceptId: oil_gas_mining.midstream_operations.gas_processing_facility
+        preferredPhrase: μονάδα επεξεργασίας φυσικού αερίου
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_integrity_management
+        preferredPhrase: διαχείριση ακεραιότητας αγωγών
+      - conceptId: oil_gas_mining.midstream_operations.hydrocarbon_storage_terminal
+        preferredPhrase: τερματικός σταθμός αποθήκευσης υδρογονανθράκων
+      - conceptId: oil_gas_mining.midstream_operations.gas_compression_station
+        preferredPhrase: σταθμός συμπίεσης φυσικού αερίου
+      - conceptId: oil_gas_mining.downstream_operations.crude_oil_refining
+        preferredPhrase: διύλιση αργού πετρελαίου
+      - conceptId: oil_gas_mining.downstream_operations.petroleum_product_yield
+        preferredPhrase: απόδοση προϊόντων πετρελαίου
+      - conceptId: oil_gas_mining.downstream_operations.refinery_process_unit
+        preferredPhrase: μονάδα διεργασίας διυλιστηρίου
+      - conceptId: oil_gas_mining.downstream_operations.fuel_blending_specification
+        preferredPhrase: προδιαγραφή ανάμειξης καυσίμου
+      - conceptId: oil_gas_mining.downstream_operations.petrochemical_feedstock_supply
+        preferredPhrase: εφοδιασμός πετροχημικής πρώτης ύλης
+      - conceptId: oil_gas_mining.downstream_operations.refinery_turnaround_maintenance
+        preferredPhrase: γενική συντήρηση διακοπής διυλιστηρίου
+      - conceptId: oil_gas_mining.mining_operations.mineral_resource_estimate
+        preferredPhrase: εκτίμηση ορυκτών πόρων
+      - conceptId: oil_gas_mining.mining_operations.open_pit_mining
+        preferredPhrase: εξόρυξη ανοικτού ορύγματος
+      - conceptId: oil_gas_mining.mining_operations.underground_mine_design
+        preferredPhrase: σχεδιασμός υπόγειου μεταλλείου
+      - conceptId: oil_gas_mining.mining_operations.ore_processing_plant
+        preferredPhrase: μονάδα επεξεργασίας μεταλλεύματος
+      - conceptId: oil_gas_mining.mining_operations.mine_tailings_management
+        preferredPhrase: διαχείριση μεταλλευτικών αποβλήτων
+      - conceptId: oil_gas_mining.mining_operations.mineral_reserve_classification
+        preferredPhrase: ταξινόμηση ορυκτών αποθεμάτων
+      - conceptId: manufacturing.production_systems.production_planning_system
+        preferredPhrase: σύστημα προγραμματισμού παραγωγής
+      - conceptId: manufacturing.production_systems.manufacturing_execution_system
+        preferredPhrase: σύστημα εκτέλεσης παραγωγής
+      - conceptId: manufacturing.production_systems.production_line_balancing
+        preferredPhrase: εξισορρόπηση γραμμής παραγωγής
+      - conceptId: manufacturing.production_systems.takt_time_calculation
+        preferredPhrase: υπολογισμός χρόνου takt
+      - conceptId: manufacturing.production_systems.overall_equipment_effectiveness
+        preferredPhrase: συνολική αποτελεσματικότητα εξοπλισμού
+      - conceptId: manufacturing.production_systems.batch_production_schedule
+        preferredPhrase: πρόγραμμα παραγωγής κατά παρτίδες
+      - conceptId: manufacturing.quality_management.statistical_process_control
+        preferredPhrase: στατιστικός έλεγχος διεργασιών
+      - conceptId: manufacturing.quality_management.quality_management_system
+        preferredPhrase: σύστημα διαχείρισης ποιότητας
+      - conceptId: manufacturing.quality_management.root_cause_analysis
+        preferredPhrase: ανάλυση βασικής αιτίας
+      - conceptId: manufacturing.quality_management.nonconformance_corrective_action
+        preferredPhrase: διορθωτική ενέργεια μη συμμόρφωσης
+      - conceptId: manufacturing.quality_management.process_capability_index
+        preferredPhrase: δείκτης ικανότητας διεργασίας
+      - conceptId: manufacturing.quality_management.incoming_quality_inspection
+        preferredPhrase: έλεγχος ποιότητας εισερχομένων
+      - conceptId: manufacturing.maintenance_reliability.preventive_maintenance_schedule
+        preferredPhrase: πρόγραμμα προληπτικής συντήρησης
+      - conceptId: manufacturing.maintenance_reliability.predictive_maintenance_model
+        preferredPhrase: μοντέλο προγνωστικής συντήρησης
+      - conceptId: manufacturing.maintenance_reliability.reliability_centered_maintenance
+        preferredPhrase: συντήρηση με επίκεντρο την αξιοπιστία
+      - conceptId: manufacturing.maintenance_reliability.mean_time_between_failures
+        preferredPhrase: μέσος χρόνος μεταξύ βλαβών
+      - conceptId: manufacturing.maintenance_reliability.equipment_failure_mode
+        preferredPhrase: τρόπος αστοχίας εξοπλισμού
+      - conceptId: manufacturing.maintenance_reliability.maintenance_work_order
+        preferredPhrase: εντολή εργασίας συντήρησης
+      - conceptId: manufacturing.industrial_operations.industrial_process_automation
+        preferredPhrase: αυτοματοποίηση βιομηχανικών διεργασιών
+      - conceptId: manufacturing.industrial_operations.programmable_logic_controller
+        preferredPhrase: προγραμματιζόμενος λογικός ελεγκτής
+      - conceptId: manufacturing.industrial_operations.production_capacity_utilization
+        preferredPhrase: αξιοποίηση παραγωγικής δυναμικότητας
+      - conceptId: manufacturing.industrial_operations.industrial_safety_procedure
+        preferredPhrase: διαδικασία βιομηχανικής ασφάλειας
+      - conceptId: manufacturing.industrial_operations.plant_operations_management
+        preferredPhrase: διαχείριση λειτουργίας εργοστασίου
+      - conceptId: manufacturing.industrial_operations.process_optimization_study
+        preferredPhrase: μελέτη βελτιστοποίησης διεργασίας
+      - conceptId: construction_real_estate.design_construction.building_structural_design
+        preferredPhrase: στατικός σχεδιασμός κτιρίου
+      - conceptId: construction_real_estate.design_construction.construction_project_schedule
+        preferredPhrase: χρονοδιάγραμμα κατασκευαστικού έργου
+      - conceptId: construction_real_estate.design_construction.building_information_modeling
+        preferredPhrase: μοντελοποίηση πληροφοριών κτιρίου
+      - conceptId: construction_real_estate.design_construction.reinforced_concrete_structure
+        preferredPhrase: κατασκευή από οπλισμένο σκυρόδεμα
+      - conceptId: construction_real_estate.design_construction.construction_site_management
+        preferredPhrase: διαχείριση εργοταξίου
+      - conceptId: construction_real_estate.design_construction.building_code_compliance
+        preferredPhrase: συμμόρφωση με οικοδομικό κανονισμό
+      - conceptId: construction_real_estate.real_estate_market.commercial_property_valuation
+        preferredPhrase: αποτίμηση εμπορικού ακινήτου
+      - conceptId: construction_real_estate.real_estate_market.residential_property_market
+        preferredPhrase: αγορά οικιστικών ακινήτων
+      - conceptId: construction_real_estate.real_estate_market.rental_yield_analysis
+        preferredPhrase: ανάλυση απόδοσης μίσθωσης
+      - conceptId: construction_real_estate.real_estate_market.real_estate_transaction
+        preferredPhrase: συναλλαγή ακινήτου
+      - conceptId: construction_real_estate.real_estate_market.property_market_appraisal
+        preferredPhrase: εκτίμηση αγοραίας αξίας ακινήτου
+      - conceptId: construction_real_estate.real_estate_market.investment_property_return
+        preferredPhrase: απόδοση επενδυτικού ακινήτου
+      - conceptId: construction_real_estate.facilities_management.facility_maintenance_plan
+        preferredPhrase: σχέδιο συντήρησης εγκαταστάσεων
+      - conceptId: construction_real_estate.facilities_management.building_energy_performance
+        preferredPhrase: ενεργειακή απόδοση κτιρίου
+      - conceptId: construction_real_estate.facilities_management.property_asset_management
+        preferredPhrase: διαχείριση περιουσιακών στοιχείων ακινήτων
+      - conceptId: construction_real_estate.facilities_management.preventive_facility_maintenance
+        preferredPhrase: προληπτική συντήρηση εγκαταστάσεων
+      - conceptId: construction_real_estate.facilities_management.building_occupancy_management
+        preferredPhrase: διαχείριση πληρότητας κτιρίου
+      - conceptId: construction_real_estate.facilities_management.facilities_service_contract
+        preferredPhrase: σύμβαση υπηρεσιών εγκαταστάσεων
+      - conceptId: construction_real_estate.project_controls.construction_cost_estimate
+        preferredPhrase: εκτίμηση κόστους κατασκευής
+      - conceptId: construction_real_estate.project_controls.earned_value_management
+        preferredPhrase: διαχείριση δεδουλευμένης αξίας
+      - conceptId: construction_real_estate.project_controls.project_schedule_variance
+        preferredPhrase: απόκλιση χρονοδιαγράμματος έργου
+      - conceptId: construction_real_estate.project_controls.construction_risk_register
+        preferredPhrase: μητρώο κινδύνων κατασκευής
+      - conceptId: construction_real_estate.project_controls.contractor_progress_payment
+        preferredPhrase: πληρωμή προόδου εργολάβου
+      - conceptId: construction_real_estate.project_controls.change_order_management
+        preferredPhrase: διαχείριση εντολών αλλαγής
+      - conceptId: transport_logistics.freight_transport.freight_transportation_network
+        preferredPhrase: δίκτυο μεταφοράς εμπορευμάτων
+      - conceptId: transport_logistics.freight_transport.intermodal_freight_terminal
+        preferredPhrase: διατροπικός τερματικός σταθμός εμπορευμάτων
+      - conceptId: transport_logistics.freight_transport.cargo_transport_capacity
+        preferredPhrase: ικανότητα μεταφοράς φορτίου
+      - conceptId: transport_logistics.freight_transport.rail_freight_service
+        preferredPhrase: υπηρεσία σιδηροδρομικών εμπορευματικών μεταφορών
+      - conceptId: transport_logistics.freight_transport.road_freight_operation
+        preferredPhrase: λειτουργία οδικών εμπορευματικών μεταφορών
+      - conceptId: transport_logistics.freight_transport.air_cargo_handling
+        preferredPhrase: διαχείριση αεροπορικού φορτίου
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_management_system
+        preferredPhrase: σύστημα διαχείρισης αποθήκης
+      - conceptId: transport_logistics.warehousing_distribution.distribution_center_operation
+        preferredPhrase: λειτουργία κέντρου διανομής
+      - conceptId: transport_logistics.warehousing_distribution.inventory_storage_policy
+        preferredPhrase: πολιτική αποθήκευσης αποθέματος
+      - conceptId: transport_logistics.warehousing_distribution.order_fulfillment_process
+        preferredPhrase: διαδικασία εκπλήρωσης παραγγελιών
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_picking_strategy
+        preferredPhrase: στρατηγική συλλογής παραγγελιών αποθήκης
+      - conceptId: transport_logistics.warehousing_distribution.cold_chain_logistics
+        preferredPhrase: εφοδιαστική ψυχρής αλυσίδας
+      - conceptId: transport_logistics.fleet_operations.fleet_maintenance_program
+        preferredPhrase: πρόγραμμα συντήρησης στόλου
+      - conceptId: transport_logistics.fleet_operations.vehicle_route_optimization
+        preferredPhrase: βελτιστοποίηση διαδρομών οχημάτων
+      - conceptId: transport_logistics.fleet_operations.fleet_fuel_efficiency
+        preferredPhrase: αποδοτικότητα καυσίμου στόλου
+      - conceptId: transport_logistics.fleet_operations.driver_safety_management
+        preferredPhrase: διαχείριση ασφάλειας οδηγών
+      - conceptId: transport_logistics.fleet_operations.vehicle_utilization_rate
+        preferredPhrase: ποσοστό αξιοποίησης οχημάτων
+      - conceptId: transport_logistics.fleet_operations.fleet_telematics_system
+        preferredPhrase: σύστημα τηλεματικής στόλου
+      - conceptId: transport_logistics.supply_chain.supply_chain_disruption
+        preferredPhrase: διαταραχή εφοδιαστικής αλυσίδας
+      - conceptId: transport_logistics.supply_chain.supplier_lead_time
+        preferredPhrase: χρόνος παράδοσης προμηθευτή
+      - conceptId: transport_logistics.supply_chain.logistics_network_optimization
+        preferredPhrase: βελτιστοποίηση δικτύου εφοδιαστικής
+      - conceptId: transport_logistics.supply_chain.demand_supply_planning
+        preferredPhrase: σχεδιασμός ζήτησης και προσφοράς
+      - conceptId: transport_logistics.supply_chain.supply_chain_resilience
+        preferredPhrase: ανθεκτικότητα εφοδιαστικής αλυσίδας
+      - conceptId: transport_logistics.supply_chain.last_mile_delivery
+        preferredPhrase: παράδοση τελευταίου μιλίου
+      - conceptId: agriculture_food.crop_science.crop_yield_forecast
+        preferredPhrase: πρόβλεψη απόδοσης καλλιέργειας
+      - conceptId: agriculture_food.crop_science.soil_nutrient_management
+        preferredPhrase: διαχείριση θρεπτικών στοιχείων εδάφους
+      - conceptId: agriculture_food.crop_science.precision_agriculture_system
+        preferredPhrase: σύστημα γεωργίας ακριβείας
+      - conceptId: agriculture_food.crop_science.integrated_pest_management
+        preferredPhrase: ολοκληρωμένη διαχείριση επιβλαβών οργανισμών
+      - conceptId: agriculture_food.crop_science.irrigation_scheduling_model
+        preferredPhrase: μοντέλο προγραμματισμού άρδευσης
+      - conceptId: agriculture_food.crop_science.crop_disease_monitoring
+        preferredPhrase: παρακολούθηση ασθενειών καλλιεργειών
+      - conceptId: agriculture_food.livestock_production.livestock_health_management
+        preferredPhrase: διαχείριση υγείας κτηνοτροφικών ζώων
+      - conceptId: agriculture_food.livestock_production.animal_feed_formulation
+        preferredPhrase: σύνθεση ζωοτροφών
+      - conceptId: agriculture_food.livestock_production.dairy_production_system
+        preferredPhrase: σύστημα γαλακτοπαραγωγής
+      - conceptId: agriculture_food.livestock_production.herd_reproductive_performance
+        preferredPhrase: αναπαραγωγική απόδοση κοπαδιού
+      - conceptId: agriculture_food.livestock_production.livestock_disease_control
+        preferredPhrase: έλεγχος ασθενειών κτηνοτροφικών ζώων
+      - conceptId: agriculture_food.livestock_production.animal_welfare_standard
+        preferredPhrase: πρότυπο ευζωίας ζώων
+      - conceptId: agriculture_food.food_processing.food_processing_technology
+        preferredPhrase: τεχνολογία επεξεργασίας τροφίμων
+      - conceptId: agriculture_food.food_processing.food_production_line
+        preferredPhrase: γραμμή παραγωγής τροφίμων
+      - conceptId: agriculture_food.food_processing.thermal_food_processing
+        preferredPhrase: θερμική επεξεργασία τροφίμων
+      - conceptId: agriculture_food.food_processing.food_packaging_system
+        preferredPhrase: σύστημα συσκευασίας τροφίμων
+      - conceptId: agriculture_food.food_processing.shelf_life_evaluation
+        preferredPhrase: αξιολόγηση διάρκειας ζωής προϊόντος
+      - conceptId: agriculture_food.food_processing.food_quality_control
+        preferredPhrase: έλεγχος ποιότητας τροφίμων
+      - conceptId: agriculture_food.food_safety.food_safety_management
+        preferredPhrase: διαχείριση ασφάλειας τροφίμων
+      - conceptId: agriculture_food.food_safety.hazard_analysis_control
+        preferredPhrase: ανάλυση κινδύνων και έλεγχος
+      - conceptId: agriculture_food.food_safety.microbial_contamination_risk
+        preferredPhrase: κίνδυνος μικροβιακής επιμόλυνσης
+      - conceptId: agriculture_food.food_safety.food_traceability_system
+        preferredPhrase: σύστημα ιχνηλασιμότητας τροφίμων
+      - conceptId: agriculture_food.food_safety.allergen_control_program
+        preferredPhrase: πρόγραμμα ελέγχου αλλεργιογόνων
+      - conceptId: agriculture_food.food_safety.food_hygiene_standard
+        preferredPhrase: πρότυπο υγιεινής τροφίμων
+      - conceptId: mathematics_statistics.probability_statistics.probability_distribution_function
+        preferredPhrase: συνάρτηση κατανομής πιθανότητας
+      - conceptId: mathematics_statistics.probability_statistics.statistical_hypothesis_testing
+        preferredPhrase: στατιστικός έλεγχος υπόθεσης
+      - conceptId: mathematics_statistics.probability_statistics.maximum_likelihood_estimation
+        preferredPhrase: εκτίμηση μέγιστης πιθανοφάνειας
+      - conceptId: mathematics_statistics.probability_statistics.bayesian_posterior_distribution
+        preferredPhrase: μπεϋζιανή εκ των υστέρων κατανομή
+      - conceptId: mathematics_statistics.probability_statistics.confidence_interval_estimation
+        preferredPhrase: εκτίμηση διαστήματος εμπιστοσύνης
+      - conceptId: mathematics_statistics.probability_statistics.stochastic_process_model
+        preferredPhrase: μοντέλο στοχαστικής διεργασίας
+      - conceptId: mathematics_statistics.algebra_geometry.linear_algebra_system
+        preferredPhrase: σύστημα γραμμικής άλγεβρας
+      - conceptId: mathematics_statistics.algebra_geometry.eigenvalue_decomposition_method
+        preferredPhrase: μέθοδος αποσύνθεσης ιδιοτιμών
+      - conceptId: mathematics_statistics.algebra_geometry.abstract_algebra_structure
+        preferredPhrase: αφηρημένη αλγεβρική δομή
+      - conceptId: mathematics_statistics.algebra_geometry.differential_geometry_manifold
+        preferredPhrase: πολλαπλότητα διαφορικής γεωμετρίας
+      - conceptId: mathematics_statistics.algebra_geometry.matrix_factorization_method
+        preferredPhrase: μέθοδος παραγοντοποίησης μητρώου
+      - conceptId: mathematics_statistics.algebra_geometry.vector_space_basis
+        preferredPhrase: βάση διανυσματικού χώρου
+      - conceptId: mathematics_statistics.optimization.constrained_optimization_problem
+        preferredPhrase: πρόβλημα βελτιστοποίησης με περιορισμούς
+      - conceptId: mathematics_statistics.optimization.convex_optimization_method
+        preferredPhrase: μέθοδος κυρτής βελτιστοποίησης
+      - conceptId: mathematics_statistics.optimization.integer_programming_model
+        preferredPhrase: μοντέλο ακέραιου προγραμματισμού
+      - conceptId: mathematics_statistics.optimization.gradient_descent_algorithm
+        preferredPhrase: αλγόριθμος καθόδου κλίσης
+      - conceptId: mathematics_statistics.optimization.multi_objective_optimization
+        preferredPhrase: πολυκριτηριακή βελτιστοποίηση
+      - conceptId: mathematics_statistics.optimization.nonlinear_optimization_solver
+        preferredPhrase: επιλυτής μη γραμμικής βελτιστοποίησης
+      - conceptId: mathematics_statistics.numerical_methods.numerical_integration_method
+        preferredPhrase: μέθοδος αριθμητικής ολοκλήρωσης
+      - conceptId: mathematics_statistics.numerical_methods.finite_difference_scheme
+        preferredPhrase: σχήμα πεπερασμένων διαφορών
+      - conceptId: mathematics_statistics.numerical_methods.numerical_stability_analysis
+        preferredPhrase: ανάλυση αριθμητικής ευστάθειας
+      - conceptId: mathematics_statistics.numerical_methods.iterative_linear_solver
+        preferredPhrase: επαναληπτικός γραμμικός επιλυτής
+      - conceptId: mathematics_statistics.numerical_methods.differential_equation_solver
+        preferredPhrase: επιλυτής διαφορικών εξισώσεων
+      - conceptId: mathematics_statistics.numerical_methods.numerical_error_estimate
+        preferredPhrase: εκτίμηση αριθμητικού σφάλματος
+      - conceptId: physics_astronomy.classical_mechanics.newtonian_motion_equation
+        preferredPhrase: νευτώνεια εξίσωση κίνησης
+      - conceptId: physics_astronomy.classical_mechanics.conservation_of_momentum
+        preferredPhrase: διατήρηση ορμής
+      - conceptId: physics_astronomy.classical_mechanics.rigid_body_dynamics
+        preferredPhrase: δυναμική στερεού σώματος
+      - conceptId: physics_astronomy.classical_mechanics.harmonic_oscillator_model
+        preferredPhrase: μοντέλο αρμονικού ταλαντωτή
+      - conceptId: physics_astronomy.classical_mechanics.rotational_motion_analysis
+        preferredPhrase: ανάλυση περιστροφικής κίνησης
+      - conceptId: physics_astronomy.classical_mechanics.classical_mechanics_system
+        preferredPhrase: σύστημα κλασικής μηχανικής
+      - conceptId: physics_astronomy.thermodynamics.thermodynamic_state_variable
+        preferredPhrase: θερμοδυναμική μεταβλητή κατάστασης
+      - conceptId: physics_astronomy.thermodynamics.heat_transfer_coefficient
+        preferredPhrase: συντελεστής μεταφοράς θερμότητας
+      - conceptId: physics_astronomy.thermodynamics.entropy_production_rate
+        preferredPhrase: ρυθμός παραγωγής εντροπίας
+      - conceptId: physics_astronomy.thermodynamics.phase_equilibrium_condition
+        preferredPhrase: συνθήκη ισορροπίας φάσεων
+      - conceptId: physics_astronomy.thermodynamics.thermodynamic_cycle_efficiency
+        preferredPhrase: απόδοση θερμοδυναμικού κύκλου
+      - conceptId: physics_astronomy.thermodynamics.equation_of_state
+        preferredPhrase: εξίσωση κατάστασης
+      - conceptId: physics_astronomy.electromagnetism.electromagnetic_field_equation
+        preferredPhrase: εξίσωση ηλεκτρομαγνητικού πεδίου
+      - conceptId: physics_astronomy.electromagnetism.electric_potential_difference
+        preferredPhrase: διαφορά ηλεκτρικού δυναμικού
+      - conceptId: physics_astronomy.electromagnetism.magnetic_flux_density
+        preferredPhrase: πυκνότητα μαγνητικής ροής
+      - conceptId: physics_astronomy.electromagnetism.electromagnetic_wave_propagation
+        preferredPhrase: διάδοση ηλεκτρομαγνητικού κύματος
+      - conceptId: physics_astronomy.electromagnetism.maxwell_equation_system
+        preferredPhrase: σύστημα εξισώσεων Maxwell
+      - conceptId: physics_astronomy.electromagnetism.electric_field_strength
+        preferredPhrase: ένταση ηλεκτρικού πεδίου
+      - conceptId: physics_astronomy.astrophysics.stellar_evolution_model
+        preferredPhrase: μοντέλο αστρικής εξέλιξης
+      - conceptId: physics_astronomy.astrophysics.galactic_rotation_curve
+        preferredPhrase: καμπύλη γαλαξιακής περιστροφής
+      - conceptId: physics_astronomy.astrophysics.cosmic_microwave_background
+        preferredPhrase: κοσμική μικροκυματική ακτινοβολία υποβάθρου
+      - conceptId: physics_astronomy.astrophysics.black_hole_accretion
+        preferredPhrase: προσαύξηση ύλης σε μαύρη τρύπα
+      - conceptId: physics_astronomy.astrophysics.exoplanet_orbital_period
+        preferredPhrase: τροχιακή περίοδος εξωπλανήτη
+      - conceptId: physics_astronomy.astrophysics.gravitational_wave_signal
+        preferredPhrase: σήμα βαρυτικού κύματος
+      - conceptId: chemistry_materials.organic_chemistry.organic_reaction_mechanism
+        preferredPhrase: μηχανισμός οργανικής αντίδρασης
+      - conceptId: chemistry_materials.organic_chemistry.carbon_carbon_bond
+        preferredPhrase: δεσμός άνθρακα άνθρακα
+      - conceptId: chemistry_materials.organic_chemistry.functional_group_transformation
+        preferredPhrase: μετατροπή λειτουργικής ομάδας
+      - conceptId: chemistry_materials.organic_chemistry.stereochemical_reaction_pathway
+        preferredPhrase: στερεοχημική πορεία αντίδρασης
+      - conceptId: chemistry_materials.organic_chemistry.organic_synthesis_route
+        preferredPhrase: οδός οργανικής σύνθεσης
+      - conceptId: chemistry_materials.organic_chemistry.reaction_yield_optimization
+        preferredPhrase: βελτιστοποίηση απόδοσης αντίδρασης
+      - conceptId: chemistry_materials.analytical_chemistry.mass_spectrometry_analysis
+        preferredPhrase: ανάλυση φασματομετρίας μάζας
+      - conceptId: chemistry_materials.analytical_chemistry.high_performance_chromatography
+        preferredPhrase: χρωματογραφία υψηλής απόδοσης
+      - conceptId: chemistry_materials.analytical_chemistry.analytical_detection_limit
+        preferredPhrase: αναλυτικό όριο ανίχνευσης
+      - conceptId: chemistry_materials.analytical_chemistry.chemical_calibration_curve
+        preferredPhrase: καμπύλη χημικής βαθμονόμησης
+      - conceptId: chemistry_materials.analytical_chemistry.quantitative_chemical_analysis
+        preferredPhrase: ποσοτική χημική ανάλυση
+      - conceptId: chemistry_materials.analytical_chemistry.sample_preparation_method
+        preferredPhrase: μέθοδος προετοιμασίας δείγματος
+      - conceptId: chemistry_materials.physical_chemistry.chemical_reaction_kinetics
+        preferredPhrase: κινητική χημικής αντίδρασης
+      - conceptId: chemistry_materials.physical_chemistry.molecular_orbital_theory
+        preferredPhrase: θεωρία μοριακών τροχιακών
+      - conceptId: chemistry_materials.physical_chemistry.thermodynamic_equilibrium_constant
+        preferredPhrase: θερμοδυναμική σταθερά ισορροπίας
+      - conceptId: chemistry_materials.physical_chemistry.electrochemical_cell_potential
+        preferredPhrase: δυναμικό ηλεκτροχημικής κυψέλης
+      - conceptId: chemistry_materials.physical_chemistry.molecular_spectroscopy_analysis
+        preferredPhrase: ανάλυση μοριακής φασματοσκοπίας
+      - conceptId: chemistry_materials.physical_chemistry.surface_adsorption_process
+        preferredPhrase: διεργασία επιφανειακής προσρόφησης
+      - conceptId: chemistry_materials.materials_science.crystal_structure_analysis
+        preferredPhrase: ανάλυση κρυσταλλικής δομής
+      - conceptId: chemistry_materials.materials_science.mechanical_material_property
+        preferredPhrase: μηχανική ιδιότητα υλικού
+      - conceptId: chemistry_materials.materials_science.polymer_composite_material
+        preferredPhrase: πολυμερές σύνθετο υλικό
+      - conceptId: chemistry_materials.materials_science.corrosion_resistance_testing
+        preferredPhrase: δοκιμή αντοχής στη διάβρωση
+      - conceptId: chemistry_materials.materials_science.material_phase_transition
+        preferredPhrase: μετάβαση φάσης υλικού
+      - conceptId: chemistry_materials.materials_science.nanomaterial_surface_property
+        preferredPhrase: επιφανειακή ιδιότητα νανοϋλικού
+      - conceptId: biology_genetics.molecular_biology.gene_expression_regulation
+        preferredPhrase: ρύθμιση γονιδιακής έκφρασης
+      - conceptId: biology_genetics.molecular_biology.protein_synthesis_pathway
+        preferredPhrase: οδός σύνθεσης πρωτεϊνών
+      - conceptId: biology_genetics.molecular_biology.dna_replication_process
+        preferredPhrase: διαδικασία αντιγραφής DNA
+      - conceptId: biology_genetics.molecular_biology.rna_transcription_mechanism
+        preferredPhrase: μηχανισμός μεταγραφής RNA
+      - conceptId: biology_genetics.molecular_biology.protein_folding_process
+        preferredPhrase: διαδικασία αναδίπλωσης πρωτεΐνης
+      - conceptId: biology_genetics.molecular_biology.cellular_signaling_pathway
+        preferredPhrase: οδός κυτταρικής σηματοδότησης
+      - conceptId: biology_genetics.genetics.genetic_variant_analysis
+        preferredPhrase: ανάλυση γενετικών παραλλαγών
+      - conceptId: biology_genetics.genetics.genome_sequencing_data
+        preferredPhrase: δεδομένα αλληλούχησης γονιδιώματος
+      - conceptId: biology_genetics.genetics.mendelian_inheritance_pattern
+        preferredPhrase: πρότυπο μεντελικής κληρονόμησης
+      - conceptId: biology_genetics.genetics.population_genetic_structure
+        preferredPhrase: γενετική δομή πληθυσμού
+      - conceptId: biology_genetics.genetics.genetic_association_study
+        preferredPhrase: μελέτη γενετικής συσχέτισης
+      - conceptId: biology_genetics.genetics.gene_mutation_frequency
+        preferredPhrase: συχνότητα γονιδιακής μετάλλαξης
+      - conceptId: biology_genetics.cell_biology.cell_membrane_transport
+        preferredPhrase: μεταφορά μέσω κυτταρικής μεμβράνης
+      - conceptId: biology_genetics.cell_biology.cellular_metabolism_pathway
+        preferredPhrase: οδός κυτταρικού μεταβολισμού
+      - conceptId: biology_genetics.cell_biology.programmed_cell_death
+        preferredPhrase: προγραμματισμένος κυτταρικός θάνατος
+      - conceptId: biology_genetics.cell_biology.cell_cycle_regulation
+        preferredPhrase: ρύθμιση κυτταρικού κύκλου
+      - conceptId: biology_genetics.cell_biology.stem_cell_differentiation
+        preferredPhrase: διαφοροποίηση βλαστοκυττάρων
+      - conceptId: biology_genetics.cell_biology.intracellular_signal_transduction
+        preferredPhrase: ενδοκυτταρική μεταγωγή σήματος
+      - conceptId: biology_genetics.physiology.cardiovascular_physiological_response
+        preferredPhrase: καρδιαγγειακή φυσιολογική απόκριση
+      - conceptId: biology_genetics.physiology.respiratory_gas_exchange
+        preferredPhrase: αναπνευστική ανταλλαγή αερίων
+      - conceptId: biology_genetics.physiology.renal_filtration_process
+        preferredPhrase: διαδικασία νεφρικής διήθησης
+      - conceptId: biology_genetics.physiology.endocrine_hormone_regulation
+        preferredPhrase: ενδοκρινική ορμονική ρύθμιση
+      - conceptId: biology_genetics.physiology.nervous_system_function
+        preferredPhrase: λειτουργία νευρικού συστήματος
+      - conceptId: biology_genetics.physiology.metabolic_homeostasis_mechanism
+        preferredPhrase: μηχανισμός μεταβολικής ομοιόστασης
+      - conceptId: computer_science_ai.algorithms_data_structures.graph_traversal_algorithm
+        preferredPhrase: αλγόριθμος διάσχισης γράφου
+      - conceptId: computer_science_ai.algorithms_data_structures.dynamic_programming_algorithm
+        preferredPhrase: αλγόριθμος δυναμικού προγραμματισμού
+      - conceptId: computer_science_ai.algorithms_data_structures.hash_table_implementation
+        preferredPhrase: υλοποίηση πίνακα κατακερματισμού
+      - conceptId: computer_science_ai.algorithms_data_structures.computational_complexity_analysis
+        preferredPhrase: ανάλυση υπολογιστικής πολυπλοκότητας
+      - conceptId: computer_science_ai.algorithms_data_structures.balanced_search_tree
+        preferredPhrase: ισορροπημένο δέντρο αναζήτησης
+      - conceptId: computer_science_ai.algorithms_data_structures.shortest_path_algorithm
+        preferredPhrase: αλγόριθμος συντομότερης διαδρομής
+      - conceptId: computer_science_ai.software_systems.distributed_system_architecture
+        preferredPhrase: αρχιτεκτονική κατανεμημένου συστήματος
+      - conceptId: computer_science_ai.software_systems.database_transaction_isolation
+        preferredPhrase: απομόνωση συναλλαγών βάσης δεδομένων
+      - conceptId: computer_science_ai.software_systems.concurrent_programming_model
+        preferredPhrase: μοντέλο ταυτόχρονου προγραμματισμού
+      - conceptId: computer_science_ai.software_systems.application_programming_interface
+        preferredPhrase: διεπαφή προγραμματισμού εφαρμογών
+      - conceptId: computer_science_ai.software_systems.fault_tolerant_system
+        preferredPhrase: σύστημα ανθεκτικό σε σφάλματα
+      - conceptId: computer_science_ai.software_systems.software_dependency_management
+        preferredPhrase: διαχείριση εξαρτήσεων λογισμικού
+      - conceptId: computer_science_ai.machine_learning.machine_learning_model
+        preferredPhrase: μοντέλο μηχανικής μάθησης
+      - conceptId: computer_science_ai.machine_learning.supervised_learning_algorithm
+        preferredPhrase: αλγόριθμος επιβλεπόμενης μάθησης
+      - conceptId: computer_science_ai.machine_learning.unsupervised_learning_method
+        preferredPhrase: μέθοδος μη επιβλεπόμενης μάθησης
+      - conceptId: computer_science_ai.machine_learning.neural_network_architecture
+        preferredPhrase: αρχιτεκτονική νευρωνικού δικτύου
+      - conceptId: computer_science_ai.machine_learning.model_training_pipeline
+        preferredPhrase: ροή εκπαίδευσης μοντέλου
+      - conceptId: computer_science_ai.machine_learning.feature_engineering_process
+        preferredPhrase: διαδικασία μηχανικής χαρακτηριστικών
+      - conceptId: computer_science_ai.data_nlp.natural_language_processing
+        preferredPhrase: επεξεργασία φυσικής γλώσσας
+      - conceptId: computer_science_ai.data_nlp.semantic_text_representation
+        preferredPhrase: σημασιολογική αναπαράσταση κειμένου
+      - conceptId: computer_science_ai.data_nlp.information_retrieval_system
+        preferredPhrase: σύστημα ανάκτησης πληροφοριών
+      - conceptId: computer_science_ai.data_nlp.large_language_model
+        preferredPhrase: μεγάλο γλωσσικό μοντέλο
+      - conceptId: computer_science_ai.data_nlp.vector_embedding_model
+        preferredPhrase: μοντέλο διανυσματικών ενσωματώσεων
+      - conceptId: computer_science_ai.data_nlp.named_entity_recognition
+        preferredPhrase: αναγνώριση ονοματικών οντοτήτων
+      - conceptId: medicine_pharmacology.clinical_diagnosis.differential_diagnosis_process
+        preferredPhrase: διαδικασία διαφορικής διάγνωσης
+      - conceptId: medicine_pharmacology.clinical_diagnosis.diagnostic_imaging_finding
+        preferredPhrase: εύρημα διαγνωστικής απεικόνισης
+      - conceptId: medicine_pharmacology.clinical_diagnosis.clinical_laboratory_result
+        preferredPhrase: κλινικό εργαστηριακό αποτέλεσμα
+      - conceptId: medicine_pharmacology.clinical_diagnosis.disease_severity_assessment
+        preferredPhrase: αξιολόγηση βαρύτητας νόσου
+      - conceptId: medicine_pharmacology.clinical_diagnosis.patient_symptom_profile
+        preferredPhrase: προφίλ συμπτωμάτων ασθενούς
+      - conceptId: medicine_pharmacology.clinical_diagnosis.diagnostic_decision_support
+        preferredPhrase: υποστήριξη διαγνωστικών αποφάσεων
+      - conceptId: medicine_pharmacology.pharmacology.drug_dose_adjustment
+        preferredPhrase: προσαρμογή δόσης φαρμάκου
+      - conceptId: medicine_pharmacology.pharmacology.adverse_drug_reaction
+        preferredPhrase: ανεπιθύμητη ενέργεια φαρμάκου
+      - conceptId: medicine_pharmacology.pharmacology.drug_drug_interaction
+        preferredPhrase: αλληλεπίδραση φαρμάκων
+      - conceptId: medicine_pharmacology.pharmacology.pharmacokinetic_concentration_profile
+        preferredPhrase: φαρμακοκινητικό προφίλ συγκέντρωσης
+      - conceptId: medicine_pharmacology.pharmacology.pharmacodynamic_response_model
+        preferredPhrase: μοντέλο φαρμακοδυναμικής απόκρισης
+      - conceptId: medicine_pharmacology.pharmacology.therapeutic_drug_monitoring
+        preferredPhrase: θεραπευτική παρακολούθηση φαρμάκων
+      - conceptId: medicine_pharmacology.clinical_trials.randomized_controlled_trial
+        preferredPhrase: τυχαιοποιημένη ελεγχόμενη μελέτη
+      - conceptId: medicine_pharmacology.clinical_trials.clinical_trial_endpoint
+        preferredPhrase: καταληκτικό σημείο κλινικής δοκιμής
+      - conceptId: medicine_pharmacology.clinical_trials.treatment_effect_estimate
+        preferredPhrase: εκτίμηση επίδρασης θεραπείας
+      - conceptId: medicine_pharmacology.clinical_trials.trial_inclusion_criteria
+        preferredPhrase: κριτήρια ένταξης στη δοκιμή
+      - conceptId: medicine_pharmacology.clinical_trials.adverse_event_monitoring
+        preferredPhrase: παρακολούθηση ανεπιθύμητων συμβάντων
+      - conceptId: medicine_pharmacology.clinical_trials.clinical_study_protocol
+        preferredPhrase: πρωτόκολλο κλινικής μελέτης
+      - conceptId: medicine_pharmacology.epidemiology.disease_incidence_rate
+        preferredPhrase: ποσοστό επίπτωσης νόσου
+      - conceptId: medicine_pharmacology.epidemiology.disease_prevalence_estimate
+        preferredPhrase: εκτίμηση επιπολασμού νόσου
+      - conceptId: medicine_pharmacology.epidemiology.epidemiological_risk_factor
+        preferredPhrase: επιδημιολογικός παράγοντας κινδύνου
+      - conceptId: medicine_pharmacology.epidemiology.population_cohort_study
+        preferredPhrase: μελέτη κοόρτης πληθυσμού
+      - conceptId: medicine_pharmacology.epidemiology.case_control_study
+        preferredPhrase: μελέτη ασθενών μαρτύρων
+      - conceptId: medicine_pharmacology.epidemiology.outbreak_surveillance_system
+        preferredPhrase: σύστημα επιτήρησης επιδημικών εξάρσεων
+      - conceptId: earth_environmental_science.geology.geological_formation_analysis
+        preferredPhrase: ανάλυση γεωλογικού σχηματισμού
+      - conceptId: earth_environmental_science.geology.tectonic_plate_movement
+        preferredPhrase: κίνηση τεκτονικών πλακών
+      - conceptId: earth_environmental_science.geology.sedimentary_basin_structure
+        preferredPhrase: δομή ιζηματογενούς λεκάνης
+      - conceptId: earth_environmental_science.geology.mineral_composition_analysis
+        preferredPhrase: ανάλυση ορυκτολογικής σύστασης
+      - conceptId: earth_environmental_science.geology.geological_fault_system
+        preferredPhrase: σύστημα γεωλογικών ρηγμάτων
+      - conceptId: earth_environmental_science.geology.subsurface_stratigraphic_model
+        preferredPhrase: στρωματογραφικό μοντέλο υπεδάφους
+      - conceptId: earth_environmental_science.climate_science.climate_change_projection
+        preferredPhrase: προβολή κλιματικής αλλαγής
+      - conceptId: earth_environmental_science.climate_science.global_temperature_anomaly
+        preferredPhrase: παγκόσμια ανωμαλία θερμοκρασίας
+      - conceptId: earth_environmental_science.climate_science.greenhouse_gas_forcing
+        preferredPhrase: εξαναγκασμός αερίων θερμοκηπίου
+      - conceptId: earth_environmental_science.climate_science.climate_model_simulation
+        preferredPhrase: προσομοίωση κλιματικού μοντέλου
+      - conceptId: earth_environmental_science.climate_science.extreme_weather_event
+        preferredPhrase: ακραίο καιρικό φαινόμενο
+      - conceptId: earth_environmental_science.climate_science.atmospheric_circulation_pattern
+        preferredPhrase: πρότυπο ατμοσφαιρικής κυκλοφορίας
+      - conceptId: earth_environmental_science.hydrology.watershed_runoff_model
+        preferredPhrase: μοντέλο απορροής υδρολογικής λεκάνης
+      - conceptId: earth_environmental_science.hydrology.groundwater_flow_system
+        preferredPhrase: σύστημα ροής υπόγειων υδάτων
+      - conceptId: earth_environmental_science.hydrology.river_discharge_measurement
+        preferredPhrase: μέτρηση παροχής ποταμού
+      - conceptId: earth_environmental_science.hydrology.flood_frequency_analysis
+        preferredPhrase: ανάλυση συχνότητας πλημμυρών
+      - conceptId: earth_environmental_science.hydrology.water_balance_model
+        preferredPhrase: μοντέλο υδατικού ισοζυγίου
+      - conceptId: earth_environmental_science.hydrology.aquifer_recharge_rate
+        preferredPhrase: ρυθμός ανατροφοδότησης υδροφορέα
+      - conceptId: earth_environmental_science.environmental_assessment.environmental_impact_assessment
+        preferredPhrase: εκτίμηση περιβαλλοντικών επιπτώσεων
+      - conceptId: earth_environmental_science.environmental_assessment.ecological_risk_assessment
+        preferredPhrase: αξιολόγηση οικολογικού κινδύνου
+      - conceptId: earth_environmental_science.environmental_assessment.air_pollution_monitoring
+        preferredPhrase: παρακολούθηση ατμοσφαιρικής ρύπανσης
+      - conceptId: earth_environmental_science.environmental_assessment.water_quality_indicator
+        preferredPhrase: δείκτης ποιότητας νερού
+      - conceptId: earth_environmental_science.environmental_assessment.biodiversity_impact_evaluation
+        preferredPhrase: αξιολόγηση επιπτώσεων στη βιοποικιλότητα
+      - conceptId: earth_environmental_science.environmental_assessment.environmental_remediation_plan
+        preferredPhrase: σχέδιο περιβαλλοντικής αποκατάστασης
+      - conceptId: psychology_sociology.cognitive_psychology.working_memory_capacity
+        preferredPhrase: χωρητικότητα μνήμης εργασίας
+      - conceptId: psychology_sociology.cognitive_psychology.cognitive_load_theory
+        preferredPhrase: θεωρία γνωστικού φορτίου
+      - conceptId: psychology_sociology.cognitive_psychology.decision_making_process
+        preferredPhrase: διαδικασία λήψης αποφάσεων
+      - conceptId: psychology_sociology.cognitive_psychology.selective_attention_mechanism
+        preferredPhrase: μηχανισμός επιλεκτικής προσοχής
+      - conceptId: psychology_sociology.cognitive_psychology.cognitive_bias_effect
+        preferredPhrase: επίδραση γνωστικής μεροληψίας
+      - conceptId: psychology_sociology.cognitive_psychology.memory_retrieval_process
+        preferredPhrase: διαδικασία ανάκλησης μνήμης
+      - conceptId: psychology_sociology.behavioral_psychology.behavioral_reinforcement_schedule
+        preferredPhrase: πρόγραμμα συμπεριφορικής ενίσχυσης
+      - conceptId: psychology_sociology.behavioral_psychology.conditioned_behavioral_response
+        preferredPhrase: εξαρτημένη συμπεριφορική απόκριση
+      - conceptId: psychology_sociology.behavioral_psychology.behavior_modification_program
+        preferredPhrase: πρόγραμμα τροποποίησης συμπεριφοράς
+      - conceptId: psychology_sociology.behavioral_psychology.motivation_behavior_relationship
+        preferredPhrase: σχέση κινήτρου και συμπεριφοράς
+      - conceptId: psychology_sociology.behavioral_psychology.habit_formation_process
+        preferredPhrase: διαδικασία διαμόρφωσης συνήθειας
+      - conceptId: psychology_sociology.behavioral_psychology.behavioral_intervention_strategy
+        preferredPhrase: στρατηγική συμπεριφορικής παρέμβασης
+      - conceptId: psychology_sociology.social_psychology.social_identity_theory
+        preferredPhrase: θεωρία κοινωνικής ταυτότητας
+      - conceptId: psychology_sociology.social_psychology.group_decision_making
+        preferredPhrase: ομαδική λήψη αποφάσεων
+      - conceptId: psychology_sociology.social_psychology.interpersonal_attitude_change
+        preferredPhrase: διαπροσωπική αλλαγή στάσης
+      - conceptId: psychology_sociology.social_psychology.social_influence_process
+        preferredPhrase: διαδικασία κοινωνικής επιρροής
+      - conceptId: psychology_sociology.social_psychology.group_conformity_behavior
+        preferredPhrase: συμπεριφορά ομαδικής συμμόρφωσης
+      - conceptId: psychology_sociology.social_psychology.stereotype_formation_process
+        preferredPhrase: διαδικασία σχηματισμού στερεοτύπων
+      - conceptId: psychology_sociology.sociology_methods.social_network_analysis
+        preferredPhrase: ανάλυση κοινωνικών δικτύων
+      - conceptId: psychology_sociology.sociology_methods.survey_sampling_design
+        preferredPhrase: σχεδιασμός δειγματοληψίας έρευνας
+      - conceptId: psychology_sociology.sociology_methods.demographic_population_change
+        preferredPhrase: δημογραφική μεταβολή πληθυσμού
+      - conceptId: psychology_sociology.sociology_methods.social_stratification_pattern
+        preferredPhrase: πρότυπο κοινωνικής διαστρωμάτωσης
+      - conceptId: psychology_sociology.sociology_methods.qualitative_interview_analysis
+        preferredPhrase: ποιοτική ανάλυση συνεντεύξεων
+      - conceptId: psychology_sociology.sociology_methods.longitudinal_social_study
+        preferredPhrase: διαχρονική κοινωνική μελέτη

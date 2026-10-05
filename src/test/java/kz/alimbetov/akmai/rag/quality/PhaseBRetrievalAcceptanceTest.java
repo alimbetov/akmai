@@ -30,18 +30,21 @@ class PhaseBRetrievalAcceptanceTest {
         RetrievalPlan second = planner.plan(chunks);
 
         assertThat(chunks).hasSize(3);
-        assertThat(first.steps()).hasSize(9);
+        assertThat(first.steps()).hasSize(12);
         assertThat(first.steps())
                 .extracting(RetrievalStep::type)
                 .containsExactly(
                         RetrievalType.VECTOR,
                         RetrievalType.LEXICAL,
+                        RetrievalType.CONCEPT,
                         RetrievalType.REFERENCE,
                         RetrievalType.VECTOR,
                         RetrievalType.LEXICAL,
+                        RetrievalType.CONCEPT,
                         RetrievalType.REFERENCE,
                         RetrievalType.VECTOR,
                         RetrievalType.LEXICAL,
+                        RetrievalType.CONCEPT,
                         RetrievalType.REFERENCE
                 );
         assertThat(first.steps())
@@ -76,6 +79,10 @@ class PhaseBRetrievalAcceptanceTest {
                 .filter(step -> step.type() == RetrievalType.LEXICAL)
                 .findFirst()
                 .orElseThrow();
+        RetrievalStep concept = plan.steps().stream()
+                .filter(step -> step.type() == RetrievalType.CONCEPT)
+                .findFirst()
+                .orElseThrow();
         RetrievalStep reference = plan.steps().stream()
                 .filter(step -> step.type() == RetrievalType.REFERENCE)
                 .findFirst()
@@ -83,8 +90,9 @@ class PhaseBRetrievalAcceptanceTest {
 
         assertThat(vector.dependsOn()).containsExactly(identifier.id());
         assertThat(lexical.dependsOn()).containsExactly(identifier.id());
+        assertThat(concept.dependsOn()).containsExactly(identifier.id());
         assertThat(reference.dependsOn())
-                .containsExactly(vector.id(), lexical.id());
+                .containsExactly(vector.id(), lexical.id(), concept.id());
     }
 
     private QueryChunker chunker() {

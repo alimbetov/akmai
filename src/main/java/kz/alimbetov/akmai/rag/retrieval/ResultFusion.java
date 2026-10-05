@@ -167,7 +167,7 @@ public class ResultFusion {
         return switch (hit.type()) {
             case IDENTIFIER -> 0;
             case REFERENCE -> exactReference(hit) ? 0 : 3;
-            case VECTOR, LEXICAL -> 2;
+            case VECTOR, LEXICAL, CONCEPT -> 2;
             case GRAPH -> 4;
         };
     }

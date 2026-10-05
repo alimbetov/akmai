@@ -1,0 +1,417 @@
+version: semantic-concept-aliases-core-v1
+entries:
+  - conceptId: finance_banking.lending_credit.credit_risk_assessment
+    aliases:
+      en: [borrower credit evaluation]
+      ru: [оценка кредитоспособности заемщика]
+      kk: [қарыз алушының несие қабілетін бағалау]
+  - conceptId: finance_banking.lending_credit.consumer_loan_underwriting
+    aliases:
+      en: [retail loan underwriting]
+      ru: [андеррайтинг розничного кредита]
+      kk: [бөлшек несиені андеррайтинг]
+  - conceptId: finance_banking.deposits_liquidity.customer_deposit_base
+    aliases:
+      en: [retail deposit portfolio]
+      ru: [портфель розничных депозитов]
+      kk: [бөлшек депозиттер портфелі]
+  - conceptId: finance_banking.risk_capital.capital_adequacy_ratio
+    aliases:
+      en: [bank capital adequacy]
+      ru: [достаточность банковского капитала]
+      kk: [банк капиталының жеткіліктілігі]
+  - conceptId: finance_banking.payments_compliance.anti_money_laundering
+    aliases:
+      en: [money laundering prevention]
+      ru: [предотвращение отмывания денег]
+      kk: [ақшаны жылыстатудың алдын алу]
+
+  - conceptId: insurance.underwriting_pricing.insurance_underwriting_process
+    aliases:
+      en: [policy underwriting workflow]
+      ru: [процесс андеррайтинга полиса]
+      kk: [полисті андеррайтинг үдерісі]
+  - conceptId: insurance.underwriting_pricing.risk_based_pricing
+    aliases:
+      en: [risk adjusted premium pricing]
+      ru: [ценообразование премии по риску]
+      kk: [тәуекелге негізделген сақтандыру бағасы]
+  - conceptId: insurance.claims_management.insurance_claim_assessment
+    aliases:
+      en: [claim damage assessment]
+      ru: [оценка ущерба по заявлению]
+      kk: [сақтандыру талабы бойынша залалды бағалау]
+  - conceptId: insurance.life_health.life_insurance_policy
+    aliases:
+      en: [life coverage contract]
+      ru: [договор страхования жизни]
+      kk: [өмірді сақтандыру шарты]
+  - conceptId: insurance.property_casualty.catastrophe_risk_model
+    aliases:
+      en: [catastrophe loss model]
+      ru: [модель катастрофических убытков]
+      kk: [апаттық шығындар моделі]
+
+  - conceptId: energy_utilities.power_generation.electricity_generation_capacity
+    aliases:
+      en: [available generation capacity]
+      ru: [доступная генерирующая мощность]
+      kk: [қолжетімді генерациялық қуат]
+  - conceptId: energy_utilities.power_generation.power_plant_efficiency
+    aliases:
+      en: [generation unit efficiency]
+      ru: [эффективность энергоблока]
+      kk: [энергия блогының тиімділігі]
+  - conceptId: energy_utilities.power_grid.transmission_grid_stability
+    aliases:
+      en: [transmission system stability]
+      ru: [устойчивость энергосистемы]
+      kk: [электр жүйесінің тұрақтылығы]
+  - conceptId: energy_utilities.energy_markets.wholesale_electricity_market
+    aliases:
+      en: [wholesale power market]
+      ru: [оптовый рынок электроэнергии]
+      kk: [электр энергиясының көтерме нарығы]
+  - conceptId: energy_utilities.renewable_energy.battery_energy_storage
+    aliases:
+      en: [battery storage system]
+      ru: [система аккумуляторного хранения]
+      kk: [аккумуляторлық сақтау жүйесі]
+
+  - conceptId: oil_gas_mining.upstream_operations.oil_reservoir_characterization
+    aliases:
+      en: [reservoir property modeling]
+      ru: [моделирование свойств пласта]
+      kk: [қабат қасиеттерін модельдеу]
+  - conceptId: oil_gas_mining.upstream_operations.drilling_operations_plan
+    aliases:
+      en: [drilling program plan]
+      ru: [программа буровых работ]
+      kk: [бұрғылау жұмыстары бағдарламасы]
+  - conceptId: oil_gas_mining.midstream_operations.crude_oil_pipeline
+    aliases:
+      en: [oil transmission pipeline]
+      ru: [магистральный нефтепровод]
+      kk: [магистральдық мұнай құбыры]
+  - conceptId: oil_gas_mining.downstream_operations.crude_oil_refining
+    aliases:
+      en: [petroleum refining process]
+      ru: [процесс переработки нефти]
+      kk: [мұнай өңдеу процесі]
+  - conceptId: oil_gas_mining.mining_operations.mineral_resource_estimate
+    aliases:
+      en: [mineral resource evaluation]
+      ru: [оценка минеральных ресурсов]
+      kk: [минералдық ресурстарды бағалау]
+
+  - conceptId: manufacturing.production_systems.production_planning_system
+    aliases:
+      en: [manufacturing planning system]
+      ru: [система производственного планирования]
+      kk: [өндірісті жоспарлау жүйесі]
+  - conceptId: manufacturing.production_systems.production_line_balancing
+    aliases:
+      en: [assembly line balancing]
+      ru: [балансировка сборочной линии]
+      kk: [құрастыру желісін теңгеру]
+  - conceptId: manufacturing.quality_management.statistical_process_control
+    aliases:
+      en: [process statistical control]
+      ru: [статистический контроль процесса]
+      kk: [процесті статистикалық бақылау]
+  - conceptId: manufacturing.maintenance_reliability.preventive_maintenance_schedule
+    aliases:
+      en: [scheduled preventive maintenance]
+      ru: [плановое профилактическое обслуживание]
+      kk: [жоспарлы профилактикалық қызмет]
+  - conceptId: manufacturing.industrial_operations.industrial_process_automation
+    aliases:
+      en: [factory process automation]
+      ru: [автоматизация производственного процесса]
+      kk: [өндірістік процесті автоматтандыру]
+
+  - conceptId: construction_real_estate.design_construction.building_structural_design
+    aliases:
+      en: [structural building engineering]
+      ru: [проектирование несущих конструкций]
+      kk: [ғимараттың көтергіш құрылымдарын жобалау]
+  - conceptId: construction_real_estate.design_construction.construction_project_schedule
+    aliases:
+      en: [construction works schedule]
+      ru: [график строительных работ]
+      kk: [құрылыс жұмыстарының кестесі]
+  - conceptId: construction_real_estate.real_estate_market.commercial_property_valuation
+    aliases:
+      en: [commercial real estate appraisal]
+      ru: [оценка коммерческой недвижимости]
+      kk: [коммерциялық жылжымайтын мүлікті бағалау]
+  - conceptId: construction_real_estate.facilities_management.facility_maintenance_plan
+    aliases:
+      en: [building maintenance plan]
+      ru: [план обслуживания здания]
+      kk: [ғимаратқа қызмет көрсету жоспары]
+  - conceptId: construction_real_estate.project_controls.construction_cost_estimate
+    aliases:
+      en: [project construction estimate]
+      ru: [смета строительного проекта]
+      kk: [құрылыс жобасының сметасы]
+
+  - conceptId: transport_logistics.freight_transport.freight_transportation_network
+    aliases:
+      en: [cargo transportation network]
+      ru: [сеть грузовых перевозок]
+      kk: [жүк тасымалы желісі]
+  - conceptId: transport_logistics.freight_transport.cargo_transport_capacity
+    aliases:
+      en: [freight carrying capacity]
+      ru: [провозная способность грузов]
+      kk: [жүк тасымалдау сыйымдылығы]
+  - conceptId: transport_logistics.warehousing_distribution.warehouse_management_system
+    aliases:
+      en: [warehouse control system]
+      ru: [система управления складом]
+      kk: [қойманы басқару жүйесі]
+  - conceptId: transport_logistics.fleet_operations.fleet_maintenance_program
+    aliases:
+      en: [vehicle fleet maintenance]
+      ru: [обслуживание автопарка]
+      kk: [көлік паркіне қызмет көрсету]
+  - conceptId: transport_logistics.supply_chain.supply_chain_disruption
+    aliases:
+      en: [supply chain interruption]
+      ru: [нарушение цепочки поставок]
+      kk: [жеткізу тізбегінің үзілуі]
+
+  - conceptId: agriculture_food.crop_science.crop_yield_forecast
+    aliases:
+      en: [harvest yield prediction]
+      ru: [прогноз урожайности]
+      kk: [егін өнімділігін болжау]
+  - conceptId: agriculture_food.crop_science.soil_nutrient_management
+    aliases:
+      en: [soil fertility management]
+      ru: [управление плодородием почвы]
+      kk: [топырақ құнарлылығын басқару]
+  - conceptId: agriculture_food.livestock_production.livestock_health_management
+    aliases:
+      en: [herd health management]
+      ru: [управление здоровьем стада]
+      kk: [табын денсаулығын басқару]
+  - conceptId: agriculture_food.food_processing.food_processing_technology
+    aliases:
+      en: [food manufacturing technology]
+      ru: [технология производства пищевых продуктов]
+      kk: [тағам өндірісінің технологиясы]
+  - conceptId: agriculture_food.food_safety.food_safety_management
+    aliases:
+      en: [food safety control]
+      ru: [контроль безопасности пищевых продуктов]
+      kk: [тағам қауіпсіздігін бақылау]
+
+  - conceptId: mathematics_statistics.probability_statistics.probability_distribution_function
+    aliases:
+      en: [probability distribution law]
+      ru: [закон распределения вероятностей]
+      kk: [ықтималдық үлестірім заңы]
+  - conceptId: mathematics_statistics.probability_statistics.statistical_hypothesis_testing
+    aliases:
+      en: [hypothesis significance testing]
+      ru: [проверка значимости гипотез]
+      kk: [гипотезаның маңыздылығын тексеру]
+  - conceptId: mathematics_statistics.algebra_geometry.linear_algebra_system
+    aliases:
+      en: [linear algebra framework]
+      ru: [система линейной алгебры]
+      kk: [сызықтық алгебра жүйесі]
+  - conceptId: mathematics_statistics.optimization.constrained_optimization_problem
+    aliases:
+      en: [optimization with constraints]
+      ru: [оптимизация с ограничениями]
+      kk: [шектеулері бар оңтайландыру]
+  - conceptId: mathematics_statistics.numerical_methods.numerical_integration_method
+    aliases:
+      en: [numerical quadrature method]
+      ru: [метод численного интегрирования]
+      kk: [сандық интегралдау әдісі]
+
+  - conceptId: physics_astronomy.classical_mechanics.newtonian_motion_equation
+    aliases:
+      en: [Newton motion equation]
+      ru: [уравнение движения Ньютона]
+      kk: [Ньютон қозғалыс теңдеуі]
+  - conceptId: physics_astronomy.classical_mechanics.conservation_of_momentum
+    aliases:
+      en: [momentum conservation law]
+      ru: [закон сохранения количества движения]
+      kk: [қозғалыс мөлшерінің сақталу заңы]
+  - conceptId: physics_astronomy.thermodynamics.thermodynamic_state_variable
+    aliases:
+      en: [thermodynamic state parameter]
+      ru: [параметр термодинамического состояния]
+      kk: [термодинамикалық күй параметрі]
+  - conceptId: physics_astronomy.electromagnetism.electromagnetic_field_equation
+    aliases:
+      en: [electromagnetic field law]
+      ru: [уравнение электромагнитного поля]
+      kk: [электромагниттік өріс теңдеуі]
+  - conceptId: physics_astronomy.astrophysics.stellar_evolution_model
+    aliases:
+      en: [star evolution model]
+      ru: [модель эволюции звезд]
+      kk: [жұлдыз эволюциясының моделі]
+
+  - conceptId: chemistry_materials.organic_chemistry.organic_reaction_mechanism
+    aliases:
+      en: [organic reaction pathway]
+      ru: [путь органической реакции]
+      kk: [органикалық реакция жолы]
+  - conceptId: chemistry_materials.organic_chemistry.carbon_carbon_bond
+    aliases:
+      en: [carbon bond linkage]
+      ru: [углеродная связь]
+      kk: [көміртек байланысы]
+  - conceptId: chemistry_materials.analytical_chemistry.mass_spectrometry_analysis
+    aliases:
+      en: [mass spectral analysis]
+      ru: [масс спектрометрический анализ]
+      kk: [масс спектрометриялық талдау]
+  - conceptId: chemistry_materials.physical_chemistry.chemical_reaction_kinetics
+    aliases:
+      en: [reaction kinetics model]
+      ru: [модель кинетики реакции]
+      kk: [реакция кинетикасының моделі]
+  - conceptId: chemistry_materials.materials_science.crystal_structure_analysis
+    aliases:
+      en: [crystalline structure analysis]
+      ru: [анализ кристаллической структуры]
+      kk: [кристалдық құрылымды талдау]
+
+  - conceptId: biology_genetics.molecular_biology.gene_expression_regulation
+    aliases:
+      en: [regulation of gene expression]
+      ru: [регулирование экспрессии генов]
+      kk: [ген экспрессиясын реттеу]
+  - conceptId: biology_genetics.molecular_biology.protein_synthesis_pathway
+    aliases:
+      en: [protein biosynthesis pathway]
+      ru: [путь биосинтеза белка]
+      kk: [ақуыз биосинтезінің жолы]
+  - conceptId: biology_genetics.genetics.genetic_variant_analysis
+    aliases:
+      en: [genetic variation analysis]
+      ru: [анализ генетических вариантов]
+      kk: [генетикалық нұсқаларды талдау]
+  - conceptId: biology_genetics.cell_biology.cell_membrane_transport
+    aliases:
+      en: [membrane transport process]
+      ru: [мембранный транспорт веществ]
+      kk: [мембраналық тасымалдау процесі]
+  - conceptId: biology_genetics.physiology.cardiovascular_physiological_response
+    aliases:
+      en: [cardiovascular system response]
+      ru: [реакция сердечно сосудистой системы]
+      kk: [жүрек қан тамыр жүйесінің жауабы]
+
+  - conceptId: computer_science_ai.algorithms_data_structures.graph_traversal_algorithm
+    aliases:
+      en: [graph search algorithm]
+      ru: [алгоритм поиска по графу]
+      kk: [граф бойынша іздеу алгоритмі]
+  - conceptId: computer_science_ai.algorithms_data_structures.dynamic_programming_algorithm
+    aliases:
+      en: [dynamic programming method]
+      ru: [метод динамического программирования]
+      kk: [динамикалық бағдарламалау әдісі]
+  - conceptId: computer_science_ai.software_systems.distributed_system_architecture
+    aliases:
+      en: [distributed computing architecture]
+      ru: [архитектура распределенных вычислений]
+      kk: [таратылған есептеу архитектурасы]
+  - conceptId: computer_science_ai.machine_learning.machine_learning_model
+    aliases:
+      en: [predictive learning model]
+      ru: [предиктивная обучаемая модель]
+      kk: [оқытуға негізделген болжамдық модель]
+  - conceptId: computer_science_ai.data_nlp.natural_language_processing
+    aliases:
+      en: [computational language processing]
+      ru: [компьютерная обработка языка]
+      kk: [тілді компьютерлік өңдеу]
+
+  - conceptId: medicine_pharmacology.clinical_diagnosis.differential_diagnosis_process
+    aliases:
+      en: [differential diagnostic workflow]
+      ru: [алгоритм дифференциальной диагностики]
+      kk: [дифференциалды диагностика алгоритмі]
+  - conceptId: medicine_pharmacology.clinical_diagnosis.diagnostic_imaging_finding
+    aliases:
+      en: [medical imaging finding]
+      ru: [результат медицинской визуализации]
+      kk: [медициналық бейнелеу нәтижесі]
+  - conceptId: medicine_pharmacology.pharmacology.drug_dose_adjustment
+    aliases:
+      en: [medication dose adjustment]
+      ru: [коррекция дозы препарата]
+      kk: [дәрі дозасын түзету]
+  - conceptId: medicine_pharmacology.clinical_trials.randomized_controlled_trial
+    aliases:
+      en: [randomized clinical trial]
+      ru: [рандомизированное клиническое исследование]
+      kk: [рандомизацияланған клиникалық зерттеу]
+  - conceptId: medicine_pharmacology.epidemiology.disease_incidence_rate
+    aliases:
+      en: [incidence rate measure]
+      ru: [показатель заболеваемости]
+      kk: [аурушаңдық көрсеткіші]
+
+  - conceptId: earth_environmental_science.geology.geological_formation_analysis
+    aliases:
+      en: [rock formation analysis]
+      ru: [анализ геологической структуры]
+      kk: [геологиялық құрылымды талдау]
+  - conceptId: earth_environmental_science.geology.tectonic_plate_movement
+    aliases:
+      en: [tectonic plate motion]
+      ru: [движение литосферной плиты]
+      kk: [литосфералық плитаның қозғалысы]
+  - conceptId: earth_environmental_science.climate_science.climate_change_projection
+    aliases:
+      en: [climate change forecast]
+      ru: [прогноз изменения климата]
+      kk: [климат өзгерісінің болжамы]
+  - conceptId: earth_environmental_science.hydrology.watershed_runoff_model
+    aliases:
+      en: [catchment runoff model]
+      ru: [модель стока водосбора]
+      kk: [су жинау алабы ағынының моделі]
+  - conceptId: earth_environmental_science.environmental_assessment.environmental_impact_assessment
+    aliases:
+      en: [environmental effects assessment]
+      ru: [экологическая оценка воздействия]
+      kk: [экологиялық әсерді бағалау]
+
+  - conceptId: psychology_sociology.cognitive_psychology.working_memory_capacity
+    aliases:
+      en: [working memory span]
+      ru: [объем кратковременной рабочей памяти]
+      kk: [жұмыс жадысының көлемі]
+  - conceptId: psychology_sociology.cognitive_psychology.cognitive_load_theory
+    aliases:
+      en: [mental load theory]
+      ru: [теория умственной нагрузки]
+      kk: [ақыл ой жүктемесі теориясы]
+  - conceptId: psychology_sociology.behavioral_psychology.behavioral_reinforcement_schedule
+    aliases:
+      en: [reinforcement timing schedule]
+      ru: [режим поведенческого подкрепления]
+      kk: [мінез құлықты нығайту режимі]
+  - conceptId: psychology_sociology.social_psychology.social_identity_theory
+    aliases:
+      en: [group identity theory]
+      ru: [теория групповой идентичности]
+      kk: [топтық сәйкестік теориясы]
+  - conceptId: psychology_sociology.sociology_methods.social_network_analysis
+    aliases:
+      en: [social graph analysis]
+      ru: [анализ социальных связей]
+      kk: [әлеуметтік байланыстарды талдау]

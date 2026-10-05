@@ -1,0 +1,561 @@
+version: semantic-concepts-en-v1
+domains:
+  - domainId: finance_banking
+    subdomains:
+      - id: lending_credit
+        phrases:
+          - credit risk assessment
+          - consumer loan underwriting
+          - corporate credit facility
+          - nonperforming loan ratio
+          - loan loss provision
+          - debt service coverage
+      - id: deposits_liquidity
+        phrases:
+          - customer deposit base
+          - liquidity coverage ratio
+          - net stable funding
+          - deposit interest rate
+          - cash reserve requirement
+          - liquidity stress testing
+      - id: risk_capital
+        phrases:
+          - capital adequacy ratio
+          - risk weighted assets
+          - common equity tier
+          - market risk exposure
+          - operational risk capital
+          - internal capital assessment
+      - id: payments_compliance
+        phrases:
+          - payment settlement system
+          - anti money laundering
+          - know your customer
+          - suspicious transaction monitoring
+          - cross border payment
+          - payment fraud detection
+
+  - domainId: insurance
+    subdomains:
+      - id: underwriting_pricing
+        phrases:
+          - insurance underwriting process
+          - risk based pricing
+          - actuarial pricing model
+          - policy coverage limit
+          - insurance premium calculation
+          - underwriting risk appetite
+      - id: claims_management
+        phrases:
+          - insurance claim assessment
+          - claims settlement process
+          - loss adjustment expense
+          - fraudulent claim detection
+          - claim reserve estimate
+          - claims handling procedure
+      - id: life_health
+        phrases:
+          - life insurance policy
+          - health insurance coverage
+          - mortality risk model
+          - morbidity risk estimate
+          - medical expense reimbursement
+          - policyholder benefit schedule
+      - id: property_casualty
+        phrases:
+          - property damage coverage
+          - casualty insurance claim
+          - catastrophe risk model
+          - business interruption coverage
+          - liability coverage limit
+          - insured loss estimate
+
+  - domainId: energy_utilities
+    subdomains:
+      - id: power_generation
+        phrases:
+          - electricity generation capacity
+          - thermal power plant
+          - combined cycle turbine
+          - generation dispatch schedule
+          - power plant efficiency
+          - reserve generation margin
+      - id: power_grid
+        phrases:
+          - transmission grid stability
+          - distribution network operator
+          - high voltage substation
+          - grid frequency control
+          - power flow analysis
+          - electricity network congestion
+      - id: energy_markets
+        phrases:
+          - wholesale electricity market
+          - day ahead market
+          - balancing energy market
+          - electricity tariff regulation
+          - energy demand forecast
+          - capacity market mechanism
+      - id: renewable_energy
+        phrases:
+          - solar power generation
+          - wind power capacity
+          - renewable energy certificate
+          - battery energy storage
+          - grid scale storage
+          - renewable integration study
+
+  - domainId: oil_gas_mining
+    subdomains:
+      - id: upstream_operations
+        phrases:
+          - oil reservoir characterization
+          - hydrocarbon exploration program
+          - drilling operations plan
+          - well completion design
+          - enhanced oil recovery
+          - reservoir pressure management
+      - id: midstream_operations
+        phrases:
+          - crude oil pipeline
+          - natural gas pipeline
+          - gas processing facility
+          - pipeline integrity management
+          - hydrocarbon storage terminal
+          - gas compression station
+      - id: downstream_operations
+        phrases:
+          - crude oil refining
+          - petroleum product yield
+          - refinery process unit
+          - fuel blending specification
+          - petrochemical feedstock supply
+          - refinery turnaround maintenance
+      - id: mining_operations
+        phrases:
+          - mineral resource estimate
+          - open pit mining
+          - underground mine design
+          - ore processing plant
+          - mine tailings management
+          - mineral reserve classification
+
+  - domainId: manufacturing
+    subdomains:
+      - id: production_systems
+        phrases:
+          - production planning system
+          - manufacturing execution system
+          - production line balancing
+          - takt time calculation
+          - overall equipment effectiveness
+          - batch production schedule
+      - id: quality_management
+        phrases:
+          - statistical process control
+          - quality management system
+          - root cause analysis
+          - nonconformance corrective action
+          - process capability index
+          - incoming quality inspection
+      - id: maintenance_reliability
+        phrases:
+          - preventive maintenance schedule
+          - predictive maintenance model
+          - reliability centered maintenance
+          - mean time between failures
+          - equipment failure mode
+          - maintenance work order
+      - id: industrial_operations
+        phrases:
+          - industrial process automation
+          - programmable logic controller
+          - production capacity utilization
+          - industrial safety procedure
+          - plant operations management
+          - process optimization study
+
+  - domainId: construction_real_estate
+    subdomains:
+      - id: design_construction
+        phrases:
+          - building structural design
+          - construction project schedule
+          - building information modeling
+          - reinforced concrete structure
+          - construction site management
+          - building code compliance
+      - id: real_estate_market
+        phrases:
+          - commercial property valuation
+          - residential property market
+          - rental yield analysis
+          - real estate transaction
+          - property market appraisal
+          - investment property return
+      - id: facilities_management
+        phrases:
+          - facility maintenance plan
+          - building energy performance
+          - property asset management
+          - preventive facility maintenance
+          - building occupancy management
+          - facilities service contract
+      - id: project_controls
+        phrases:
+          - construction cost estimate
+          - earned value management
+          - project schedule variance
+          - construction risk register
+          - contractor progress payment
+          - change order management
+
+  - domainId: transport_logistics
+    subdomains:
+      - id: freight_transport
+        phrases:
+          - freight transportation network
+          - intermodal freight terminal
+          - cargo transport capacity
+          - rail freight service
+          - road freight operation
+          - air cargo handling
+      - id: warehousing_distribution
+        phrases:
+          - warehouse management system
+          - distribution center operation
+          - inventory storage policy
+          - order fulfillment process
+          - warehouse picking strategy
+          - cold chain logistics
+      - id: fleet_operations
+        phrases:
+          - fleet maintenance program
+          - vehicle route optimization
+          - fleet fuel efficiency
+          - driver safety management
+          - vehicle utilization rate
+          - fleet telematics system
+      - id: supply_chain
+        phrases:
+          - supply chain disruption
+          - supplier lead time
+          - logistics network optimization
+          - demand supply planning
+          - supply chain resilience
+          - last mile delivery
+
+  - domainId: agriculture_food
+    subdomains:
+      - id: crop_science
+        phrases:
+          - crop yield forecast
+          - soil nutrient management
+          - precision agriculture system
+          - integrated pest management
+          - irrigation scheduling model
+          - crop disease monitoring
+      - id: livestock_production
+        phrases:
+          - livestock health management
+          - animal feed formulation
+          - dairy production system
+          - herd reproductive performance
+          - livestock disease control
+          - animal welfare standard
+      - id: food_processing
+        phrases:
+          - food processing technology
+          - food production line
+          - thermal food processing
+          - food packaging system
+          - shelf life evaluation
+          - food quality control
+      - id: food_safety
+        phrases:
+          - food safety management
+          - hazard analysis control
+          - microbial contamination risk
+          - food traceability system
+          - allergen control program
+          - food hygiene standard
+
+  - domainId: mathematics_statistics
+    subdomains:
+      - id: probability_statistics
+        phrases:
+          - probability distribution function
+          - statistical hypothesis testing
+          - maximum likelihood estimation
+          - Bayesian posterior distribution
+          - confidence interval estimation
+          - stochastic process model
+      - id: algebra_geometry
+        phrases:
+          - linear algebra system
+          - eigenvalue decomposition method
+          - abstract algebra structure
+          - differential geometry manifold
+          - matrix factorization method
+          - vector space basis
+      - id: optimization
+        phrases:
+          - constrained optimization problem
+          - convex optimization method
+          - integer programming model
+          - gradient descent algorithm
+          - multi objective optimization
+          - nonlinear optimization solver
+      - id: numerical_methods
+        phrases:
+          - numerical integration method
+          - finite difference scheme
+          - numerical stability analysis
+          - iterative linear solver
+          - differential equation solver
+          - numerical error estimate
+
+  - domainId: physics_astronomy
+    subdomains:
+      - id: classical_mechanics
+        phrases:
+          - Newtonian motion equation
+          - conservation of momentum
+          - rigid body dynamics
+          - harmonic oscillator model
+          - rotational motion analysis
+          - classical mechanics system
+      - id: thermodynamics
+        phrases:
+          - thermodynamic state variable
+          - heat transfer coefficient
+          - entropy production rate
+          - phase equilibrium condition
+          - thermodynamic cycle efficiency
+          - equation of state
+      - id: electromagnetism
+        phrases:
+          - electromagnetic field equation
+          - electric potential difference
+          - magnetic flux density
+          - electromagnetic wave propagation
+          - Maxwell equation system
+          - electric field strength
+      - id: astrophysics
+        phrases:
+          - stellar evolution model
+          - galactic rotation curve
+          - cosmic microwave background
+          - black hole accretion
+          - exoplanet orbital period
+          - gravitational wave signal
+
+  - domainId: chemistry_materials
+    subdomains:
+      - id: organic_chemistry
+        phrases:
+          - organic reaction mechanism
+          - carbon carbon bond
+          - functional group transformation
+          - stereochemical reaction pathway
+          - organic synthesis route
+          - reaction yield optimization
+      - id: analytical_chemistry
+        phrases:
+          - mass spectrometry analysis
+          - high performance chromatography
+          - analytical detection limit
+          - chemical calibration curve
+          - quantitative chemical analysis
+          - sample preparation method
+      - id: physical_chemistry
+        phrases:
+          - chemical reaction kinetics
+          - molecular orbital theory
+          - thermodynamic equilibrium constant
+          - electrochemical cell potential
+          - molecular spectroscopy analysis
+          - surface adsorption process
+      - id: materials_science
+        phrases:
+          - crystal structure analysis
+          - mechanical material property
+          - polymer composite material
+          - corrosion resistance testing
+          - material phase transition
+          - nanomaterial surface property
+
+  - domainId: biology_genetics
+    subdomains:
+      - id: molecular_biology
+        phrases:
+          - gene expression regulation
+          - protein synthesis pathway
+          - DNA replication process
+          - RNA transcription mechanism
+          - protein folding process
+          - cellular signaling pathway
+      - id: genetics
+        phrases:
+          - genetic variant analysis
+          - genome sequencing data
+          - Mendelian inheritance pattern
+          - population genetic structure
+          - genetic association study
+          - gene mutation frequency
+      - id: cell_biology
+        phrases:
+          - cell membrane transport
+          - cellular metabolism pathway
+          - programmed cell death
+          - cell cycle regulation
+          - stem cell differentiation
+          - intracellular signal transduction
+      - id: physiology
+        phrases:
+          - cardiovascular physiological response
+          - respiratory gas exchange
+          - renal filtration process
+          - endocrine hormone regulation
+          - nervous system function
+          - metabolic homeostasis mechanism
+
+  - domainId: computer_science_ai
+    subdomains:
+      - id: algorithms_data_structures
+        phrases:
+          - graph traversal algorithm
+          - dynamic programming algorithm
+          - hash table implementation
+          - computational complexity analysis
+          - balanced search tree
+          - shortest path algorithm
+      - id: software_systems
+        phrases:
+          - distributed system architecture
+          - database transaction isolation
+          - concurrent programming model
+          - application programming interface
+          - fault tolerant system
+          - software dependency management
+      - id: machine_learning
+        phrases:
+          - machine learning model
+          - supervised learning algorithm
+          - unsupervised learning method
+          - neural network architecture
+          - model training pipeline
+          - feature engineering process
+      - id: data_nlp
+        phrases:
+          - natural language processing
+          - semantic text representation
+          - information retrieval system
+          - large language model
+          - vector embedding model
+          - named entity recognition
+
+  - domainId: medicine_pharmacology
+    subdomains:
+      - id: clinical_diagnosis
+        phrases:
+          - differential diagnosis process
+          - diagnostic imaging finding
+          - clinical laboratory result
+          - disease severity assessment
+          - patient symptom profile
+          - diagnostic decision support
+      - id: pharmacology
+        phrases:
+          - drug dose adjustment
+          - adverse drug reaction
+          - drug drug interaction
+          - pharmacokinetic concentration profile
+          - pharmacodynamic response model
+          - therapeutic drug monitoring
+      - id: clinical_trials
+        phrases:
+          - randomized controlled trial
+          - clinical trial endpoint
+          - treatment effect estimate
+          - trial inclusion criteria
+          - adverse event monitoring
+          - clinical study protocol
+      - id: epidemiology
+        phrases:
+          - disease incidence rate
+          - disease prevalence estimate
+          - epidemiological risk factor
+          - population cohort study
+          - case control study
+          - outbreak surveillance system
+
+  - domainId: earth_environmental_science
+    subdomains:
+      - id: geology
+        phrases:
+          - geological formation analysis
+          - tectonic plate movement
+          - sedimentary basin structure
+          - mineral composition analysis
+          - geological fault system
+          - subsurface stratigraphic model
+      - id: climate_science
+        phrases:
+          - climate change projection
+          - global temperature anomaly
+          - greenhouse gas forcing
+          - climate model simulation
+          - extreme weather event
+          - atmospheric circulation pattern
+      - id: hydrology
+        phrases:
+          - watershed runoff model
+          - groundwater flow system
+          - river discharge measurement
+          - flood frequency analysis
+          - water balance model
+          - aquifer recharge rate
+      - id: environmental_assessment
+        phrases:
+          - environmental impact assessment
+          - ecological risk assessment
+          - air pollution monitoring
+          - water quality indicator
+          - biodiversity impact evaluation
+          - environmental remediation plan
+
+  - domainId: psychology_sociology
+    subdomains:
+      - id: cognitive_psychology
+        phrases:
+          - working memory capacity
+          - cognitive load theory
+          - decision making process
+          - selective attention mechanism
+          - cognitive bias effect
+          - memory retrieval process
+      - id: behavioral_psychology
+        phrases:
+          - behavioral reinforcement schedule
+          - conditioned behavioral response
+          - behavior modification program
+          - motivation behavior relationship
+          - habit formation process
+          - behavioral intervention strategy
+      - id: social_psychology
+        phrases:
+          - social identity theory
+          - group decision making
+          - interpersonal attitude change
+          - social influence process
+          - group conformity behavior
+          - stereotype formation process
+      - id: sociology_methods
+        phrases:
+          - social network analysis
+          - survey sampling design
+          - demographic population change
+          - social stratification pattern
+          - qualitative interview analysis
+          - longitudinal social study

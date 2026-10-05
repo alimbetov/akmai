@@ -493,6 +493,111 @@ public class PostgresSearchProjectionRepository
         };
     }
 
+    @Override
+    public List<SearchProjection> searchSemanticConcepts(
+            List<String> conceptIds,
+            List<String> documentIds,
+            Set<Long> accessLevels,
+            int limit
+    ) {
+        requireAccessLevels(accessLevels);
+        if (limit <= 0 || conceptIds == null || conceptIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> requestedConcepts = conceptIds.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .limit(16)
+                .toList();
+        if (requestedConcepts.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> scopedDocuments = documentIds == null
+                ? List.of()
+                : documentIds.stream()
+                        .filter(java.util.Objects::nonNull)
+                        .map(String::trim)
+                        .filter(value -> !value.isBlank())
+                        .distinct()
+                        .toList();
+        Set<String> requestedSet = Set.copyOf(requestedConcepts);
+        List<SearchProjection> result = new java.util.ArrayList<>();
+
+        for (long accessLevel : routedAccessLevels(accessLevels)) {
+            boolean documentScoped = !scopedDocuments.isEmpty();
+            String documentPredicate = documentScoped
+                    ? "  AND p.document_id = ANY (?::varchar[])\n"
+                    : "";
+            String sql = """
+                    SELECT p.*
+                    FROM knowledge_search_projection p
+                    JOIN knowledge_document_lifecycle l
+                      ON l.document_id = p.document_id
+                     AND l.published_generation = p.generation
+                     AND l.access_level = p.access_level
+                    WHERE p.access_level = ?
+                      AND l.retention_status = 'ACTIVE'
+                      AND (p.metadata_json -> 'semanticConcepts')
+                          ??| ?::text[]
+                    """
+                    + documentPredicate
+                    + """
+                    ORDER BY (
+                        SELECT count(*)
+                        FROM jsonb_array_elements_text(
+                            CASE
+                                WHEN jsonb_typeof(
+                                    p.metadata_json -> 'semanticConcepts'
+                                ) = 'array'
+                                THEN p.metadata_json -> 'semanticConcepts'
+                                ELSE '[]'::jsonb
+                            END
+                        ) AS matched(concept_id)
+                        WHERE matched.concept_id = ANY (?::text[])
+                    ) DESC,
+                    p.document_id,
+                    p.chunk_index
+                    LIMIT ?
+                    """;
+
+            result.addAll(jdbcTemplate.query(
+                    sql,
+                    ps -> {
+                        int index = 1;
+                        ps.setLong(index++, accessLevel);
+                        bindArray(ps, index++, requestedConcepts);
+                        if (documentScoped) {
+                            bindArray(ps, index++, scopedDocuments);
+                        }
+                        bindArray(ps, index++, requestedConcepts);
+                        ps.setInt(index, limit);
+                    },
+                    this::map
+            ));
+        }
+
+        return result.stream()
+                .sorted(
+                        java.util.Comparator
+                                .<SearchProjection>comparingInt(
+                                        projection ->
+                                                semanticConceptOverlap(
+                                                        projection,
+                                                        requestedSet
+                                                )
+                                )
+                                .reversed()
+                                .thenComparing(SearchProjection::documentId)
+                                .thenComparingInt(SearchProjection::chunkIndex)
+                )
+                .limit(limit)
+                .toList();
+    }
+
     private List<SearchProjection> searchSimpleWithLanguageFallback(
             String query,
             String language,
@@ -972,6 +1077,25 @@ public class PostgresSearchProjectionRepository
                     "accessLevels must not be empty"
             );
         }
+    }
+
+    private int semanticConceptOverlap(
+            SearchProjection projection,
+            Set<String> requestedConcepts
+    ) {
+        Object raw = projection.metadata().get("semanticConcepts");
+        if (!(raw instanceof Iterable<?> values)) {
+            return 0;
+        }
+
+        int overlap = 0;
+        for (Object value : values) {
+            if (value instanceof String conceptId
+                    && requestedConcepts.contains(conceptId)) {
+                overlap++;
+            }
+        }
+        return overlap;
     }
 
     private void bindArray(

@@ -1,0 +1,433 @@
+version: semantic-domain-v2
+domains:
+  - id: finance_banking
+    kind: ECONOMIC_SECTOR
+    names:
+      kk: Қаржы және банк ісі
+      ru: Финансы и банковское дело
+      en: Finance and banking
+      zh: 金融与银行
+      de: Finanz- und Bankwesen
+      fr: Finance et banque
+      es: Finanzas y banca
+      pt: Finanças e banca
+      it: Finanza e attività bancaria
+      tr: Finans ve bankacılık
+      el: Χρηματοοικονομικά και τραπεζική
+    anchors:
+      kk: [банк, несие, сыйақы мөлшерлемесі]
+      ru: [банк, кредит, процентная ставка]
+      en: [bank, credit, interest rate]
+      zh: [银行, 信贷, 利率]
+      de: [Bank, Kredit, Zinssatz]
+      fr: [banque, crédit, taux d'intérêt]
+      es: [banco, crédito, tasa de interés]
+      pt: [banco, crédito, taxa de juro]
+      it: [banca, credito, tasso di interesse]
+      tr: [banka, kredi, faiz oranı]
+      el: [τράπεζα, πίστωση, επιτόκιο]
+
+  - id: insurance
+    kind: ECONOMIC_SECTOR
+    names:
+      kk: Сақтандыру
+      ru: Страхование
+      en: Insurance
+      zh: 保险
+      de: Versicherung
+      fr: Assurance
+      es: Seguros
+      pt: Seguros
+      it: Assicurazioni
+      tr: Sigortacılık
+      el: Ασφάλιση
+    anchors:
+      kk: [сақтандыру, сақтандыру сыйлықақысы, сақтандыру талабы]
+      ru: [страхование, страховая премия, страховой случай]
+      en: [insurance, insurance premium, insurance claim]
+      zh: [保险, 保险费, 理赔]
+      de: [Versicherung, Versicherungsprämie, Versicherungsanspruch]
+      fr: [assurance, prime d'assurance, sinistre]
+      es: [seguro, prima de seguro, siniestro]
+      pt: [seguro, prémio de seguro, sinistro]
+      it: [assicurazione, premio assicurativo, sinistro]
+      tr: [sigorta, sigorta primi, sigorta tazminatı]
+      el: [ασφάλιση, ασφάλιστρο, ασφαλιστική απαίτηση]
+
+  - id: energy_utilities
+    kind: ECONOMIC_SECTOR
+    names:
+      kk: Энергетика және коммуналдық қызметтер
+      ru: Энергетика и коммунальные услуги
+      en: Energy and utilities
+      zh: 能源与公用事业
+      de: Energie und Versorgungswirtschaft
+      fr: Énergie et services publics
+      es: Energía y servicios públicos
+      pt: Energia e serviços públicos
+      it: Energia e servizi di pubblica utilità
+      tr: Enerji ve kamu hizmetleri
+      el: Ενέργεια και υπηρεσίες κοινής ωφέλειας
+    anchors:
+      kk: [электр энергиясы, электр желісі, энергиямен жабдықтау]
+      ru: [электроэнергия, электрическая сеть, энергоснабжение]
+      en: [electricity, power grid, energy supply]
+      zh: [电力, 电网, 能源供应]
+      de: [Elektrizität, Stromnetz, Energieversorgung]
+      fr: [électricité, réseau électrique, approvisionnement énergétique]
+      es: [electricidad, red eléctrica, suministro energético]
+      pt: [eletricidade, rede elétrica, fornecimento de energia]
+      it: [elettricità, rete elettrica, fornitura energetica]
+      tr: [elektrik, elektrik şebekesi, enerji arzı]
+      el: [ηλεκτρική ενέργεια, ηλεκτρικό δίκτυο, ενεργειακός εφοδιασμός]
+
+  - id: oil_gas_mining
+    kind: ECONOMIC_SECTOR
+    names:
+      kk: Мұнай, газ және тау-кен өнеркәсібі
+      ru: Нефть, газ и горнодобывающая промышленность
+      en: Oil, gas and mining
+      zh: 石油、天然气与采矿
+      de: Öl, Gas und Bergbau
+      fr: Pétrole, gaz et mines
+      es: Petróleo, gas y minería
+      pt: Petróleo, gás e mineração
+      it: Petrolio, gas e attività mineraria
+      tr: Petrol, gaz ve madencilik
+      el: Πετρέλαιο, φυσικό αέριο και εξόρυξη
+    anchors:
+      kk: [мұнай, табиғи газ, кен өндіру]
+      ru: [нефть, природный газ, добыча полезных ископаемых]
+      en: [oil, natural gas, mining]
+      zh: [石油, 天然气, 采矿]
+      de: [Erdöl, Erdgas, Bergbau]
+      fr: [pétrole, gaz naturel, exploitation minière]
+      es: [petróleo, gas natural, minería]
+      pt: [petróleo, gás natural, mineração]
+      it: [petrolio, gas naturale, attività mineraria]
+      tr: [petrol, doğal gaz, madencilik]
+      el: [πετρέλαιο, φυσικό αέριο, εξόρυξη]
+
+  - id: manufacturing
+    kind: ECONOMIC_SECTOR
+    names:
+      kk: Өңдеу өнеркәсібі
+      ru: Обрабатывающая промышленность
+      en: Manufacturing
+      zh: 制造业
+      de: Fertigungsindustrie
+      fr: Industrie manufacturière
+      es: Industria manufacturera
+      pt: Indústria transformadora
+      it: Industria manifatturiera
+      tr: İmalat sanayii
+      el: Μεταποίηση
+    anchors:
+      kk: [өндіріс, зауыт, өнеркәсіптік жабдық]
+      ru: [производство, завод, промышленное оборудование]
+      en: [manufacturing, factory, industrial equipment]
+      zh: [制造, 工厂, 工业设备]
+      de: [Fertigung, Fabrik, Industrieausrüstung]
+      fr: [fabrication, usine, équipement industriel]
+      es: [fabricación, fábrica, equipo industrial]
+      pt: [fabrico, fábrica, equipamento industrial]
+      it: [produzione, fabbrica, attrezzatura industriale]
+      tr: [üretim, fabrika, endüstriyel ekipman]
+      el: [παραγωγή, εργοστάσιο, βιομηχανικός εξοπλισμός]
+
+  - id: construction_real_estate
+    kind: ECONOMIC_SECTOR
+    names:
+      kk: Құрылыс және жылжымайтын мүлік
+      ru: Строительство и недвижимость
+      en: Construction and real estate
+      zh: 建筑与房地产
+      de: Bau und Immobilien
+      fr: Construction et immobilier
+      es: Construcción e inmobiliario
+      pt: Construção e imobiliário
+      it: Costruzioni e immobiliare
+      tr: İnşaat ve gayrimenkul
+      el: Κατασκευές και ακίνητα
+    anchors:
+      kk: [құрылыс, жылжымайтын мүлік, ғимарат]
+      ru: [строительство, недвижимость, здание]
+      en: [construction, real estate, building]
+      zh: [建筑, 房地产, 建筑物]
+      de: [Bauwesen, Immobilien, Gebäude]
+      fr: [construction, immobilier, bâtiment]
+      es: [construcción, bienes raíces, edificio]
+      pt: [construção, imobiliário, edifício]
+      it: [costruzione, immobiliare, edificio]
+      tr: [inşaat, gayrimenkul, bina]
+      el: [κατασκευή, ακίνητα, κτίριο]
+
+  - id: transport_logistics
+    kind: ECONOMIC_SECTOR
+    names:
+      kk: Көлік және логистика
+      ru: Транспорт и логистика
+      en: Transport and logistics
+      zh: 运输与物流
+      de: Transport und Logistik
+      fr: Transport et logistique
+      es: Transporte y logística
+      pt: Transporte e logística
+      it: Trasporti e logistica
+      tr: Ulaştırma ve lojistik
+      el: Μεταφορές και εφοδιαστική
+    anchors:
+      kk: [көлік, логистика, жеткізу тізбегі]
+      ru: [транспорт, логистика, цепочка поставок]
+      en: [transport, logistics, supply chain]
+      zh: [运输, 物流, 供应链]
+      de: [Transport, Logistik, Lieferkette]
+      fr: [transport, logistique, chaîne d'approvisionnement]
+      es: [transporte, logística, cadena de suministro]
+      pt: [transporte, logística, cadeia de abastecimento]
+      it: [trasporto, logistica, catena di fornitura]
+      tr: [ulaştırma, lojistik, tedarik zinciri]
+      el: [μεταφορές, εφοδιαστική, εφοδιαστική αλυσίδα]
+
+  - id: agriculture_food
+    kind: ECONOMIC_SECTOR
+    names:
+      kk: Ауыл шаруашылығы және азық-түлік
+      ru: Сельское хозяйство и пищевая промышленность
+      en: Agriculture and food
+      zh: 农业与食品
+      de: Landwirtschaft und Lebensmittel
+      fr: Agriculture et alimentation
+      es: Agricultura y alimentación
+      pt: Agricultura e alimentos
+      it: Agricoltura e alimentazione
+      tr: Tarım ve gıda
+      el: Γεωργία και τρόφιμα
+    anchors:
+      kk: [ауыл шаруашылығы, егін, азық-түлік өндірісі]
+      ru: [сельское хозяйство, урожай, производство продуктов питания]
+      en: [agriculture, crop, food production]
+      zh: [农业, 农作物, 食品生产]
+      de: [Landwirtschaft, Nutzpflanze, Lebensmittelproduktion]
+      fr: [agriculture, culture agricole, production alimentaire]
+      es: [agricultura, cultivo, producción alimentaria]
+      pt: [agricultura, cultura agrícola, produção alimentar]
+      it: [agricoltura, coltura, produzione alimentare]
+      tr: [tarım, mahsul, gıda üretimi]
+      el: [γεωργία, καλλιέργεια, παραγωγή τροφίμων]
+
+  - id: mathematics_statistics
+    kind: SCIENTIFIC_DISCIPLINE
+    names:
+      kk: Математика және статистика
+      ru: Математика и статистика
+      en: Mathematics and statistics
+      zh: 数学与统计学
+      de: Mathematik und Statistik
+      fr: Mathématiques et statistique
+      es: Matemáticas y estadística
+      pt: Matemática e estatística
+      it: Matematica e statistica
+      tr: Matematik ve istatistik
+      el: Μαθηματικά και στατιστική
+    anchors:
+      kk: [математика, теңдеу, ықтималдық]
+      ru: [математика, уравнение, вероятность]
+      en: [mathematics, equation, probability]
+      zh: [数学, 方程, 概率]
+      de: [Mathematik, Gleichung, Wahrscheinlichkeit]
+      fr: [mathématiques, équation, probabilité]
+      es: [matemáticas, ecuación, probabilidad]
+      pt: [matemática, equação, probabilidade]
+      it: [matematica, equazione, probabilità]
+      tr: [matematik, denklem, olasılık]
+      el: [μαθηματικά, εξίσωση, πιθανότητα]
+
+  - id: physics_astronomy
+    kind: SCIENTIFIC_DISCIPLINE
+    names:
+      kk: Физика және астрономия
+      ru: Физика и астрономия
+      en: Physics and astronomy
+      zh: 物理学与天文学
+      de: Physik und Astronomie
+      fr: Physique et astronomie
+      es: Física y astronomía
+      pt: Física e astronomia
+      it: Fisica e astronomia
+      tr: Fizik ve astronomi
+      el: Φυσική και αστρονομία
+    anchors:
+      kk: [физика, квант, астрономия]
+      ru: [физика, квант, астрономия]
+      en: [physics, quantum, astronomy]
+      zh: [物理学, 量子, 天文学]
+      de: [Physik, Quant, Astronomie]
+      fr: [physique, quantum, astronomie]
+      es: [física, cuántico, astronomía]
+      pt: [física, quântico, astronomia]
+      it: [fisica, quanto, astronomia]
+      tr: [fizik, kuantum, astronomi]
+      el: [φυσική, κβαντικό, αστρονομία]
+
+  - id: chemistry_materials
+    kind: SCIENTIFIC_DISCIPLINE
+    names:
+      kk: Химия және материалтану
+      ru: Химия и материаловедение
+      en: Chemistry and materials science
+      zh: 化学与材料科学
+      de: Chemie und Materialwissenschaft
+      fr: Chimie et science des matériaux
+      es: Química y ciencia de materiales
+      pt: Química e ciência dos materiais
+      it: Chimica e scienza dei materiali
+      tr: Kimya ve malzeme bilimi
+      el: Χημεία και επιστήμη υλικών
+    anchors:
+      kk: [химия, молекула, материал]
+      ru: [химия, молекула, материал]
+      en: [chemistry, molecule, material]
+      zh: [化学, 分子, 材料]
+      de: [Chemie, Molekül, Material]
+      fr: [chimie, molécule, matériau]
+      es: [química, molécula, material]
+      pt: [química, molécula, material]
+      it: [chimica, molecola, materiale]
+      tr: [kimya, molekül, malzeme]
+      el: [χημεία, μόριο, υλικό]
+
+  - id: biology_genetics
+    kind: SCIENTIFIC_DISCIPLINE
+    names:
+      kk: Биология және генетика
+      ru: Биология и генетика
+      en: Biology and genetics
+      zh: 生物学与遗传学
+      de: Biologie und Genetik
+      fr: Biologie et génétique
+      es: Biología y genética
+      pt: Biologia e genética
+      it: Biologia e genetica
+      tr: Biyoloji ve genetik
+      el: Βιολογία και γενετική
+    anchors:
+      kk: [биология, ген, жасуша]
+      ru: [биология, ген, клетка]
+      en: [biology, gene, cell]
+      zh: [生物学, 基因, 细胞]
+      de: [Biologie, Gen, Zelle]
+      fr: [biologie, gène, cellule]
+      es: [biología, gen, célula]
+      pt: [biologia, gene, célula]
+      it: [biologia, gene, cellula]
+      tr: [biyoloji, gen, hücre]
+      el: [βιολογία, γονίδιο, κύτταρο]
+
+  - id: computer_science_ai
+    kind: SCIENTIFIC_DISCIPLINE
+    names:
+      kk: Информатика және жасанды интеллект
+      ru: Информатика и искусственный интеллект
+      en: Computer science and artificial intelligence
+      zh: 计算机科学与人工智能
+      de: Informatik und künstliche Intelligenz
+      fr: Informatique et intelligence artificielle
+      es: Informática e inteligencia artificial
+      pt: Ciência da computação e inteligência artificial
+      it: Informatica e intelligenza artificiale
+      tr: Bilgisayar bilimi ve yapay zekâ
+      el: Επιστήμη υπολογιστών και τεχνητή νοημοσύνη
+    anchors:
+      kk: [алгоритм, жасанды интеллект, машиналық оқыту]
+      ru: [алгоритм, искусственный интеллект, машинное обучение]
+      en: [algorithm, artificial intelligence, machine learning]
+      zh: [算法, 人工智能, 机器学习]
+      de: [Algorithmus, künstliche Intelligenz, maschinelles Lernen]
+      fr: [algorithme, intelligence artificielle, apprentissage automatique]
+      es: [algoritmo, inteligencia artificial, aprendizaje automático]
+      pt: [algoritmo, inteligência artificial, aprendizagem automática]
+      it: [algoritmo, intelligenza artificiale, apprendimento automatico]
+      tr: [algoritma, yapay zekâ, makine öğrenmesi]
+      el: [αλγόριθμος, τεχνητή νοημοσύνη, μηχανική μάθηση]
+
+  - id: medicine_pharmacology
+    kind: SCIENTIFIC_DISCIPLINE
+    names:
+      kk: Медицина және фармакология
+      ru: Медицина и фармакология
+      en: Medicine and pharmacology
+      zh: 医学与药理学
+      de: Medizin und Pharmakologie
+      fr: Médecine et pharmacologie
+      es: Medicina y farmacología
+      pt: Medicina e farmacologia
+      it: Medicina e farmacologia
+      tr: Tıp ve farmakoloji
+      el: Ιατρική και φαρμακολογία
+    anchors:
+      kk: [диагноз, емдеу, дәрі]
+      ru: [диагноз, лечение, лекарственный препарат]
+      en: [diagnosis, treatment, drug]
+      zh: [诊断, 治疗, 药物]
+      de: [Diagnose, Behandlung, Arzneimittel]
+      fr: [diagnostic, traitement, médicament]
+      es: [diagnóstico, tratamiento, medicamento]
+      pt: [diagnóstico, tratamento, medicamento]
+      it: [diagnosi, trattamento, farmaco]
+      tr: [tanı, tedavi, ilaç]
+      el: [διάγνωση, θεραπεία, φάρμακο]
+
+  - id: earth_environmental_science
+    kind: SCIENTIFIC_DISCIPLINE
+    names:
+      kk: Жер және экология ғылымдары
+      ru: Науки о Земле и окружающей среде
+      en: Earth and environmental science
+      zh: 地球与环境科学
+      de: Geo- und Umweltwissenschaften
+      fr: Sciences de la Terre et de l'environnement
+      es: Ciencias de la Tierra y ambientales
+      pt: Ciências da Terra e ambientais
+      it: Scienze della Terra e ambientali
+      tr: Yer ve çevre bilimleri
+      el: Επιστήμες της Γης και περιβάλλοντος
+    anchors:
+      kk: [климат, геология, экожүйе]
+      ru: [климат, геология, экосистема]
+      en: [climate, geology, ecosystem]
+      zh: [气候, 地质学, 生态系统]
+      de: [Klima, Geologie, Ökosystem]
+      fr: [climat, géologie, écosystème]
+      es: [clima, geología, ecosistema]
+      pt: [clima, geologia, ecossistema]
+      it: [clima, geologia, ecosistema]
+      tr: [iklim, jeoloji, ekosistem]
+      el: [κλίμα, γεωλογία, οικοσύστημα]
+
+  - id: psychology_sociology
+    kind: SCIENTIFIC_DISCIPLINE
+    names:
+      kk: Психология және әлеуметтану
+      ru: Психология и социология
+      en: Psychology and sociology
+      zh: 心理学与社会学
+      de: Psychologie und Soziologie
+      fr: Psychologie et sociologie
+      es: Psicología y sociología
+      pt: Psicologia e sociologia
+      it: Psicologia e sociologia
+      tr: Psikoloji ve sosyoloji
+      el: Ψυχολογία και κοινωνιολογία
+    anchors:
+      kk: [мінез-құлық, қоғам, таным]
+      ru: [поведение, общество, познание]
+      en: [behavior, society, cognition]
+      zh: [行为, 社会, 认知]
+      de: [Verhalten, Gesellschaft, Kognition]
+      fr: [comportement, société, cognition]
+      es: [comportamiento, sociedad, cognición]
+      pt: [comportamento, sociedade, cognição]
+      it: [comportamento, società, cognizione]
+      tr: [davranış, toplum, biliş]
+      el: [συμπεριφορά, κοινωνία, γνωστική λειτουργία]

@@ -21,7 +21,11 @@ class IndustryProfileRegistryTest {
                 .containsExactlyInAnyOrder(
                         "civil_law",
                         "cardiology",
-                        "software"
+                        "software",
+                        "banking",
+                        "pharmacology",
+                        "cybersecurity",
+                        "public_administration"
                 );
     }
 

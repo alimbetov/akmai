@@ -1,0 +1,725 @@
+{
+  "version": "semantic-concept-golden-v1",
+  "cases": [
+    {
+      "caseId": "en-001",
+      "language": "en",
+      "query": "Explain credit risk assessment.",
+      "expectedConceptId": "finance_banking.lending_credit.credit_risk_assessment"
+    },
+    {
+      "caseId": "ru-001",
+      "language": "ru",
+      "query": "Что означает: оценка кредитного риска?",
+      "expectedConceptId": "finance_banking.lending_credit.credit_risk_assessment"
+    },
+    {
+      "caseId": "kk-001",
+      "language": "kk",
+      "query": "Түсіндіріңіз: кредиттік тәуекелді бағалау.",
+      "expectedConceptId": "finance_banking.lending_credit.credit_risk_assessment"
+    },
+    {
+      "caseId": "en-002",
+      "language": "en",
+      "query": "Explain consumer loan underwriting.",
+      "expectedConceptId": "finance_banking.lending_credit.consumer_loan_underwriting"
+    },
+    {
+      "caseId": "ru-002",
+      "language": "ru",
+      "query": "Что означает: андеррайтинг потребительского кредита?",
+      "expectedConceptId": "finance_banking.lending_credit.consumer_loan_underwriting"
+    },
+    {
+      "caseId": "kk-002",
+      "language": "kk",
+      "query": "Түсіндіріңіз: тұтынушылық кредит андеррайтингі.",
+      "expectedConceptId": "finance_banking.lending_credit.consumer_loan_underwriting"
+    },
+    {
+      "caseId": "en-003",
+      "language": "en",
+      "query": "Explain insurance underwriting process.",
+      "expectedConceptId": "insurance.underwriting_pricing.insurance_underwriting_process"
+    },
+    {
+      "caseId": "ru-003",
+      "language": "ru",
+      "query": "Что означает: процесс страхового андеррайтинга?",
+      "expectedConceptId": "insurance.underwriting_pricing.insurance_underwriting_process"
+    },
+    {
+      "caseId": "kk-003",
+      "language": "kk",
+      "query": "Түсіндіріңіз: сақтандыру андеррайтингі процесі.",
+      "expectedConceptId": "insurance.underwriting_pricing.insurance_underwriting_process"
+    },
+    {
+      "caseId": "en-004",
+      "language": "en",
+      "query": "Explain risk based pricing.",
+      "expectedConceptId": "insurance.underwriting_pricing.risk_based_pricing"
+    },
+    {
+      "caseId": "ru-004",
+      "language": "ru",
+      "query": "Что означает: ценообразование на основе риска?",
+      "expectedConceptId": "insurance.underwriting_pricing.risk_based_pricing"
+    },
+    {
+      "caseId": "kk-004",
+      "language": "kk",
+      "query": "Түсіндіріңіз: тәуекелге негізделген баға белгілеу.",
+      "expectedConceptId": "insurance.underwriting_pricing.risk_based_pricing"
+    },
+    {
+      "caseId": "en-005",
+      "language": "en",
+      "query": "Explain electricity generation capacity.",
+      "expectedConceptId": "energy_utilities.power_generation.electricity_generation_capacity"
+    },
+    {
+      "caseId": "ru-005",
+      "language": "ru",
+      "query": "Что означает: установленная мощность генерации электроэнергии?",
+      "expectedConceptId": "energy_utilities.power_generation.electricity_generation_capacity"
+    },
+    {
+      "caseId": "kk-005",
+      "language": "kk",
+      "query": "Түсіндіріңіз: электр өндіру қуаты.",
+      "expectedConceptId": "energy_utilities.power_generation.electricity_generation_capacity"
+    },
+    {
+      "caseId": "en-006",
+      "language": "en",
+      "query": "Explain thermal power plant.",
+      "expectedConceptId": "energy_utilities.power_generation.thermal_power_plant"
+    },
+    {
+      "caseId": "ru-006",
+      "language": "ru",
+      "query": "Что означает: тепловая электростанция?",
+      "expectedConceptId": "energy_utilities.power_generation.thermal_power_plant"
+    },
+    {
+      "caseId": "kk-006",
+      "language": "kk",
+      "query": "Түсіндіріңіз: жылу электр станциясы.",
+      "expectedConceptId": "energy_utilities.power_generation.thermal_power_plant"
+    },
+    {
+      "caseId": "en-007",
+      "language": "en",
+      "query": "Explain oil reservoir characterization.",
+      "expectedConceptId": "oil_gas_mining.upstream_operations.oil_reservoir_characterization"
+    },
+    {
+      "caseId": "ru-007",
+      "language": "ru",
+      "query": "Что означает: характеристика нефтяного пласта?",
+      "expectedConceptId": "oil_gas_mining.upstream_operations.oil_reservoir_characterization"
+    },
+    {
+      "caseId": "kk-007",
+      "language": "kk",
+      "query": "Түсіндіріңіз: мұнай қабатын сипаттау.",
+      "expectedConceptId": "oil_gas_mining.upstream_operations.oil_reservoir_characterization"
+    },
+    {
+      "caseId": "en-008",
+      "language": "en",
+      "query": "Explain hydrocarbon exploration program.",
+      "expectedConceptId": "oil_gas_mining.upstream_operations.hydrocarbon_exploration_program"
+    },
+    {
+      "caseId": "ru-008",
+      "language": "ru",
+      "query": "Что означает: программа разведки углеводородов?",
+      "expectedConceptId": "oil_gas_mining.upstream_operations.hydrocarbon_exploration_program"
+    },
+    {
+      "caseId": "kk-008",
+      "language": "kk",
+      "query": "Түсіндіріңіз: көмірсутектерді барлау бағдарламасы.",
+      "expectedConceptId": "oil_gas_mining.upstream_operations.hydrocarbon_exploration_program"
+    },
+    {
+      "caseId": "en-009",
+      "language": "en",
+      "query": "Explain production planning system.",
+      "expectedConceptId": "manufacturing.production_systems.production_planning_system"
+    },
+    {
+      "caseId": "ru-009",
+      "language": "ru",
+      "query": "Что означает: система планирования производства?",
+      "expectedConceptId": "manufacturing.production_systems.production_planning_system"
+    },
+    {
+      "caseId": "kk-009",
+      "language": "kk",
+      "query": "Түсіндіріңіз: өндірісті жоспарлау жүйесі.",
+      "expectedConceptId": "manufacturing.production_systems.production_planning_system"
+    },
+    {
+      "caseId": "en-010",
+      "language": "en",
+      "query": "Explain manufacturing execution system.",
+      "expectedConceptId": "manufacturing.production_systems.manufacturing_execution_system"
+    },
+    {
+      "caseId": "ru-010",
+      "language": "ru",
+      "query": "Что означает: система управления производственным исполнением?",
+      "expectedConceptId": "manufacturing.production_systems.manufacturing_execution_system"
+    },
+    {
+      "caseId": "kk-010",
+      "language": "kk",
+      "query": "Түсіндіріңіз: өндірісті орындауды басқару жүйесі.",
+      "expectedConceptId": "manufacturing.production_systems.manufacturing_execution_system"
+    },
+    {
+      "caseId": "en-011",
+      "language": "en",
+      "query": "Explain building structural design.",
+      "expectedConceptId": "construction_real_estate.design_construction.building_structural_design"
+    },
+    {
+      "caseId": "ru-011",
+      "language": "ru",
+      "query": "Что означает: проектирование строительных конструкций?",
+      "expectedConceptId": "construction_real_estate.design_construction.building_structural_design"
+    },
+    {
+      "caseId": "kk-011",
+      "language": "kk",
+      "query": "Түсіндіріңіз: ғимарат құрылымын жобалау.",
+      "expectedConceptId": "construction_real_estate.design_construction.building_structural_design"
+    },
+    {
+      "caseId": "en-012",
+      "language": "en",
+      "query": "Explain construction project schedule.",
+      "expectedConceptId": "construction_real_estate.design_construction.construction_project_schedule"
+    },
+    {
+      "caseId": "ru-012",
+      "language": "ru",
+      "query": "Что означает: график строительного проекта?",
+      "expectedConceptId": "construction_real_estate.design_construction.construction_project_schedule"
+    },
+    {
+      "caseId": "kk-012",
+      "language": "kk",
+      "query": "Түсіндіріңіз: құрылыс жобасының кестесі.",
+      "expectedConceptId": "construction_real_estate.design_construction.construction_project_schedule"
+    },
+    {
+      "caseId": "en-013",
+      "language": "en",
+      "query": "Explain freight transportation network.",
+      "expectedConceptId": "transport_logistics.freight_transport.freight_transportation_network"
+    },
+    {
+      "caseId": "ru-013",
+      "language": "ru",
+      "query": "Что означает: сеть грузовых перевозок?",
+      "expectedConceptId": "transport_logistics.freight_transport.freight_transportation_network"
+    },
+    {
+      "caseId": "kk-013",
+      "language": "kk",
+      "query": "Түсіндіріңіз: жүк тасымалдау желісі.",
+      "expectedConceptId": "transport_logistics.freight_transport.freight_transportation_network"
+    },
+    {
+      "caseId": "en-014",
+      "language": "en",
+      "query": "Explain intermodal freight terminal.",
+      "expectedConceptId": "transport_logistics.freight_transport.intermodal_freight_terminal"
+    },
+    {
+      "caseId": "ru-014",
+      "language": "ru",
+      "query": "Что означает: интермодальный грузовой терминал?",
+      "expectedConceptId": "transport_logistics.freight_transport.intermodal_freight_terminal"
+    },
+    {
+      "caseId": "kk-014",
+      "language": "kk",
+      "query": "Түсіндіріңіз: интермодальдық жүк терминалы.",
+      "expectedConceptId": "transport_logistics.freight_transport.intermodal_freight_terminal"
+    },
+    {
+      "caseId": "en-015",
+      "language": "en",
+      "query": "Explain crop yield forecast.",
+      "expectedConceptId": "agriculture_food.crop_science.crop_yield_forecast"
+    },
+    {
+      "caseId": "ru-015",
+      "language": "ru",
+      "query": "Что означает: прогноз урожайности сельскохозяйственных культур?",
+      "expectedConceptId": "agriculture_food.crop_science.crop_yield_forecast"
+    },
+    {
+      "caseId": "kk-015",
+      "language": "kk",
+      "query": "Түсіндіріңіз: ауыл шаруашылығы дақылдарының өнімділігін болжау.",
+      "expectedConceptId": "agriculture_food.crop_science.crop_yield_forecast"
+    },
+    {
+      "caseId": "en-016",
+      "language": "en",
+      "query": "Explain soil nutrient management.",
+      "expectedConceptId": "agriculture_food.crop_science.soil_nutrient_management"
+    },
+    {
+      "caseId": "ru-016",
+      "language": "ru",
+      "query": "Что означает: управление питательными веществами почвы?",
+      "expectedConceptId": "agriculture_food.crop_science.soil_nutrient_management"
+    },
+    {
+      "caseId": "kk-016",
+      "language": "kk",
+      "query": "Түсіндіріңіз: топырақ қоректік заттарын басқару.",
+      "expectedConceptId": "agriculture_food.crop_science.soil_nutrient_management"
+    },
+    {
+      "caseId": "en-017",
+      "language": "en",
+      "query": "Explain probability distribution function.",
+      "expectedConceptId": "mathematics_statistics.probability_statistics.probability_distribution_function"
+    },
+    {
+      "caseId": "ru-017",
+      "language": "ru",
+      "query": "Что означает: функция распределения вероятностей?",
+      "expectedConceptId": "mathematics_statistics.probability_statistics.probability_distribution_function"
+    },
+    {
+      "caseId": "kk-017",
+      "language": "kk",
+      "query": "Түсіндіріңіз: ықтималдық үлестірім функциясы.",
+      "expectedConceptId": "mathematics_statistics.probability_statistics.probability_distribution_function"
+    },
+    {
+      "caseId": "en-018",
+      "language": "en",
+      "query": "Explain statistical hypothesis testing.",
+      "expectedConceptId": "mathematics_statistics.probability_statistics.statistical_hypothesis_testing"
+    },
+    {
+      "caseId": "ru-018",
+      "language": "ru",
+      "query": "Что означает: проверка статистических гипотез?",
+      "expectedConceptId": "mathematics_statistics.probability_statistics.statistical_hypothesis_testing"
+    },
+    {
+      "caseId": "kk-018",
+      "language": "kk",
+      "query": "Түсіндіріңіз: статистикалық гипотезаларды тексеру.",
+      "expectedConceptId": "mathematics_statistics.probability_statistics.statistical_hypothesis_testing"
+    },
+    {
+      "caseId": "en-019",
+      "language": "en",
+      "query": "Explain newtonian motion equation.",
+      "expectedConceptId": "physics_astronomy.classical_mechanics.newtonian_motion_equation"
+    },
+    {
+      "caseId": "ru-019",
+      "language": "ru",
+      "query": "Что означает: ньютоновское уравнение движения?",
+      "expectedConceptId": "physics_astronomy.classical_mechanics.newtonian_motion_equation"
+    },
+    {
+      "caseId": "kk-019",
+      "language": "kk",
+      "query": "Түсіндіріңіз: ньютондық қозғалыс теңдеуі.",
+      "expectedConceptId": "physics_astronomy.classical_mechanics.newtonian_motion_equation"
+    },
+    {
+      "caseId": "en-020",
+      "language": "en",
+      "query": "Explain conservation of momentum.",
+      "expectedConceptId": "physics_astronomy.classical_mechanics.conservation_of_momentum"
+    },
+    {
+      "caseId": "ru-020",
+      "language": "ru",
+      "query": "Что означает: закон сохранения импульса?",
+      "expectedConceptId": "physics_astronomy.classical_mechanics.conservation_of_momentum"
+    },
+    {
+      "caseId": "kk-020",
+      "language": "kk",
+      "query": "Түсіндіріңіз: импульстің сақталу заңы.",
+      "expectedConceptId": "physics_astronomy.classical_mechanics.conservation_of_momentum"
+    },
+    {
+      "caseId": "en-021",
+      "language": "en",
+      "query": "Explain organic reaction mechanism.",
+      "expectedConceptId": "chemistry_materials.organic_chemistry.organic_reaction_mechanism"
+    },
+    {
+      "caseId": "ru-021",
+      "language": "ru",
+      "query": "Что означает: механизм органической реакции?",
+      "expectedConceptId": "chemistry_materials.organic_chemistry.organic_reaction_mechanism"
+    },
+    {
+      "caseId": "kk-021",
+      "language": "kk",
+      "query": "Түсіндіріңіз: органикалық реакция механизмі.",
+      "expectedConceptId": "chemistry_materials.organic_chemistry.organic_reaction_mechanism"
+    },
+    {
+      "caseId": "en-022",
+      "language": "en",
+      "query": "Explain carbon carbon bond.",
+      "expectedConceptId": "chemistry_materials.organic_chemistry.carbon_carbon_bond"
+    },
+    {
+      "caseId": "ru-022",
+      "language": "ru",
+      "query": "Что означает: углерод углеродная связь?",
+      "expectedConceptId": "chemistry_materials.organic_chemistry.carbon_carbon_bond"
+    },
+    {
+      "caseId": "kk-022",
+      "language": "kk",
+      "query": "Түсіндіріңіз: көміртек көміртек байланысы.",
+      "expectedConceptId": "chemistry_materials.organic_chemistry.carbon_carbon_bond"
+    },
+    {
+      "caseId": "en-023",
+      "language": "en",
+      "query": "Explain gene expression regulation.",
+      "expectedConceptId": "biology_genetics.molecular_biology.gene_expression_regulation"
+    },
+    {
+      "caseId": "ru-023",
+      "language": "ru",
+      "query": "Что означает: регуляция экспрессии генов?",
+      "expectedConceptId": "biology_genetics.molecular_biology.gene_expression_regulation"
+    },
+    {
+      "caseId": "kk-023",
+      "language": "kk",
+      "query": "Түсіндіріңіз: ген экспрессиясын реттеу.",
+      "expectedConceptId": "biology_genetics.molecular_biology.gene_expression_regulation"
+    },
+    {
+      "caseId": "en-024",
+      "language": "en",
+      "query": "Explain protein synthesis pathway.",
+      "expectedConceptId": "biology_genetics.molecular_biology.protein_synthesis_pathway"
+    },
+    {
+      "caseId": "ru-024",
+      "language": "ru",
+      "query": "Что означает: путь синтеза белка?",
+      "expectedConceptId": "biology_genetics.molecular_biology.protein_synthesis_pathway"
+    },
+    {
+      "caseId": "kk-024",
+      "language": "kk",
+      "query": "Түсіндіріңіз: ақуыз синтезінің жолы.",
+      "expectedConceptId": "biology_genetics.molecular_biology.protein_synthesis_pathway"
+    },
+    {
+      "caseId": "en-025",
+      "language": "en",
+      "query": "Explain graph traversal algorithm.",
+      "expectedConceptId": "computer_science_ai.algorithms_data_structures.graph_traversal_algorithm"
+    },
+    {
+      "caseId": "ru-025",
+      "language": "ru",
+      "query": "Что означает: алгоритм обхода графа?",
+      "expectedConceptId": "computer_science_ai.algorithms_data_structures.graph_traversal_algorithm"
+    },
+    {
+      "caseId": "kk-025",
+      "language": "kk",
+      "query": "Түсіндіріңіз: графты аралау алгоритмі.",
+      "expectedConceptId": "computer_science_ai.algorithms_data_structures.graph_traversal_algorithm"
+    },
+    {
+      "caseId": "en-026",
+      "language": "en",
+      "query": "Explain dynamic programming algorithm.",
+      "expectedConceptId": "computer_science_ai.algorithms_data_structures.dynamic_programming_algorithm"
+    },
+    {
+      "caseId": "ru-026",
+      "language": "ru",
+      "query": "Что означает: алгоритм динамического программирования?",
+      "expectedConceptId": "computer_science_ai.algorithms_data_structures.dynamic_programming_algorithm"
+    },
+    {
+      "caseId": "kk-026",
+      "language": "kk",
+      "query": "Түсіндіріңіз: динамикалық бағдарламалау алгоритмі.",
+      "expectedConceptId": "computer_science_ai.algorithms_data_structures.dynamic_programming_algorithm"
+    },
+    {
+      "caseId": "en-027",
+      "language": "en",
+      "query": "Explain differential diagnosis process.",
+      "expectedConceptId": "medicine_pharmacology.clinical_diagnosis.differential_diagnosis_process"
+    },
+    {
+      "caseId": "ru-027",
+      "language": "ru",
+      "query": "Что означает: процесс дифференциальной диагностики?",
+      "expectedConceptId": "medicine_pharmacology.clinical_diagnosis.differential_diagnosis_process"
+    },
+    {
+      "caseId": "kk-027",
+      "language": "kk",
+      "query": "Түсіндіріңіз: дифференциалды диагностика процесі.",
+      "expectedConceptId": "medicine_pharmacology.clinical_diagnosis.differential_diagnosis_process"
+    },
+    {
+      "caseId": "en-028",
+      "language": "en",
+      "query": "Explain diagnostic imaging finding.",
+      "expectedConceptId": "medicine_pharmacology.clinical_diagnosis.diagnostic_imaging_finding"
+    },
+    {
+      "caseId": "ru-028",
+      "language": "ru",
+      "query": "Что означает: результат диагностической визуализации?",
+      "expectedConceptId": "medicine_pharmacology.clinical_diagnosis.diagnostic_imaging_finding"
+    },
+    {
+      "caseId": "kk-028",
+      "language": "kk",
+      "query": "Түсіндіріңіз: диагностикалық бейнелеу нәтижесі.",
+      "expectedConceptId": "medicine_pharmacology.clinical_diagnosis.diagnostic_imaging_finding"
+    },
+    {
+      "caseId": "en-029",
+      "language": "en",
+      "query": "Explain geological formation analysis.",
+      "expectedConceptId": "earth_environmental_science.geology.geological_formation_analysis"
+    },
+    {
+      "caseId": "ru-029",
+      "language": "ru",
+      "query": "Что означает: анализ геологической формации?",
+      "expectedConceptId": "earth_environmental_science.geology.geological_formation_analysis"
+    },
+    {
+      "caseId": "kk-029",
+      "language": "kk",
+      "query": "Түсіндіріңіз: геологиялық формацияны талдау.",
+      "expectedConceptId": "earth_environmental_science.geology.geological_formation_analysis"
+    },
+    {
+      "caseId": "en-030",
+      "language": "en",
+      "query": "Explain tectonic plate movement.",
+      "expectedConceptId": "earth_environmental_science.geology.tectonic_plate_movement"
+    },
+    {
+      "caseId": "ru-030",
+      "language": "ru",
+      "query": "Что означает: движение тектонической плиты?",
+      "expectedConceptId": "earth_environmental_science.geology.tectonic_plate_movement"
+    },
+    {
+      "caseId": "kk-030",
+      "language": "kk",
+      "query": "Түсіндіріңіз: тектоникалық плитаның қозғалысы.",
+      "expectedConceptId": "earth_environmental_science.geology.tectonic_plate_movement"
+    },
+    {
+      "caseId": "en-031",
+      "language": "en",
+      "query": "Explain working memory capacity.",
+      "expectedConceptId": "psychology_sociology.cognitive_psychology.working_memory_capacity"
+    },
+    {
+      "caseId": "ru-031",
+      "language": "ru",
+      "query": "Что означает: объем рабочей памяти?",
+      "expectedConceptId": "psychology_sociology.cognitive_psychology.working_memory_capacity"
+    },
+    {
+      "caseId": "kk-031",
+      "language": "kk",
+      "query": "Түсіндіріңіз: жұмыс жадысының сыйымдылығы.",
+      "expectedConceptId": "psychology_sociology.cognitive_psychology.working_memory_capacity"
+    },
+    {
+      "caseId": "en-032",
+      "language": "en",
+      "query": "Explain cognitive load theory.",
+      "expectedConceptId": "psychology_sociology.cognitive_psychology.cognitive_load_theory"
+    },
+    {
+      "caseId": "ru-032",
+      "language": "ru",
+      "query": "Что означает: теория когнитивной нагрузки?",
+      "expectedConceptId": "psychology_sociology.cognitive_psychology.cognitive_load_theory"
+    },
+    {
+      "caseId": "kk-032",
+      "language": "kk",
+      "query": "Түсіндіріңіз: когнитивтік жүктеме теориясы.",
+      "expectedConceptId": "psychology_sociology.cognitive_psychology.cognitive_load_theory"
+    },
+    {
+      "caseId": "en-033",
+      "language": "en",
+      "query": "Explain corporate credit facility.",
+      "expectedConceptId": "finance_banking.lending_credit.corporate_credit_facility"
+    },
+    {
+      "caseId": "ru-033",
+      "language": "ru",
+      "query": "Что означает: корпоративная кредитная линия?",
+      "expectedConceptId": "finance_banking.lending_credit.corporate_credit_facility"
+    },
+    {
+      "caseId": "kk-033",
+      "language": "kk",
+      "query": "Түсіндіріңіз: корпоративтік кредит желісі.",
+      "expectedConceptId": "finance_banking.lending_credit.corporate_credit_facility"
+    },
+    {
+      "caseId": "en-034",
+      "language": "en",
+      "query": "Explain actuarial pricing model.",
+      "expectedConceptId": "insurance.underwriting_pricing.actuarial_pricing_model"
+    },
+    {
+      "caseId": "ru-034",
+      "language": "ru",
+      "query": "Что означает: актуарная модель ценообразования?",
+      "expectedConceptId": "insurance.underwriting_pricing.actuarial_pricing_model"
+    },
+    {
+      "caseId": "kk-034",
+      "language": "kk",
+      "query": "Түсіндіріңіз: актуарлық баға белгілеу моделі.",
+      "expectedConceptId": "insurance.underwriting_pricing.actuarial_pricing_model"
+    },
+    {
+      "caseId": "en-035",
+      "language": "en",
+      "query": "Explain combined cycle turbine.",
+      "expectedConceptId": "energy_utilities.power_generation.combined_cycle_turbine"
+    },
+    {
+      "caseId": "ru-035",
+      "language": "ru",
+      "query": "Что означает: парогазовая турбинная установка?",
+      "expectedConceptId": "energy_utilities.power_generation.combined_cycle_turbine"
+    },
+    {
+      "caseId": "kk-035",
+      "language": "kk",
+      "query": "Түсіндіріңіз: бу газ турбиналық қондырғы.",
+      "expectedConceptId": "energy_utilities.power_generation.combined_cycle_turbine"
+    },
+    {
+      "caseId": "en-036",
+      "language": "en",
+      "query": "Explain drilling operations plan.",
+      "expectedConceptId": "oil_gas_mining.upstream_operations.drilling_operations_plan"
+    },
+    {
+      "caseId": "ru-036",
+      "language": "ru",
+      "query": "Что означает: план буровых работ?",
+      "expectedConceptId": "oil_gas_mining.upstream_operations.drilling_operations_plan"
+    },
+    {
+      "caseId": "kk-036",
+      "language": "kk",
+      "query": "Түсіндіріңіз: бұрғылау жұмыстарының жоспары.",
+      "expectedConceptId": "oil_gas_mining.upstream_operations.drilling_operations_plan"
+    },
+    {
+      "caseId": "en-037",
+      "language": "en",
+      "query": "Explain production line balancing.",
+      "expectedConceptId": "manufacturing.production_systems.production_line_balancing"
+    },
+    {
+      "caseId": "ru-037",
+      "language": "ru",
+      "query": "Что означает: балансировка производственной линии?",
+      "expectedConceptId": "manufacturing.production_systems.production_line_balancing"
+    },
+    {
+      "caseId": "kk-037",
+      "language": "kk",
+      "query": "Түсіндіріңіз: өндірістік желіні теңгеру.",
+      "expectedConceptId": "manufacturing.production_systems.production_line_balancing"
+    },
+    {
+      "caseId": "en-038",
+      "language": "en",
+      "query": "Explain building information modeling.",
+      "expectedConceptId": "construction_real_estate.design_construction.building_information_modeling"
+    },
+    {
+      "caseId": "ru-038",
+      "language": "ru",
+      "query": "Что означает: информационное моделирование зданий?",
+      "expectedConceptId": "construction_real_estate.design_construction.building_information_modeling"
+    },
+    {
+      "caseId": "kk-038",
+      "language": "kk",
+      "query": "Түсіндіріңіз: ғимараттарды ақпараттық модельдеу.",
+      "expectedConceptId": "construction_real_estate.design_construction.building_information_modeling"
+    },
+    {
+      "caseId": "en-039",
+      "language": "en",
+      "query": "Explain cargo transport capacity.",
+      "expectedConceptId": "transport_logistics.freight_transport.cargo_transport_capacity"
+    },
+    {
+      "caseId": "ru-039",
+      "language": "ru",
+      "query": "Что означает: пропускная способность грузовых перевозок?",
+      "expectedConceptId": "transport_logistics.freight_transport.cargo_transport_capacity"
+    },
+    {
+      "caseId": "kk-039",
+      "language": "kk",
+      "query": "Түсіндіріңіз: жүк тасымалдау өткізу қабілеті.",
+      "expectedConceptId": "transport_logistics.freight_transport.cargo_transport_capacity"
+    },
+    {
+      "caseId": "en-040",
+      "language": "en",
+      "query": "Explain precision agriculture system.",
+      "expectedConceptId": "agriculture_food.crop_science.precision_agriculture_system"
+    },
+    {
+      "caseId": "ru-040",
+      "language": "ru",
+      "query": "Что означает: система точного земледелия?",
+      "expectedConceptId": "agriculture_food.crop_science.precision_agriculture_system"
+    },
+    {
+      "caseId": "kk-040",
+      "language": "kk",
+      "query": "Түсіндіріңіз: дәлме дәл егіншілік жүйесі.",
+      "expectedConceptId": "agriculture_food.crop_science.precision_agriculture_system"
+    }
+  ]
+}
