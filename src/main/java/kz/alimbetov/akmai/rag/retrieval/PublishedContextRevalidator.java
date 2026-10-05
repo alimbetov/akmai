@@ -5,21 +5,32 @@ import java.util.List;
 import java.util.Set;
 import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Final lifecycle/ACL fence immediately before retrieved context is exposed
- * to answer generation.
+ * Final lifecycle/ACL/TTL fence immediately before retrieved context is
+ * exposed to answer generation.
  */
 @Component
 public class PublishedContextRevalidator {
 
     private final PublishedSearchProjectionReader projectionReader;
+    private final PublishedLifecycleEligibility lifecycleEligibility;
 
+    @Autowired
     public PublishedContextRevalidator(
-            PublishedSearchProjectionReader projectionReader
+            PublishedSearchProjectionReader projectionReader,
+            PublishedLifecycleEligibility lifecycleEligibility
     ) {
         this.projectionReader = projectionReader;
+        this.lifecycleEligibility = lifecycleEligibility;
+    }
+
+    PublishedContextRevalidator(
+            PublishedSearchProjectionReader projectionReader
+    ) {
+        this(projectionReader, PublishedLifecycleEligibility.allowAll());
     }
 
     public List<RetrievalHit> revalidate(
@@ -31,7 +42,15 @@ public class PublishedContextRevalidator {
             return List.of();
         }
 
-        List<RetrievalHit> eligible = hits.stream()
+        List<RetrievalHit> lifecycleEligible = lifecycleEligibility.filter(
+                hits,
+                accessLevels
+        );
+        if (lifecycleEligible.isEmpty()) {
+            return List.of();
+        }
+
+        List<RetrievalHit> eligible = lifecycleEligible.stream()
                 .filter(RetrievalHit::hasRoutingIdentity)
                 .filter(hit -> accessLevels.contains(hit.accessLevel()))
                 .toList();
