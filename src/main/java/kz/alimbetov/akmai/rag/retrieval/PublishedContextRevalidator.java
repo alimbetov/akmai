@@ -42,15 +42,7 @@ public class PublishedContextRevalidator {
             return List.of();
         }
 
-        List<RetrievalHit> lifecycleEligible = lifecycleEligibility.filter(
-                hits,
-                accessLevels
-        );
-        if (lifecycleEligible.isEmpty()) {
-            return List.of();
-        }
-
-        List<RetrievalHit> eligible = lifecycleEligible.stream()
+        List<RetrievalHit> eligible = hits.stream()
                 .filter(RetrievalHit::hasRoutingIdentity)
                 .filter(hit -> accessLevels.contains(hit.accessLevel()))
                 .toList();
@@ -81,9 +73,17 @@ public class PublishedContextRevalidator {
                         )
                 );
 
-        return eligible.stream()
+        List<RetrievalHit> publishedHits = eligible.stream()
                 .filter(hit -> published.contains(Key.of(hit)))
                 .toList();
+        if (publishedHits.isEmpty()) {
+            return List.of();
+        }
+
+        // Keep lifecycle/ACL/TTL as the final synchronous DB fence. Running
+        // this before projection materialization creates a TOCTOU window in
+        // which expires_at can cross its deadline between the two reads.
+        return lifecycleEligibility.filter(publishedHits, accessLevels);
     }
 
     private void requireAccessLevels(Set<Long> accessLevels) {
