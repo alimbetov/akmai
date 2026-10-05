@@ -1,6 +1,12 @@
 name: Retrieval Quality Gate
 
 on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+      - "fix/**"
+      - "audit/**"
   pull_request:
 
 jobs:
