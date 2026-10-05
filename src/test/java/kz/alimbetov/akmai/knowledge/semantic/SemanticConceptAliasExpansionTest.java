@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -66,6 +67,7 @@ class SemanticConceptAliasExpansionTest {
                 );
         SemanticConceptAliasDefinition definition =
                 load("semantic/concept-aliases-global-v1.yaml");
+        List<String> droppedAliases = new ArrayList<>();
 
         for (SemanticConceptAliasDefinition.Entry entry :
                 definition.entries()) {
@@ -84,12 +86,23 @@ class SemanticConceptAliasExpansionTest {
                             " ",
                             normalizer.normalizeTokens(alias)
                     );
-                    assertThat(surface.aliases())
-                            .as(entry.conceptId() + "/" + language)
-                            .contains(normalized);
+                    if (!surface.aliases().contains(normalized)) {
+                        droppedAliases.add(
+                                entry.conceptId()
+                                        + "/" + language
+                                        + " alias='" + alias
+                                        + "' normalized='" + normalized
+                                        + "' preferred='"
+                                        + surface.preferredPhrase() + "'"
+                        );
+                    }
                 }
             }
         }
+
+        assertThat(droppedAliases)
+                .as("global aliases dropped after normalization")
+                .isEmpty();
     }
 
     @Test
