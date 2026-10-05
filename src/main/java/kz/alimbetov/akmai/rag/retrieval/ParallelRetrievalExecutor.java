@@ -12,7 +12,10 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
@@ -27,6 +30,13 @@ public class ParallelRetrievalExecutor {
     private final Executor retrievalExecutor;
     private final RetrievalObserver observer;
     private final RetrievalProperties properties;
+    private final ScheduledExecutorService timeoutExecutor = Executors.newSingleThreadScheduledExecutor(
+            runnable -> {
+                Thread thread = new Thread(runnable, "retrieval-timeout");
+                thread.setDaemon(true);
+                return thread;
+            }
+    );
 
     public ParallelRetrievalExecutor(
             List<RetrievalStrategy> strategies,
@@ -157,35 +167,42 @@ public class ParallelRetrievalExecutor {
 
         CompletableFuture<RetrievalStepOutcome> future =
                 ready.thenCompose(ignored -> {
-                    try {
-                        return CompletableFuture.supplyAsync(
-                                        () -> executeStep(
-                                                step,
-                                                dependencies,
-                                                accessLevels
-                                        ),
-                                        retrievalExecutor
-                                )
-                                .orTimeout(
-                                        properties.strategyTimeout().toMillis(),
-                                        TimeUnit.MILLISECONDS
-                                )
-                                .exceptionally(
-                                        exception ->
-                                                outcomeFromFailure(
-                                                        step,
-                                                        exception
-                                                )
-                                );
-                    } catch (RejectedExecutionException exception) {
-                        return CompletableFuture.completedFuture(
-                                failed(
-                                        step,
-                                        RetrievalOutcomeStatus.REJECTED,
-                                        "EXECUTOR_REJECTED"
-                                )
-                        );
-                    }
+                    CompletableFuture<RetrievalStepOutcome> execution =
+                            new CompletableFuture<>();
+                    ScheduledFuture<?> timeoutHandle = timeoutExecutor.schedule(
+                            () -> {
+                                if (!execution.isDone()) {
+                                    execution.complete(timeout(step));
+                                }
+                            },
+                            properties.strategyTimeout().toMillis(),
+                            TimeUnit.MILLISECONDS
+                    );
+
+                    CompletableFuture<RetrievalStepOutcome> strategyResult =
+                            CompletableFuture.supplyAsync(
+                                    () -> executeStep(
+                                            step,
+                                            dependencies,
+                                            accessLevels
+                                    ),
+                                    retrievalExecutor
+                            );
+
+                    strategyResult.whenComplete((result, error) -> {
+                        timeoutHandle.cancel(false);
+                        if (error != null) {
+                            if (!execution.isDone()) {
+                                execution.completeExceptionally(error);
+                            }
+                            return;
+                        }
+                        if (!execution.isDone()) {
+                            execution.complete(result);
+                        }
+                    });
+
+                    return execution;
                 })
                 .exceptionally(
                         exception -> outcomeFromFailure(step, exception)
@@ -423,7 +440,6 @@ public class ParallelRetrievalExecutor {
                 hit.fusedScore()
         );
     }
-
 
     private Set<Long> normalizeAccessLevels(Set<Long> accessLevels) {
         if (accessLevels == null || accessLevels.isEmpty()) {
