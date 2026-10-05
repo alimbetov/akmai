@@ -25,6 +25,14 @@ jobs:
           -Dtest=QueryLanguageDetectorTest,MultilingualChunkingRulesTest,IndustryProfileLanguageCoverageTest,IndustryProfileSemanticRulesTest,SemanticDomainCatalogTest,SemanticLexiconRegistryTest,SemanticDomainRouterTest,SemanticChunkAnnotatorTest,SemanticProjectionPropagationTest,EnglishSemanticConceptCatalogTest,EnglishSemanticConceptMatcherTest,EnglishSemanticConceptAnnotationTest,EnglishSemanticMorphologyNormalizerTest,SemanticMorphologyRegistryTest,SemanticConceptSurfaceRegistryTest,SemanticConceptAliasExpansionTest,RussianKazakhSemanticMorphologyTest,ChineseSemanticMorphologyNormalizerTest,EuropeanSemanticMorphologyNormalizerTest,TurkishGreekSemanticMorphologyTest,MultilingualSemanticSurfaceRoundTripTest,MultilingualSemanticConceptMatcherTest,MultilingualSemanticConceptAnnotationTest,SemanticQueryAnalyzerTest,RetrievalPlannerTest,PhaseBRetrievalAcceptanceTest,SemanticConceptGoldenSetTest,SemanticConceptRetrievalGoldenSetTest,LexicalRetrievalStrategySemanticTest,ConceptRetrievalStrategyTest,RerankerTest,MultilingualRetrievalQualityRegressionTest,PublishedVectorSearchIntegrationTest,PostgresRetrievalIntegrationTest,AnswerGroundingVerifierTest,TemporalAuthorityFilterTest,RagFallbackMessagesTest,RagQuestionServiceAssuranceTest,AdaptiveGraphScoreCalculatorTest,AdaptiveGraphUtilityRecorderTest,AssociationLearningRecorderTest,AdaptiveGraphReplayUtilityTest,AdaptiveGraphThresholdCalibratorTest,GraphReplayHarnessTest,AdaptiveGraphReplayQualityGateTest
           test
 
+      - name: Upload retrieval quality diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrieval-quality-surefire-reports
+          path: target/surefire-reports
+          if-no-files-found: warn
+
       - name: Upload adaptive graph replay report
         uses: actions/upload-artifact@v4
         with:
