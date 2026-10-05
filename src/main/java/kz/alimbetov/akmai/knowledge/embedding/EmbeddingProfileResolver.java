@@ -5,6 +5,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
+import kz.alimbetov.akmai.config.CanonicalEmbeddingContract;
 import kz.alimbetov.akmai.config.VectorStorageProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -17,9 +18,10 @@ public class EmbeddingProfileResolver {
 
     public EmbeddingProfileResolver(
             VectorStorageProperties vectorProperties,
-            @Value("${spring.ai.ollama.embedding.model:qwen3-embedding:0.6b}")
+            @Value("${spring.ai.ollama.embedding.model:qwen3-embedding:4b}")
             String model
     ) {
+        CanonicalEmbeddingContract.validate(model, vectorProperties.dimensions());
         this.vectorProperties = vectorProperties;
         this.model = model;
     }
