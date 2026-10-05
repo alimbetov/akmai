@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,13 +16,28 @@ public class ResultFusion {
 
     private final RetrievalProperties properties;
     private final PublishedSearchProjectionReader projectionRepository;
+    private final RetrievalFusionProperties fusionProperties;
 
     public ResultFusion(
             RetrievalProperties properties,
             PublishedSearchProjectionReader projectionRepository
     ) {
+        this(
+                properties,
+                projectionRepository,
+                RetrievalFusionProperties.defaults()
+        );
+    }
+
+    @Autowired
+    public ResultFusion(
+            RetrievalProperties properties,
+            PublishedSearchProjectionReader projectionRepository,
+            RetrievalFusionProperties fusionProperties
+    ) {
         this.properties = properties;
         this.projectionRepository = projectionRepository;
+        this.fusionProperties = fusionProperties;
     }
 
     public List<RetrievalHit> fuse(
@@ -225,7 +241,8 @@ public class ResultFusion {
         private void add(RetrievalEvidence item, int tier) {
             evidence.add(item);
             authorityTier = Math.min(authorityTier, tier);
-            fusedScore += 1.0 / (properties.rrfK() + item.rank());
+            fusedScore += fusionProperties.weight(item.type())
+                    / (properties.rrfK() + item.rank());
         }
 
         private RetrievalHit toHit(SearchProjection canonical) {
@@ -236,6 +253,10 @@ public class ResultFusion {
             Map<String, Object> metadata =
                     new LinkedHashMap<>(source.metadata());
             metadata.put("authorityTier", authorityTier);
+            metadata.put(
+                    "rrfWeighted",
+                    fusionProperties.weightedEnabled()
+            );
             return new RetrievalHit(
                     source.type(),
                     source.accessLevel(),
