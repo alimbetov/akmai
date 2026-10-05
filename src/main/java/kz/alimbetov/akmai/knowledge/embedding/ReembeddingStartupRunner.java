@@ -29,7 +29,7 @@ public class ReembeddingStartupRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        service.abortInterruptedMigrations();
+        service.recoverExpiredMigration();
         if (!properties.autoMigrate()) {
             return;
         }

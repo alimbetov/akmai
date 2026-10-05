@@ -33,6 +33,9 @@ CREATE TABLE knowledge_embedding_migration (
     source_profile_id  VARCHAR(128) NOT NULL,
     target_profile_id  VARCHAR(128) NOT NULL,
     migration_status   VARCHAR(32) NOT NULL,
+    owner_id           VARCHAR(128),
+    lease_until        TIMESTAMPTZ,
+    fencing_token      BIGINT NOT NULL DEFAULT 0,
     created_at         TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
     completed_at       TIMESTAMPTZ,
@@ -46,6 +49,8 @@ CREATE TABLE knowledge_embedding_migration (
             'FAILED',
             'COMPLETED'
         )),
+    CONSTRAINT ck_embedding_migration_fencing_token
+        CHECK (fencing_token >= 0),
     CONSTRAINT fk_embedding_migration_source
         FOREIGN KEY (source_profile_id)
         REFERENCES knowledge_embedding_profile(profile_id),
@@ -56,6 +61,14 @@ CREATE TABLE knowledge_embedding_migration (
 
 CREATE UNIQUE INDEX uq_embedding_migration_active
     ON knowledge_embedding_migration ((1))
+    WHERE migration_status IN (
+        'PREPARING',
+        'STAGING',
+        'READY_TO_CUTOVER'
+    );
+
+CREATE INDEX idx_embedding_migration_lease
+    ON knowledge_embedding_migration(lease_until)
     WHERE migration_status IN (
         'PREPARING',
         'STAGING',

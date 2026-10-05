@@ -3,8 +3,11 @@ package kz.alimbetov.akmai.knowledge.embedding;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import kz.alimbetov.akmai.config.ReembeddingProperties;
+import kz.alimbetov.akmai.knowledge.embedding.ReembeddingLeaseManager.Authority;
+import kz.alimbetov.akmai.knowledge.embedding.ReembeddingLeaseManager.LostAuthorityException;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
 import kz.alimbetov.akmai.knowledge.ingestion.GenerationVectorAssembler;
@@ -33,6 +36,7 @@ public class ReembeddingService {
     private final VectorGenerationRepository manifests;
     private final PostgresGenerationVectorRepository vectors;
     private final GenerationVectorAssembler vectorAssembler;
+    private final ReembeddingLeaseManager leases;
     private final ReembeddingProperties properties;
 
     public ReembeddingService(
@@ -48,6 +52,7 @@ public class ReembeddingService {
             VectorGenerationRepository manifests,
             PostgresGenerationVectorRepository vectors,
             GenerationVectorAssembler vectorAssembler,
+            ReembeddingLeaseManager leases,
             ReembeddingProperties properties
     ) {
         this.jdbcTemplate = jdbcTemplate;
@@ -61,6 +66,7 @@ public class ReembeddingService {
         this.manifests = manifests;
         this.vectors = vectors;
         this.vectorAssembler = vectorAssembler;
+        this.leases = leases;
         this.properties = properties;
     }
 
@@ -71,55 +77,50 @@ public class ReembeddingService {
             return new MigrationResult(null, 0, false);
         }
 
-        UUID migrationId = begin(source, target);
-        try {
-            awaitDrain(migrationId);
-            snapshot(migrationId, source, target);
+        Authority authority = begin(source, target);
+        if (authority == null) {
+            return new MigrationResult(null, 0, false);
+        }
 
-            List<SnapshotDocument> documents = snapshotDocuments(migrationId);
+        try {
+            awaitDrain(authority);
+            snapshot(authority, source, target);
+
+            List<SnapshotDocument> documents = snapshotDocuments(authority);
             for (SnapshotDocument document : documents) {
-                stageCandidate(
-                        migrationId,
-                        document,
-                        target
-                );
+                stageCandidate(authority, document, target);
             }
 
-            readyToCutover(migrationId);
-            cutover(migrationId, source, target);
+            readyToCutover(authority);
+            cutover(authority, source, target);
             return new MigrationResult(
-                    migrationId,
+                    authority.migrationId(),
                     documents.size(),
                     true
             );
         } catch (RuntimeException exception) {
-            abort(
-                    migrationId,
+            boolean aborted = abortIfOwned(
+                    authority,
                     exception.getClass().getSimpleName()
                             + ": "
                             + safe(exception.getMessage())
             );
+            if (!aborted && exception instanceof LostAuthorityException) {
+                recoverExpiredMigration();
+            }
             throw exception;
         }
     }
 
-    public int abortInterruptedMigrations() {
-        List<UUID> active = jdbcTemplate.query(
-                """
-                SELECT migration_id
-                FROM knowledge_embedding_migration
-                WHERE migration_status IN (
-                    'PREPARING', 'STAGING', 'READY_TO_CUTOVER'
-                )
-                ORDER BY created_at
-                """,
-                (rs, rowNum) -> rs.getObject(1, UUID.class)
-        );
-        active.forEach(id -> abort(id, "PROCESS_RESTART_RECOVERY"));
-        return active.size();
+    public int recoverExpiredMigration() {
+        Optional<Authority> claimed = leases.claimExpiredActive();
+        if (claimed.isEmpty()) {
+            return 0;
+        }
+        return abortIfOwned(claimed.get(), "STALE_LEASE_RECOVERY") ? 1 : 0;
     }
 
-    private UUID begin(
+    private Authority begin(
             EmbeddingProfile source,
             EmbeddingProfile target
     ) {
@@ -127,9 +128,7 @@ public class ReembeddingService {
         return transactionTemplate.execute(status -> {
             RuntimeState runtime = lockRuntime();
             if (!"IDLE".equals(runtime.status())) {
-                throw new IllegalStateException(
-                        "Embedding migration is already active"
-                );
+                return null;
             }
             if (!source.profileId().equals(runtime.activeProfileId())) {
                 throw new IllegalStateException(
@@ -148,7 +147,8 @@ public class ReembeddingService {
                     source.profileId(),
                     target.profileId()
             );
-            jdbcTemplate.update(
+            Authority authority = leases.claimNew(migrationId);
+            int updated = jdbcTemplate.update(
                     """
                     UPDATE knowledge_embedding_runtime
                     SET migration_profile_id = ?,
@@ -156,16 +156,25 @@ public class ReembeddingService {
                         row_version = row_version + 1,
                         updated_at = clock_timestamp()
                     WHERE singleton_id = 1
+                      AND migration_status = 'IDLE'
+                      AND active_profile_id = ?
                     """,
-                    target.profileId()
+                    target.profileId(),
+                    source.profileId()
             );
-            return migrationId;
+            if (updated != 1) {
+                throw new IllegalStateException(
+                        "Embedding runtime changed before migration ownership was established"
+                );
+            }
+            return authority;
         });
     }
 
-    private void awaitDrain(UUID migrationId) {
+    private void awaitDrain(Authority authority) {
         Instant deadline = Instant.now().plus(properties.drainTimeout());
         while (Instant.now().isBefore(deadline)) {
+            leases.renew(authority);
             Integer active = jdbcTemplate.queryForObject(
                     """
                     SELECT
@@ -189,19 +198,21 @@ public class ReembeddingService {
         }
         throw new IllegalStateException(
                 "Timed out draining ingestion/retention before migration "
-                        + migrationId
+                        + authority.migrationId()
         );
     }
 
     private void snapshot(
-            UUID migrationId,
+            Authority authority,
             EmbeddingProfile source,
             EmbeddingProfile target
     ) {
         transactionTemplate.executeWithoutResult(status -> {
+            leases.renew(authority);
             RuntimeState runtime = lockRuntime();
             if (!"PREPARING".equals(runtime.status())
-                    || !source.profileId().equals(runtime.activeProfileId())) {
+                    || !source.profileId().equals(runtime.activeProfileId())
+                    || !target.profileId().equals(runtime.migrationProfileId())) {
                 throw new IllegalStateException(
                         "Embedding migration lost PREPARING authority"
                 );
@@ -239,20 +250,30 @@ public class ReembeddingService {
                       AND l.published_generation IS NOT NULL
                     ORDER BY l.document_id
                     """,
-                    migrationId
+                    authority.migrationId()
             );
 
-            jdbcTemplate.update(
+            int migrationUpdated = jdbcTemplate.update(
                     """
                     UPDATE knowledge_embedding_migration
                     SET migration_status = 'STAGING',
                         updated_at = clock_timestamp()
                     WHERE migration_id = ?
+                      AND owner_id = ?
+                      AND fencing_token = ?
                       AND migration_status = 'PREPARING'
                     """,
-                    migrationId
+                    authority.migrationId(),
+                    authority.ownerId(),
+                    authority.fencingToken()
             );
-            jdbcTemplate.update(
+            if (migrationUpdated != 1) {
+                throw new LostAuthorityException(
+                        "Re-embedding migration lost ownership before STAGING"
+                );
+            }
+
+            int runtimeUpdated = jdbcTemplate.update(
                     """
                     UPDATE knowledge_embedding_runtime
                     SET migration_status = 'STAGING',
@@ -260,13 +281,22 @@ public class ReembeddingService {
                         row_version = row_version + 1,
                         updated_at = clock_timestamp()
                     WHERE singleton_id = 1
+                      AND migration_status = 'PREPARING'
+                      AND migration_profile_id = ?
                     """,
+                    target.profileId(),
                     target.profileId()
             );
+            if (runtimeUpdated != 1) {
+                throw new IllegalStateException(
+                        "Embedding runtime lost PREPARING state"
+                );
+            }
         });
     }
 
-    private List<SnapshotDocument> snapshotDocuments(UUID migrationId) {
+    private List<SnapshotDocument> snapshotDocuments(Authority authority) {
+        leases.renew(authority);
         return jdbcTemplate.query(
                 """
                 SELECT document_id, source_generation
@@ -278,20 +308,16 @@ public class ReembeddingService {
                         rs.getString("document_id"),
                         rs.getLong("source_generation")
                 ),
-                migrationId
+                authority.migrationId()
         );
     }
 
     private void stageCandidate(
-            UUID migrationId,
+            Authority authority,
             SnapshotDocument snapshot,
             EmbeddingProfile target
     ) {
-        long candidate = allocateCandidate(
-                migrationId,
-                snapshot,
-                target
-        );
+        long candidate = allocateCandidate(authority, snapshot, target);
 
         try {
             GenerationIdentity sourceIdentity = generationIdentity(
@@ -319,10 +345,8 @@ public class ReembeddingService {
                             .map(value -> value.withGeneration(candidate))
                             .toList();
 
-            List<float[]> embeddings = embeddingService.embed(
-                    cloned,
-                    target
-            );
+            leases.renew(authority);
+            List<float[]> embeddings = embeddingService.embed(cloned, target);
             GenerationVectorAssembler.Assembly assembly =
                     vectorAssembler.assemble(
                             cloned,
@@ -332,6 +356,7 @@ public class ReembeddingService {
                     );
 
             transactionTemplate.executeWithoutResult(status -> {
+                leases.renew(authority);
                 int owned = jdbcTemplate.update(
                         """
                         UPDATE knowledge_embedding_migration_document
@@ -341,7 +366,7 @@ public class ReembeddingService {
                           AND candidate_generation = ?
                           AND document_status = 'STAGING'
                         """,
-                        migrationId,
+                        authority.migrationId(),
                         snapshot.documentId(),
                         candidate
                 );
@@ -352,14 +377,8 @@ public class ReembeddingService {
                 }
 
                 projections.saveAll(targetIdentity, cloned);
-                identifiers.saveAll(
-                        targetIdentity,
-                        clonedIdentifiers
-                );
-                references.cloneGeneration(
-                        sourceIdentity,
-                        targetIdentity
-                );
+                identifiers.saveAll(targetIdentity, clonedIdentifiers);
+                references.cloneGeneration(sourceIdentity, targetIdentity);
                 manifests.save(
                         targetIdentity,
                         target.profileId(),
@@ -372,7 +391,7 @@ public class ReembeddingService {
                         assembly.vectors()
                 );
 
-                jdbcTemplate.update(
+                int verified = jdbcTemplate.update(
                         """
                         UPDATE knowledge_embedding_migration_document
                         SET document_status = 'VERIFIED',
@@ -383,51 +402,34 @@ public class ReembeddingService {
                           AND candidate_generation = ?
                           AND document_status = 'STAGING'
                         """,
-                        migrationId,
+                        authority.migrationId(),
                         snapshot.documentId(),
                         candidate
                 );
+                if (verified != 1) {
+                    throw new IllegalStateException(
+                            "Migration document could not be verified"
+                    );
+                }
             });
         } catch (RuntimeException exception) {
-            jdbcTemplate.update(
-                    """
-                    UPDATE knowledge_document_generation
-                    SET generation_status = 'FAILED',
-                        failure_code = 'REEMBEDDING_STAGE_FAILED',
-                        last_error = ?,
-                        cleanup_required = true,
-                        failed_at = clock_timestamp()
-                    WHERE document_id = ?
-                      AND generation = ?
-                      AND generation_status = 'STAGING'
-                    """,
-                    safe(exception.getMessage()),
-                    snapshot.documentId(),
-                    candidate
-            );
-            jdbcTemplate.update(
-                    """
-                    UPDATE knowledge_embedding_migration_document
-                    SET document_status = 'FAILED',
-                        last_error = ?,
-                        updated_at = clock_timestamp()
-                    WHERE migration_id = ?
-                      AND document_id = ?
-                    """,
-                    safe(exception.getMessage()),
-                    migrationId,
-                    snapshot.documentId()
+            failCandidateIfOwned(
+                    authority,
+                    snapshot,
+                    candidate,
+                    safe(exception.getMessage())
             );
             throw exception;
         }
     }
 
     private long allocateCandidate(
-            UUID migrationId,
+            Authority authority,
             SnapshotDocument snapshot,
             EmbeddingProfile target
     ) {
         return transactionTemplate.execute(status -> {
+            leases.renew(authority);
             RuntimeState runtime = lockRuntime();
             if (!"STAGING".equals(runtime.status())
                     || !target.profileId().equals(
@@ -498,12 +500,12 @@ public class ReembeddingService {
                     """,
                     snapshot.documentId(),
                     candidate,
-                    migrationId,
+                    authority.migrationId(),
                     target.profileId(),
                     fingerprint,
                     lifecycle.accessLevel()
             );
-            jdbcTemplate.update(
+            int documentUpdated = jdbcTemplate.update(
                     """
                     UPDATE knowledge_embedding_migration_document
                     SET candidate_generation = ?,
@@ -514,11 +516,64 @@ public class ReembeddingService {
                       AND document_status = 'SNAPSHOT'
                     """,
                     candidate,
-                    migrationId,
+                    authority.migrationId(),
                     snapshot.documentId()
             );
+            if (documentUpdated != 1) {
+                throw new IllegalStateException(
+                        "Migration document lost SNAPSHOT state"
+                );
+            }
             return candidate;
         });
+    }
+
+    private void failCandidateIfOwned(
+            Authority authority,
+            SnapshotDocument snapshot,
+            long candidate,
+            String error
+    ) {
+        try {
+            transactionTemplate.executeWithoutResult(status -> {
+                leases.renew(authority);
+                jdbcTemplate.update(
+                        """
+                        UPDATE knowledge_document_generation
+                        SET generation_status = 'FAILED',
+                            failure_code = 'REEMBEDDING_STAGE_FAILED',
+                            last_error = ?,
+                            cleanup_required = true,
+                            failed_at = clock_timestamp()
+                        WHERE document_id = ?
+                          AND generation = ?
+                          AND migration_id = ?
+                          AND generation_status = 'STAGING'
+                        """,
+                        error,
+                        snapshot.documentId(),
+                        candidate,
+                        authority.migrationId()
+                );
+                jdbcTemplate.update(
+                        """
+                        UPDATE knowledge_embedding_migration_document
+                        SET document_status = 'FAILED',
+                            last_error = ?,
+                            updated_at = clock_timestamp()
+                        WHERE migration_id = ?
+                          AND document_id = ?
+                          AND candidate_generation = ?
+                        """,
+                        error,
+                        authority.migrationId(),
+                        snapshot.documentId(),
+                        candidate
+                );
+            });
+        } catch (LostAuthorityException ignored) {
+            // A stale owner is deliberately fenced from failure cleanup.
+        }
     }
 
     private GenerationIdentity generationIdentity(
@@ -549,8 +604,9 @@ public class ReembeddingService {
         );
     }
 
-    private void readyToCutover(UUID migrationId) {
+    private void readyToCutover(Authority authority) {
         transactionTemplate.executeWithoutResult(status -> {
+            leases.renew(authority);
             Integer pending = jdbcTemplate.queryForObject(
                     """
                     SELECT count(*)
@@ -559,7 +615,7 @@ public class ReembeddingService {
                       AND document_status <> 'VERIFIED'
                     """,
                     Integer.class,
-                    migrationId
+                    authority.migrationId()
             );
             if (pending != null && pending > 0) {
                 throw new IllegalStateException(
@@ -567,17 +623,27 @@ public class ReembeddingService {
                 );
             }
 
-            jdbcTemplate.update(
+            int migrationUpdated = jdbcTemplate.update(
                     """
                     UPDATE knowledge_embedding_migration
                     SET migration_status = 'READY_TO_CUTOVER',
                         updated_at = clock_timestamp()
                     WHERE migration_id = ?
+                      AND owner_id = ?
+                      AND fencing_token = ?
                       AND migration_status = 'STAGING'
                     """,
-                    migrationId
+                    authority.migrationId(),
+                    authority.ownerId(),
+                    authority.fencingToken()
             );
-            jdbcTemplate.update(
+            if (migrationUpdated != 1) {
+                throw new LostAuthorityException(
+                        "Re-embedding migration lost ownership before cutover"
+                );
+            }
+
+            int runtimeUpdated = jdbcTemplate.update(
                     """
                     UPDATE knowledge_embedding_runtime
                     SET migration_status = 'READY_TO_CUTOVER',
@@ -587,15 +653,21 @@ public class ReembeddingService {
                       AND migration_status = 'STAGING'
                     """
             );
+            if (runtimeUpdated != 1) {
+                throw new IllegalStateException(
+                        "Embedding runtime lost STAGING state"
+                );
+            }
         });
     }
 
     private void cutover(
-            UUID migrationId,
+            Authority authority,
             EmbeddingProfile source,
             EmbeddingProfile target
     ) {
         transactionTemplate.executeWithoutResult(status -> {
+            leases.renew(authority);
             RuntimeState runtime = lockRuntime();
             if (!"READY_TO_CUTOVER".equals(runtime.status())
                     || !source.profileId().equals(runtime.activeProfileId())
@@ -614,7 +686,7 @@ public class ReembeddingService {
                     WHERE migration_id = ?
                     """,
                     Integer.class,
-                    migrationId
+                    authority.migrationId()
             );
 
             Integer invalid = jdbcTemplate.queryForObject(
@@ -645,7 +717,7 @@ public class ReembeddingService {
                       )
                     """,
                     Integer.class,
-                    migrationId,
+                    authority.migrationId(),
                     source.profileId(),
                     target.profileId()
             );
@@ -668,7 +740,7 @@ public class ReembeddingService {
                     FOR UPDATE OF l
                     """,
                     String.class,
-                    migrationId
+                    authority.migrationId()
             );
             if (lockedDocuments.size() != expected) {
                 throw new IllegalStateException(
@@ -689,7 +761,7 @@ public class ReembeddingService {
                       AND source.generation = d.source_generation
                       AND source.generation_status = 'PUBLISHED'
                     """,
-                    migrationId
+                    authority.migrationId()
             );
             int published = jdbcTemplate.update(
                     """
@@ -702,7 +774,7 @@ public class ReembeddingService {
                       AND candidate.generation = d.candidate_generation
                       AND candidate.generation_status = 'STAGING'
                     """,
-                    migrationId
+                    authority.migrationId()
             );
             int switched = jdbcTemplate.update(
                     """
@@ -721,7 +793,7 @@ public class ReembeddingService {
                       AND l.document_id = d.document_id
                       AND l.published_generation = d.source_generation
                     """,
-                    migrationId
+                    authority.migrationId()
             );
 
             if (retiring != expected
@@ -739,7 +811,7 @@ public class ReembeddingService {
                 );
             }
 
-            jdbcTemplate.update(
+            int runtimeUpdated = jdbcTemplate.update(
                     """
                     UPDATE knowledge_embedding_runtime
                     SET active_profile_id = ?,
@@ -748,10 +820,19 @@ public class ReembeddingService {
                         row_version = row_version + 1,
                         updated_at = clock_timestamp()
                     WHERE singleton_id = 1
+                      AND migration_status = 'READY_TO_CUTOVER'
+                      AND migration_profile_id = ?
                     """,
+                    target.profileId(),
                     target.profileId()
             );
-            jdbcTemplate.update(
+            if (runtimeUpdated != 1) {
+                throw new IllegalStateException(
+                        "Embedding runtime could not complete cutover"
+                );
+            }
+
+            int migrationUpdated = jdbcTemplate.update(
                     """
                     UPDATE knowledge_embedding_migration
                     SET migration_status = 'COMPLETED',
@@ -759,74 +840,107 @@ public class ReembeddingService {
                         updated_at = clock_timestamp(),
                         last_error = NULL
                     WHERE migration_id = ?
+                      AND owner_id = ?
+                      AND fencing_token = ?
+                      AND migration_status = 'READY_TO_CUTOVER'
                     """,
-                    migrationId
+                    authority.migrationId(),
+                    authority.ownerId(),
+                    authority.fencingToken()
             );
+            if (migrationUpdated != 1) {
+                throw new LostAuthorityException(
+                        "Re-embedding migration lost ownership during cutover"
+                );
+            }
         });
     }
 
-    private void abort(UUID migrationId, String error) {
-        transactionTemplate.executeWithoutResult(status -> {
-            jdbcTemplate.update(
-                    """
-                    UPDATE knowledge_document_generation g
-                    SET generation_status = 'FAILED',
-                        failure_code = 'REEMBEDDING_ABORTED',
-                        last_error = ?,
-                        cleanup_required = true,
-                        failed_at = clock_timestamp()
-                    FROM knowledge_embedding_migration_document d
-                    WHERE d.migration_id = ?
-                      AND d.document_id = g.document_id
-                      AND d.candidate_generation = g.generation
-                      AND g.generation_status = 'STAGING'
-                    """,
-                    safe(error),
-                    migrationId
-            );
-            jdbcTemplate.update(
-                    """
-                    UPDATE knowledge_embedding_migration_document
-                    SET document_status = 'FAILED',
-                        last_error = ?,
-                        updated_at = clock_timestamp()
-                    WHERE migration_id = ?
-                      AND document_status <> 'FAILED'
-                    """,
-                    safe(error),
-                    migrationId
-            );
-            jdbcTemplate.update(
-                    """
-                    UPDATE knowledge_embedding_migration
-                    SET migration_status = 'FAILED',
-                        last_error = ?,
-                        updated_at = clock_timestamp()
-                    WHERE migration_id = ?
-                      AND migration_status <> 'COMPLETED'
-                    """,
-                    safe(error),
-                    migrationId
-            );
-            jdbcTemplate.update(
-                    """
-                    UPDATE knowledge_embedding_runtime runtime
-                    SET migration_profile_id = NULL,
-                        migration_status = 'IDLE',
-                        row_version = row_version + 1,
-                        updated_at = clock_timestamp()
-                    WHERE singleton_id = 1
-                      AND EXISTS (
-                          SELECT 1
-                          FROM knowledge_embedding_migration migration
-                          WHERE migration.migration_id = ?
-                            AND migration.target_profile_id =
-                                runtime.migration_profile_id
-                      )
-                    """,
-                    migrationId
-            );
-        });
+    private boolean abortIfOwned(Authority authority, String error) {
+        try {
+            Boolean aborted = transactionTemplate.execute(status -> {
+                leases.renew(authority);
+                jdbcTemplate.update(
+                        """
+                        UPDATE knowledge_document_generation g
+                        SET generation_status = 'FAILED',
+                            failure_code = 'REEMBEDDING_ABORTED',
+                            last_error = ?,
+                            cleanup_required = true,
+                            failed_at = clock_timestamp()
+                        FROM knowledge_embedding_migration_document d
+                        WHERE d.migration_id = ?
+                          AND d.document_id = g.document_id
+                          AND d.candidate_generation = g.generation
+                          AND g.generation_status = 'STAGING'
+                        """,
+                        safe(error),
+                        authority.migrationId()
+                );
+                jdbcTemplate.update(
+                        """
+                        UPDATE knowledge_embedding_migration_document
+                        SET document_status = 'FAILED',
+                            last_error = ?,
+                            updated_at = clock_timestamp()
+                        WHERE migration_id = ?
+                          AND document_status <> 'FAILED'
+                        """,
+                        safe(error),
+                        authority.migrationId()
+                );
+                int migrationUpdated = jdbcTemplate.update(
+                        """
+                        UPDATE knowledge_embedding_migration
+                        SET migration_status = 'FAILED',
+                            last_error = ?,
+                            updated_at = clock_timestamp()
+                        WHERE migration_id = ?
+                          AND owner_id = ?
+                          AND fencing_token = ?
+                          AND migration_status IN (
+                              'PREPARING', 'STAGING', 'READY_TO_CUTOVER'
+                          )
+                        """,
+                        safe(error),
+                        authority.migrationId(),
+                        authority.ownerId(),
+                        authority.fencingToken()
+                );
+                if (migrationUpdated != 1) {
+                    throw new LostAuthorityException(
+                            "Re-embedding migration lost ownership before abort"
+                    );
+                }
+                jdbcTemplate.update(
+                        """
+                        UPDATE knowledge_embedding_runtime runtime
+                        SET migration_profile_id = NULL,
+                            migration_status = 'IDLE',
+                            row_version = row_version + 1,
+                            updated_at = clock_timestamp()
+                        WHERE singleton_id = 1
+                          AND EXISTS (
+                              SELECT 1
+                              FROM knowledge_embedding_migration migration
+                              WHERE migration.migration_id = ?
+                                AND migration.target_profile_id =
+                                    runtime.migration_profile_id
+                                AND migration.owner_id = ?
+                                AND migration.fencing_token = ?
+                                AND migration.migration_status = 'FAILED'
+                          )
+                        """,
+                        authority.migrationId(),
+                        authority.ownerId(),
+                        authority.fencingToken()
+                );
+                return true;
+            });
+            return Boolean.TRUE.equals(aborted);
+        } catch (LostAuthorityException ignored) {
+            return false;
+        }
     }
 
     private RuntimeState lockRuntime() {

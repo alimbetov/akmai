@@ -11,8 +11,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import kz.alimbetov.akmai.config.ReembeddingProperties;
 import kz.alimbetov.akmai.knowledge.chunking.CrossReferenceExtractor;
+import kz.alimbetov.akmai.knowledge.embedding.ReembeddingLeaseManager.Authority;
+import kz.alimbetov.akmai.knowledge.embedding.ReembeddingLeaseManager.LostAuthorityException;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifierRepository;
 import kz.alimbetov.akmai.knowledge.ingestion.GenerationVectorAssembler;
 import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
@@ -217,11 +220,103 @@ class ReembeddingIntegrationTest {
         )).isEqualTo(1);
     }
 
+    @Test
+    void liveLeaseCannotBeTakenOverByAnotherInstance() {
+        UUID migrationId = seedUnownedMigration();
+        ReembeddingProperties properties = properties();
+        ReembeddingLeaseManager first = new ReembeddingLeaseManager(
+                jdbc,
+                properties,
+                "instance-a"
+        );
+        ReembeddingLeaseManager second = new ReembeddingLeaseManager(
+                jdbc,
+                properties,
+                "instance-b"
+        );
+
+        Authority firstAuthority = first.claimNew(migrationId);
+
+        assertThat(firstAuthority.fencingToken()).isEqualTo(1L);
+        assertThat(second.claimExpiredActive()).isEmpty();
+        first.renew(firstAuthority);
+    }
+
+    @Test
+    void expiredLeaseTakeoverIncrementsFenceAndRejectsStaleOwner() {
+        UUID migrationId = seedUnownedMigration();
+        ReembeddingProperties properties = properties();
+        ReembeddingLeaseManager first = new ReembeddingLeaseManager(
+                jdbc,
+                properties,
+                "instance-a"
+        );
+        ReembeddingLeaseManager second = new ReembeddingLeaseManager(
+                jdbc,
+                properties,
+                "instance-b"
+        );
+
+        Authority stale = first.claimNew(migrationId);
+        jdbc.update(
+                """
+                UPDATE knowledge_embedding_migration
+                SET lease_until = clock_timestamp() - interval '1 second'
+                WHERE migration_id = ?
+                """,
+                migrationId
+        );
+
+        Authority takeover = second.claimExpiredActive().orElseThrow();
+
+        assertThat(takeover.fencingToken()).isEqualTo(2L);
+        assertThat(takeover.ownerId()).isEqualTo("instance-b");
+        assertThatThrownBy(() -> first.renew(stale))
+                .isInstanceOf(LostAuthorityException.class);
+        second.renew(takeover);
+    }
+
+    @Test
+    void startupRecoveryDoesNotAbortMigrationWithLiveRemoteLease() {
+        UUID migrationId = seedOwnedMigration(false, 7L);
+        EmbeddingModel model = mock(EmbeddingModel.class);
+
+        int recovered = service(model).recoverExpiredMigration();
+
+        assertThat(recovered).isZero();
+        assertThat(migrationStatus(migrationId)).isEqualTo("PREPARING");
+        assertThat(profiles.runtime().migrationStatus())
+                .isEqualTo(EmbeddingRuntime.MigrationStatus.PREPARING);
+    }
+
+    @Test
+    void startupRecoveryClaimsExpiredLeaseBeforeAbortingMigration() {
+        UUID migrationId = seedOwnedMigration(true, 7L);
+        EmbeddingModel model = mock(EmbeddingModel.class);
+
+        int recovered = service(model).recoverExpiredMigration();
+
+        assertThat(recovered).isEqualTo(1);
+        assertThat(migrationStatus(migrationId)).isEqualTo("FAILED");
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT fencing_token
+                FROM knowledge_embedding_migration
+                WHERE migration_id = ?
+                """,
+                Long.class,
+                migrationId
+        )).isEqualTo(8L);
+        assertThat(profiles.runtime().migrationStatus())
+                .isEqualTo(EmbeddingRuntime.MigrationStatus.IDLE);
+    }
+
     private ReembeddingService service(EmbeddingModel model) {
         EmbeddingProfileResolver resolver = mock(EmbeddingProfileResolver.class);
         when(resolver.configuredProfile()).thenReturn(target);
         EmbeddingProfileService profileService =
                 new EmbeddingProfileService(resolver, profiles, storage);
+        ReembeddingProperties properties = properties();
 
         return new ReembeddingService(
                 jdbc,
@@ -235,11 +330,79 @@ class ReembeddingIntegrationTest {
                 manifests,
                 vectors,
                 new GenerationVectorAssembler(),
-                new ReembeddingProperties(
-                        false,
-                        Duration.ofSeconds(2),
-                        Duration.ofMillis(10)
+                new ReembeddingLeaseManager(jdbc, properties),
+                properties
+        );
+    }
+
+    private ReembeddingProperties properties() {
+        return new ReembeddingProperties(
+                false,
+                Duration.ofSeconds(2),
+                Duration.ofMillis(10),
+                Duration.ofSeconds(1)
+        );
+    }
+
+    private UUID seedUnownedMigration() {
+        UUID migrationId = UUID.randomUUID();
+        jdbc.update(
+                """
+                INSERT INTO knowledge_embedding_migration (
+                    migration_id, source_profile_id, target_profile_id,
+                    migration_status
+                ) VALUES (?, ?, ?, 'PREPARING')
+                """,
+                migrationId,
+                source.profileId(),
+                target.profileId()
+        );
+        return migrationId;
+    }
+
+    private UUID seedOwnedMigration(boolean expired, long fence) {
+        UUID migrationId = UUID.randomUUID();
+        jdbc.update(
+                """
+                INSERT INTO knowledge_embedding_migration (
+                    migration_id, source_profile_id, target_profile_id,
+                    migration_status, owner_id, lease_until, fencing_token
+                ) VALUES (
+                    ?, ?, ?, 'PREPARING', 'remote-instance',
+                    clock_timestamp()
+                        + (? * interval '1 second'),
+                    ?
                 )
+                """,
+                migrationId,
+                source.profileId(),
+                target.profileId(),
+                expired ? -1 : 60,
+                fence
+        );
+        jdbc.update(
+                """
+                UPDATE knowledge_embedding_runtime
+                SET migration_profile_id = ?,
+                    migration_status = 'PREPARING',
+                    row_version = row_version + 1,
+                    updated_at = clock_timestamp()
+                WHERE singleton_id = 1
+                """,
+                target.profileId()
+        );
+        return migrationId;
+    }
+
+    private String migrationStatus(UUID migrationId) {
+        return jdbc.queryForObject(
+                """
+                SELECT migration_status
+                FROM knowledge_embedding_migration
+                WHERE migration_id = ?
+                """,
+                String.class,
+                migrationId
         );
     }
 
