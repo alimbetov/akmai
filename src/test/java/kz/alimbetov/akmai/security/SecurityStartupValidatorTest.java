@@ -18,17 +18,62 @@ class SecurityStartupValidatorTest {
     @Test
     void productionRequiresSecurityEnabled() {
         assertThatThrownBy(() -> validator(
-                new SecurityProperties(
-                        false,
-                        "",
-                        false,
-                        Set.of(1L)
-                ),
-                "prod"
+                new SecurityProperties(false, "", false, Set.of(1L)),
+                "prod",
+                "prod",
+                true
         ).run(arguments()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
                         "Production profile requires API-key security"
+                );
+    }
+
+    @Test
+    void nonLocalEnvironmentRequiresSecurityWithoutProdProfile() {
+        assertThatThrownBy(() -> validator(
+                new SecurityProperties(false, "", false, Set.of(1L)),
+                "staging",
+                null,
+                true
+        ).run(arguments()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "Non-local environment requires API-key security"
+                );
+    }
+
+    @Test
+    void nonLocalActiveProfileFailsClosedWithoutEnvironmentMarker() {
+        assertThatThrownBy(() -> validator(
+                new SecurityProperties(false, "", false, Set.of(1L)),
+                null,
+                "staging",
+                true
+        ).run(arguments()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "Non-local environment requires API-key security"
+                );
+    }
+
+    @Test
+    void nonLocalEnvironmentForbidsLocalBypass() {
+        assertThatThrownBy(() -> validator(
+                new SecurityProperties(
+                        true,
+                        STRONG_KEY,
+                        STRONG_ADMIN_KEY,
+                        true,
+                        Set.of(1L)
+                ),
+                "staging",
+                null,
+                true
+        ).run(arguments()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "Non-local environment forbids unauthenticated local mode"
                 );
     }
 
@@ -41,7 +86,9 @@ class SecurityStartupValidatorTest {
                         true,
                         Set.of(1L)
                 ),
-                "prod"
+                "prod",
+                "prod",
+                true
         ).run(arguments()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
@@ -58,7 +105,9 @@ class SecurityStartupValidatorTest {
                         false,
                         Set.of(1L)
                 ),
-                "prod"
+                "prod",
+                "prod",
+                true
         ).run(arguments()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("at least 32 characters");
@@ -74,7 +123,9 @@ class SecurityStartupValidatorTest {
                         false,
                         Set.of(1L, 2L)
                 ),
-                "prod"
+                "prod",
+                "prod",
+                true
         ).run(arguments());
     }
 
@@ -87,7 +138,9 @@ class SecurityStartupValidatorTest {
                         false,
                         Set.of(1L)
                 ),
-                "prod"
+                "prod",
+                "prod",
+                true
         ).run(arguments()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("admin API key is required");
@@ -103,21 +156,96 @@ class SecurityStartupValidatorTest {
                         false,
                         Set.of(1L)
                 ),
-                "prod"
+                "prod",
+                "prod",
+                true
         ).run(arguments()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("must differ");
     }
 
     @Test
-    void localDevelopmentStillRequiresExplicitOptInWhenDisabled() {
+    void nonLocalRequiresExplicitDatabaseCredentials() {
         assertThatThrownBy(() -> validator(
                 new SecurityProperties(
-                        false,
-                        "",
+                        true,
+                        STRONG_KEY,
+                        STRONG_ADMIN_KEY,
                         false,
                         Set.of(1L)
-                )
+                ),
+                "staging",
+                null,
+                false
+        ).run(arguments()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "Database username must be explicitly configured"
+                );
+    }
+
+    @Test
+    void nonLocalRejectsDefaultDatasourceCredentials() {
+        SecurityProperties properties = new SecurityProperties(
+                true,
+                STRONG_KEY,
+                STRONG_ADMIN_KEY,
+                false,
+                Set.of(1L)
+        );
+        MockEnvironment environment = environment("prod", "prod");
+        environment.setProperty("spring.datasource.username", "akmai");
+        environment.setProperty("spring.datasource.password", "akmai");
+
+        assertThatThrownBy(() -> new SecurityStartupValidator(
+                properties,
+                environment
+        ).run(arguments()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "Default datasource credentials are forbidden"
+                );
+    }
+
+    @Test
+    void nonLocalAcceptsExplicitSpringDatasourceCredentials() {
+        SecurityProperties properties = new SecurityProperties(
+                true,
+                STRONG_KEY,
+                STRONG_ADMIN_KEY,
+                false,
+                Set.of(1L)
+        );
+        MockEnvironment environment = environment("staging", null);
+        environment.setProperty(
+                "spring.datasource.username",
+                "runtime-user"
+        );
+        environment.setProperty(
+                "spring.datasource.password",
+                "runtime-secret"
+        );
+
+        new SecurityStartupValidator(properties, environment).run(arguments());
+    }
+
+    @Test
+    void localDevelopmentStillAllowsExplicitUnauthenticatedMode() {
+        validator(
+                new SecurityProperties(false, "", true, Set.of(1L)),
+                "local",
+                null,
+                false
+        ).run(arguments());
+    }
+
+    @Test
+    void localDevelopmentStillRequiresExplicitOptInWhenDisabled() {
+        assertThatThrownBy(() -> validator(
+                new SecurityProperties(false, "", false, Set.of(1L)),
+                "local",
+                null,
+                false
         ).run(arguments()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
@@ -127,14 +255,30 @@ class SecurityStartupValidatorTest {
 
     private SecurityStartupValidator validator(
             SecurityProperties properties,
-            String... profiles
+            String deployment,
+            String profile,
+            boolean databaseCredentials
+    ) {
+        MockEnvironment environment = environment(deployment, profile);
+        if (databaseCredentials) {
+            environment.setProperty("DB_USERNAME", "runtime-user");
+            environment.setProperty("DB_PASSWORD", "runtime-secret");
+        }
+        return new SecurityStartupValidator(properties, environment);
+    }
+
+    private MockEnvironment environment(
+            String deployment,
+            String profile
     ) {
         MockEnvironment environment = new MockEnvironment();
-        environment.setActiveProfiles(profiles);
-        return new SecurityStartupValidator(
-                properties,
-                environment
-        );
+        if (deployment != null) {
+            environment.setProperty("AKMAI_ENVIRONMENT", deployment);
+        }
+        if (profile != null) {
+            environment.setActiveProfiles(profile);
+        }
+        return environment;
     }
 
     private DefaultApplicationArguments arguments() {

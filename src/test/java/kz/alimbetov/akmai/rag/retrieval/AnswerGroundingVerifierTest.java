@@ -76,7 +76,7 @@ class AnswerGroundingVerifierTest {
     }
 
     @Test
-    void acceptsMultipleNumericValuesWhenCitedEvidenceContainsThem() {
+    void acceptsMultipleNumericValuesWhenCitedEvidenceContainsThemInOrder() {
         var result = verifier.verify(
                 "Use 10 mg for 30 days [SOURCE 1].",
                 List.of(hit(
@@ -86,6 +86,50 @@ class AnswerGroundingVerifierTest {
 
         assertThat(result.grounded()).isTrue();
         assertThat(result.unsupportedClaimCount()).isZero();
+        assertThat(result.numericMismatchCount()).isZero();
+    }
+
+    @Test
+    void rejectsSwappedQuantitiesThatPreviouslyCollapsedToSameNumberSet() {
+        var result = verifier.verify(
+                "Use 10 mg for 30 days [SOURCE 1].",
+                List.of(hit("Use 30 mg for 10 days."))
+        );
+
+        assertThat(result.grounded()).isFalse();
+        assertThat(result.numericMismatchCount()).isEqualTo(1);
+    }
+
+    @Test
+    void rejectsSameNumberWithDifferentUnit() {
+        var result = verifier.verify(
+                "Use 5 g [SOURCE 1].",
+                List.of(hit("Use 5 mg."))
+        );
+
+        assertThat(result.grounded()).isFalse();
+        assertThat(result.numericMismatchCount()).isEqualTo(1);
+    }
+
+    @Test
+    void rejectsAmbiguousThousandsSeparatorAgainstDecimal() {
+        var result = verifier.verify(
+                "Use 1,000 mg [SOURCE 1].",
+                List.of(hit("Use 1.0 mg."))
+        );
+
+        assertThat(result.grounded()).isFalse();
+        assertThat(result.numericMismatchCount()).isEqualTo(1);
+    }
+
+    @Test
+    void acceptsUnambiguousCommaAndDotDecimalEquivalence() {
+        var result = verifier.verify(
+                "Use 0,5 mg [SOURCE 1].",
+                List.of(hit("Use 0.5 mg."))
+        );
+
+        assertThat(result.grounded()).isTrue();
         assertThat(result.numericMismatchCount()).isZero();
     }
 

@@ -5,21 +5,32 @@ import java.util.List;
 import java.util.Set;
 import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Final lifecycle/ACL fence immediately before retrieved context is exposed
- * to answer generation.
+ * Final lifecycle/ACL/TTL fence immediately before retrieved context is
+ * exposed to answer generation.
  */
 @Component
 public class PublishedContextRevalidator {
 
     private final PublishedSearchProjectionReader projectionReader;
+    private final PublishedLifecycleEligibility lifecycleEligibility;
 
+    @Autowired
     public PublishedContextRevalidator(
-            PublishedSearchProjectionReader projectionReader
+            PublishedSearchProjectionReader projectionReader,
+            PublishedLifecycleEligibility lifecycleEligibility
     ) {
         this.projectionReader = projectionReader;
+        this.lifecycleEligibility = lifecycleEligibility;
+    }
+
+    PublishedContextRevalidator(
+            PublishedSearchProjectionReader projectionReader
+    ) {
+        this(projectionReader, PublishedLifecycleEligibility.allowAll());
     }
 
     public List<RetrievalHit> revalidate(
@@ -62,9 +73,17 @@ public class PublishedContextRevalidator {
                         )
                 );
 
-        return eligible.stream()
+        List<RetrievalHit> publishedHits = eligible.stream()
                 .filter(hit -> published.contains(Key.of(hit)))
                 .toList();
+        if (publishedHits.isEmpty()) {
+            return List.of();
+        }
+
+        // Keep lifecycle/ACL/TTL as the final synchronous DB fence. Running
+        // this before projection materialization creates a TOCTOU window in
+        // which expires_at can cross its deadline between the two reads.
+        return lifecycleEligibility.filter(publishedHits, accessLevels);
     }
 
     private void requireAccessLevels(Set<Long> accessLevels) {

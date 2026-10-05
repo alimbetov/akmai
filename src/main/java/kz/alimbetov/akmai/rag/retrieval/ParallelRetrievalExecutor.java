@@ -12,14 +12,16 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalStep;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -30,13 +32,7 @@ public class ParallelRetrievalExecutor {
     private final Executor retrievalExecutor;
     private final RetrievalObserver observer;
     private final RetrievalProperties properties;
-    private final ScheduledExecutorService timeoutExecutor = Executors.newSingleThreadScheduledExecutor(
-            runnable -> {
-                Thread thread = new Thread(runnable, "retrieval-timeout");
-                thread.setDaemon(true);
-                return thread;
-            }
-    );
+    private final PublishedLifecycleEligibility lifecycleEligibility;
 
     public ParallelRetrievalExecutor(
             List<RetrievalStrategy> strategies,
@@ -44,11 +40,29 @@ public class ParallelRetrievalExecutor {
             RetrievalObserver observer,
             RetrievalProperties properties
     ) {
+        this(
+                strategies,
+                retrievalExecutor,
+                observer,
+                properties,
+                PublishedLifecycleEligibility.allowAll()
+        );
+    }
+
+    @Autowired
+    public ParallelRetrievalExecutor(
+            List<RetrievalStrategy> strategies,
+            @Qualifier("retrievalExecutor") Executor retrievalExecutor,
+            RetrievalObserver observer,
+            RetrievalProperties properties,
+            PublishedLifecycleEligibility lifecycleEligibility
+    ) {
         this.strategies = new EnumMap<>(RetrievalType.class);
         strategies.forEach(strategy -> this.strategies.put(strategy.type(), strategy));
         this.retrievalExecutor = retrievalExecutor;
         this.observer = observer;
         this.properties = properties;
+        this.lifecycleEligibility = lifecycleEligibility;
     }
 
     public List<RetrievalHit> execute(
@@ -65,16 +79,16 @@ public class ParallelRetrievalExecutor {
         Set<Long> scope = normalizeAccessLevels(accessLevels);
         validateAcyclic(plan);
         Instant deadline = Instant.now().plus(properties.requestTimeout());
-        Map<String, CompletableFuture<RetrievalStepOutcome>> futures = new HashMap<>();
+        Map<String, StepExecution> executions = new HashMap<>();
         for (RetrievalStep step : plan.steps()) {
-            schedule(step, plan, futures, scope);
+            schedule(step, plan, executions, scope);
         }
 
         LinkedHashMap<String, RetrievalStepOutcome> outcomes =
                 new LinkedHashMap<>();
         for (RetrievalStep step : plan.steps()) {
-            CompletableFuture<RetrievalStepOutcome> future =
-                    futures.get(step.id());
+            StepExecution execution = executions.get(step.id());
+            CompletableFuture<RetrievalStepOutcome> future = execution.outcome();
             long remaining =
                     Duration.between(Instant.now(), deadline).toMillis();
 
@@ -85,7 +99,7 @@ public class ParallelRetrievalExecutor {
                             completedOutcome(step, future)
                     );
                 } else {
-                    future.cancel(true);
+                    execution.cancel();
                     outcomes.put(step.id(), timeout(step));
                 }
                 continue;
@@ -103,11 +117,11 @@ public class ParallelRetrievalExecutor {
                             completedOutcome(step, future)
                     );
                 } else {
-                    future.cancel(true);
+                    execution.cancel();
                     outcomes.put(step.id(), timeout(step));
                 }
             } catch (InterruptedException exception) {
-                future.cancel(true);
+                execution.cancel();
                 Thread.currentThread().interrupt();
                 outcomes.put(
                         step.id(),
@@ -137,78 +151,60 @@ public class ParallelRetrievalExecutor {
         return new RetrievalExecutionResult(hits, outcomes, degraded, criticalFailure);
     }
 
-    private CompletableFuture<RetrievalStepOutcome> schedule(
+    private StepExecution schedule(
             RetrievalStep step,
             RetrievalPlan plan,
-            Map<String, CompletableFuture<RetrievalStepOutcome>> futures,
+            Map<String, StepExecution> executions,
             Set<Long> accessLevels
     ) {
-        CompletableFuture<RetrievalStepOutcome> existing = futures.get(step.id());
+        StepExecution existing = executions.get(step.id());
         if (existing != null) {
             return existing;
         }
 
-        List<CompletableFuture<RetrievalStepOutcome>> dependencies =
-                step.dependsOn().stream()
-                        .map(id -> findStep(plan, id))
-                        .map(dependency ->
-                                schedule(
-                                        dependency,
-                                        plan,
-                                        futures,
-                                        accessLevels
-                                )
+        StepExecution execution = new StepExecution(
+                step,
+                properties.strategyTimeout(),
+                throwable -> outcomeFromFailure(step, throwable)
+        );
+        executions.put(step.id(), execution);
+
+        List<StepExecution> dependencies = step.dependsOn().stream()
+                .map(id -> findStep(plan, id))
+                .map(dependency ->
+                        schedule(
+                                dependency,
+                                plan,
+                                executions,
+                                accessLevels
                         )
-                        .toList();
+                )
+                .toList();
 
         CompletableFuture<Void> ready = CompletableFuture.allOf(
-                dependencies.toArray(CompletableFuture[]::new)
+                dependencies.stream()
+                        .map(StepExecution::outcome)
+                        .toArray(CompletableFuture[]::new)
         );
-
-        CompletableFuture<RetrievalStepOutcome> future =
-                ready.thenCompose(ignored -> {
-                    CompletableFuture<RetrievalStepOutcome> execution =
-                            new CompletableFuture<>();
-                    ScheduledFuture<?> timeoutHandle = timeoutExecutor.schedule(
-                            () -> {
-                                if (!execution.isDone()) {
-                                    execution.complete(timeout(step));
-                                }
-                            },
-                            properties.strategyTimeout().toMillis(),
-                            TimeUnit.MILLISECONDS
-                    );
-
-                    CompletableFuture<RetrievalStepOutcome> strategyResult =
-                            CompletableFuture.supplyAsync(
-                                    () -> executeStep(
-                                            step,
-                                            dependencies,
-                                            accessLevels
-                                    ),
-                                    retrievalExecutor
-                            );
-
-                    strategyResult.whenComplete((result, error) -> {
-                        timeoutHandle.cancel(false);
-                        if (error != null) {
-                            if (!execution.isDone()) {
-                                execution.completeExceptionally(error);
-                            }
-                            return;
-                        }
-                        if (!execution.isDone()) {
-                            execution.complete(result);
-                        }
-                    });
-
-                    return execution;
-                })
-                .exceptionally(
-                        exception -> outcomeFromFailure(step, exception)
+        ready.whenComplete((ignored, dependencyFailure) -> {
+            if (dependencyFailure != null) {
+                execution.complete(
+                        outcomeFromFailure(step, dependencyFailure)
                 );
-        futures.put(step.id(), future);
-        return future;
+                return;
+            }
+            execution.start(
+                    retrievalExecutor,
+                    () -> executeStep(
+                            step,
+                            dependencies.stream()
+                                    .map(StepExecution::outcome)
+                                    .toList(),
+                            accessLevels
+                    )
+            );
+        });
+        return execution;
     }
 
     private RetrievalStepOutcome executeStep(
@@ -236,7 +232,7 @@ public class ParallelRetrievalExecutor {
 
         Instant started = Instant.now();
         try {
-            List<RetrievalHit> hits = strategy.retrieve(
+            List<RetrievalHit> retrieved = strategy.retrieve(
                             step.queryChunk(),
                             new RetrievalContext(
                                     List.copyOf(dependencyHits),
@@ -245,6 +241,10 @@ public class ParallelRetrievalExecutor {
                     ).stream()
                     .map(hit -> withQueryChunk(hit, step.queryChunk().id()))
                     .toList();
+            List<RetrievalHit> hits = lifecycleEligibility.filter(
+                    retrieved,
+                    accessLevels
+            );
             observer.success(step.type(), Duration.between(started, Instant.now()), hits.size());
             return new RetrievalStepOutcome(
                     step.id(),
@@ -326,6 +326,9 @@ public class ParallelRetrievalExecutor {
         if (root instanceof RejectedExecutionException) {
             return failed(step, RetrievalOutcomeStatus.REJECTED, "EXECUTOR_REJECTED");
         }
+        if (root instanceof java.util.concurrent.CancellationException) {
+            return timeout(step);
+        }
         return failed(
                 step,
                 RetrievalOutcomeStatus.FAILED,
@@ -335,7 +338,8 @@ public class ParallelRetrievalExecutor {
 
     private Throwable unwrap(Throwable throwable) {
         Throwable current = throwable;
-        while (current instanceof CompletionException
+        while ((current instanceof CompletionException
+                || current instanceof java.util.concurrent.ExecutionException)
                 && current.getCause() != null) {
             current = current.getCause();
         }
@@ -495,5 +499,87 @@ public class ParallelRetrievalExecutor {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Unknown retrieval dependency: " + id
                 ));
+    }
+
+    private static final class StepExecution {
+        private final CompletableFuture<RetrievalStepOutcome> raw =
+                new CompletableFuture<>();
+        private final CompletableFuture<RetrievalStepOutcome> outcome;
+        private final Duration timeout;
+        private final AtomicReference<FutureTask<Void>> task =
+                new AtomicReference<>();
+        private final java.util.concurrent.atomic.AtomicBoolean cancelled =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+
+        private StepExecution(
+                RetrievalStep step,
+                Duration timeout,
+                Function<Throwable, RetrievalStepOutcome> failureMapper
+        ) {
+            this.timeout = timeout;
+            this.outcome = raw.exceptionally(failureMapper);
+        }
+
+        private void start(Executor executor, Supplier<RetrievalStepOutcome> work) {
+            if (cancelled.get() || raw.isDone()) {
+                return;
+            }
+            FutureTask<Void> futureTask = new FutureTask<>(() -> {
+                try {
+                    raw.complete(work.get());
+                } catch (Throwable throwable) {
+                    raw.completeExceptionally(throwable);
+                }
+                return null;
+            });
+            if (!task.compareAndSet(null, futureTask)) {
+                return;
+            }
+            if (cancelled.get() || raw.isDone()) {
+                futureTask.cancel(true);
+                return;
+            }
+
+            raw.orTimeout(
+                    timeout.toMillis(),
+                    TimeUnit.MILLISECONDS
+            ).whenComplete((value, failure) -> {
+                Throwable root = failure;
+                while (root instanceof CompletionException
+                        && root.getCause() != null) {
+                    root = root.getCause();
+                }
+                if (root instanceof TimeoutException) {
+                    cancelTaskOnly();
+                }
+            });
+
+            try {
+                executor.execute(futureTask);
+            } catch (RejectedExecutionException exception) {
+                raw.completeExceptionally(exception);
+            }
+        }
+
+        private void complete(RetrievalStepOutcome value) {
+            raw.complete(value);
+        }
+
+        private CompletableFuture<RetrievalStepOutcome> outcome() {
+            return outcome;
+        }
+
+        private void cancel() {
+            cancelled.set(true);
+            cancelTaskOnly();
+            raw.cancel(true);
+        }
+
+        private void cancelTaskOnly() {
+            FutureTask<Void> running = task.get();
+            if (running != null) {
+                running.cancel(true);
+            }
+        }
     }
 }
