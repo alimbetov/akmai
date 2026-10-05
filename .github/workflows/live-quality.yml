@@ -31,16 +31,13 @@ jobs:
       - name: Require live Ollama configuration
         env:
           AKMAI_LIVE_OLLAMA_BASE_URL: ${{ secrets.AKMAI_LIVE_OLLAMA_BASE_URL }}
-          AKMAI_LIVE_EMBEDDING_MODEL: ${{ secrets.AKMAI_LIVE_EMBEDDING_MODEL }}
         run: |
           test -n "$AKMAI_LIVE_OLLAMA_BASE_URL"
-          test -n "$AKMAI_LIVE_EMBEDDING_MODEL"
 
       - name: Live multilingual embedding quality
         env:
           AKMAI_LIVE_QUALITY: "true"
           AKMAI_LIVE_OLLAMA_BASE_URL: ${{ secrets.AKMAI_LIVE_OLLAMA_BASE_URL }}
-          AKMAI_LIVE_EMBEDDING_MODEL: ${{ secrets.AKMAI_LIVE_EMBEDDING_MODEL }}
         run: >
           mvn -B
           -Dtest=LiveEmbeddingRetrievalQualityTest
