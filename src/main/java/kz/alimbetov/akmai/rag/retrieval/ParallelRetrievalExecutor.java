@@ -505,6 +505,7 @@ public class ParallelRetrievalExecutor {
         private final CompletableFuture<RetrievalStepOutcome> raw =
                 new CompletableFuture<>();
         private final CompletableFuture<RetrievalStepOutcome> outcome;
+        private final Duration timeout;
         private final AtomicReference<FutureTask<Void>> task =
                 new AtomicReference<>();
         private final java.util.concurrent.atomic.AtomicBoolean cancelled =
@@ -515,21 +516,8 @@ public class ParallelRetrievalExecutor {
                 Duration timeout,
                 Function<Throwable, RetrievalStepOutcome> failureMapper
         ) {
-            CompletableFuture<RetrievalStepOutcome> timed = raw.orTimeout(
-                    timeout.toMillis(),
-                    TimeUnit.MILLISECONDS
-            );
-            timed.whenComplete((value, failure) -> {
-                Throwable root = failure;
-                while (root instanceof CompletionException
-                        && root.getCause() != null) {
-                    root = root.getCause();
-                }
-                if (root instanceof TimeoutException) {
-                    cancelTaskOnly();
-                }
-            });
-            this.outcome = timed.exceptionally(failureMapper);
+            this.timeout = timeout;
+            this.outcome = raw.exceptionally(failureMapper);
         }
 
         private void start(Executor executor, Supplier<RetrievalStepOutcome> work) {
@@ -551,6 +539,21 @@ public class ParallelRetrievalExecutor {
                 futureTask.cancel(true);
                 return;
             }
+
+            raw.orTimeout(
+                    timeout.toMillis(),
+                    TimeUnit.MILLISECONDS
+            ).whenComplete((value, failure) -> {
+                Throwable root = failure;
+                while (root instanceof CompletionException
+                        && root.getCause() != null) {
+                    root = root.getCause();
+                }
+                if (root instanceof TimeoutException) {
+                    cancelTaskOnly();
+                }
+            });
+
             try {
                 executor.execute(futureTask);
             } catch (RejectedExecutionException exception) {
