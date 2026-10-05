@@ -34,7 +34,7 @@ public class ParallelRetrievalExecutor {
     private final RetrievalProperties properties;
     private final PublishedLifecycleEligibility lifecycleEligibility;
 
-    ParallelRetrievalExecutor(
+    public ParallelRetrievalExecutor(
             List<RetrievalStrategy> strategies,
             @Qualifier("retrievalExecutor") Executor retrievalExecutor,
             RetrievalObserver observer,
