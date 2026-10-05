@@ -81,7 +81,7 @@ public class OllamaTransportConfiguration {
     ) {
         return OllamaChatModel.builder()
                 .ollamaApi(api)
-                .defaultOptions(
+                .options(
                         OllamaChatOptions.builder()
                                 .model(model)
                                 .temperature(temperature)
@@ -99,7 +99,7 @@ public class OllamaTransportConfiguration {
         CanonicalEmbeddingContract.validate(model, dimensions);
         return OllamaEmbeddingModel.builder()
                 .ollamaApi(api)
-                .defaultOptions(
+                .options(
                         OllamaEmbeddingOptions.builder()
                                 .model(model)
                                 .dimensions(dimensions)
