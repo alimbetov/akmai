@@ -15,15 +15,18 @@ import kz.alimbetov.akmai.rag.retrieval.ContextAssembler;
 import kz.alimbetov.akmai.rag.retrieval.ContextBudget;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.KnowledgeExpansion;
+import kz.alimbetov.akmai.rag.retrieval.MeasuredRetrievalCoordinator;
 import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
 import kz.alimbetov.akmai.rag.retrieval.PublishedContextRevalidator;
 import kz.alimbetov.akmai.rag.retrieval.Reranker;
 import kz.alimbetov.akmai.rag.retrieval.ResultFusion;
-import kz.alimbetov.akmai.rag.retrieval.TemporalAuthorityFilter;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalAttributionStage;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalExecutionResult;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
+import kz.alimbetov.akmai.rag.retrieval.TemporalAuthorityFilter;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlanner;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionException;
@@ -50,6 +53,7 @@ public class RagQuestionService {
     private final AdaptiveGraphOnlineExpansion adaptiveGraphOnlineExpansion;
     private final AdaptiveGraphCompetitiveAdmission adaptiveGraphCompetitiveAdmission;
     private final AdaptiveGraphUtilityRecorder adaptiveGraphUtilityRecorder;
+    private final MeasuredRetrievalCoordinator measuredRetrievalCoordinator;
 
     public RagQuestionService(
             QueryChunker queryChunker,
@@ -72,6 +76,53 @@ public class RagQuestionService {
             AdaptiveGraphCompetitiveAdmission adaptiveGraphCompetitiveAdmission,
             AdaptiveGraphUtilityRecorder adaptiveGraphUtilityRecorder
     ) {
+        this(
+                queryChunker,
+                fallbackMessages,
+                retrievalPlanner,
+                retrievalExecutor,
+                resultFusion,
+                reranker,
+                knowledgeExpansion,
+                contextBudget,
+                temporalAuthorityFilter,
+                contextRevalidator,
+                contextAssembler,
+                citationValidator,
+                answerGroundingVerifier,
+                answerGenerationService,
+                associationLearningRecorder,
+                adaptiveGraphShadowExpansion,
+                adaptiveGraphOnlineExpansion,
+                adaptiveGraphCompetitiveAdmission,
+                adaptiveGraphUtilityRecorder,
+                null
+        );
+    }
+
+    @Autowired
+    public RagQuestionService(
+            QueryChunker queryChunker,
+            RagFallbackMessages fallbackMessages,
+            RetrievalPlanner retrievalPlanner,
+            ParallelRetrievalExecutor retrievalExecutor,
+            ResultFusion resultFusion,
+            Reranker reranker,
+            KnowledgeExpansion knowledgeExpansion,
+            ContextBudget contextBudget,
+            TemporalAuthorityFilter temporalAuthorityFilter,
+            PublishedContextRevalidator contextRevalidator,
+            ContextAssembler contextAssembler,
+            CitationValidator citationValidator,
+            AnswerGroundingVerifier answerGroundingVerifier,
+            AnswerGenerationService answerGenerationService,
+            AssociationLearningRecorder associationLearningRecorder,
+            AdaptiveGraphShadowExpansion adaptiveGraphShadowExpansion,
+            AdaptiveGraphOnlineExpansion adaptiveGraphOnlineExpansion,
+            AdaptiveGraphCompetitiveAdmission adaptiveGraphCompetitiveAdmission,
+            AdaptiveGraphUtilityRecorder adaptiveGraphUtilityRecorder,
+            MeasuredRetrievalCoordinator measuredRetrievalCoordinator
+    ) {
         this.queryChunker = queryChunker;
         this.fallbackMessages = fallbackMessages;
         this.retrievalPlanner = retrievalPlanner;
@@ -92,6 +143,7 @@ public class RagQuestionService {
         this.adaptiveGraphCompetitiveAdmission =
                 adaptiveGraphCompetitiveAdmission;
         this.adaptiveGraphUtilityRecorder = adaptiveGraphUtilityRecorder;
+        this.measuredRetrievalCoordinator = measuredRetrievalCoordinator;
     }
 
     public RagResponse ask(String question, Set<Long> accessLevels) {
@@ -101,8 +153,13 @@ public class RagQuestionService {
 
         List<QueryChunk> queryChunks = queryChunker.chunk(question);
         RetrievalPlan plan = retrievalPlanner.plan(queryChunks);
+        if (measuredRetrievalCoordinator != null) {
+            measuredRetrievalCoordinator.observePlan(queryChunks, plan);
+        }
+
         RetrievalExecutionResult execution =
                 retrievalExecutor.executeDetailed(plan, accessLevels);
+        recordStage(RetrievalAttributionStage.PRODUCED, execution.hits());
 
         if (execution.criticalFailure()) {
             throw new RetrievalUnavailableException(
@@ -114,8 +171,12 @@ public class RagQuestionService {
         try {
             List<RetrievalHit> fused =
                     resultFusion.fuse(execution.hits(), accessLevels);
+            recordStage(RetrievalAttributionStage.FUSED, fused);
+
             List<RetrievalHit> ranked =
                     reranker.rerank(fused, question);
+            recordStage(RetrievalAttributionStage.RERANKED, ranked);
+
             List<RetrievalHit> expanded =
                     knowledgeExpansion.expand(ranked, accessLevels);
 
@@ -144,6 +205,7 @@ public class RagQuestionService {
                     bounded,
                     accessLevels
             );
+            recordStage(RetrievalAttributionStage.SELECTED, finalContext);
         } catch (DataAccessException | TransactionException exception) {
             throw new RetrievalUnavailableException(
                     "Knowledge retrieval is temporarily unavailable",
@@ -160,6 +222,12 @@ public class RagQuestionService {
 
         CitationValidator.CitationValidation validation =
                 citationValidator.validate(answer, finalContext);
+        if (measuredRetrievalCoordinator != null) {
+            measuredRetrievalCoordinator.recordCitations(
+                    finalContext,
+                    validation
+            );
+        }
 
         if (validation.answer().isBlank()
                 || validation.citedSources().isEmpty()) {
@@ -184,6 +252,12 @@ public class RagQuestionService {
         if (!grounding.grounded()) {
             return insufficientInformation(question);
         }
+        if (measuredRetrievalCoordinator != null) {
+            measuredRetrievalCoordinator.recordGrounded(
+                    finalContext,
+                    validation
+            );
+        }
 
         associationLearningRecorder.record(
                 queryChunks,
@@ -205,6 +279,15 @@ public class RagQuestionService {
                 .toList();
 
         return new RagResponse(validation.answer(), sources);
+    }
+
+    private void recordStage(
+            RetrievalAttributionStage stage,
+            List<RetrievalHit> hits
+    ) {
+        if (measuredRetrievalCoordinator != null) {
+            measuredRetrievalCoordinator.recordStage(stage, hits);
+        }
     }
 
     private RagResponse insufficientInformation(String question) {
