@@ -1,6 +1,18 @@
 name: Production Image Build
 
 on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+      - "fix/**"
+      - "audit/**"
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "pom.xml"
+      - "src/**"
+      - ".github/workflows/container-build.yml"
   pull_request:
     paths:
       - "Dockerfile"
