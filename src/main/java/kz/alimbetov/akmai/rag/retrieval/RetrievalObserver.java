@@ -44,6 +44,59 @@ public class RetrievalObserver {
         ).increment();
     }
 
+    public void attribution(
+            RetrievalAttributionStage stage,
+            RetrievalType type,
+            int count
+    ) {
+        if (stage == null || type == null || count <= 0) {
+            return;
+        }
+        meterRegistry.counter(
+                "akmai.retrieval.attribution",
+                "stage", stage.name(),
+                "strategy", type.name()
+        ).increment(count);
+    }
+
+    public void plannerLane(
+            String mode,
+            RetrievalType type,
+            int count
+    ) {
+        if (type == null || count <= 0) {
+            return;
+        }
+        meterRegistry.counter(
+                "akmai.retrieval.planner.lanes",
+                "mode", plannerMode(mode),
+                "strategy", type.name()
+        ).increment(count);
+    }
+
+    public void plannerDelta(
+            String action,
+            RetrievalType type,
+            int count
+    ) {
+        if (type == null || count <= 0) {
+            return;
+        }
+        meterRegistry.counter(
+                "akmai.retrieval.planner.delta",
+                "action", plannerAction(action),
+                "strategy", type.name()
+        ).increment(count);
+    }
+
+    public void plannerQueryClass(String queryClass) {
+        String safe = boundedIdentifier(queryClass, "UNKNOWN");
+        meterRegistry.counter(
+                "akmai.retrieval.planner.queries",
+                "class", safe
+        ).increment();
+    }
+
     public void rerankSuccess(Duration duration, int candidates) {
         Timer.builder("akmai.retrieval.reranker")
                 .tag("outcome", "success")
@@ -61,6 +114,34 @@ public class RetrievalObserver {
                 "akmai.retrieval.reranker.failures",
                 "exception", rootCause(error).getClass().getSimpleName()
         ).increment();
+    }
+
+    private String plannerMode(String value) {
+        return switch (value == null ? "" : value) {
+            case "current" -> "current";
+            case "shadow" -> "shadow";
+            default -> "unknown";
+        };
+    }
+
+    private String plannerAction(String value) {
+        return switch (value == null ? "" : value) {
+            case "added" -> "added";
+            case "omitted" -> "omitted";
+            default -> "unknown";
+        };
+    }
+
+    private String boundedIdentifier(String value, String fallback) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        String normalized = value.toUpperCase(java.util.Locale.ROOT);
+        if (normalized.length() > 48
+                || !normalized.matches("[A-Z0-9_]+")) {
+            return fallback;
+        }
+        return normalized;
     }
 
     private Throwable rootCause(Throwable error) {
