@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalStep;
@@ -59,12 +60,7 @@ class ParallelRetrievalExecutorCancellationTest {
             );
 
             RetrievalExecutionResult result = subject.executeDetailed(
-                    new RetrievalPlan(List.of(new RetrievalStep(
-                            "v",
-                            query(),
-                            RetrievalType.VECTOR,
-                            List.of()
-                    ))),
+                    plan(),
                     Set.of(1L)
             );
 
@@ -117,12 +113,7 @@ class ParallelRetrievalExecutorCancellationTest {
             );
 
             RetrievalExecutionResult result = subject.executeDetailed(
-                    new RetrievalPlan(List.of(new RetrievalStep(
-                            "v",
-                            query(),
-                            RetrievalType.VECTOR,
-                            List.of()
-                    ))),
+                    plan(),
                     Set.of(1L)
             );
 
@@ -134,6 +125,76 @@ class ParallelRetrievalExecutorCancellationTest {
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void timedOutTaskReleasesSingleWorkerForNextRetrieval() throws Exception {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        CountDownLatch interrupted = new CountDownLatch(1);
+        AtomicInteger invocations = new AtomicInteger();
+        try {
+            RetrievalStrategy vector = new RetrievalStrategy() {
+                @Override
+                public RetrievalType type() {
+                    return RetrievalType.VECTOR;
+                }
+
+                @Override
+                public List<RetrievalHit> retrieve(
+                        QueryChunk queryChunk,
+                        RetrievalContext context
+                ) {
+                    if (invocations.incrementAndGet() == 1) {
+                        try {
+                            Thread.sleep(10_000);
+                        } catch (InterruptedException exception) {
+                            interrupted.countDown();
+                            Thread.currentThread().interrupt();
+                            throw new IllegalStateException(
+                                    "worker interrupted",
+                                    exception
+                            );
+                        }
+                    }
+                    return List.of();
+                }
+            };
+            ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
+                    List.of(vector),
+                    executor,
+                    new RetrievalObserver(new SimpleMeterRegistry()),
+                    properties(Duration.ofSeconds(1), Duration.ofMillis(150))
+            );
+
+            RetrievalExecutionResult first = subject.executeDetailed(
+                    plan(),
+                    Set.of(1L)
+            );
+            assertThat(first.outcomes().get("v").status())
+                    .isEqualTo(RetrievalOutcomeStatus.TIMED_OUT);
+            assertThat(interrupted.await(1, TimeUnit.SECONDS)).isTrue();
+
+            RetrievalExecutionResult second = subject.executeDetailed(
+                    plan(),
+                    Set.of(1L)
+            );
+
+            assertThat(second.outcomes().get("v").status())
+                    .as("cancelled work must not starve the only retrieval worker")
+                    .isEqualTo(RetrievalOutcomeStatus.EMPTY);
+            assertThat(invocations).hasValue(2);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private RetrievalPlan plan() {
+        return new RetrievalPlan(List.of(new RetrievalStep(
+                "v",
+                query(),
+                RetrievalType.VECTOR,
+                List.of()
+        )));
     }
 
     private RetrievalProperties properties(
