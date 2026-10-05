@@ -20,7 +20,7 @@ spring:
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
       embedding:
-        model: ${AKMAI_EMBEDDING_MODEL:qwen3-embedding:0.6b}
+        model: ${AKMAI_EMBEDDING_MODEL:qwen3-embedding:4b}
       chat:
         options:
           model: ${AKMAI_CHAT_MODEL:qwen3:8b}

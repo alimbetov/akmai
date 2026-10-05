@@ -9,7 +9,7 @@ import java.util.List;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.actuate.health.Status;
+import org.springframework.boot.health.contributor.Status;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 class ReadinessIntegrationTest {
@@ -53,6 +53,7 @@ class ReadinessIntegrationTest {
                 .containsEntry("reason", "vector storage dimension mismatch")
                 .containsEntry("actualType", "missing");
     }
+
     @Test
     void ollamaHealthIsDownWhenEndpointIsUnavailable() {
         var health = new OllamaHealthIndicator(

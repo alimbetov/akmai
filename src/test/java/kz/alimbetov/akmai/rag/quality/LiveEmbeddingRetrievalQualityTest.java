@@ -7,7 +7,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import kz.alimbetov.akmai.config.CanonicalEmbeddingContract;
 import kz.alimbetov.akmai.config.OllamaTransportConfiguration;
+import kz.alimbetov.akmai.config.VectorStorageProperties;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -102,14 +104,15 @@ class LiveEmbeddingRetrievalQualityTest {
     @Test
     void liveOllamaEmbeddingsMeetMultilingualNearestNeighborGate() {
         String baseUrl = required("AKMAI_LIVE_OLLAMA_BASE_URL");
-        String modelName = required("AKMAI_LIVE_EMBEDDING_MODEL");
 
         RetrievalProperties properties = retrievalProperties();
+        VectorStorageProperties vectorProperties = vectorProperties();
         OllamaTransportConfiguration configuration =
                 new OllamaTransportConfiguration();
         EmbeddingModel model = configuration.retrievalEmbeddingModel(
                 configuration.retrievalOllamaApi(baseUrl, properties),
-                modelName
+                vectorProperties,
+                CanonicalEmbeddingContract.MODEL
         );
 
         List<RetrievalBenchmarkResult> results = new ArrayList<>();
@@ -120,6 +123,9 @@ class LiveEmbeddingRetrievalQualityTest {
                     testCase.noiseText()
             ));
             assertThat(embeddings).hasSize(3);
+            assertThat(embeddings)
+                    .allSatisfy(embedding -> assertThat(embedding)
+                            .hasSize(CanonicalEmbeddingContract.DIMENSIONS));
 
             float[] query = embeddings.get(0);
             List<Scored> ranked = List.of(
@@ -173,6 +179,18 @@ class LiveEmbeddingRetrievalQualityTest {
                     assertThat(result.reciprocalRank()).isEqualTo(1.0);
                     assertThat(result.ndcgAt10()).isEqualTo(1.0);
                 });
+    }
+
+    private VectorStorageProperties vectorProperties() {
+        return new VectorStorageProperties(
+                CanonicalEmbeddingContract.DIMENSIONS,
+                "HNSW",
+                "COSINE_DISTANCE",
+                64,
+                Duration.ofSeconds(30),
+                Duration.ofSeconds(30),
+                "conservative-v1"
+        );
     }
 
     private RetrievalProperties retrievalProperties() {

@@ -2,12 +2,11 @@ package kz.alimbetov.akmai.config;
 
 import java.time.Duration;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalProperties;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.OllamaEmbeddingModel;
 import org.springframework.ai.ollama.api.OllamaApi;
-import org.springframework.ai.ollama.api.OllamaOptions;
+import org.springframework.ai.ollama.api.OllamaChatOptions;
+import org.springframework.ai.ollama.api.OllamaEmbeddingOptions;
 import org.springframework.ai.ollama.management.ModelManagementOptions;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,26 +49,28 @@ public class OllamaTransportConfiguration {
     }
 
     @Bean(name = "vectorWriteEmbeddingModel")
-    public EmbeddingModel vectorWriteEmbeddingModel(
+    public OllamaEmbeddingModel vectorWriteEmbeddingModel(
             @Qualifier("vectorWriteOllamaApi") OllamaApi api,
-            @Value("${spring.ai.ollama.embedding.model:qwen3-embedding:0.6b}")
+            VectorStorageProperties vectorProperties,
+            @Value("${spring.ai.ollama.embedding.model:qwen3-embedding:4b}")
             String model
     ) {
-        return embeddingModel(api, model);
+        return embeddingModel(api, model, vectorProperties.dimensions());
     }
 
     @Bean(name = "retrievalEmbeddingModel")
-    public EmbeddingModel retrievalEmbeddingModel(
+    public OllamaEmbeddingModel retrievalEmbeddingModel(
             @Qualifier("retrievalOllamaApi") OllamaApi api,
-            @Value("${spring.ai.ollama.embedding.model:qwen3-embedding:0.6b}")
+            VectorStorageProperties vectorProperties,
+            @Value("${spring.ai.ollama.embedding.model:qwen3-embedding:4b}")
             String model
     ) {
-        return embeddingModel(api, model);
+        return embeddingModel(api, model, vectorProperties.dimensions());
     }
 
     @Bean(name = "chatModel")
     @Primary
-    public ChatModel chatModel(
+    public OllamaChatModel chatModel(
             @Qualifier("chatOllamaApi") OllamaApi api,
             @Value("${spring.ai.ollama.chat.options.model:qwen3:8b}")
             String model,
@@ -78,8 +79,8 @@ public class OllamaTransportConfiguration {
     ) {
         return OllamaChatModel.builder()
                 .ollamaApi(api)
-                .defaultOptions(
-                        OllamaOptions.builder()
+                .options(
+                        OllamaChatOptions.builder()
                                 .model(model)
                                 .temperature(temperature)
                                 .build()
@@ -88,15 +89,18 @@ public class OllamaTransportConfiguration {
                 .build();
     }
 
-    private EmbeddingModel embeddingModel(
+    private OllamaEmbeddingModel embeddingModel(
             OllamaApi api,
-            String model
+            String model,
+            int dimensions
     ) {
+        CanonicalEmbeddingContract.validate(model, dimensions);
         return OllamaEmbeddingModel.builder()
                 .ollamaApi(api)
-                .defaultOptions(
-                        OllamaOptions.builder()
+                .options(
+                        OllamaEmbeddingOptions.builder()
                                 .model(model)
+                                .dimensions(dimensions)
                                 .build()
                 )
                 .modelManagementOptions(ModelManagementOptions.defaults())
