@@ -1,6 +1,12 @@
 name: Retrieval Storage Final Benchmark
 
 on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+      - "fix/**"
+      - "audit/**"
   pull_request:
   workflow_dispatch:
     inputs:
@@ -57,11 +63,23 @@ jobs:
             exit 0
           fi
 
-          git fetch origin             "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"             --force
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base_ref="${{ github.base_ref }}"
+            git fetch origin \
+              "$base_ref:refs/remotes/origin/$base_ref" \
+              --force
+            files="$(git diff --name-only "origin/$base_ref"...HEAD)"
+          elif [[ "${{ github.ref_name }}" == "${{ github.event.repository.default_branch }}" ]]; then
+            files="$(git diff --name-only "${{ github.event.before }}" HEAD)"
+          else
+            base_ref="${{ github.event.repository.default_branch }}"
+            git fetch origin \
+              "$base_ref:refs/remotes/origin/$base_ref" \
+              --force
+            files="$(git diff --name-only "origin/$base_ref"...HEAD)"
+          fi
 
-          files="$(git diff --name-only             "origin/${{ github.base_ref }}"...HEAD)"
-
-          pattern='^(src/main/java/kz/alimbetov/akmai/knowledge/(vector|projection|lifecycle)/|src/main/java/kz/alimbetov/akmai/rag/(query|retrieval|access)/|src/main/java/kz/alimbetov/akmai/knowledge/model/(RetrievalLanguageCatalog|KnowledgeLanguage)\.java$|src/main/resources/db/changelog/greenfield/|src/test/java/kz/alimbetov/akmai/(knowledge/vector|rag/quality)/|\.github/workflows/retrieval-storage-decision-matrix\.yml$)'
+          pattern='^(src/main/java/kz/alimbetov/akmai/knowledge/(vector|projection|lifecycle)/|src/main/java/kz/alimbetov/akmai/rag/(query|retrieval|access)/|src/main/java/kz/alimbetov/akmai/knowledge/model/(RetrievalLanguageCatalog|KnowledgeLanguage)\.java$|src/main/resources/db/changelog/greenfield/|src/test/java/kz/alimbetov/akmai/(knowledge/vector|rag/quality|rag/retrieval)/|\.github/workflows/retrieval-storage-decision-matrix\.yml$)'
 
           if grep -Eq "$pattern" <<< "$files"; then
             echo "retrieval_sensitive=true" >> "$GITHUB_OUTPUT"
