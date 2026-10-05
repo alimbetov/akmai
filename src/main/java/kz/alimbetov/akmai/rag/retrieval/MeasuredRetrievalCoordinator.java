@@ -1,7 +1,9 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
+import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.plan.AdaptiveRetrievalPlanner;
@@ -81,14 +83,12 @@ public class MeasuredRetrievalCoordinator {
             return;
         }
         try {
+            EnumMap<RetrievalType, Integer> counts =
+                    new EnumMap<>(RetrievalType.class);
             for (RetrievalHit hit : hits) {
-                if (hit == null) {
-                    continue;
-                }
-                channels(hit).forEach(type ->
-                        observer.attribution(stage, type, 1)
-                );
+                addChannels(counts, hit);
             }
+            publish(stage, counts);
         } catch (RuntimeException exception) {
             LOGGER.debug(
                     "measured_retrieval event=attribution_failed stage={} errorType={}",
@@ -133,16 +133,16 @@ public class MeasuredRetrievalCoordinator {
             return;
         }
         try {
+            EnumMap<RetrievalType, Integer> counts =
+                    new EnumMap<>(RetrievalType.class);
             for (SourceRef source : validation.citedSources()) {
                 int index = source.number() - 1;
                 if (index < 0 || index >= context.size()) {
                     continue;
                 }
-                RetrievalHit hit = context.get(index);
-                channels(hit).forEach(type ->
-                        observer.attribution(stage, type, 1)
-                );
+                addChannels(counts, context.get(index));
             }
+            publish(stage, counts);
         } catch (RuntimeException exception) {
             LOGGER.debug(
                     "measured_retrieval event=source_attribution_failed stage={} errorType={}",
@@ -150,6 +150,25 @@ public class MeasuredRetrievalCoordinator {
                     exception.getClass().getSimpleName()
             );
         }
+    }
+
+    private void addChannels(
+            Map<RetrievalType, Integer> counts,
+            RetrievalHit hit
+    ) {
+        if (hit == null) {
+            return;
+        }
+        channels(hit).forEach(type -> counts.merge(type, 1, Integer::sum));
+    }
+
+    private void publish(
+            RetrievalAttributionStage stage,
+            Map<RetrievalType, Integer> counts
+    ) {
+        counts.forEach((type, count) ->
+                observer.attribution(stage, type, count)
+        );
     }
 
     private Set<RetrievalType> channels(RetrievalHit hit) {
