@@ -45,9 +45,9 @@ entries:
       zh: [防止洗钱]
       de: [Verhinderung von Geldwäsche]
       fr: [prévention du blanchiment d'argent]
-      es: [prevención del lavado de dinero]
-      pt: [prevenção à lavagem de dinheiro]
-      it: [prevenzione del riciclaggio di denaro]
+      es: [controles contra el blanqueo de capitales]
+      pt: [controles contra lavagem de dinheiro]
+      it: [controlli antiriciclaggio]
       tr: [kara para aklamanın önlenmesi]
       el: [πρόληψη νομιμοποίησης εσόδων]
   - conceptId: insurance.underwriting_pricing.insurance_underwriting_process
@@ -124,7 +124,7 @@ entries:
     aliases:
       zh: [输电系统稳定性]
       de: [Stabilität des Übertragungssystems]
-      fr: [stabilité du réseau de transport]
+      fr: [stabilité du système de transport électrique]
       es: [estabilidad del sistema de transmisión]
       pt: [estabilidade do sistema de transmissão]
       it: [stabilità del sistema di trasmissione]
@@ -132,14 +132,14 @@ entries:
       el: [ευστάθεια συστήματος μεταφοράς]
   - conceptId: energy_utilities.energy_markets.wholesale_electricity_market
     aliases:
-      zh: [电力批发市场]
-      de: [Stromgroßhandelsmarkt]
+      zh: [电力现货批发市场]
+      de: [Großhandelsmarkt für elektrische Energie]
       fr: [marché de gros de l'électricité]
-      es: [mercado mayorista de electricidad]
-      pt: [mercado atacadista de eletricidade]
-      it: [mercato elettrico all'ingrosso]
-      tr: [toptan elektrik piyasası]
-      el: [χονδρεμπορική αγορά ηλεκτρικής ενέργειας]
+      es: [mercado eléctrico de compraventa mayorista]
+      pt: [mercado grossista de energia elétrica]
+      it: [mercato all'ingrosso dell'energia elettrica]
+      tr: [elektrik toptan satış piyasası]
+      el: [αγορά χονδρικής ηλεκτρικής ενέργειας]
   - conceptId: energy_utilities.renewable_energy.battery_energy_storage
     aliases:
       zh: [电池储能系统]
@@ -207,9 +207,9 @@ entries:
       fr: [système de planification de fabrication]
       es: [sistema de planificación de fabricación]
       pt: [sistema de planejamento de manufatura]
-      it: [sistema di pianificazione della produzione]
+      it: [sistema di programmazione della produzione]
       tr: [imalat planlama sistemi]
-      el: [σύστημα προγραμματισμού παραγωγής]
+      el: [σύστημα σχεδιασμού παραγωγής]
   - conceptId: manufacturing.production_systems.production_line_balancing
     aliases:
       zh: [装配线平衡]
@@ -227,7 +227,7 @@ entries:
       fr: [contrôle statistique du processus]
       es: [control estadístico del proceso]
       pt: [controle estatístico do processo]
-      it: [controllo statistico del processo]
+      it: [controllo statistico dei processi]
       tr: [süreç istatistiksel kontrolü]
       el: [στατιστικός έλεγχος διεργασίας]
   - conceptId: manufacturing.maintenance_reliability.preventive_maintenance_schedule
@@ -273,12 +273,12 @@ entries:
   - conceptId: construction_real_estate.real_estate_market.commercial_property_valuation
     aliases:
       zh: [商业房地产估价]
-      de: [Bewertung von Gewerbeimmobilien]
+      de: [Wertermittlung gewerblicher Immobilien]
       fr: [évaluation de l'immobilier commercial]
       es: [tasación de bienes raíces comerciales]
       pt: [avaliação de imóveis comerciais]
-      it: [valutazione immobiliare commerciale]
-      tr: [ticari gayrimenkul değerlemesi]
+      it: [stima del valore degli immobili commerciali]
+      tr: [ticari taşınmaz değer tespiti]
       el: [εκτίμηση εμπορικών ακινήτων]
   - conceptId: construction_real_estate.facilities_management.facility_maintenance_plan
     aliases:
@@ -304,21 +304,21 @@ entries:
     aliases:
       zh: [货物运输网络]
       de: [Gütertransportnetz]
-      fr: [réseau de transport de marchandises]
+      fr: [réseau logistique de fret]
       es: [red de transporte de carga]
-      pt: [rede de transporte de cargas]
-      it: [rete di trasporto merci]
-      tr: [yük taşıma ağı]
+      pt: [malha de transporte de mercadorias]
+      it: [rete logistica per il trasporto merci]
+      tr: [yük taşımacılığı şebekesi]
       el: [δίκτυο μεταφοράς φορτίων]
   - conceptId: transport_logistics.freight_transport.cargo_transport_capacity
     aliases:
       zh: [货运承载能力]
-      de: [Gütertransportkapazität]
+      de: [Kapazität im Güterverkehr]
       fr: [capacité de transport de fret]
-      es: [capacidad de transporte de carga]
-      pt: [capacidade de transporte de carga]
-      it: [capacità di trasporto merci]
-      tr: [yük taşıma kapasitesi]
+      es: [capacidad operativa de transporte de mercancías]
+      pt: [capacidade operacional de transporte de mercadorias]
+      it: [capacità operativa del trasporto merci]
+      tr: [yük taşımacılığı kapasitesi]
       el: [μεταφορική ικανότητα φορτίου]
   - conceptId: transport_logistics.warehousing_distribution.warehouse_management_system
     aliases:
@@ -342,13 +342,13 @@ entries:
       el: [συντήρηση στόλου οχημάτων]
   - conceptId: transport_logistics.supply_chain.supply_chain_disruption
     aliases:
-      zh: [供应链中断]
+      zh: [供应链断供事件]
       de: [Unterbrechung der Lieferkette]
       fr: [interruption de la chaîne d'approvisionnement]
-      es: [interrupción de la cadena de suministro]
-      pt: [interrupção da cadeia de suprimentos]
-      it: [interruzione della catena di fornitura]
-      tr: [tedarik zinciri kesintisi]
+      es: [disrupción del suministro en la cadena]
+      pt: [ruptura na cadeia de suprimentos]
+      it: [discontinuità della catena di approvvigionamento]
+      tr: [tedarik zincirinde kesinti]
       el: [διακοπή εφοδιαστικής αλυσίδας]
   - conceptId: agriculture_food.crop_science.crop_yield_forecast
     aliases:
@@ -376,7 +376,7 @@ entries:
       de: [Herdengesundheitsmanagement]
       fr: [gestion de la santé du troupeau]
       es: [gestión de salud del rebaño]
-      pt: [gestão da saúde do rebanho]
+      pt: [manejo sanitário do rebanho]
       it: [gestione della salute della mandria]
       tr: [sürü sağlığı yönetimi]
       el: [διαχείριση υγείας κοπαδιού]
@@ -449,16 +449,16 @@ entries:
       pt: [método de quadratura numérica]
       it: [metodo di quadratura numerica]
       tr: [sayısal kuadratur yöntemi]
-      el: [μέθοδος αριθμητικής ολοκλήρωσης]
+      el: [αριθμητική μέθοδος ολοκλήρωσης]
   - conceptId: physics_astronomy.classical_mechanics.newtonian_motion_equation
     aliases:
-      zh: [牛顿运动方程]
-      de: [Newtonsche Bewegungsgleichung]
+      zh: [牛顿力学运动方程]
+      de: [Bewegungsgleichung nach Newton]
       fr: [équation du mouvement de Newton]
       es: [ecuación de movimiento de Newton]
       pt: [equação de movimento de Newton]
       it: [equazione del moto di Newton]
-      tr: [Newton hareket denklemi]
+      tr: [Newton mekaniği hareket denklemi]
       el: [εξίσωση κίνησης του Νεύτωνα]
   - conceptId: physics_astronomy.classical_mechanics.conservation_of_momentum
     aliases:
@@ -492,14 +492,14 @@ entries:
       el: [νόμος ηλεκτρομαγνητικού πεδίου]
   - conceptId: physics_astronomy.astrophysics.stellar_evolution_model
     aliases:
-      zh: [恒星演化模型]
+      zh: [恒星演化计算模型]
       de: [Sternentwicklungsmodell]
       fr: [modèle d'évolution stellaire]
-      es: [modelo de evolución estelar]
-      pt: [modelo de evolução estelar]
-      it: [modello di evoluzione stellare]
-      tr: [yıldız evrimi modeli]
-      el: [μοντέλο αστρικής εξέλιξης]
+      es: [modelo computacional de evolución estelar]
+      pt: [modelo computacional de evolução estelar]
+      it: [modello computazionale di evoluzione stellare]
+      tr: [yıldız evrimi hesaplama modeli]
+      el: [υπολογιστικό μοντέλο αστρικής εξέλιξης]
   - conceptId: chemistry_materials.organic_chemistry.organic_reaction_mechanism
     aliases:
       zh: [有机反应路径]
@@ -522,8 +522,8 @@ entries:
       el: [δεσμός μεταξύ ατόμων άνθρακα]
   - conceptId: chemistry_materials.analytical_chemistry.mass_spectrometry_analysis
     aliases:
-      zh: [质谱分析]
-      de: [massenspektrometrische Analyse]
+      zh: [质谱检测分析]
+      de: [Analyse mittels Massenspektrometrie]
       fr: [analyse spectrale de masse]
       es: [análisis espectral de masas]
       pt: [análise espectral de massa]
@@ -542,24 +542,24 @@ entries:
       el: [μοντέλο κινητικής αντίδρασης]
   - conceptId: chemistry_materials.materials_science.crystal_structure_analysis
     aliases:
-      zh: [晶体结构分析]
+      zh: [晶体结构表征分析]
       de: [Analyse der Kristallstruktur]
-      fr: [analyse de structure cristalline]
-      es: [análisis de estructura cristalina]
+      fr: [caractérisation de la structure cristalline]
+      es: [caracterización de la estructura cristalina]
       pt: [análise de estrutura cristalina]
-      it: [analisi della struttura cristallina]
-      tr: [kristal yapı analizi]
-      el: [ανάλυση κρυσταλλικής δομής]
+      it: [caratterizzazione della struttura cristallina]
+      tr: [kristal yapısı karakterizasyonu]
+      el: [χαρακτηρισμός κρυσταλλικής δομής]
   - conceptId: biology_genetics.molecular_biology.gene_expression_regulation
     aliases:
-      zh: [基因表达调控]
-      de: [Regulation der Genexpression]
+      zh: [基因表达调节机制]
+      de: [Steuerung der Genexpression]
       fr: [régulation de l'expression génique]
       es: [regulación de la expresión génica]
-      pt: [regulação da expressão gênica]
+      pt: [controle da expressão gênica]
       it: [regolazione dell'espressione genica]
-      tr: [gen ifadesi düzenlenmesi]
-      el: [ρύθμιση γονιδιακής έκφρασης]
+      tr: [gen ekspresyonunun düzenlenmesi]
+      el: [έλεγχος γονιδιακής έκφρασης]
   - conceptId: biology_genetics.molecular_biology.protein_synthesis_pathway
     aliases:
       zh: [蛋白质生物合成途径]
@@ -572,7 +572,7 @@ entries:
       el: [οδός βιοσύνθεσης πρωτεϊνών]
   - conceptId: biology_genetics.genetics.genetic_variant_analysis
     aliases:
-      zh: [遗传变异分析]
+      zh: [遗传变异检测分析]
       de: [Analyse genetischer Variation]
       fr: [analyse de variation génétique]
       es: [análisis de variación genética]
@@ -654,10 +654,10 @@ entries:
     aliases:
       zh: [鉴别诊断流程]
       de: [differentialdiagnostischer Ablauf]
-      fr: [processus de diagnostic différentiel]
+      fr: [démarche de diagnostic différentiel]
       es: [flujo de diagnóstico diferencial]
       pt: [fluxo de diagnóstico diferencial]
-      it: [processo di diagnosi differenziale]
+      it: [iter di diagnosi differenziale]
       tr: [ayırıcı tanı iş akışı]
       el: [ροή διαφορικής διάγνωσης]
   - conceptId: medicine_pharmacology.clinical_diagnosis.diagnostic_imaging_finding
@@ -672,14 +672,14 @@ entries:
       el: [εύρημα ιατρικής απεικόνισης]
   - conceptId: medicine_pharmacology.pharmacology.drug_dose_adjustment
     aliases:
-      zh: [药物剂量调整]
+      zh: [药物给药剂量调整]
       de: [Anpassung der Medikamentendosis]
-      fr: [ajustement de la dose médicamenteuse]
+      fr: [adaptation posologique du médicament]
       es: [ajuste de dosis del medicamento]
-      pt: [ajuste da dose do medicamento]
-      it: [aggiustamento della dose del farmaco]
+      pt: [ajuste posológico do medicamento]
+      it: [modifica del dosaggio del farmaco]
       tr: [ilaç dozu ayarlaması]
-      el: [προσαρμογή δόσης φαρμάκου]
+      el: [ρύθμιση δοσολογίας φαρμάκου]
   - conceptId: medicine_pharmacology.clinical_trials.randomized_controlled_trial
     aliases:
       zh: [随机临床试验]
@@ -712,17 +712,17 @@ entries:
       el: [ανάλυση πετρωματικού σχηματισμού]
   - conceptId: earth_environmental_science.geology.tectonic_plate_movement
     aliases:
-      zh: [构造板块运动]
-      de: [Bewegung tektonischer Platten]
-      fr: [mouvement des plaques tectoniques]
-      es: [movimiento de placas tectónicas]
-      pt: [movimento de placas tectônicas]
-      it: [movimento delle placche tettoniche]
-      tr: [tektonik plaka hareketi]
-      el: [κίνηση τεκτονικών πλακών]
+      zh: [板块构造运动]
+      de: [Verschiebung tektonischer Platten]
+      fr: [déplacement des plaques tectoniques]
+      es: [desplazamiento de placas tectónicas]
+      pt: [deslocamento das placas tectônicas]
+      it: [spostamento delle placche tettoniche]
+      tr: [tektonik levha hareketi]
+      el: [μετακίνηση τεκτονικών πλακών]
   - conceptId: earth_environmental_science.climate_science.climate_change_projection
     aliases:
-      zh: [气候变化预测]
+      zh: [气候变化情景预测]
       de: [Klimawandelprognose]
       fr: [prévision du changement climatique]
       es: [pronóstico del cambio climático]
@@ -732,10 +732,10 @@ entries:
       el: [πρόβλεψη κλιματικής αλλαγής]
   - conceptId: earth_environmental_science.hydrology.watershed_runoff_model
     aliases:
-      zh: [流域径流模型]
+      zh: [流域降雨径流模型]
       de: [Einzugsgebietsabflussmodell]
-      fr: [modèle de ruissellement du bassin versant]
-      es: [modelo de escorrentía de cuenca]
+      fr: [modèle hydrologique de ruissellement de bassin]
+      es: [modelo hidrológico de escorrentía de cuenca]
       pt: [modelo de escoamento da bacia]
       it: [modello di deflusso del bacino]
       tr: [havza akış modeli]
@@ -757,8 +757,8 @@ entries:
       fr: [empan de mémoire de travail]
       es: [amplitud de memoria de trabajo]
       pt: [amplitude da memória de trabalho]
-      it: [capacità della memoria di lavoro]
-      tr: [çalışma belleği kapasitesi]
+      it: [ampiezza della memoria di lavoro]
+      tr: [işleyen bellek kapasitesi]
       el: [εύρος μνήμης εργασίας]
   - conceptId: psychology_sociology.cognitive_psychology.cognitive_load_theory
     aliases:
