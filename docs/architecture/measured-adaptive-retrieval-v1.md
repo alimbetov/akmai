@@ -48,6 +48,8 @@ The shadow planner does not change the executed `RetrievalPlan`. It compares the
 - exact concept query: `VECTOR + CONCEPT + REFERENCE`
 - identifier-scoped queries retain `IDENTIFIER` and apply the same semantic policy inside the identifier scope
 
+An exact concept recommendation requires all matched concepts to use `EXACT` match mode; a single exact match cannot suppress lexical retrieval for a mixed-confidence query.
+
 Metrics:
 
 - `akmai.retrieval.planner.lanes{mode,strategy}`
@@ -85,7 +87,6 @@ Properties:
 - `lexical-weight` default `1.0`
 - `concept-weight` default `1.0`
 - `reference-weight` default `1.0`
-- `graph-weight` default `1.0`
 
 When disabled, fusion remains exactly standard reciprocal-rank fusion:
 
@@ -95,7 +96,7 @@ When enabled:
 
 `score += strategyWeight / (rrfK + rank)`
 
-Authority tiers remain a separate first-order ordering constraint and are not replaced by fusion weights.
+Authority tiers remain a separate first-order ordering constraint and are not replaced by fusion weights. Adaptive Graph is intentionally not assigned an RRF weight in v1 because graph expansion and competition happen after base result fusion.
 
 ## Rollout gates
 
@@ -117,5 +118,6 @@ This version deliberately does not:
 - disable vector recall for concept queries;
 - learn fusion weights online;
 - allow shadow planner decisions to affect answers;
+- assign RRF weight to post-fusion graph candidates;
 - increase graph promotion capacity;
 - add a new external infrastructure dependency.
