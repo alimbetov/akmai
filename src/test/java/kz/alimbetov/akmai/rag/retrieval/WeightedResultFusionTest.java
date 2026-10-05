@@ -35,7 +35,6 @@ class WeightedResultFusionTest {
                         1.0,
                         1.0,
                         2.0,
-                        1.0,
                         1.0
                 );
         ResultFusion subject = new ResultFusion(
