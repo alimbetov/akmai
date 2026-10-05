@@ -2,8 +2,6 @@ package kz.alimbetov.akmai.config;
 
 import java.time.Duration;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalProperties;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.OllamaEmbeddingModel;
 import org.springframework.ai.ollama.api.OllamaApi;
@@ -51,7 +49,7 @@ public class OllamaTransportConfiguration {
     }
 
     @Bean(name = "vectorWriteEmbeddingModel")
-    public EmbeddingModel vectorWriteEmbeddingModel(
+    public OllamaEmbeddingModel vectorWriteEmbeddingModel(
             @Qualifier("vectorWriteOllamaApi") OllamaApi api,
             VectorStorageProperties vectorProperties,
             @Value("${spring.ai.ollama.embedding.model:qwen3-embedding:4b}")
@@ -61,7 +59,7 @@ public class OllamaTransportConfiguration {
     }
 
     @Bean(name = "retrievalEmbeddingModel")
-    public EmbeddingModel retrievalEmbeddingModel(
+    public OllamaEmbeddingModel retrievalEmbeddingModel(
             @Qualifier("retrievalOllamaApi") OllamaApi api,
             VectorStorageProperties vectorProperties,
             @Value("${spring.ai.ollama.embedding.model:qwen3-embedding:4b}")
@@ -72,7 +70,7 @@ public class OllamaTransportConfiguration {
 
     @Bean(name = "chatModel")
     @Primary
-    public ChatModel chatModel(
+    public OllamaChatModel chatModel(
             @Qualifier("chatOllamaApi") OllamaApi api,
             @Value("${spring.ai.ollama.chat.options.model:qwen3:8b}")
             String model,
@@ -91,7 +89,7 @@ public class OllamaTransportConfiguration {
                 .build();
     }
 
-    private EmbeddingModel embeddingModel(
+    private OllamaEmbeddingModel embeddingModel(
             OllamaApi api,
             String model,
             int dimensions
