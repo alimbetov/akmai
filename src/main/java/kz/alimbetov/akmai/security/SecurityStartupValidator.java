@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class SecurityStartupValidator implements ApplicationRunner {
 
+    private static final String DEFAULT_DATABASE_CREDENTIAL = "akmai";
+
     private final SecurityProperties properties;
     private final Environment environment;
 
@@ -24,11 +26,15 @@ public class SecurityStartupValidator implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        boolean productionProfile = Arrays.asList(
-                environment.getActiveProfiles()
-        ).contains("prod");
-        String deploymentEnvironment = deploymentEnvironment();
-        boolean local = isLocal(deploymentEnvironment) && !productionProfile;
+        String[] activeProfiles = environment.getActiveProfiles();
+        boolean productionProfile = Arrays.asList(activeProfiles).contains("prod");
+        String deploymentEnvironment = deploymentEnvironment(activeProfiles);
+        boolean nonLocalProfile = Arrays.stream(activeProfiles)
+                .map(value -> value.trim().toLowerCase(Locale.ROOT))
+                .anyMatch(value -> !isLocal(value));
+        boolean local = isLocal(deploymentEnvironment)
+                && !productionProfile
+                && !nonLocalProfile;
         boolean hardened = !local;
 
         if (hardened && !properties.enabled()) {
@@ -93,22 +99,23 @@ public class SecurityStartupValidator implements ApplicationRunner {
             );
         }
         if (hardened) {
-            requireSecret("DB_USERNAME");
-            requireSecret("DB_PASSWORD");
+            validateDatabaseCredentials();
         }
     }
 
-    private String deploymentEnvironment() {
+    private String deploymentEnvironment(String[] activeProfiles) {
         String explicit = environment.getProperty("AKMAI_ENVIRONMENT");
         if (explicit == null || explicit.isBlank()) {
             explicit = environment.getProperty("akmai.environment");
         }
-        if (explicit == null || explicit.isBlank()) {
-            return Arrays.asList(environment.getActiveProfiles()).contains("prod")
-                    ? "prod"
-                    : "local";
+        if (explicit != null && !explicit.isBlank()) {
+            return explicit.trim().toLowerCase(Locale.ROOT);
         }
-        return explicit.trim().toLowerCase(Locale.ROOT);
+        return Arrays.stream(activeProfiles)
+                .map(value -> value.trim().toLowerCase(Locale.ROOT))
+                .filter(value -> !isLocal(value))
+                .findFirst()
+                .orElse("local");
     }
 
     private boolean isLocal(String deploymentEnvironment) {
@@ -117,12 +124,39 @@ public class SecurityStartupValidator implements ApplicationRunner {
                 || "test".equals(deploymentEnvironment);
     }
 
-    private void requireSecret(String property) {
-        String value = environment.getProperty(property);
-        if (value == null || value.isBlank()) {
+    private void validateDatabaseCredentials() {
+        String username = firstNonBlank(
+                environment.getProperty("DB_USERNAME"),
+                environment.getProperty("SPRING_DATASOURCE_USERNAME"),
+                environment.getProperty("spring.datasource.username")
+        );
+        String password = firstNonBlank(
+                environment.getProperty("DB_PASSWORD"),
+                environment.getProperty("SPRING_DATASOURCE_PASSWORD"),
+                environment.getProperty("spring.datasource.password")
+        );
+        if (username == null) {
             throw new IllegalStateException(
-                    property + " must be explicitly configured outside local development"
+                    "Database username must be explicitly configured outside local development"
             );
         }
+        if (password == null) {
+            throw new IllegalStateException(
+                    "Database password must be explicitly configured outside local development"
+            );
+        }
+        if (DEFAULT_DATABASE_CREDENTIAL.equals(username)
+                || DEFAULT_DATABASE_CREDENTIAL.equals(password)) {
+            throw new IllegalStateException(
+                    "Default datasource credentials are forbidden outside local development"
+            );
+        }
+    }
+
+    private String firstNonBlank(String... values) {
+        return Arrays.stream(values)
+                .filter(value -> value != null && !value.isBlank())
+                .findFirst()
+                .orElse(null);
     }
 }

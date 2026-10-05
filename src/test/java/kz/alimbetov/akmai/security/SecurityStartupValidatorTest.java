@@ -44,6 +44,20 @@ class SecurityStartupValidatorTest {
     }
 
     @Test
+    void nonLocalActiveProfileFailsClosedWithoutEnvironmentMarker() {
+        assertThatThrownBy(() -> validator(
+                new SecurityProperties(false, "", false, Set.of(1L)),
+                null,
+                "staging",
+                true
+        ).run(arguments()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "Non-local environment requires API-key security"
+                );
+    }
+
+    @Test
     void nonLocalEnvironmentForbidsLocalBypass() {
         assertThatThrownBy(() -> validator(
                 new SecurityProperties(
@@ -165,7 +179,54 @@ class SecurityStartupValidatorTest {
                 false
         ).run(arguments()))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("DB_USERNAME must be explicitly configured");
+                .hasMessageContaining(
+                        "Database username must be explicitly configured"
+                );
+    }
+
+    @Test
+    void nonLocalRejectsDefaultDatasourceCredentials() {
+        SecurityProperties properties = new SecurityProperties(
+                true,
+                STRONG_KEY,
+                STRONG_ADMIN_KEY,
+                false,
+                Set.of(1L)
+        );
+        MockEnvironment environment = environment("prod", "prod");
+        environment.setProperty("spring.datasource.username", "akmai");
+        environment.setProperty("spring.datasource.password", "akmai");
+
+        assertThatThrownBy(() -> new SecurityStartupValidator(
+                properties,
+                environment
+        ).run(arguments()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "Default datasource credentials are forbidden"
+                );
+    }
+
+    @Test
+    void nonLocalAcceptsExplicitSpringDatasourceCredentials() {
+        SecurityProperties properties = new SecurityProperties(
+                true,
+                STRONG_KEY,
+                STRONG_ADMIN_KEY,
+                false,
+                Set.of(1L)
+        );
+        MockEnvironment environment = environment("staging", null);
+        environment.setProperty(
+                "spring.datasource.username",
+                "runtime-user"
+        );
+        environment.setProperty(
+                "spring.datasource.password",
+                "runtime-secret"
+        );
+
+        new SecurityStartupValidator(properties, environment).run(arguments());
     }
 
     @Test
@@ -198,6 +259,18 @@ class SecurityStartupValidatorTest {
             String profile,
             boolean databaseCredentials
     ) {
+        MockEnvironment environment = environment(deployment, profile);
+        if (databaseCredentials) {
+            environment.setProperty("DB_USERNAME", "runtime-user");
+            environment.setProperty("DB_PASSWORD", "runtime-secret");
+        }
+        return new SecurityStartupValidator(properties, environment);
+    }
+
+    private MockEnvironment environment(
+            String deployment,
+            String profile
+    ) {
         MockEnvironment environment = new MockEnvironment();
         if (deployment != null) {
             environment.setProperty("AKMAI_ENVIRONMENT", deployment);
@@ -205,11 +278,7 @@ class SecurityStartupValidatorTest {
         if (profile != null) {
             environment.setActiveProfiles(profile);
         }
-        if (databaseCredentials) {
-            environment.setProperty("DB_USERNAME", "runtime-user");
-            environment.setProperty("DB_PASSWORD", "runtime-secret");
-        }
-        return new SecurityStartupValidator(properties, environment);
+        return environment;
     }
 
     private DefaultApplicationArguments arguments() {
