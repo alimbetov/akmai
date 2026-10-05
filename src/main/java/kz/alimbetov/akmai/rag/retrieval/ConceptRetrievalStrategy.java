@@ -12,22 +12,33 @@ import kz.alimbetov.akmai.knowledge.semantic.SemanticConceptMatch;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalysis;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalyzer;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ConceptRetrievalStrategy implements RetrievalStrategy {
 
-    private static final int MAX_QUERY_CONCEPTS = 4;
-    private static final int MAX_RESULT_CANDIDATES = 4;
-
     private final PublishedSearchProjectionReader repository;
     private final SemanticQueryAnalyzer semanticQueryAnalyzer;
-    private final RetrievalProperties properties;
+    private final ConceptRetrievalProperties properties;
 
     public ConceptRetrievalStrategy(
             PublishedSearchProjectionReader repository,
             SemanticQueryAnalyzer semanticQueryAnalyzer,
-            RetrievalProperties properties
+            RetrievalProperties ignored
+    ) {
+        this(
+                repository,
+                semanticQueryAnalyzer,
+                ConceptRetrievalProperties.defaults()
+        );
+    }
+
+    @Autowired
+    public ConceptRetrievalStrategy(
+            PublishedSearchProjectionReader repository,
+            SemanticQueryAnalyzer semanticQueryAnalyzer,
+            ConceptRetrievalProperties properties
     ) {
         this.repository = repository;
         this.semanticQueryAnalyzer = semanticQueryAnalyzer;
@@ -44,7 +55,8 @@ public class ConceptRetrievalStrategy implements RetrievalStrategy {
             QueryChunk queryChunk,
             RetrievalContext context
     ) {
-        if (queryChunk == null
+        if (!properties.enabled()
+                || queryChunk == null
                 || queryChunk.semanticText() == null
                 || queryChunk.semanticText().isBlank()) {
             return List.of();
@@ -56,6 +68,9 @@ public class ConceptRetrievalStrategy implements RetrievalStrategy {
                     queryChunk.semanticText()
             );
         } catch (RuntimeException exception) {
+            return List.of();
+        }
+        if (analysis.confidence() < properties.minConfidence()) {
             return List.of();
         }
 
@@ -71,22 +86,18 @@ public class ConceptRetrievalStrategy implements RetrievalStrategy {
                 )
                 .map(SemanticConceptMatch::conceptId)
                 .distinct()
-                .limit(MAX_QUERY_CONCEPTS)
+                .limit(properties.maxQueryConcepts())
                 .toList();
         if (conceptIds.isEmpty()) {
             return List.of();
         }
 
-        int limit = Math.min(
-                MAX_RESULT_CANDIDATES,
-                properties.lexicalLimit()
-        );
         List<SearchProjection> projections =
                 repository.searchSemanticConcepts(
                         conceptIds,
                         List.copyOf(context.documentIds()),
                         context.accessLevels(),
-                        limit
+                        properties.topK()
                 );
 
         return projections.stream()
