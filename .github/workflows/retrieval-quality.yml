@@ -30,7 +30,17 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: retrieval-quality-surefire-reports
-          path: target/surefire-reports
+          path: |
+            target/surefire-reports
+            src/main/resources/semantic/concept-aliases-global-v1.yaml
+            src/main/resources/semantic/concept-surfaces-zh-v1.yaml
+            src/main/resources/semantic/concept-surfaces-de-v1.yaml
+            src/main/resources/semantic/concept-surfaces-fr-v1.yaml
+            src/main/resources/semantic/concept-surfaces-es-v1.yaml
+            src/main/resources/semantic/concept-surfaces-pt-v1.yaml
+            src/main/resources/semantic/concept-surfaces-it-v1.yaml
+            src/main/resources/semantic/concept-surfaces-tr-v1.yaml
+            src/main/resources/semantic/concept-surfaces-el-v1.yaml
           if-no-files-found: warn
 
       - name: Upload adaptive graph replay report
