@@ -21,6 +21,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalStep;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -31,18 +32,37 @@ public class ParallelRetrievalExecutor {
     private final Executor retrievalExecutor;
     private final RetrievalObserver observer;
     private final RetrievalProperties properties;
+    private final PublishedLifecycleEligibility lifecycleEligibility;
 
-    public ParallelRetrievalExecutor(
+    ParallelRetrievalExecutor(
             List<RetrievalStrategy> strategies,
             @Qualifier("retrievalExecutor") Executor retrievalExecutor,
             RetrievalObserver observer,
             RetrievalProperties properties
+    ) {
+        this(
+                strategies,
+                retrievalExecutor,
+                observer,
+                properties,
+                PublishedLifecycleEligibility.allowAll()
+        );
+    }
+
+    @Autowired
+    public ParallelRetrievalExecutor(
+            List<RetrievalStrategy> strategies,
+            @Qualifier("retrievalExecutor") Executor retrievalExecutor,
+            RetrievalObserver observer,
+            RetrievalProperties properties,
+            PublishedLifecycleEligibility lifecycleEligibility
     ) {
         this.strategies = new EnumMap<>(RetrievalType.class);
         strategies.forEach(strategy -> this.strategies.put(strategy.type(), strategy));
         this.retrievalExecutor = retrievalExecutor;
         this.observer = observer;
         this.properties = properties;
+        this.lifecycleEligibility = lifecycleEligibility;
     }
 
     public List<RetrievalHit> execute(
@@ -212,7 +232,7 @@ public class ParallelRetrievalExecutor {
 
         Instant started = Instant.now();
         try {
-            List<RetrievalHit> hits = strategy.retrieve(
+            List<RetrievalHit> retrieved = strategy.retrieve(
                             step.queryChunk(),
                             new RetrievalContext(
                                     List.copyOf(dependencyHits),
@@ -221,6 +241,10 @@ public class ParallelRetrievalExecutor {
                     ).stream()
                     .map(hit -> withQueryChunk(hit, step.queryChunk().id()))
                     .toList();
+            List<RetrievalHit> hits = lifecycleEligibility.filter(
+                    retrieved,
+                    accessLevels
+            );
             observer.success(step.type(), Duration.between(started, Instant.now()), hits.size());
             return new RetrievalStepOutcome(
                     step.id(),
