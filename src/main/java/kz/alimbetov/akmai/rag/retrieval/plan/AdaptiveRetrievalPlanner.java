@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import kz.alimbetov.akmai.knowledge.semantic.SemanticMatchMode;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalysis;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalyzer;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
@@ -80,7 +81,11 @@ public class AdaptiveRetrievalPlanner {
                         >= properties.conceptConfidenceThreshold();
         boolean exactConcept = strongConcept
                 && semantic.confidence()
-                        >= properties.exactConceptConfidenceThreshold();
+                        >= properties.exactConceptConfidenceThreshold()
+                && semantic.concepts().stream()
+                        .allMatch(match ->
+                                match.matchMode() == SemanticMatchMode.EXACT
+                        );
 
         if (hasSemanticText) {
             lanes.add(RetrievalType.VECTOR);
