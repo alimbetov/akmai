@@ -11,12 +11,16 @@ Akmai is a local-first RAG foundation for multilingual knowledge bases with a fo
 - medical documents;
 - technical documentation.
 
-Default models:
+Canonical model baseline:
 
-- embeddings: `qwen3-embedding:0.6b`
-- generation: `qwen3:8b`
+- embeddings: `qwen3-embedding:4b`, fixed at `1024` dimensions;
+- vector distance: cosine;
+- ANN: HNSW;
+- generation: `qwen3:8b`.
 
-The chunking pipeline is intentionally independent from a concrete embedding model so the same canonical chunks can later be re-embedded with `qwen3-embedding:4b` or `qwen3-embedding:8b`.
+The embedding model and vector dimensionality form one canonical AkmAI embedding space. Runtime drift from `qwen3-embedding:4b / 1024` fails fast. Development, integration, stage and production quality paths use the same real embedding profile; unit tests may use deterministic test doubles where semantic quality is not under test.
+
+The chunking pipeline remains independent from a concrete embedding space. A future encoder change is introduced only through a new versioned embedding profile, full generation re-embedding, quality validation and atomic publication. Vectors from different embedding profiles must never be mixed even when their dimensionality is identical.
 
 ## Architecture
 
@@ -249,7 +253,7 @@ docker compose up -d postgres
 Install Ollama models:
 
 ```bash
-ollama pull qwen3-embedding:0.6b
+ollama pull qwen3-embedding:4b
 ollama pull qwen3:8b
 ```
 
@@ -308,21 +312,38 @@ The generation prompt requires answers to remain grounded in retrieved context a
 
 ## Re-embedding strategy
 
-Chunking is separated from embedding model selection.
+AkmAI keeps a stable vector storage contract while versioning every embedding space. The current canonical profile is:
 
-Target evolution:
+```text
+provider     = Ollama
+model        = qwen3-embedding:4b
+dimensions   = 1024
+distance     = COSINE_DISTANCE
+index        = HNSW
+```
+
+A future encoder, instruction or embedding-text transformation is never mixed into the current space. The migration flow is:
 
 ```text
 canonical KnowledgeChunk
         |
-        +--> qwen3-embedding:0.6b
+        v
+new versioned EmbeddingProfile
         |
-        +--> qwen3-embedding:4b
+        v
+full re-embedding into a new generation
         |
-        +--> qwen3-embedding:8b
+        v
+retrieval quality + storage validation
+        |
+        v
+atomic publication
+        |
+        v
+old embedding generation retirement
 ```
 
-A future persistence layer should store canonical documents, chunks, relations and embedding-version metadata separately from the pgvector retrieval projection. That will allow model upgrades without reparsing the original source documents.
+Canonical documents, chunks and relations remain independent from the vector projection, so a future model upgrade does not require reparsing the original source documents. Equal dimensionality does not make vectors from different embedding profiles compatible.
 
 ## Next milestones
 
