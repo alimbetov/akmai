@@ -14,13 +14,11 @@ public record RetrievalFusionProperties(
         @DefaultValue("1.0") @DecimalMin("0.0") @DecimalMax("4.0") double vectorWeight,
         @DefaultValue("1.0") @DecimalMin("0.0") @DecimalMax("4.0") double lexicalWeight,
         @DefaultValue("1.0") @DecimalMin("0.0") @DecimalMax("4.0") double conceptWeight,
-        @DefaultValue("1.0") @DecimalMin("0.0") @DecimalMax("4.0") double referenceWeight,
-        @DefaultValue("1.0") @DecimalMin("0.0") @DecimalMax("4.0") double graphWeight
+        @DefaultValue("1.0") @DecimalMin("0.0") @DecimalMax("4.0") double referenceWeight
 ) {
     public static RetrievalFusionProperties defaults() {
         return new RetrievalFusionProperties(
                 false,
-                1.0,
                 1.0,
                 1.0,
                 1.0,
@@ -39,7 +37,7 @@ public record RetrievalFusionProperties(
             case LEXICAL -> lexicalWeight;
             case CONCEPT -> conceptWeight;
             case REFERENCE -> referenceWeight;
-            case GRAPH -> graphWeight;
+            case GRAPH -> 1.0;
         };
     }
 }
