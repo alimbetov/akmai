@@ -42,6 +42,22 @@ class ContextDiversityFilterTest {
     }
 
     @Test
+    void exactAuthorityConsumesQuotaBeforeWeakerHits() {
+        ContextDiversityFilter subject = new ContextDiversityFilter(
+                new RetrievalIntelligenceProperties(true, 1, true)
+        );
+
+        List<RetrievalHit> result = subject.apply(List.of(
+                hit("doc-1", "exact", "A", 0),
+                hit("doc-1", "weak-1", "A", 2),
+                hit("doc-1", "weak-2", "A", 2)
+        ));
+
+        assertThat(result).extracting(RetrievalHit::chunkId)
+                .containsExactly("exact");
+    }
+
+    @Test
     void disabledFilterPreservesBaselineOrder() {
         ContextDiversityFilter subject = new ContextDiversityFilter(
                 RetrievalIntelligenceProperties.defaults()
