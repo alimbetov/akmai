@@ -14,6 +14,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class ResultFusion {
 
+    private static final String MULTI_QUERY_ID_PREFIX = "mq:";
+    private static final double MULTI_QUERY_ORIGIN_WEIGHT = 0.70;
+
     private final RetrievalProperties properties;
     private final PublishedSearchProjectionReader projectionRepository;
     private final RetrievalFusionProperties fusionProperties;
@@ -87,7 +90,7 @@ public class ResultFusion {
                                     routedHit.key().generation()
                             )
                     )
-                    .add(evidence, authorityTier(hit));
+                    .add(evidence, authorityTier(hit), originWeight(hit));
         }
 
         return accumulated.entrySet().stream()
@@ -171,6 +174,15 @@ public class ResultFusion {
         return String.valueOf(queryChunkId) + "|" + hit.type();
     }
 
+    private double originWeight(RetrievalHit hit) {
+        Object queryChunkId = hit.metadata().get("queryChunkId");
+        if (queryChunkId instanceof String id
+                && id.startsWith(MULTI_QUERY_ID_PREFIX)) {
+            return MULTI_QUERY_ORIGIN_WEIGHT;
+        }
+        return 1.0;
+    }
+
     private Double rawScore(RetrievalHit hit) {
         Object score = hit.metadata().get("score");
         return score instanceof Number number
@@ -227,6 +239,7 @@ public class ResultFusion {
         private final List<RetrievalEvidence> evidence = new ArrayList<>();
         private double fusedScore;
         private int authorityTier = Integer.MAX_VALUE;
+        private boolean expansionContribution;
 
         private Accumulator(
                 RetrievalHit representative,
@@ -238,10 +251,16 @@ public class ResultFusion {
             this.generation = generation;
         }
 
-        private void add(RetrievalEvidence item, int tier) {
+        private void add(
+                RetrievalEvidence item,
+                int tier,
+                double originWeight
+        ) {
             evidence.add(item);
             authorityTier = Math.min(authorityTier, tier);
-            fusedScore += fusionProperties.weight(item.type())
+            expansionContribution |= originWeight < 1.0;
+            fusedScore += originWeight
+                    * fusionProperties.weight(item.type())
                     / (properties.rrfK() + item.rank());
         }
 
@@ -257,6 +276,8 @@ public class ResultFusion {
                     "rrfWeighted",
                     fusionProperties.weightedEnabled()
             );
+            metadata.put("originAwareFusion", true);
+            metadata.put("multiQueryContribution", expansionContribution);
             return new RetrievalHit(
                     source.type(),
                     source.accessLevel(),
