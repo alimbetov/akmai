@@ -54,19 +54,13 @@ class IngestionSemanticLinkerTest {
                 anyBoolean()
         );
         verify(seeds, never()).seedSymmetric(
-                any(), any(), anyDouble(), anyInt(), any()
+                any(), any(), anyDouble(), anyInt(), anyInt(), any()
         );
     }
 
     @Test
     void linkingRejectsSelfAndHonorsPerChunkBudget() {
-        SemanticMemoryProperties properties = new SemanticMemoryProperties();
-        properties.setIngestionLinkingEnabled(true);
-        properties.setTopK(4);
-        properties.setMaxEdgesPerChunk(2);
-        properties.setMinSimilarity(0.90);
-        properties.setSameLanguageOnly(true);
-
+        SemanticMemoryProperties properties = enabledProperties();
         AdaptiveGraphProperties graphProperties = mock(AdaptiveGraphProperties.class);
         when(graphProperties.graphVersion()).thenReturn(7);
 
@@ -99,6 +93,9 @@ class IngestionSemanticLinkerTest {
                 new SemanticNeighborSearchRepository.SemanticNeighbor(second, "en", 0.95),
                 new SemanticNeighborSearchRepository.SemanticNeighbor(overBudget, "en", 0.94)
         ));
+        when(seeds.seedSymmetric(
+                any(), any(), anyDouble(), anyInt(), anyInt(), any()
+        )).thenReturn(true);
 
         IngestionSemanticLinker.LinkingReport report =
                 linker.linkPublishedGeneration(
@@ -111,11 +108,13 @@ class IngestionSemanticLinkerTest {
         assertThat(report.seededEdges()).isEqualTo(2);
         assertThat(report.selfRejected()).isEqualTo(1);
         assertThat(report.budgetRejected()).isEqualTo(1);
+        assertThat(report.degreeRejected()).isZero();
         verify(seeds).seedSymmetric(
                 self,
                 first,
                 0.97,
                 7,
+                2,
                 any()
         );
         verify(seeds).seedSymmetric(
@@ -123,6 +122,7 @@ class IngestionSemanticLinkerTest {
                 second,
                 0.95,
                 7,
+                2,
                 any()
         );
         verify(seeds, never()).seedSymmetric(
@@ -130,8 +130,68 @@ class IngestionSemanticLinkerTest {
                 overBudget,
                 0.94,
                 7,
+                2,
                 any()
         );
+    }
+
+    @Test
+    void degreeRejectionDoesNotConsumeSuccessfulEdgeBudget() {
+        SemanticMemoryProperties properties = enabledProperties();
+        AdaptiveGraphProperties graphProperties = mock(AdaptiveGraphProperties.class);
+        when(graphProperties.graphVersion()).thenReturn(3);
+
+        SemanticNeighborSearchRepository neighbors =
+                mock(SemanticNeighborSearchRepository.class);
+        SemanticAssociationSeedRepository seeds =
+                mock(SemanticAssociationSeedRepository.class);
+        IngestionSemanticLinker linker = new IngestionSemanticLinker(
+                properties,
+                graphProperties,
+                neighbors,
+                seeds
+        );
+
+        ChunkGraphNode saturated = new ChunkGraphNode(10, "hub", 1, "hub-1");
+        ChunkGraphNode accepted = new ChunkGraphNode(10, "doc-b", 1, "chunk-b");
+        when(neighbors.search(
+                any(float[].class),
+                anyString(),
+                anyLong(),
+                anyInt(),
+                anyDouble(),
+                anyBoolean()
+        )).thenReturn(List.of(
+                new SemanticNeighborSearchRepository.SemanticNeighbor(
+                        saturated, "en", 0.99
+                ),
+                new SemanticNeighborSearchRepository.SemanticNeighbor(
+                        accepted, "en", 0.96
+                )
+        ));
+        when(seeds.seedSymmetric(
+                any(), any(), anyDouble(), anyInt(), anyInt(), any()
+        )).thenReturn(false, true);
+
+        IngestionSemanticLinker.LinkingReport report =
+                linker.linkPublishedGeneration(
+                        new GenerationIdentity("doc-a", 1, 10),
+                        List.of(row("chunk-a", "en"))
+                );
+
+        assertThat(report.seededEdges()).isEqualTo(1);
+        assertThat(report.degreeRejected()).isEqualTo(1);
+        assertThat(report.budgetRejected()).isZero();
+    }
+
+    private SemanticMemoryProperties enabledProperties() {
+        SemanticMemoryProperties properties = new SemanticMemoryProperties();
+        properties.setIngestionLinkingEnabled(true);
+        properties.setTopK(4);
+        properties.setMaxEdgesPerChunk(2);
+        properties.setMinSimilarity(0.90);
+        properties.setSameLanguageOnly(true);
+        return properties;
     }
 
     private VectorRow row(String chunkId, String language) {
