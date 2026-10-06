@@ -15,6 +15,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class QueryChunker {
 
+    private static final String MULTI_QUERY_ID_PREFIX = "mq:";
+
     private final TextNormalizer normalizer;
     private final IdentifierExtractor identifierExtractor;
     private final QueryLanguageDetector languageDetector;
@@ -156,10 +158,14 @@ public class QueryChunker {
         String idSource = origin == QueryOrigin.ORIGINAL
                 ? baseIdSource
                 : origin.name() + "|" + baseIdSource;
+        String id = UUID.nameUUIDFromBytes(
+                idSource.getBytes(StandardCharsets.UTF_8)
+        ).toString();
+        if (origin == QueryOrigin.MULTI_QUERY) {
+            id = MULTI_QUERY_ID_PREFIX + id;
+        }
         return new QueryChunk(
-                UUID.nameUUIDFromBytes(
-                        idSource.getBytes(StandardCharsets.UTF_8)
-                ).toString(),
+                id,
                 index,
                 text,
                 normalized,
