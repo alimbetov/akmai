@@ -89,6 +89,9 @@ public class SemanticAssociationSeedRepository {
                     target_chunk_id,
                     band,
                     weight,
+                    semantic_similarity,
+                    semantic_seeded_at,
+                    semantic_last_seen_at,
                     support_count,
                     context_count,
                     citation_count,
@@ -101,7 +104,7 @@ public class SemanticAssociationSeedRepository {
                     updated_at
                 ) VALUES (
                     ?, ?, ?, ?, ?, ?, ?,
-                    'CANDIDATE', ?,
+                    'CANDIDATE', 0, ?, ?, ?,
                     0, 0, 0, 0::bit(256), 0, ?, ?, ?, ?, clock_timestamp()
                 )
                 ON CONFLICT (
@@ -114,18 +117,23 @@ public class SemanticAssociationSeedRepository {
                     target_chunk_id,
                     graph_version
                 ) DO UPDATE SET
-                    weight = CASE
-                        WHEN knowledge_chunk_association.band = 'CANDIDATE'
-                         AND knowledge_chunk_association.distinct_query_support = 0
-                        THEN greatest(
-                            knowledge_chunk_association.weight,
-                            EXCLUDED.weight
-                        )
-                        ELSE knowledge_chunk_association.weight
-                    END,
-                    last_seen_at = greatest(
-                        knowledge_chunk_association.last_seen_at,
-                        EXCLUDED.last_seen_at
+                    semantic_similarity = greatest(
+                        coalesce(
+                            knowledge_chunk_association.semantic_similarity,
+                            0
+                        ),
+                        EXCLUDED.semantic_similarity
+                    ),
+                    semantic_seeded_at = coalesce(
+                        knowledge_chunk_association.semantic_seeded_at,
+                        EXCLUDED.semantic_seeded_at
+                    ),
+                    semantic_last_seen_at = greatest(
+                        coalesce(
+                            knowledge_chunk_association.semantic_last_seen_at,
+                            EXCLUDED.semantic_last_seen_at
+                        ),
+                        EXCLUDED.semantic_last_seen_at
                     ),
                     compaction_required = TRUE,
                     updated_at = clock_timestamp()
@@ -138,6 +146,8 @@ public class SemanticAssociationSeedRepository {
                 target.generation(),
                 target.chunkId(),
                 similarity,
+                observed,
+                observed,
                 graphVersion,
                 observed,
                 observed,
