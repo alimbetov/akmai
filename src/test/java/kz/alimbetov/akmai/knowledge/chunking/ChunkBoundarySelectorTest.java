@@ -65,16 +65,27 @@ class ChunkBoundarySelectorTest {
     }
 
     @Test
-    void protectsNumericCommaUrlVersionTimeAndInitials() {
+    void protectsNumericCommaUrlVersionTimeInitialsAndTechnicalIdentifiers() {
         assertRank("Значение 3,14 применяется", ',', "ru", ChunkBoundarySelector.RANK_NONE);
         assertRank("visit example.com/path now", '.', "en", ChunkBoundarySelector.RANK_NONE);
         assertRank("release v2.1 is stable", '.', "en", ChunkBoundarySelector.RANK_NONE);
         assertRank("Время 12:30 указано", ':', "ru", ChunkBoundarySelector.RANK_NONE);
+        assertRank("field schema:value remains atomic", ':', "en", ChunkBoundarySelector.RANK_NONE);
+        assertRank("identifier urn:uuid continues", ':', "en", ChunkBoundarySelector.RANK_NONE);
 
         String initial = "Author A. Smith continues";
         int initialBoundary = initial.indexOf(". ") + 1;
         assertThat(ChunkBoundarySelector.rank(initial, initialBoundary, "en"))
                 .isEqualTo(ChunkBoundarySelector.RANK_WHITESPACE);
+    }
+
+    @Test
+    void proseColonRemainsClauseBoundary() {
+        String text = "Condition: next paragraph explains the rule";
+        int boundary = text.indexOf(':') + 1;
+
+        assertThat(ChunkBoundarySelector.rank(text, boundary, "en"))
+                .isEqualTo(ChunkBoundarySelector.RANK_CLAUSE);
     }
 
     @Test
