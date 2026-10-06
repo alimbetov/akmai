@@ -11,10 +11,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.config.IdempotencyProperties;
+import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResponse;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import kz.alimbetov.akmai.knowledge.embedding.GenerationEmbeddingService;
-import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResponse;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyContext;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyRepository;
@@ -23,6 +23,7 @@ import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionProperties;
 import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository.VectorGenerationEntry;
+import kz.alimbetov.akmai.knowledge.model.ChunkRole;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjectionFactory;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository.VectorRow;
@@ -88,6 +89,16 @@ public class PersistenceCoordinator {
                 .map(projectionFactory::create)
                 .toList();
         String documentId = singleDocumentId(baseProjections);
+        int indexedChunkCount = Math.toIntExact(
+                baseProjections.stream()
+                        .filter(this::searchable)
+                        .count()
+        );
+        if (indexedChunkCount == 0) {
+            throw new IllegalArgumentException(
+                    "A persistence batch must contain searchable chunks"
+            );
+        }
 
         heartbeat(idempotency);
         profileService.assertConfiguredProfileIsActive();
@@ -133,15 +144,24 @@ public class PersistenceCoordinator {
             List<SearchProjection> projections = baseProjections.stream()
                     .map(value -> value.withIdentity(identity))
                     .toList();
+            List<SearchProjection> retrievalProjections = projections.stream()
+                    .filter(this::searchable)
+                    .toList();
+
             List<float[]> embeddings = embeddingService.embed(
-                    projections,
+                    retrievalProjections,
                     profile,
                     () -> heartbeat(idempotency)
             );
-            List<DocumentIdentifier> identifiers = identifiers(projections);
-            List<VectorGenerationEntry> manifest = manifest(projections, generation);
+            List<DocumentIdentifier> identifiers = identifiers(
+                    retrievalProjections
+            );
+            List<VectorGenerationEntry> manifest = manifest(
+                    retrievalProjections,
+                    generation
+            );
             List<VectorRow> vectors = vectors(
-                    projections,
+                    retrievalProjections,
                     embeddings,
                     profile,
                     generation
@@ -199,7 +219,7 @@ public class PersistenceCoordinator {
                         java.time.Duration.ofNanos(
                                 System.nanoTime() - startedNanos
                         ),
-                        chunks.size()
+                        indexedChunkCount
                 );
             }
         } catch (PublicationOutcomeUnknownException exception) {
@@ -209,7 +229,7 @@ public class PersistenceCoordinator {
                         java.time.Duration.ofNanos(
                                 System.nanoTime() - startedNanos
                         ),
-                        chunks.size()
+                        indexedChunkCount
                 );
             }
             throw exception;
@@ -220,7 +240,7 @@ public class PersistenceCoordinator {
                         java.time.Duration.ofNanos(
                                 System.nanoTime() - startedNanos
                         ),
-                        chunks.size()
+                        indexedChunkCount
                 );
             }
             generationRepository.fail(
@@ -232,6 +252,11 @@ public class PersistenceCoordinator {
             idempotencyRepository.fail(idempotency, safeMessage(exception));
             throw exception;
         }
+    }
+
+    private boolean searchable(SearchProjection projection) {
+        return projection != null
+                && ChunkRole.isSearchable(projection.metadata());
     }
 
     private void heartbeat(
@@ -347,7 +372,56 @@ public class PersistenceCoordinator {
                 ? ""
                 : projection.sectionPath());
         metadata.put("chunkIndex", projection.chunkIndex());
+        copyHierarchyMetadata(projection, metadata);
         return Map.copyOf(metadata);
+    }
+
+    private void copyHierarchyMetadata(
+            SearchProjection projection,
+            Map<String, Object> metadata
+    ) {
+        ChunkRole role = ChunkRole.fromMetadata(projection.metadata());
+        if (role != null) {
+            metadata.put(ChunkRole.METADATA_KEY, role.name());
+        }
+        if (projection.parentChunkId() != null
+                && !projection.parentChunkId().isBlank()) {
+            metadata.put(
+                    ChunkRole.PARENT_CHUNK_ID_KEY,
+                    projection.parentChunkId()
+            );
+        }
+        copyIfPresent(
+                projection.metadata(),
+                metadata,
+                ChunkRole.PARENT_CHUNK_INDEX_KEY
+        );
+        copyIfPresent(
+                projection.metadata(),
+                metadata,
+                ChunkRole.CHILD_INDEX_KEY
+        );
+        copyIfPresent(
+                projection.metadata(),
+                metadata,
+                ChunkRole.CHILD_COUNT_KEY
+        );
+        copyIfPresent(
+                projection.metadata(),
+                metadata,
+                ChunkRole.ESTIMATED_TOKENS_KEY
+        );
+    }
+
+    private void copyIfPresent(
+            Map<String, Object> source,
+            Map<String, Object> target,
+            String key
+    ) {
+        Object value = source.get(key);
+        if (value != null) {
+            target.put(key, value);
+        }
     }
 
     private Instant expiration() {
