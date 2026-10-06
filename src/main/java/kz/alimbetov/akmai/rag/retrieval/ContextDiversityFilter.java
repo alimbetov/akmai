@@ -8,7 +8,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * Preserves ranking order while preventing one document section from consuming
- * the whole context budget. Exact-authority hits are never removed.
+ * the whole context budget. Exact-authority hits are never removed, but they do
+ * consume the section quota so weaker hits from the same section are suppressed.
  */
 @Component
 public class ContextDiversityFilter {
@@ -35,22 +36,20 @@ public class ContextDiversityFilter {
             if (hit == null) {
                 continue;
             }
-            if (authorityTier(hit) == 0) {
-                selected.add(hit);
+
+            String sectionKey = sectionKey(hit);
+            boolean exactAuthority = authorityTier(hit) == 0;
+            if (!exactAuthority
+                    && sectionKey != null
+                    && perSection.getOrDefault(sectionKey, 0)
+                            >= properties.maxChunksPerSection()) {
                 continue;
             }
 
-            String sectionKey = sectionKey(hit);
-            if (sectionKey == null) {
-                selected.add(hit);
-                continue;
-            }
-            if (perSection.getOrDefault(sectionKey, 0)
-                    >= properties.maxChunksPerSection()) {
-                continue;
-            }
             selected.add(hit);
-            perSection.merge(sectionKey, 1, Integer::sum);
+            if (sectionKey != null) {
+                perSection.merge(sectionKey, 1, Integer::sum);
+            }
         }
         return List.copyOf(selected);
     }
@@ -67,6 +66,12 @@ public class ContextDiversityFilter {
         if (!(raw instanceof String section) || section.isBlank()) {
             return null;
         }
-        return String.valueOf(hit.documentId()) + "\u0000" + section.trim();
+        return hit.accessLevel()
+                + "\u0000"
+                + String.valueOf(hit.documentId())
+                + "\u0000"
+                + hit.generation()
+                + "\u0000"
+                + section.trim();
     }
 }
