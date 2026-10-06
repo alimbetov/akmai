@@ -34,11 +34,19 @@ jobs:
         run: |
           test -n "$AKMAI_LIVE_OLLAMA_BASE_URL"
 
-      - name: Live multilingual embedding quality
+      - name: Live multilingual embedding and production retrieval quality
         env:
           AKMAI_LIVE_QUALITY: "true"
           AKMAI_LIVE_OLLAMA_BASE_URL: ${{ secrets.AKMAI_LIVE_OLLAMA_BASE_URL }}
         run: >
           mvn -B
-          -Dtest=LiveEmbeddingRetrievalQualityTest
+          -Dtest=LiveEmbeddingRetrievalQualityTest,LiveCorpusBackedRagBenchmarkV1Test
           test
+
+      - name: Upload live RAG quality report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-benchmark-v1
+          path: target/quality/rag-benchmark-v1.json
+          if-no-files-found: warn

@@ -10,10 +10,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import kz.alimbetov.akmai.config.SelfOptimizingRagProperties;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
+import kz.alimbetov.akmai.rag.learning.LearningPrivacyFingerprint;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
@@ -23,20 +27,47 @@ public class SemanticQueryMemory {
     private static final int MAX_OBSERVATIONS_PER_CLUSTER = 4;
     private static final int MAX_SOURCE_REFS_PER_OBSERVATION = 12;
     private static final int MAX_CENTROID_WEIGHT = 32;
+    private static final String REDACTED_QUESTION = "[redacted]";
 
     private final EmbeddingModel embeddingModel;
     private final EmbeddingProfileService profileService;
     private final AdvancedRetrievalProperties properties;
+    private final SemanticQueryMemoryRepository repository;
+    private final SelfOptimizingRagProperties selfOptimizingProperties;
+    private final LearningPrivacyFingerprint fingerprint;
     private final Cache<String, MemoryCluster> clusters;
+    private final Set<String> loadedProfiles = ConcurrentHashMap.newKeySet();
 
     public SemanticQueryMemory(
             @Qualifier("retrievalEmbeddingModel") EmbeddingModel embeddingModel,
             EmbeddingProfileService profileService,
             AdvancedRetrievalProperties properties
     ) {
+        this(
+                embeddingModel,
+                profileService,
+                properties,
+                null,
+                null,
+                null
+        );
+    }
+
+    @Autowired
+    public SemanticQueryMemory(
+            @Qualifier("retrievalEmbeddingModel") EmbeddingModel embeddingModel,
+            EmbeddingProfileService profileService,
+            AdvancedRetrievalProperties properties,
+            SemanticQueryMemoryRepository repository,
+            SelfOptimizingRagProperties selfOptimizingProperties,
+            LearningPrivacyFingerprint fingerprint
+    ) {
         this.embeddingModel = embeddingModel;
         this.profileService = profileService;
         this.properties = properties;
+        this.repository = repository;
+        this.selfOptimizingProperties = selfOptimizingProperties;
+        this.fingerprint = fingerprint;
         this.clusters = Caffeine.newBuilder()
                 .maximumSize(properties.queryMemoryMaxEntries())
                 .build();
@@ -59,6 +90,7 @@ public class SemanticQueryMemory {
         if (profileId == null) {
             return List.of();
         }
+        loadPersisted(profileId);
         float[] queryVector = safeEmbed(question);
         if (queryVector == null) {
             return List.of();
@@ -126,6 +158,7 @@ public class SemanticQueryMemory {
         if (profileId == null) {
             return;
         }
+        loadPersisted(profileId);
         float[] vector = safeEmbed(question);
         if (vector == null) {
             return;
@@ -154,43 +187,145 @@ public class SemanticQueryMemory {
                 .map(ClusterCandidate::cluster)
                 .orElse(null);
 
+        MemoryCluster updated;
         if (nearest == null) {
             String id = UUID.randomUUID().toString();
-            clusters.put(id, new MemoryCluster(
+            updated = new MemoryCluster(
                     id,
                     profileId,
                     vector.clone(),
                     requiredScope,
                     1,
                     List.of(observation)
-            ));
+            );
+            clusters.put(id, updated);
+        } else {
+            updated = merge(nearest, profileId, requiredScope, vector, observation);
+            clusters.put(updated.id(), updated);
+        }
+        persist(updated, question, observation);
+    }
+
+    private MemoryCluster merge(
+            MemoryCluster current,
+            String profileId,
+            Set<Long> requiredScope,
+            float[] vector,
+            MemoryObservation observation
+    ) {
+        if (!profileId.equals(current.embeddingProfileId())
+                || !current.requiredAccessLevels().equals(requiredScope)
+                || current.centroid().length != vector.length) {
+            return current;
+        }
+        int weight = Math.min(current.observationCount(), MAX_CENTROID_WEIGHT);
+        float[] centroid = mergeCentroid(current.centroid(), vector, weight);
+        List<MemoryObservation> observations = new ArrayList<>(current.observations());
+        observations.add(0, observation);
+        int maxObservations = persistentObservationLimit();
+        if (observations.size() > maxObservations) {
+            observations = new ArrayList<>(observations.subList(0, maxObservations));
+        }
+        return new MemoryCluster(
+                current.id(),
+                current.embeddingProfileId(),
+                centroid,
+                current.requiredAccessLevels(),
+                current.observationCount() + 1,
+                List.copyOf(observations)
+        );
+    }
+
+    private void loadPersisted(String profileId) {
+        if (!persistentEnabled()
+                || !loadedProfiles.add(profileId)) {
             return;
         }
-
-        clusters.asMap().computeIfPresent(nearest.id(), (id, current) -> {
-            if (!profileId.equals(current.embeddingProfileId())
-                    || !current.requiredAccessLevels().equals(requiredScope)
-                    || current.centroid().length != vector.length) {
-                return current;
-            }
-            int weight = Math.min(current.observationCount(), MAX_CENTROID_WEIGHT);
-            float[] centroid = mergeCentroid(current.centroid(), vector, weight);
-            List<MemoryObservation> observations = new ArrayList<>(current.observations());
-            observations.add(0, observation);
-            if (observations.size() > MAX_OBSERVATIONS_PER_CLUSTER) {
-                observations = new ArrayList<>(
-                        observations.subList(0, MAX_OBSERVATIONS_PER_CLUSTER)
+        try {
+            List<SemanticQueryMemoryRepository.StoredCluster> persisted =
+                    repository.findClustersByProfile(
+                            profileId,
+                            selfOptimizingProperties.persistentMemoryMaxEntries()
+                    );
+            for (var stored : persisted) {
+                List<MemoryObservation> observations = repository.findObservations(
+                                stored.clusterId(),
+                                persistentObservationLimit()
+                        ).stream()
+                        .map(value -> new MemoryObservation(
+                                REDACTED_QUESTION,
+                                value.groundedAnswer(),
+                                value.sourceRefs(),
+                                value.observedAt()
+                        ))
+                        .toList();
+                clusters.asMap().putIfAbsent(
+                        stored.clusterId().toString(),
+                        new MemoryCluster(
+                                stored.clusterId().toString(),
+                                stored.embeddingProfileId(),
+                                stored.centroid(),
+                                stored.requiredAccessLevels(),
+                                stored.observationCount(),
+                                observations
+                        )
                 );
             }
-            return new MemoryCluster(
-                    id,
-                    current.embeddingProfileId(),
-                    centroid,
-                    current.requiredAccessLevels(),
-                    current.observationCount() + 1,
-                    List.copyOf(observations)
+        } catch (RuntimeException exception) {
+            loadedProfiles.remove(profileId);
+        }
+    }
+
+    private void persist(
+            MemoryCluster cluster,
+            String question,
+            MemoryObservation observation
+    ) {
+        if (!persistentEnabled()) {
+            return;
+        }
+        String queryFingerprint = fingerprint.fingerprint(question);
+        if (queryFingerprint.isBlank()) {
+            return;
+        }
+        try {
+            repository.persist(
+                    new SemanticQueryMemoryRepository.StoredCluster(
+                            UUID.fromString(cluster.id()),
+                            cluster.embeddingProfileId(),
+                            cluster.requiredAccessLevels(),
+                            cluster.centroid(),
+                            cluster.observationCount(),
+                            observation.observedAt()
+                    ),
+                    queryFingerprint,
+                    observation.groundedAnswer(),
+                    observation.sourceRefs(),
+                    observation.observedAt(),
+                    selfOptimizingProperties.persistentMemoryMaxEntries(),
+                    persistentObservationLimit()
             );
-        });
+        } catch (RuntimeException ignored) {
+            // Query memory is an optimization. Current authoritative retrieval
+            // remains available if persistence is temporarily unavailable.
+        }
+    }
+
+    private boolean persistentEnabled() {
+        return repository != null
+                && selfOptimizingProperties != null
+                && fingerprint != null
+                && selfOptimizingProperties.persistentQueryMemoryEnabled();
+    }
+
+    private int persistentObservationLimit() {
+        if (selfOptimizingProperties == null) {
+            return MAX_OBSERVATIONS_PER_CLUSTER;
+        }
+        return Math.min(
+                MAX_OBSERVATIONS_PER_CLUSTER,
+                selfOptimizingProperties.persistentMemoryObservationsPerCluster()
+        );
     }
 
     private String activeProfileId() {

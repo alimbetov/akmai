@@ -6,12 +6,15 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticMatchMode;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalysis;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalyzer;
+import kz.alimbetov.akmai.rag.policy.ApprovedRetrievalPolicyProvider;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -19,20 +22,31 @@ public class AdaptiveRetrievalPlanner {
 
     private final SemanticQueryAnalyzer semanticQueryAnalyzer;
     private final AdaptiveRetrievalProperties properties;
+    private final ApprovedRetrievalPolicyProvider approvedPolicyProvider;
 
     public AdaptiveRetrievalPlanner(
             SemanticQueryAnalyzer semanticQueryAnalyzer,
             AdaptiveRetrievalProperties properties
     ) {
+        this(semanticQueryAnalyzer, properties, null);
+    }
+
+    @Autowired
+    public AdaptiveRetrievalPlanner(
+            SemanticQueryAnalyzer semanticQueryAnalyzer,
+            AdaptiveRetrievalProperties properties,
+            ApprovedRetrievalPolicyProvider approvedPolicyProvider
+    ) {
         this.semanticQueryAnalyzer = semanticQueryAnalyzer;
         this.properties = properties;
+        this.approvedPolicyProvider = approvedPolicyProvider;
     }
 
     /**
-     * Applies only conservative lane reductions to the existing baseline plan.
-     * The adaptive planner never creates a retrieval lane that the baseline
-     * planner did not already schedule. If semantic analysis is unavailable or
-     * the query chunk is not safely classifiable, the baseline is preserved.
+     * Production execution is evidence-gated. With the Spring policy provider
+     * present, an enabled planner changes the baseline only when an APPROVED
+     * retrieval policy contains a route for the classified query. The older
+     * two-argument constructor retains heuristic behavior for isolated tests.
      */
     public RetrievalPlan enforce(
             List<QueryChunk> chunks,
@@ -52,7 +66,17 @@ public class AdaptiveRetrievalPlanner {
             if (chunk == null) {
                 continue;
             }
-            recommended.put(chunk.id(), recommend(chunk).lanes());
+            Recommendation heuristic = recommend(chunk);
+            Optional<Set<RetrievalType>> approved = approvedPolicyProvider == null
+                    ? Optional.of(heuristic.lanes())
+                    : approvedPolicyProvider.lanes(heuristic.queryClass());
+            if (approved.isEmpty()) {
+                return currentPlan;
+            }
+            recommended.put(
+                    chunk.id(),
+                    safeApprovedLanes(chunk, approved.get())
+            );
         }
         if (recommended.isEmpty()) {
             return currentPlan;
@@ -99,15 +123,50 @@ public class AdaptiveRetrievalPlanner {
             if (chunk == null) {
                 continue;
             }
-            Recommendation recommendation = recommend(chunk);
+            Recommendation heuristic = recommend(chunk);
+            Set<RetrievalType> lanes = approvedPolicyProvider == null
+                    ? heuristic.lanes()
+                    : approvedPolicyProvider.lanes(heuristic.queryClass())
+                            .map(value -> safeApprovedLanes(chunk, value))
+                            .orElse(heuristic.lanes());
             recommendations.add(new ChunkRecommendation(
                     chunk.id(),
-                    recommendation.queryClass(),
+                    heuristic.queryClass(),
                     current.getOrDefault(chunk.id(), Set.of()),
-                    recommendation.lanes()
+                    lanes
             ));
         }
         return new ShadowPlanReport(true, List.copyOf(recommendations));
+    }
+
+    private Set<RetrievalType> safeApprovedLanes(
+            QueryChunk chunk,
+            Set<RetrievalType> requested
+    ) {
+        EnumSet<RetrievalType> baseline = baselineLanes(chunk);
+        EnumSet<RetrievalType> result = EnumSet.noneOf(RetrievalType.class);
+        if (requested != null) {
+            result.addAll(requested);
+            result.retainAll(baseline);
+        }
+
+        boolean hasIdentifiers = chunk.identifiers() != null
+                && !chunk.identifiers().isEmpty();
+        boolean hasSemanticText = chunk.semanticText() != null
+                && !chunk.semanticText().isBlank();
+        if (hasIdentifiers) {
+            result.add(RetrievalType.IDENTIFIER);
+        }
+        if (hasSemanticText) {
+            result.add(RetrievalType.VECTOR);
+            if (baseline.contains(RetrievalType.REFERENCE)) {
+                result.add(RetrievalType.REFERENCE);
+            }
+        }
+        if (result.isEmpty()) {
+            result.addAll(baseline);
+        }
+        return Set.copyOf(result);
     }
 
     private boolean keep(

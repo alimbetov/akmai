@@ -2,13 +2,13 @@ package kz.alimbetov.akmai.knowledge.api;
 
 import jakarta.validation.Valid;
 import kz.alimbetov.akmai.api.ApiRequestValidator;
-import org.springframework.web.bind.annotation.RequestHeader;
-import kz.alimbetov.akmai.knowledge.service.KnowledgeIngestionService;
+import kz.alimbetov.akmai.knowledge.service.KnowledgeIngestionPort;
 import kz.alimbetov.akmai.security.KnowledgeAccessLevelAuthorizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class KnowledgeController {
 
-    private final KnowledgeIngestionService ingestionService;
+    private final KnowledgeIngestionPort ingestionService;
     private final ApiRequestValidator requestValidator;
     private final KnowledgeAccessLevelAuthorizer accessLevelAuthorizer;
 
