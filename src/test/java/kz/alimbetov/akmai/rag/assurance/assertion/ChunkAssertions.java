@@ -1,5 +1,6 @@
 package kz.alimbetov.akmai.rag.assurance.assertion;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -116,6 +117,33 @@ public final class ChunkAssertions {
             assertCoreMetadata(chunk, metadata, "language", chunk.language());
             assertCoreMetadata(chunk, metadata, "domain", chunk.domain().name());
             assertCoreMetadata(chunk, metadata, "sectionPath", chunk.sectionPath());
+        }
+        return this;
+    }
+
+    public ChunkAssertions preservesAtomicFact(String... requiredFragments) {
+        List<String> fragments = requiredFragments == null
+                ? List.of()
+                : Arrays.stream(requiredFragments)
+                        .filter(fragment -> fragment != null && !fragment.isBlank())
+                        .toList();
+        if (fragments.isEmpty()) {
+            throw new IllegalArgumentException("requiredFragments must not be empty");
+        }
+
+        boolean preserved = actual.stream()
+                .filter(Objects::nonNull)
+                .map(KnowledgeChunk::normalizedText)
+                .filter(Objects::nonNull)
+                .anyMatch(text -> fragments.stream().allMatch(text::contains));
+        if (!preserved) {
+            throw AssuranceFailure.violation(
+                    "W-06",
+                    fixtureId,
+                    "protected atomic fact fragments must remain jointly recoverable in one chunk",
+                    "chunkSet",
+                    "requiredFragments=" + fragments
+            );
         }
         return this;
     }
