@@ -2,7 +2,9 @@ package kz.alimbetov.akmai.rag.query;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import kz.alimbetov.akmai.knowledge.chunking.TextNormalizer;
 import kz.alimbetov.akmai.knowledge.identifier.DetectedIdentifier;
@@ -17,6 +19,8 @@ public class QueryChunker {
     private final IdentifierExtractor identifierExtractor;
     private final QueryLanguageDetector languageDetector;
     private final QueryDecomposer decomposer;
+    private MultiQueryGenerator multiQueryGenerator;
+    private AdvancedRetrievalProperties advancedProperties;
 
     public QueryChunker(
             TextNormalizer normalizer,
@@ -44,7 +48,46 @@ public class QueryChunker {
         this.decomposer = decomposer;
     }
 
+    @Autowired(required = false)
+    void setMultiQueryExpansion(
+            MultiQueryGenerator multiQueryGenerator,
+            AdvancedRetrievalProperties advancedProperties
+    ) {
+        this.multiQueryGenerator = multiQueryGenerator;
+        this.advancedProperties = advancedProperties;
+    }
+
     public List<QueryChunk> chunk(String question) {
+        List<QueryChunk> original = chunk(question, QueryOrigin.ORIGINAL);
+        if (multiQueryGenerator == null || advancedProperties == null) {
+            return original;
+        }
+
+        List<String> variants = multiQueryGenerator.generate(question);
+        if (variants.isEmpty()) {
+            return original;
+        }
+
+        Map<String, QueryChunk> unique = new LinkedHashMap<>();
+        addUnique(unique, original);
+        for (String variant : variants) {
+            addUnique(unique, chunk(variant, QueryOrigin.MULTI_QUERY));
+            if (unique.size() >= advancedProperties.maxExpandedChunks()) {
+                break;
+            }
+        }
+        return unique.values().stream()
+                .limit(advancedProperties.maxExpandedChunks())
+                .toList();
+    }
+
+    public List<QueryChunk> chunk(
+            String question,
+            QueryOrigin origin
+    ) {
+        QueryOrigin effectiveOrigin = origin == null
+                ? QueryOrigin.ORIGINAL
+                : origin;
         String normalized = normalizer.normalize(question);
         QueryDecompositionResult decomposition =
                 decomposer.decomposeDetailed(normalized);
@@ -60,23 +103,55 @@ public class QueryChunker {
                     result.size(),
                     segment,
                     semantic,
-                    identifiers
+                    identifiers,
+                    effectiveOrigin
             ));
         }
 
         return result.isEmpty()
-                ? List.of(newChunk(0, normalized, normalized, List.of()))
+                ? List.of(newChunk(
+                        0,
+                        normalized,
+                        normalized,
+                        List.of(),
+                        effectiveOrigin
+                ))
                 : List.copyOf(result);
+    }
+
+    private void addUnique(
+            Map<String, QueryChunk> unique,
+            List<QueryChunk> chunks
+    ) {
+        for (QueryChunk chunk : chunks) {
+            unique.putIfAbsent(dedupKey(chunk), chunk);
+            if (advancedProperties != null
+                    && unique.size() >= advancedProperties.maxExpandedChunks()) {
+                return;
+            }
+        }
+    }
+
+    private String dedupKey(QueryChunk chunk) {
+        return chunk.normalizedText()
+                + "|"
+                + chunk.semanticText()
+                + "|"
+                + chunk.language();
     }
 
     private QueryChunk newChunk(
             int index,
             String text,
             String semantic,
-            List<DetectedIdentifier> identifiers
+            List<DetectedIdentifier> identifiers,
+            QueryOrigin origin
     ) {
         String normalized = normalizer.normalize(text);
-        String idSource = index + "|" + normalized + "|" + semantic;
+        String baseIdSource = index + "|" + normalized + "|" + semantic;
+        String idSource = origin == QueryOrigin.ORIGINAL
+                ? baseIdSource
+                : origin.name() + "|" + baseIdSource;
         return new QueryChunk(
                 UUID.nameUUIDFromBytes(
                         idSource.getBytes(StandardCharsets.UTF_8)
@@ -86,7 +161,8 @@ public class QueryChunker {
                 normalized,
                 semantic.isBlank() ? text : semantic,
                 languageDetector.detect(text),
-                identifiers
+                identifiers,
+                origin
         );
     }
 

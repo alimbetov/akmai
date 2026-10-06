@@ -23,6 +23,10 @@ public enum AppParameterKey {
     ADAPTIVE_GRAPH_COMPETITION_ENABLED(
             "akmai.adaptive-graph.competition.enabled",
             "Allow eligible HOT graph candidates to compete with base retrieval"
+    ),
+    SEMANTIC_MEMORY_INGESTION_LINKING_ENABLED(
+            "akmai.semantic-memory.ingestion-linking-enabled",
+            "Seed bounded semantic graph links after generation publication"
     );
 
     private final String key;

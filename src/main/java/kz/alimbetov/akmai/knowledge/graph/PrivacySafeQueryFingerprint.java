@@ -8,6 +8,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
+import kz.alimbetov.akmai.rag.query.QueryOrigin;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -35,7 +36,16 @@ public class PrivacySafeQueryFingerprint {
             );
         }
 
-        String canonical = queryChunks.stream()
+        List<QueryChunk> originalChunks = queryChunks.stream()
+                .filter(java.util.Objects::nonNull)
+                .filter(chunk -> chunk.origin() == QueryOrigin.ORIGINAL)
+                .toList();
+        List<QueryChunk> fingerprintChunks = originalChunks.isEmpty()
+                ? queryChunks
+                : originalChunks;
+
+        String canonical = fingerprintChunks.stream()
+                .filter(java.util.Objects::nonNull)
                 .sorted(Comparator.comparingInt(QueryChunk::index))
                 .map(chunk -> chunk.index()
                         + "|"

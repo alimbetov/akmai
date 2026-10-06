@@ -243,7 +243,8 @@ public class AppParameterService {
                 }
             }
             case ADAPTIVE_GRAPH_MAINTENANCE_ENABLED,
-                    ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED -> {
+                    ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED,
+                    SEMANTIC_MEMORY_INGESTION_LINKING_ENABLED -> {
                 // no additional dependency
             }
         }
@@ -330,6 +331,7 @@ public class AppParameterService {
                     graphProperties.expansionEnabled();
             case ADAPTIVE_GRAPH_COMPETITION_ENABLED ->
                     competitionProperties.enabled();
+            case SEMANTIC_MEMORY_INGESTION_LINKING_ENABLED -> false;
         };
         return ResolvedAppParameter.fallback(key, value);
     }

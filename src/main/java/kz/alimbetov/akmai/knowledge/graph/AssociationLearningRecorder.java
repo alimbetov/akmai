@@ -11,6 +11,8 @@ import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import kz.alimbetov.akmai.knowledge.model.ChunkRole;
 import kz.alimbetov.akmai.observability.AkmaiMetrics;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
+import kz.alimbetov.akmai.rag.query.QueryOrigin;
+import kz.alimbetov.akmai.rag.query.SemanticQueryMemory;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
@@ -32,6 +34,7 @@ public class AssociationLearningRecorder {
     private final PrivacySafeQueryFingerprint fingerprint;
     private final AkmaiMetrics metrics;
     private final AppParameterService appParameterService;
+    private final SemanticQueryMemory semanticQueryMemory;
 
     public AssociationLearningRecorder(
             AdaptiveGraphProperties properties,
@@ -44,6 +47,24 @@ public class AssociationLearningRecorder {
                 repository,
                 fingerprint,
                 metrics,
+                null,
+                null
+        );
+    }
+
+    public AssociationLearningRecorder(
+            AdaptiveGraphProperties properties,
+            AdaptiveChunkGraphRepository repository,
+            PrivacySafeQueryFingerprint fingerprint,
+            AkmaiMetrics metrics,
+            AppParameterService appParameterService
+    ) {
+        this(
+                properties,
+                repository,
+                fingerprint,
+                metrics,
+                appParameterService,
                 null
         );
     }
@@ -54,13 +75,15 @@ public class AssociationLearningRecorder {
             AdaptiveChunkGraphRepository repository,
             PrivacySafeQueryFingerprint fingerprint,
             AkmaiMetrics metrics,
-            AppParameterService appParameterService
+            AppParameterService appParameterService,
+            SemanticQueryMemory semanticQueryMemory
     ) {
         this.properties = properties;
         this.repository = repository;
         this.fingerprint = fingerprint;
         this.metrics = metrics;
         this.appParameterService = appParameterService;
+        this.semanticQueryMemory = semanticQueryMemory;
     }
 
     public void record(
@@ -69,6 +92,8 @@ public class AssociationLearningRecorder {
             List<RetrievalHit> boundedContext,
             CitationValidator.CitationValidation validation
     ) {
+        recordSemanticMemory(queryChunks, boundedContext, validation);
+
         if (!runtimeEnabled(
                 AppParameterKey.ADAPTIVE_GRAPH_LEARNING_ENABLED,
                 properties.learningEnabled()
@@ -139,6 +164,46 @@ public class AssociationLearningRecorder {
             metrics.adaptiveGraphLearning("batch", "failed", 1);
             LOGGER.warn(
                     "adaptive_graph_learning event=failed errorType={}",
+                    exception.getClass().getSimpleName()
+            );
+        }
+    }
+
+    private void recordSemanticMemory(
+            List<QueryChunk> queryChunks,
+            List<RetrievalHit> boundedContext,
+            CitationValidator.CitationValidation validation
+    ) {
+        if (semanticQueryMemory == null
+                || queryChunks == null
+                || queryChunks.isEmpty()) {
+            return;
+        }
+        String question = queryChunks.stream()
+                .filter(chunk -> chunk != null)
+                .filter(chunk -> chunk.origin() == QueryOrigin.ORIGINAL)
+                .filter(chunk -> chunk.index() == 0)
+                .map(QueryChunk::rawText)
+                .filter(value -> value != null && !value.isBlank())
+                .findFirst()
+                .orElseGet(() -> queryChunks.stream()
+                        .filter(chunk -> chunk != null)
+                        .map(QueryChunk::rawText)
+                        .filter(value -> value != null && !value.isBlank())
+                        .findFirst()
+                        .orElse(""));
+        if (question.isBlank()) {
+            return;
+        }
+        try {
+            semanticQueryMemory.recordGrounded(
+                    question,
+                    boundedContext,
+                    validation
+            );
+        } catch (RuntimeException exception) {
+            LOGGER.warn(
+                    "semantic_query_memory event=record_failed errorType={}",
                     exception.getClass().getSimpleName()
             );
         }
