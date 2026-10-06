@@ -31,6 +31,9 @@ public class GenerationVectorAssembler {
 
         for (int index = 0; index < projections.size(); index++) {
             SearchProjection projection = projections.get(index);
+            if (!ChunkRole.isSearchable(projection.metadata())) {
+                continue;
+            }
             String vectorId = VectorIdentity.physicalId(
                     projection.documentId(),
                     generation,
