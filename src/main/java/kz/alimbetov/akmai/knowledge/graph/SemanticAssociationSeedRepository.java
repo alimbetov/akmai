@@ -1,0 +1,203 @@
+package kz.alimbetov.akmai.knowledge.graph;
+
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.TreeSet;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.support.TransactionTemplate;
+
+@Repository
+public class SemanticAssociationSeedRepository {
+
+    private final JdbcTemplate jdbcTemplate;
+    private final TransactionTemplate transactionTemplate;
+
+    public SemanticAssociationSeedRepository(
+            JdbcTemplate jdbcTemplate,
+            TransactionTemplate transactionTemplate
+    ) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.transactionTemplate = transactionTemplate;
+    }
+
+    public void seedSymmetric(
+            ChunkGraphNode left,
+            ChunkGraphNode right,
+            double similarity,
+            int graphVersion,
+            Instant observedAt
+    ) {
+        requirePair(left, right);
+        if (!Double.isFinite(similarity)
+                || similarity < 0
+                || similarity > 1) {
+            throw new IllegalArgumentException(
+                    "similarity must be in [0, 1]"
+            );
+        }
+        if (graphVersion <= 0) {
+            throw new IllegalArgumentException("graphVersion must be positive");
+        }
+        if (observedAt == null) {
+            throw new IllegalArgumentException("observedAt must not be null");
+        }
+
+        ChunkGraphNode first = left.compareTo(right) <= 0 ? left : right;
+        ChunkGraphNode second = first == left ? right : left;
+        TreeSet<ChunkGraphNode> lockOrder = new TreeSet<>();
+        lockOrder.add(first);
+        lockOrder.add(second);
+
+        transactionTemplate.executeWithoutResult(status -> {
+            lockOrder.forEach(this::lockPublishedGeneration);
+            lockOrder.forEach(this::lockNode);
+            upsertDirection(
+                    first,
+                    second,
+                    similarity,
+                    graphVersion,
+                    observedAt
+            );
+            upsertDirection(
+                    second,
+                    first,
+                    similarity,
+                    graphVersion,
+                    observedAt
+            );
+        });
+    }
+
+    private void upsertDirection(
+            ChunkGraphNode source,
+            ChunkGraphNode target,
+            double similarity,
+            int graphVersion,
+            Instant observedAt
+    ) {
+        Timestamp observed = Timestamp.from(observedAt);
+        jdbcTemplate.update(
+                """
+                INSERT INTO knowledge_chunk_association (
+                    access_level,
+                    source_document_id,
+                    source_generation,
+                    source_chunk_id,
+                    target_document_id,
+                    target_generation,
+                    target_chunk_id,
+                    band,
+                    weight,
+                    support_count,
+                    context_count,
+                    citation_count,
+                    query_support_sketch,
+                    distinct_query_support,
+                    graph_version,
+                    first_seen_at,
+                    last_seen_at,
+                    last_reinforced_at,
+                    updated_at
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?, ?,
+                    'CANDIDATE', ?,
+                    0, 0, 0, 0::bit(256), 0, ?, ?, ?, ?, clock_timestamp()
+                )
+                ON CONFLICT (
+                    access_level,
+                    source_document_id,
+                    source_generation,
+                    source_chunk_id,
+                    target_document_id,
+                    target_generation,
+                    target_chunk_id,
+                    graph_version
+                ) DO UPDATE SET
+                    weight = CASE
+                        WHEN knowledge_chunk_association.band = 'CANDIDATE'
+                         AND knowledge_chunk_association.distinct_query_support = 0
+                        THEN greatest(
+                            knowledge_chunk_association.weight,
+                            EXCLUDED.weight
+                        )
+                        ELSE knowledge_chunk_association.weight
+                    END,
+                    last_seen_at = greatest(
+                        knowledge_chunk_association.last_seen_at,
+                        EXCLUDED.last_seen_at
+                    ),
+                    compaction_required = TRUE,
+                    updated_at = clock_timestamp()
+                """,
+                source.accessLevel(),
+                source.documentId(),
+                source.generation(),
+                source.chunkId(),
+                target.documentId(),
+                target.generation(),
+                target.chunkId(),
+                similarity,
+                graphVersion,
+                observed,
+                observed,
+                observed
+        );
+    }
+
+    private void requirePair(ChunkGraphNode left, ChunkGraphNode right) {
+        if (left == null || right == null) {
+            throw new IllegalArgumentException(
+                    "semantic association nodes must not be null"
+            );
+        }
+        if (left.equals(right)) {
+            throw new IllegalArgumentException(
+                    "self semantic association is not allowed"
+            );
+        }
+        if (left.accessLevel() != right.accessLevel()) {
+            throw new IllegalArgumentException(
+                    "cross-ACL semantic association is forbidden"
+            );
+        }
+    }
+
+    private void lockPublishedGeneration(ChunkGraphNode node) {
+        Integer published = jdbcTemplate.query(
+                """
+                SELECT 1
+                FROM knowledge_document_lifecycle
+                WHERE document_id = ?
+                  AND access_level = ?
+                  AND published_generation = ?
+                  AND lifecycle_status = 'READY'
+                  AND retention_status = 'ACTIVE'
+                FOR SHARE
+                """,
+                (rs, rowNum) -> rs.getInt(1),
+                node.documentId(),
+                node.accessLevel(),
+                node.generation()
+        ).stream().findFirst().orElse(null);
+
+        if (published == null) {
+            throw new IllegalStateException(
+                    "semantic linking requires ACTIVE/PUBLISHED generation"
+            );
+        }
+    }
+
+    private void lockNode(ChunkGraphNode node) {
+        jdbcTemplate.query(
+                """
+                SELECT pg_advisory_xact_lock(
+                    hashtextextended(?, 0)
+                )
+                """,
+                rs -> {
+                },
+                "akmai:semantic-memory:node:" + node.lockKey()
+        );
+    }
+}
