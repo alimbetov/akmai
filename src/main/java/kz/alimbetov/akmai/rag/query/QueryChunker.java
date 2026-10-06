@@ -45,6 +45,16 @@ public class QueryChunker {
     }
 
     public List<QueryChunk> chunk(String question) {
+        return chunk(question, QueryOrigin.ORIGINAL);
+    }
+
+    public List<QueryChunk> chunk(
+            String question,
+            QueryOrigin origin
+    ) {
+        QueryOrigin effectiveOrigin = origin == null
+                ? QueryOrigin.ORIGINAL
+                : origin;
         String normalized = normalizer.normalize(question);
         QueryDecompositionResult decomposition =
                 decomposer.decomposeDetailed(normalized);
@@ -60,12 +70,19 @@ public class QueryChunker {
                     result.size(),
                     segment,
                     semantic,
-                    identifiers
+                    identifiers,
+                    effectiveOrigin
             ));
         }
 
         return result.isEmpty()
-                ? List.of(newChunk(0, normalized, normalized, List.of()))
+                ? List.of(newChunk(
+                        0,
+                        normalized,
+                        normalized,
+                        List.of(),
+                        effectiveOrigin
+                ))
                 : List.copyOf(result);
     }
 
@@ -73,10 +90,17 @@ public class QueryChunker {
             int index,
             String text,
             String semantic,
-            List<DetectedIdentifier> identifiers
+            List<DetectedIdentifier> identifiers,
+            QueryOrigin origin
     ) {
         String normalized = normalizer.normalize(text);
-        String idSource = index + "|" + normalized + "|" + semantic;
+        String idSource = origin.name()
+                + "|"
+                + index
+                + "|"
+                + normalized
+                + "|"
+                + semantic;
         return new QueryChunk(
                 UUID.nameUUIDFromBytes(
                         idSource.getBytes(StandardCharsets.UTF_8)
@@ -86,7 +110,8 @@ public class QueryChunker {
                 normalized,
                 semantic.isBlank() ? text : semantic,
                 languageDetector.detect(text),
-                identifiers
+                identifiers,
+                origin
         );
     }
 
