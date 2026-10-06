@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.rag.service;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphCompetitiveAdmission;
 import kz.alimbetov.akmai.knowledge.graph.AdaptiveGraphOnlineExpansion;
@@ -242,7 +243,8 @@ public class RagQuestionService {
         AnswerGroundingVerifier.GroundingValidation grounding =
                 answerGroundingVerifier.verify(
                         validation.answer(),
-                        finalContext
+                        finalContext,
+                        groundingLanguage(queryChunks)
                 );
         adaptiveGraphUtilityRecorder.record(
                 finalContext,
@@ -279,6 +281,41 @@ public class RagQuestionService {
                 .toList();
 
         return new RagResponse(validation.answer(), sources);
+    }
+
+    private String groundingLanguage(List<QueryChunk> queryChunks) {
+        if (queryChunks == null || queryChunks.isEmpty()) {
+            return "unknown";
+        }
+        String selected = null;
+        for (QueryChunk chunk : queryChunks) {
+            if (chunk == null || chunk.language() == null
+                    || chunk.language().isBlank()) {
+                return "unknown";
+            }
+            String language = baseLanguage(chunk.language());
+            if (selected == null) {
+                selected = language;
+            } else if (!selected.equals(language)) {
+                return "unknown";
+            }
+        }
+        return selected == null ? "unknown" : selected;
+    }
+
+    private String baseLanguage(String raw) {
+        String normalized = raw.trim().toLowerCase(Locale.ROOT);
+        int hyphen = normalized.indexOf('-');
+        int underscore = normalized.indexOf('_');
+        int delimiter;
+        if (hyphen < 0) {
+            delimiter = underscore;
+        } else if (underscore < 0) {
+            delimiter = hyphen;
+        } else {
+            delimiter = Math.min(hyphen, underscore);
+        }
+        return delimiter > 0 ? normalized.substring(0, delimiter) : normalized;
     }
 
     private void recordStage(
