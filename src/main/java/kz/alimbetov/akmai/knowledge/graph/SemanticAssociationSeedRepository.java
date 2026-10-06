@@ -21,11 +21,12 @@ public class SemanticAssociationSeedRepository {
         this.transactionTemplate = transactionTemplate;
     }
 
-    public void seedSymmetric(
+    public boolean seedSymmetric(
             ChunkGraphNode left,
             ChunkGraphNode right,
             double similarity,
             int graphVersion,
+            int maxSemanticDegree,
             Instant observedAt
     ) {
         requirePair(left, right);
@@ -39,6 +40,11 @@ public class SemanticAssociationSeedRepository {
         if (graphVersion <= 0) {
             throw new IllegalArgumentException("graphVersion must be positive");
         }
+        if (maxSemanticDegree < 1) {
+            throw new IllegalArgumentException(
+                    "maxSemanticDegree must be positive"
+            );
+        }
         if (observedAt == null) {
             throw new IllegalArgumentException("observedAt must not be null");
         }
@@ -49,9 +55,21 @@ public class SemanticAssociationSeedRepository {
         lockOrder.add(first);
         lockOrder.add(second);
 
-        transactionTemplate.executeWithoutResult(status -> {
+        Boolean seeded = transactionTemplate.execute(status -> {
             lockOrder.forEach(this::lockPublishedGeneration);
             lockOrder.forEach(this::lockNode);
+
+            boolean existing = associationExists(
+                    first,
+                    second,
+                    graphVersion
+            );
+            if (!existing
+                    && (semanticDegree(first, graphVersion) >= maxSemanticDegree
+                    || semanticDegree(second, graphVersion) >= maxSemanticDegree)) {
+                return false;
+            }
+
             upsertDirection(
                     first,
                     second,
@@ -66,7 +84,68 @@ public class SemanticAssociationSeedRepository {
                     graphVersion,
                     observedAt
             );
+            return true;
         });
+        return Boolean.TRUE.equals(seeded);
+    }
+
+    private boolean associationExists(
+            ChunkGraphNode source,
+            ChunkGraphNode target,
+            int graphVersion
+    ) {
+        Boolean exists = jdbcTemplate.queryForObject(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM knowledge_chunk_association
+                    WHERE access_level = ?
+                      AND source_document_id = ?
+                      AND source_generation = ?
+                      AND source_chunk_id = ?
+                      AND target_document_id = ?
+                      AND target_generation = ?
+                      AND target_chunk_id = ?
+                      AND graph_version = ?
+                )
+                """,
+                Boolean.class,
+                source.accessLevel(),
+                source.documentId(),
+                source.generation(),
+                source.chunkId(),
+                target.documentId(),
+                target.generation(),
+                target.chunkId(),
+                graphVersion
+        );
+        return Boolean.TRUE.equals(exists);
+    }
+
+    private int semanticDegree(
+            ChunkGraphNode node,
+            int graphVersion
+    ) {
+        Integer degree = jdbcTemplate.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_chunk_association
+                WHERE access_level = ?
+                  AND source_document_id = ?
+                  AND source_generation = ?
+                  AND source_chunk_id = ?
+                  AND graph_version = ?
+                  AND semantic_similarity IS NOT NULL
+                  AND band <> 'DECAYED'
+                """,
+                Integer.class,
+                node.accessLevel(),
+                node.documentId(),
+                node.generation(),
+                node.chunkId(),
+                graphVersion
+        );
+        return degree == null ? 0 : degree;
     }
 
     private void upsertDirection(
@@ -207,7 +286,7 @@ public class SemanticAssociationSeedRepository {
                 """,
                 rs -> {
                 },
-                "akmai:semantic-memory:node:" + node.lockKey()
+                "akmai:adaptive-graph:node:" + node.lockKey()
         );
     }
 }
