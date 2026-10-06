@@ -223,7 +223,7 @@ final class ChunkBoundarySelector {
 
     private static boolean isIdentifierCodePoint(int codePoint) {
         return Character.isLetterOrDigit(codePoint)
-                || codePoint == '_' || codePoint == '-' || codePoint == '.');
+                || codePoint == '_' || codePoint == '-' || codePoint == '.';
     }
 
     private static boolean hasSeparatorAfterTerminal(
