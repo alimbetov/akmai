@@ -200,12 +200,30 @@ final class ChunkBoundarySelector {
         if (punctuation != ':') {
             return false;
         }
-        if (isNumericSeparator(text, index)) {
+        if (isNumericSeparator(text, index) || isTightLexicalSeparator(text, index)) {
             return true;
         }
         int after = index + Character.charCount(punctuation);
         return after < text.length()
                 && (text.charAt(after) == '/' || text.charAt(after) == '\\');
+    }
+
+    private static boolean isTightLexicalSeparator(String text, int index) {
+        if (index <= 0 || index + 1 >= text.length()) {
+            return false;
+        }
+        int before = text.codePointBefore(index);
+        int afterIndex = index + Character.charCount(text.codePointAt(index));
+        if (afterIndex >= text.length()) {
+            return false;
+        }
+        int after = text.codePointAt(afterIndex);
+        return isIdentifierCodePoint(before) && isIdentifierCodePoint(after);
+    }
+
+    private static boolean isIdentifierCodePoint(int codePoint) {
+        return Character.isLetterOrDigit(codePoint)
+                || codePoint == '_' || codePoint == '-' || codePoint == '.';
     }
 
     private static boolean hasSeparatorAfterTerminal(
