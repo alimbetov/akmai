@@ -36,17 +36,15 @@ CREATE TABLE rag_experience_memory_source (
         FOREIGN KEY (memory_id)
         REFERENCES rag_experience_memory(id)
         ON DELETE CASCADE,
-    CONSTRAINT fk_experience_memory_source_generation
-        FOREIGN KEY (document_id, generation, access_level)
-        REFERENCES knowledge_document_generation(
-            document_id, generation, access_level
-        ),
     CONSTRAINT ck_experience_memory_source_access
         CHECK (access_level > 0),
     CONSTRAINT ck_experience_memory_source_generation
         CHECK (generation > 0)
 );
 
+-- Deliberately no FK from source identity to knowledge_document_generation.
+-- Experience memory must not block retirement/purge of old corpus generations;
+-- read-time generation fencing treats a missing/non-PUBLISHED generation as stale.
 CREATE INDEX ix_experience_memory_scope_profile_time
     ON rag_experience_memory (
         embedding_profile_id,
