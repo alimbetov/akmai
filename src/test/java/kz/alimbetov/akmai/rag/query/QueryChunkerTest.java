@@ -54,21 +54,36 @@ class QueryChunkerTest {
         ).getFirst().language()).isEqualTo("el");
     }
 
-
     @Test
     void preservesOriginalMultiIntentQueryAndAddsBoundedRetrievalSubqueries() {
+        String root = "What dosage applies and what monitoring is required?";
+        var chunks = chunker().chunk(root);
+
+        assertThat(chunks)
+                .extracting(QueryChunk::rawText)
+                .containsExactly(
+                        root,
+                        "What dosage applies",
+                        "what monitoring is required?"
+                );
+        assertThat(chunks)
+                .extracting(QueryChunk::rootQuery)
+                .containsOnly(root);
+        assertThat(chunks).hasSizeLessThanOrEqualTo(QueryDecomposer.MAX_SEGMENTS);
+    }
+
+    @Test
+    void advancedOffBaselineKeepsOnlyOriginalOrigin() {
         var chunks = chunker().chunk(
                 "What dosage applies and what monitoring is required?"
         );
 
         assertThat(chunks)
-                .extracting(QueryChunk::rawText)
-                .containsExactly(
-                        "What dosage applies and what monitoring is required?",
-                        "What dosage applies",
-                        "what monitoring is required?"
-                );
-        assertThat(chunks).hasSizeLessThanOrEqualTo(QueryDecomposer.MAX_SEGMENTS);
+                .extracting(QueryChunk::origin)
+                .containsOnly(QueryOrigin.ORIGINAL);
+        assertThat(chunks)
+                .extracting(QueryChunk::id)
+                .noneMatch(id -> id.startsWith("mq:"));
     }
 
     @Test
