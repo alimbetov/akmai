@@ -92,7 +92,12 @@ public class AssociationLearningRecorder {
             List<RetrievalHit> boundedContext,
             CitationValidator.CitationValidation validation
     ) {
-        recordSemanticMemory(queryChunks, boundedContext, validation);
+        recordSemanticMemory(
+                queryChunks,
+                allowedAccessLevels,
+                boundedContext,
+                validation
+        );
 
         if (!runtimeEnabled(
                 AppParameterKey.ADAPTIVE_GRAPH_LEARNING_ENABLED,
@@ -171,24 +176,27 @@ public class AssociationLearningRecorder {
 
     private void recordSemanticMemory(
             List<QueryChunk> queryChunks,
+            Set<Long> allowedAccessLevels,
             List<RetrievalHit> boundedContext,
             CitationValidator.CitationValidation validation
     ) {
         if (semanticQueryMemory == null
                 || queryChunks == null
-                || queryChunks.isEmpty()) {
+                || queryChunks.isEmpty()
+                || allowedAccessLevels == null
+                || allowedAccessLevels.isEmpty()) {
             return;
         }
         String question = queryChunks.stream()
                 .filter(chunk -> chunk != null)
                 .filter(chunk -> chunk.origin() == QueryOrigin.ORIGINAL)
                 .filter(chunk -> chunk.index() == 0)
-                .map(QueryChunk::rawText)
+                .map(QueryChunk::rootQuery)
                 .filter(value -> value != null && !value.isBlank())
                 .findFirst()
                 .orElseGet(() -> queryChunks.stream()
                         .filter(chunk -> chunk != null)
-                        .map(QueryChunk::rawText)
+                        .map(QueryChunk::rootQuery)
                         .filter(value -> value != null && !value.isBlank())
                         .findFirst()
                         .orElse(""));
@@ -198,6 +206,7 @@ public class AssociationLearningRecorder {
         try {
             semanticQueryMemory.recordGrounded(
                     question,
+                    allowedAccessLevels,
                     boundedContext,
                     validation
             );
