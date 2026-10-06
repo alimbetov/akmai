@@ -106,9 +106,34 @@ public class SemanticQueryMemory {
             List<RetrievalHit> finalContext,
             CitationValidator.CitationValidation validation
     ) {
+        LinkedHashSet<Long> citedScope = new LinkedHashSet<>();
+        if (finalContext != null
+                && validation != null
+                && validation.citedSources() != null) {
+            for (var source : validation.citedSources()) {
+                int index = source.number() - 1;
+                if (index >= 0 && index < finalContext.size()) {
+                    RetrievalHit hit = finalContext.get(index);
+                    if (hit != null && hit.accessLevel() > 0) {
+                        citedScope.add(hit.accessLevel());
+                    }
+                }
+            }
+        }
+        recordGrounded(question, Set.copyOf(citedScope), finalContext, validation);
+    }
+
+    public void recordGrounded(
+            String question,
+            Set<Long> requestAccessLevels,
+            List<RetrievalHit> finalContext,
+            CitationValidator.CitationValidation validation
+    ) {
+        Set<Long> requestScope = normalizeScope(requestAccessLevels);
         if (!properties.queryMemoryEnabled()
                 || question == null
                 || question.isBlank()
+                || requestScope.isEmpty()
                 || finalContext == null
                 || finalContext.isEmpty()
                 || validation == null
@@ -119,7 +144,6 @@ public class SemanticQueryMemory {
             return;
         }
 
-        LinkedHashSet<Long> requiredAccessLevels = new LinkedHashSet<>();
         LinkedHashSet<String> sourceRefs = new LinkedHashSet<>();
         ArrayList<PersistentExperienceMemoryRepository.SourceKey> sourceKeys =
                 new ArrayList<>();
@@ -129,10 +153,10 @@ public class SemanticQueryMemory {
                 continue;
             }
             RetrievalHit hit = finalContext.get(index);
-            if (!hit.hasRoutingIdentity()) {
+            if (!hit.hasRoutingIdentity()
+                    || !requestScope.contains(hit.accessLevel())) {
                 continue;
             }
-            requiredAccessLevels.add(hit.accessLevel());
             if (sourceRefs.size() < MAX_SOURCE_REFS_PER_OBSERVATION) {
                 sourceRefs.add(hit.documentId() + ":" + hit.chunkId());
                 sourceKeys.add(new PersistentExperienceMemoryRepository.SourceKey(
@@ -143,7 +167,7 @@ public class SemanticQueryMemory {
                 ));
             }
         }
-        if (requiredAccessLevels.isEmpty() || sourceKeys.isEmpty()) {
+        if (sourceKeys.isEmpty()) {
             return;
         }
 
@@ -156,7 +180,6 @@ public class SemanticQueryMemory {
             return;
         }
 
-        Set<Long> requiredScope = Set.copyOf(requiredAccessLevels);
         Instant observedAt = Instant.now();
         String normalizedQuestion = normalizeQuestion(question);
         String groundedAnswer = truncate(
@@ -172,7 +195,7 @@ public class SemanticQueryMemory {
 
         recordPersistent(
                 profileId,
-                requiredScope,
+                requestScope,
                 vector,
                 normalizedQuestion,
                 groundedAnswer,
@@ -183,7 +206,7 @@ public class SemanticQueryMemory {
         synchronized (mutationLock) {
             MemoryCluster nearest = clusters.asMap().values().stream()
                     .filter(cluster -> profileId.equals(cluster.embeddingProfileId()))
-                    .filter(cluster -> cluster.requiredAccessLevels().equals(requiredScope))
+                    .filter(cluster -> cluster.requiredAccessLevels().equals(requestScope))
                     .filter(cluster -> cluster.centroid().length == vector.length)
                     .map(cluster -> new ClusterCandidate(
                             cluster,
@@ -202,7 +225,7 @@ public class SemanticQueryMemory {
                         id,
                         profileId,
                         vector.clone(),
-                        requiredScope,
+                        requestScope,
                         1,
                         List.of(observation)
                 ));
@@ -212,7 +235,7 @@ public class SemanticQueryMemory {
             MemoryCluster current = clusters.getIfPresent(nearest.id());
             if (current == null
                     || !profileId.equals(current.embeddingProfileId())
-                    || !current.requiredAccessLevels().equals(requiredScope)
+                    || !current.requiredAccessLevels().equals(requestScope)
                     || current.centroid().length != vector.length) {
                 return;
             }
