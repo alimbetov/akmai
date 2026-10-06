@@ -1,11 +1,8 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,10 +12,11 @@ import org.springframework.stereotype.Component;
  * Deterministic post-generation grounding guard.
  *
  * <p>This verifier is deliberately fail-closed. Every factual sentence must
- * cite context and every numeric claim must be supported by an ordered
- * numeric/quantity sequence in at least one cited chunk. Numeric comparison
- * keeps units attached to values and refuses to guess ambiguous locale
- * separators such as {@code 1,000}. It is not a semantic NLI model.</p>
+ * cite context and every numeric claim must be supported by an ordered typed
+ * quantity/date sequence in at least one cited chunk. Numeric parsing is
+ * locale-aware: answer values use the query language while evidence values
+ * use the source language carried by retrieval metadata. It is not a semantic
+ * NLI model.</p>
  */
 @Component
 public class AnswerGroundingVerifier {
@@ -27,37 +25,26 @@ public class AnswerGroundingVerifier {
             Pattern.compile("\\[SOURCE\\s+(\\d+)]");
     private static final Pattern SENTENCE_BOUNDARY =
             Pattern.compile("\\R+|(?<=[.!?。！？])\\s+|(?<=[。！？])");
-    private static final Pattern QUANTITY = Pattern.compile(
-            "(?<![\\p{L}\\p{N}])([-+]?\\d+(?:[.,]\\d+)?)(?:\\s*([\\p{L}%‰°µμ]+(?:/[\\p{L}]+)?))?"
-    );
 
-    private static final Map<String, String> UNIT_ALIASES = Map.ofEntries(
-            Map.entry("mg", "mg"),
-            Map.entry("мг", "mg"),
-            Map.entry("毫克", "mg"),
-            Map.entry("mcg", "ug"),
-            Map.entry("ug", "ug"),
-            Map.entry("µg", "ug"),
-            Map.entry("μg", "ug"),
-            Map.entry("мкг", "ug"),
-            Map.entry("微克", "ug"),
-            Map.entry("g", "g"),
-            Map.entry("г", "g"),
-            Map.entry("克", "g"),
-            Map.entry("kg", "kg"),
-            Map.entry("кг", "kg"),
-            Map.entry("千克", "kg"),
-            Map.entry("ml", "ml"),
-            Map.entry("мл", "ml"),
-            Map.entry("毫升", "ml"),
-            Map.entry("l", "l"),
-            Map.entry("л", "l"),
-            Map.entry("升", "l")
-    );
+    private final GroundingQuantityParser quantityParser =
+            new GroundingQuantityParser();
 
+    /**
+     * Compatibility overload for callers that do not yet carry query language.
+     * It is conservative: language is inferred only when all cited context uses
+     * one source language, otherwise locale-sensitive forms fail closed.
+     */
     public GroundingValidation verify(
             String answer,
             List<RetrievalHit> context
+    ) {
+        return verify(answer, context, inferSingleContextLanguage(context));
+    }
+
+    public GroundingValidation verify(
+            String answer,
+            List<RetrievalHit> context,
+            String queryLanguage
     ) {
         String input = answer == null ? "" : answer.trim();
         List<RetrievalHit> safeContext =
@@ -90,7 +77,8 @@ public class AnswerGroundingVerifier {
                 continue;
             }
 
-            List<NumericClaim> claimNumbers = numericClaims(claimText);
+            List<GroundingQuantityParser.NumericClaim> claimNumbers =
+                    quantityParser.parse(claimText, queryLanguage);
             if (!claimNumbers.isEmpty()
                     && !supportedByAnyCitation(
                             claimNumbers,
@@ -125,14 +113,14 @@ public class AnswerGroundingVerifier {
     }
 
     private boolean supportedByAnyCitation(
-            List<NumericClaim> claimNumbers,
+            List<GroundingQuantityParser.NumericClaim> claimNumbers,
             Set<Integer> citations,
             List<RetrievalHit> context
     ) {
         for (int citation : citations) {
-            List<NumericClaim> evidence = numericClaims(
-                    context.get(citation - 1).text()
-            );
+            RetrievalHit hit = context.get(citation - 1);
+            List<GroundingQuantityParser.NumericClaim> evidence =
+                    quantityParser.parse(hit.text(), sourceLanguage(hit));
             if (containsOrderedSequence(evidence, claimNumbers)) {
                 return true;
             }
@@ -141,14 +129,14 @@ public class AnswerGroundingVerifier {
     }
 
     private boolean containsOrderedSequence(
-            List<NumericClaim> evidence,
-            List<NumericClaim> claims
+            List<GroundingQuantityParser.NumericClaim> evidence,
+            List<GroundingQuantityParser.NumericClaim> claims
     ) {
         if (claims.isEmpty()) {
             return true;
         }
         int claimIndex = 0;
-        for (NumericClaim candidate : evidence) {
+        for (GroundingQuantityParser.NumericClaim candidate : evidence) {
             if (candidate.matches(claims.get(claimIndex))) {
                 claimIndex++;
                 if (claimIndex == claims.size()) {
@@ -161,7 +149,7 @@ public class AnswerGroundingVerifier {
 
     private boolean hasClaimContent(String value) {
         return value != null && value.codePoints().anyMatch(
-                codePoint -> Character.isLetterOrDigit(codePoint)
+                Character::isLetterOrDigit
         );
     }
 
@@ -181,69 +169,34 @@ public class AnswerGroundingVerifier {
         return Set.copyOf(result);
     }
 
-    private List<NumericClaim> numericClaims(String value) {
-        if (value == null || value.isBlank()) {
-            return List.of();
+    private String inferSingleContextLanguage(List<RetrievalHit> context) {
+        if (context == null || context.isEmpty()) {
+            return "unknown";
         }
-        List<NumericClaim> result = new ArrayList<>();
-        Matcher matcher = QUANTITY.matcher(value);
-        while (matcher.find()) {
-            result.add(new NumericClaim(
-                    normalizeNumber(matcher.group(1)),
-                    normalizeUnit(matcher.group(2))
-            ));
-        }
-        return List.copyOf(result);
-    }
-
-    private String normalizeNumber(String raw) {
-        String value = raw.trim().toLowerCase(Locale.ROOT);
-        int comma = value.indexOf(',');
-        int dot = value.indexOf('.');
-
-        if (comma >= 0 && dot >= 0) {
-            return "ambiguous:" + value;
-        }
-
-        int separator = comma >= 0 ? comma : dot;
-        if (separator >= 0) {
-            int fractionalDigits = value.length() - separator - 1;
-            String integerPart = value.substring(
-                    value.startsWith("+") || value.startsWith("-") ? 1 : 0,
-                    separator
-            );
-            if (fractionalDigits == 3
-                    && !integerPart.isEmpty()
-                    && !integerPart.chars().allMatch(ch -> ch == '0')) {
-                // A single separator followed by three digits is locale
-                // ambiguous (1,000 may mean one thousand or one decimal).
-                // Preserve it lexically instead of guessing.
-                return "ambiguous:" + value;
+        String candidate = null;
+        for (RetrievalHit hit : context) {
+            String language = sourceLanguage(hit);
+            if (language == null || language.isBlank()
+                    || "unknown".equalsIgnoreCase(language)) {
+                return "unknown";
             }
-            value = value.replace(',', '.');
+            if (candidate == null) {
+                candidate = language;
+            } else if (!candidate.equalsIgnoreCase(language)) {
+                return "unknown";
+            }
         }
-
-        try {
-            return new BigDecimal(value)
-                    .stripTrailingZeros()
-                    .toPlainString();
-        } catch (NumberFormatException exception) {
-            return "invalid:" + raw;
-        }
+        return candidate == null ? "unknown" : candidate;
     }
 
-    private String normalizeUnit(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return "";
+    private String sourceLanguage(RetrievalHit hit) {
+        if (hit == null || hit.metadata() == null) {
+            return "unknown";
         }
-        String unit = raw.trim().toLowerCase(Locale.ROOT);
-        return UNIT_ALIASES.getOrDefault(unit, unit);
-    }
-
-    private record NumericClaim(String value, String unit) {
-        private boolean matches(NumericClaim other) {
-            return value.equals(other.value) && unit.equals(other.unit);
-        }
+        Object value = hit.metadata().get("language");
+        return value instanceof String language && !language.isBlank()
+                ? language
+                : "unknown";
     }
 
     public enum ClaimStatus {
