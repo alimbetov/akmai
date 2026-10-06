@@ -74,13 +74,8 @@ public class SemanticQueryMemory {
             return List.of();
         }
 
-        List<MemoryMatch> persistent = persistentMatches(
-                profileId,
-                scope,
-                queryVector
-        );
-        if (!persistent.isEmpty()) {
-            return persistent;
+        if (persistentRepository != null) {
+            return persistentMatches(profileId, scope, queryVector);
         }
 
         return clusters.asMap().values().stream()
@@ -246,9 +241,6 @@ public class SemanticQueryMemory {
             Set<Long> scope,
             float[] queryVector
     ) {
-        if (persistentRepository == null) {
-            return List.of();
-        }
         try {
             return persistentRepository.find(
                             profileId,
