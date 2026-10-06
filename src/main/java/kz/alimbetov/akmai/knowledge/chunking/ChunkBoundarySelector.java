@@ -57,8 +57,15 @@ final class ChunkBoundarySelector {
                 if (safe != index || safe <= 0 || safe >= text.length()) {
                     continue;
                 }
-                if (rank(text, safe, language) == expectedRank) {
-                    return safe;
+                int boundary = safe;
+                if (boundary > 0 && (text.charAt(boundary) == '\n' || text.charAt(boundary) == '\r')) {
+                    boundary++;
+                }
+                if (boundary <= 0 || boundary >= text.length()) {
+                    continue;
+                }
+                if (rank(text, boundary, language) == expectedRank) {
+                    return boundary;
                 }
             }
         }
