@@ -157,6 +157,7 @@ public class ParentContextExpansion {
         metadata.put("chunkIndex", parent.chunkIndex());
         metadata.put("generation", parent.generation());
         metadata.put("accessLevel", parent.accessLevel());
+        copySeedMetadata(seed, metadata, "authorityTier");
         metadata.put(ChunkRole.METADATA_KEY, ChunkRole.PARENT.name());
         metadata.put(EXPANSION_KEY, true);
         metadata.put(MATCHED_CHILD_KEY, seed.chunkId());
@@ -172,6 +173,20 @@ public class ParentContextExpansion {
                 seed.evidence(),
                 seed.fusedScore()
         );
+    }
+
+    private void copySeedMetadata(
+            RetrievalHit seed,
+            Map<String, Object> target,
+            String key
+    ) {
+        if (seed == null || seed.metadata() == null) {
+            return;
+        }
+        Object value = seed.metadata().get(key);
+        if (value != null) {
+            target.put(key, value);
+        }
     }
 
     private String parentChunkId(RetrievalHit hit) {
