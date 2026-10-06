@@ -31,6 +31,7 @@ import org.springframework.context.annotation.Configuration;
     RetentionEconomicsProperties.class,
     AdaptiveGraphProperties.class,
     AdaptiveGraphCompetitionProperties.class,
+    SemanticMemoryProperties.class,
     AppParameterProperties.class
 })
 public class AkmaiConfiguration {
