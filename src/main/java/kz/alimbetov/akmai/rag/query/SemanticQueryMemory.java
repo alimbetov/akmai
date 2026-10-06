@@ -14,6 +14,7 @@ import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +29,8 @@ public class SemanticQueryMemory {
     private final EmbeddingProfileService profileService;
     private final AdvancedRetrievalProperties properties;
     private final Cache<String, MemoryCluster> clusters;
+    private final Object mutationLock = new Object();
+    private PersistentExperienceMemoryRepository persistentRepository;
 
     public SemanticQueryMemory(
             @Qualifier("retrievalEmbeddingModel") EmbeddingModel embeddingModel,
@@ -40,6 +43,13 @@ public class SemanticQueryMemory {
         this.clusters = Caffeine.newBuilder()
                 .maximumSize(properties.queryMemoryMaxEntries())
                 .build();
+    }
+
+    @Autowired(required = false)
+    void setPersistentRepository(
+            PersistentExperienceMemoryRepository persistentRepository
+    ) {
+        this.persistentRepository = persistentRepository;
     }
 
     public List<MemoryMatch> find(
@@ -64,9 +74,18 @@ public class SemanticQueryMemory {
             return List.of();
         }
 
+        List<MemoryMatch> persistent = persistentMatches(
+                profileId,
+                scope,
+                queryVector
+        );
+        if (!persistent.isEmpty()) {
+            return persistent;
+        }
+
         return clusters.asMap().values().stream()
                 .filter(cluster -> profileId.equals(cluster.embeddingProfileId()))
-                .filter(cluster -> scope.containsAll(cluster.requiredAccessLevels()))
+                .filter(cluster -> scope.equals(cluster.requiredAccessLevels()))
                 .map(cluster -> new MemoryMatch(
                         cluster.id(),
                         cosine(queryVector, cluster.centroid()),
@@ -107,18 +126,29 @@ public class SemanticQueryMemory {
 
         LinkedHashSet<Long> requiredAccessLevels = new LinkedHashSet<>();
         LinkedHashSet<String> sourceRefs = new LinkedHashSet<>();
+        ArrayList<PersistentExperienceMemoryRepository.SourceKey> sourceKeys =
+                new ArrayList<>();
         for (var source : validation.citedSources()) {
             int index = source.number() - 1;
             if (index < 0 || index >= finalContext.size()) {
                 continue;
             }
             RetrievalHit hit = finalContext.get(index);
+            if (!hit.hasRoutingIdentity()) {
+                continue;
+            }
             requiredAccessLevels.add(hit.accessLevel());
             if (sourceRefs.size() < MAX_SOURCE_REFS_PER_OBSERVATION) {
                 sourceRefs.add(hit.documentId() + ":" + hit.chunkId());
+                sourceKeys.add(new PersistentExperienceMemoryRepository.SourceKey(
+                        hit.accessLevel(),
+                        hit.documentId(),
+                        hit.generation(),
+                        hit.chunkId()
+                ));
             }
         }
-        if (requiredAccessLevels.isEmpty()) {
+        if (requiredAccessLevels.isEmpty() || sourceKeys.isEmpty()) {
             return;
         }
 
@@ -132,46 +162,64 @@ public class SemanticQueryMemory {
         }
 
         Set<Long> requiredScope = Set.copyOf(requiredAccessLevels);
+        Instant observedAt = Instant.now();
+        String normalizedQuestion = normalizeQuestion(question);
+        String groundedAnswer = truncate(
+                validation.answer(),
+                properties.queryMemoryAnswerMaxChars()
+        );
         MemoryObservation observation = new MemoryObservation(
-                normalizeQuestion(question),
-                truncate(validation.answer(), properties.queryMemoryAnswerMaxChars()),
+                normalizedQuestion,
+                groundedAnswer,
                 List.copyOf(sourceRefs),
-                Instant.now()
+                observedAt
         );
 
-        MemoryCluster nearest = clusters.asMap().values().stream()
-                .filter(cluster -> profileId.equals(cluster.embeddingProfileId()))
-                .filter(cluster -> cluster.requiredAccessLevels().equals(requiredScope))
-                .filter(cluster -> cluster.centroid().length == vector.length)
-                .map(cluster -> new ClusterCandidate(
-                        cluster,
-                        cosine(vector, cluster.centroid())
-                ))
-                .filter(candidate -> Double.isFinite(candidate.similarity()))
-                .filter(candidate -> candidate.similarity()
-                        >= properties.queryMemorySimilarityThreshold())
-                .max(Comparator.comparingDouble(ClusterCandidate::similarity))
-                .map(ClusterCandidate::cluster)
-                .orElse(null);
+        recordPersistent(
+                profileId,
+                requiredScope,
+                vector,
+                normalizedQuestion,
+                groundedAnswer,
+                List.copyOf(sourceKeys),
+                observedAt
+        );
 
-        if (nearest == null) {
-            String id = UUID.randomUUID().toString();
-            clusters.put(id, new MemoryCluster(
-                    id,
-                    profileId,
-                    vector.clone(),
-                    requiredScope,
-                    1,
-                    List.of(observation)
-            ));
-            return;
-        }
+        synchronized (mutationLock) {
+            MemoryCluster nearest = clusters.asMap().values().stream()
+                    .filter(cluster -> profileId.equals(cluster.embeddingProfileId()))
+                    .filter(cluster -> cluster.requiredAccessLevels().equals(requiredScope))
+                    .filter(cluster -> cluster.centroid().length == vector.length)
+                    .map(cluster -> new ClusterCandidate(
+                            cluster,
+                            cosine(vector, cluster.centroid())
+                    ))
+                    .filter(candidate -> Double.isFinite(candidate.similarity()))
+                    .filter(candidate -> candidate.similarity()
+                            >= properties.queryMemorySimilarityThreshold())
+                    .max(Comparator.comparingDouble(ClusterCandidate::similarity))
+                    .map(ClusterCandidate::cluster)
+                    .orElse(null);
 
-        clusters.asMap().computeIfPresent(nearest.id(), (id, current) -> {
-            if (!profileId.equals(current.embeddingProfileId())
+            if (nearest == null) {
+                String id = UUID.randomUUID().toString();
+                clusters.put(id, new MemoryCluster(
+                        id,
+                        profileId,
+                        vector.clone(),
+                        requiredScope,
+                        1,
+                        List.of(observation)
+                ));
+                return;
+            }
+
+            MemoryCluster current = clusters.getIfPresent(nearest.id());
+            if (current == null
+                    || !profileId.equals(current.embeddingProfileId())
                     || !current.requiredAccessLevels().equals(requiredScope)
                     || current.centroid().length != vector.length) {
-                return current;
+                return;
             }
             int weight = Math.min(current.observationCount(), MAX_CENTROID_WEIGHT);
             float[] centroid = mergeCentroid(current.centroid(), vector, weight);
@@ -182,15 +230,79 @@ public class SemanticQueryMemory {
                         observations.subList(0, MAX_OBSERVATIONS_PER_CLUSTER)
                 );
             }
-            return new MemoryCluster(
-                    id,
+            clusters.put(nearest.id(), new MemoryCluster(
+                    nearest.id(),
                     current.embeddingProfileId(),
                     centroid,
                     current.requiredAccessLevels(),
                     current.observationCount() + 1,
                     List.copyOf(observations)
+            ));
+        }
+    }
+
+    private List<MemoryMatch> persistentMatches(
+            String profileId,
+            Set<Long> scope,
+            float[] queryVector
+    ) {
+        if (persistentRepository == null) {
+            return List.of();
+        }
+        try {
+            return persistentRepository.find(
+                            profileId,
+                            scope,
+                            queryVector,
+                            properties.queryMemorySimilarityThreshold(),
+                            properties.queryMemoryMatches()
+                    ).stream()
+                    .map(entry -> new MemoryMatch(
+                            "pg:" + entry.id(),
+                            entry.similarity(),
+                            1,
+                            List.of(new MemoryObservation(
+                                    entry.normalizedQuestion(),
+                                    entry.groundedAnswer(),
+                                    entry.sources().stream()
+                                            .map(source -> source.documentId()
+                                                    + ":" + source.chunkId())
+                                            .toList(),
+                                    entry.observedAt()
+                            ))
+                    ))
+                    .toList();
+        } catch (RuntimeException exception) {
+            return List.of();
+        }
+    }
+
+    private void recordPersistent(
+            String profileId,
+            Set<Long> scope,
+            float[] vector,
+            String normalizedQuestion,
+            String groundedAnswer,
+            List<PersistentExperienceMemoryRepository.SourceKey> sourceKeys,
+            Instant observedAt
+    ) {
+        if (persistentRepository == null) {
+            return;
+        }
+        try {
+            persistentRepository.record(
+                    profileId,
+                    scope,
+                    vector,
+                    normalizedQuestion,
+                    groundedAnswer,
+                    sourceKeys,
+                    observedAt
             );
-        });
+        } catch (RuntimeException exception) {
+            // Experience memory is an optimization. Retrieval must remain available
+            // if persistence is temporarily unavailable.
+        }
     }
 
     private String activeProfileId() {
