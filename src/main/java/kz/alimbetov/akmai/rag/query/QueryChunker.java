@@ -148,13 +148,10 @@ public class QueryChunker {
             QueryOrigin origin
     ) {
         String normalized = normalizer.normalize(text);
-        String idSource = origin.name()
-                + "|"
-                + index
-                + "|"
-                + normalized
-                + "|"
-                + semantic;
+        String baseIdSource = index + "|" + normalized + "|" + semantic;
+        String idSource = origin == QueryOrigin.ORIGINAL
+                ? baseIdSource
+                : origin.name() + "|" + baseIdSource;
         return new QueryChunk(
                 UUID.nameUUIDFromBytes(
                         idSource.getBytes(StandardCharsets.UTF_8)
