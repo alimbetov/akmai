@@ -117,7 +117,7 @@ class RagAssertionsFoundationTest {
                 "Title",
                 "Section",
                 "en",
-                KnowledgeDomain.TECHNICAL,
+                KnowledgeDomain.GENERAL,
                 List.of(),
                 Map.of("language", "en")
         );
