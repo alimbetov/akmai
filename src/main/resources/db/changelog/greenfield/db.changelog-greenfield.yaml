@@ -28,4 +28,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/greenfield/014-reembedding-ha-lease.sql
   - include:
-      file: db/changelog/greenfield/015-experience-memory.sql
+      file: db/changelog/greenfield/015-self-organizing-semantic-memory.sql
+  - include:
+      file: db/changelog/greenfield/016-experience-memory.sql
