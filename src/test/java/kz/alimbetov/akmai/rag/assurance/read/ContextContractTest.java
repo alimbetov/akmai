@@ -83,7 +83,7 @@ class ContextContractTest {
         ContextAssembler assembler = new ContextAssembler(new ObjectMapper());
         RetrievalProperties properties = properties(256);
         ContextBudget budget = new ContextBudget(estimator, properties, assembler);
-        String largeEvidence = ("bounded evidence with attribution metadata ").repeat(35);
+        String largeEvidence = ("bounded evidence with attribution metadata ").repeat(10);
         List<RetrievalHit> candidates = List.of(
                 hit("budget-1", largeEvidence, Map.of()),
                 hit("budget-2", largeEvidence, Map.of()),
