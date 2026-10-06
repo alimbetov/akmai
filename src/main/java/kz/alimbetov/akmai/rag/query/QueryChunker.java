@@ -88,6 +88,7 @@ public class QueryChunker {
         QueryOrigin effectiveOrigin = origin == null
                 ? QueryOrigin.ORIGINAL
                 : origin;
+        String rootQuery = question == null ? "" : question.trim();
         String normalized = normalizer.normalize(question);
         QueryDecompositionResult decomposition =
                 decomposer.decomposeDetailed(normalized);
@@ -104,7 +105,8 @@ public class QueryChunker {
                     segment,
                     semantic,
                     identifiers,
-                    effectiveOrigin
+                    effectiveOrigin,
+                    rootQuery
             ));
         }
 
@@ -114,7 +116,8 @@ public class QueryChunker {
                         normalized,
                         normalized,
                         List.of(),
-                        effectiveOrigin
+                        effectiveOrigin,
+                        rootQuery
                 ))
                 : List.copyOf(result);
     }
@@ -145,7 +148,8 @@ public class QueryChunker {
             String text,
             String semantic,
             List<DetectedIdentifier> identifiers,
-            QueryOrigin origin
+            QueryOrigin origin,
+            String rootQuery
     ) {
         String normalized = normalizer.normalize(text);
         String baseIdSource = index + "|" + normalized + "|" + semantic;
@@ -162,7 +166,8 @@ public class QueryChunker {
                 semantic.isBlank() ? text : semantic,
                 languageDetector.detect(text),
                 identifiers,
-                origin
+                origin,
+                rootQuery
         );
     }
 
