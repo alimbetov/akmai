@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResponse;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
+import kz.alimbetov.akmai.knowledge.graph.IngestionSemanticLinker;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyContext;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyRepository;
 import kz.alimbetov.akmai.knowledge.identifier.DocumentIdentifier;
@@ -17,6 +18,9 @@ import kz.alimbetov.akmai.knowledge.projection.SearchProjectionRepository;
 import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository.VectorRow;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -24,6 +28,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class GenerationPublicationService {
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(GenerationPublicationService.class);
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
@@ -34,6 +41,7 @@ public class GenerationPublicationService {
     private final PostgresGenerationVectorRepository vectorRepository;
     private final IngestionIdempotencyRepository idempotencyRepository;
     private final PublicationOutcomeResolver outcomeResolver;
+    private IngestionSemanticLinker semanticLinker;
 
     public GenerationPublicationService(
             JdbcTemplate jdbcTemplate,
@@ -56,6 +64,11 @@ public class GenerationPublicationService {
         this.vectorRepository = vectorRepository;
         this.idempotencyRepository = idempotencyRepository;
         this.outcomeResolver = outcomeResolver;
+    }
+
+    @Autowired(required = false)
+    void setSemanticLinker(IngestionSemanticLinker semanticLinker) {
+        this.semanticLinker = semanticLinker;
     }
 
     public PublicationResult publish(
@@ -118,6 +131,13 @@ public class GenerationPublicationService {
                         "Publication transaction returned no result"
                 );
             }
+            linkAfterCommit(
+                    result,
+                    documentId,
+                    generation,
+                    projections,
+                    vectors
+            );
             return result;
         } catch (RuntimeException exception) {
             PublicationOutcomeResolver.Outcome outcome =
@@ -127,12 +147,65 @@ public class GenerationPublicationService {
                             idempotency
                     );
             if (outcome == PublicationOutcomeResolver.Outcome.COMMITTED) {
+                linkAfterCommit(
+                        PublicationResult.PUBLISHED,
+                        documentId,
+                        generation,
+                        projections,
+                        vectors
+                );
                 return PublicationResult.PUBLISHED;
             }
             if (outcome == PublicationOutcomeResolver.Outcome.SUPERSEDED) {
                 return PublicationResult.SUPERSEDED;
             }
             throw exception;
+        }
+    }
+
+    private void linkAfterCommit(
+            PublicationResult result,
+            String documentId,
+            long generation,
+            List<SearchProjection> projections,
+            List<VectorRow> vectors
+    ) {
+        if (semanticLinker == null
+                || (result != PublicationResult.PUBLISHED
+                && result != PublicationResult.ALREADY_PUBLISHED)
+                || projections == null
+                || projections.isEmpty()
+                || vectors == null
+                || vectors.isEmpty()) {
+            return;
+        }
+
+        try {
+            long accessLevel = projections.getFirst().accessLevel();
+            boolean mixedAccess = projections.stream()
+                    .anyMatch(projection ->
+                            projection.accessLevel() != accessLevel
+                    );
+            if (mixedAccess || accessLevel <= 0) {
+                throw new IllegalStateException(
+                        "Published generation has inconsistent access level"
+                );
+            }
+            semanticLinker.linkPublishedGeneration(
+                    new GenerationIdentity(
+                            documentId,
+                            generation,
+                            accessLevel
+                    ),
+                    vectors
+            );
+        } catch (RuntimeException exception) {
+            LOGGER.warn(
+                    "semantic_memory_linking event=post_publication_failed documentId={} generation={} errorType={}",
+                    documentId,
+                    generation,
+                    exception.getClass().getSimpleName()
+            );
         }
     }
 
