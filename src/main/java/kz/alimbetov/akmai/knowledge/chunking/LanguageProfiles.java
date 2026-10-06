@@ -8,12 +8,20 @@ import kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage;
 /** Central registry for all supported multilingual chunk-boundary profiles. */
 public final class LanguageProfiles {
 
-    private static final Set<Character> COMMON_TERMINALS =
-            Set.of('.', '!', '?', '。', '！', '？', '…', ';');
-    private static final Set<Character> COMMON_CLAUSES =
-            Set.of(';', ':', '；', '：', '—');
-    private static final Set<Character> COMMON_WEAK = Set.of(',', '，');
-    private static final Set<Character> ZH_WEAK = Set.of(',', '，', '、');
+    private static final Set<Character> LATIN_TERMINALS =
+            Set.of('.', '!', '?', '…');
+    private static final Set<Character> CJK_TERMINALS =
+            union(LATIN_TERMINALS, Set.of('。', '！', '？'));
+    private static final Set<Character> GREEK_TERMINALS =
+            union(LATIN_TERMINALS, Set.of(';', ';'));
+
+    private static final Set<Character> COMMON_CLAUSES = Set.of(';', ':', '—');
+    private static final Set<Character> CJK_CLAUSES =
+            union(COMMON_CLAUSES, Set.of('；', '：'));
+    private static final Set<Character> GREEK_CLAUSES = Set.of(':', '·', '—');
+
+    private static final Set<Character> COMMON_WEAK = Set.of(',');
+    private static final Set<Character> CJK_WEAK = Set.of(',', '，', '、');
 
     private static final Map<KnowledgeLanguage, LanguageProfile> PROFILES =
             buildProfiles();
@@ -164,8 +172,8 @@ public final class LanguageProfiles {
                 profiles,
                 KnowledgeLanguage.EL,
                 Set.of("δρ.", "κ.", "κα.", "αρ.", "άρθρ."),
-                union(COMMON_TERMINALS, Set.of(';')),
-                COMMON_CLAUSES,
+                GREEK_TERMINALS,
+                GREEK_CLAUSES,
                 COMMON_WEAK,
                 Set.of(
                         "άρθρο", "κεφάλαιο", "ενότητα", "παράγραφος",
@@ -177,9 +185,9 @@ public final class LanguageProfiles {
                 profiles,
                 KnowledgeLanguage.ZH,
                 Set.of(),
-                COMMON_TERMINALS,
-                COMMON_CLAUSES,
-                ZH_WEAK,
+                CJK_TERMINALS,
+                CJK_CLAUSES,
+                CJK_WEAK,
                 Set.of("章", "条", "节", "款", "项", "附录"),
                 false
         );
@@ -187,7 +195,7 @@ public final class LanguageProfiles {
                 profiles,
                 KnowledgeLanguage.UNKNOWN,
                 Set.of(),
-                COMMON_TERMINALS,
+                LATIN_TERMINALS,
                 COMMON_CLAUSES,
                 COMMON_WEAK,
                 Set.of(),
@@ -208,7 +216,7 @@ public final class LanguageProfiles {
                 profiles,
                 language,
                 abbreviations,
-                COMMON_TERMINALS,
+                LATIN_TERMINALS,
                 COMMON_CLAUSES,
                 COMMON_WEAK,
                 structuralKeywords,
