@@ -59,6 +59,20 @@ public class RetrievalObserver {
         ).increment(count);
     }
 
+    public void attributionRequest(
+            RetrievalAttributionStage stage,
+            RetrievalType type
+    ) {
+        if (stage == null || type == null) {
+            return;
+        }
+        meterRegistry.counter(
+                "akmai.retrieval.attribution.requests",
+                "stage", stage.name(),
+                "strategy", type.name()
+        ).increment();
+    }
+
     public void plannerLane(
             String mode,
             RetrievalType type,
