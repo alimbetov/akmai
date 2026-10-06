@@ -52,7 +52,7 @@ final class ChunkBoundarySelector {
         for (int expectedRank = RANK_STRUCTURAL;
                 expectedRank >= RANK_WHITESPACE;
                 expectedRank--) {
-            for (int index = max; index >= min; index--) {
+            for (int index = min; index <= max; index++) {
                 int safe = safeBoundary(text, index);
                 if (safe != index || safe <= 0 || safe >= text.length()) {
                     continue;
