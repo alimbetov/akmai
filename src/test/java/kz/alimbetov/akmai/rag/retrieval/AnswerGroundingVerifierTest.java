@@ -123,10 +123,11 @@ class AnswerGroundingVerifierTest {
     }
 
     @Test
-    void acceptsUnambiguousCommaAndDotDecimalEquivalence() {
+    void acceptsUnambiguousCrossLocaleDecimalEquivalence() {
         var result = verifier.verify(
                 "Use 0,5 mg [SOURCE 1].",
-                List.of(hit("Use 0.5 mg."))
+                List.of(hit("Use 0.5 mg.")),
+                "ru"
         );
 
         assertThat(result.grounded()).isTrue();
