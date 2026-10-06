@@ -154,11 +154,29 @@ class AnswerGroundingVerifierC07C08Test {
     void acceptsEquivalentFinancialMinimumAcrossLocales() {
         var result = verifier.verify(
                 "Minimum capital is €1,500.00 [SOURCE 1].",
-                List.of(hit("Mindestens 1.500,00 € Kapital sind erforderlich.", "de")),
+                List.of(hit(
+                        "Mindestens 1.500,00 € Kapital sind erforderlich.",
+                        "de"
+                )),
                 "en"
         );
 
         assertThat(result.grounded()).isTrue();
+    }
+
+    @Test
+    void thresholdMarkerAppliesOnlyToNextNumericOccurrence() {
+        var claims = new GroundingQuantityParser().parse(
+                "Minimum capital is $1,000 and fee is $20.",
+                "en"
+        );
+
+        assertThat(claims)
+                .extracting(GroundingQuantityParser.NumericClaim::role)
+                .containsExactly(
+                        GroundingQuantityParser.SemanticRole.MINIMUM,
+                        GroundingQuantityParser.SemanticRole.MONEY
+                );
     }
 
     static Stream<Arguments> productionLocaleFormats() {
