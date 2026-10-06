@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticConceptMatch;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticMatchMode;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalysis;
@@ -25,20 +27,7 @@ class AdaptiveRetrievalPlannerTest {
     void exactConceptShadowOmitsRedundantLexicalLane() {
         QueryChunk chunk = query("capital adequacy ratio");
         when(analyzer.analyze(chunk.semanticText()))
-                .thenReturn(new SemanticQueryAnalysis(
-                        "en",
-                        "en",
-                        1.0,
-                        List.of("finance_banking"),
-                        List.of(new SemanticConceptMatch(
-                                "finance_banking.risk_capital.capital_adequacy_ratio",
-                                "finance_banking",
-                                "risk_capital",
-                                "capital adequacy ratio",
-                                3.0,
-                                SemanticMatchMode.EXACT
-                        ))
-                ));
+                .thenReturn(exactConceptAnalysis());
         AdaptiveRetrievalPlanner subject = new AdaptiveRetrievalPlanner(
                 analyzer,
                 new AdaptiveRetrievalProperties(true, 0.65, 0.95)
@@ -97,6 +86,86 @@ class AdaptiveRetrievalPlannerTest {
     }
 
     @Test
+    void enforcementPrunesOnlyConfidentlyRedundantLaneAndNormalizesDependencies() {
+        QueryChunk chunk = query("capital adequacy ratio");
+        when(analyzer.analyze(chunk.semanticText()))
+                .thenReturn(exactConceptAnalysis());
+        AdaptiveRetrievalPlanner subject = new AdaptiveRetrievalPlanner(
+                analyzer,
+                new AdaptiveRetrievalProperties(true, false, 0.65, 0.95)
+        );
+        RetrievalPlan baseline = new RetrievalPlanner().plan(List.of(chunk));
+
+        RetrievalPlan enforced = subject.enforce(List.of(chunk), baseline);
+
+        assertThat(types(enforced)).containsExactlyInAnyOrder(
+                RetrievalType.VECTOR,
+                RetrievalType.CONCEPT,
+                RetrievalType.REFERENCE
+        );
+        RetrievalStep reference = enforced.steps().stream()
+                .filter(step -> step.type() == RetrievalType.REFERENCE)
+                .findFirst()
+                .orElseThrow();
+        Set<String> keptIds = enforced.steps().stream()
+                .map(RetrievalStep::id)
+                .collect(Collectors.toSet());
+        assertThat(reference.dependsOn())
+                .hasSize(2)
+                .allMatch(keptIds::contains);
+    }
+
+    @Test
+    void enforcementPreservesFullBaselineWhenSemanticAnalysisFails() {
+        QueryChunk chunk = query("capital adequacy ratio");
+        when(analyzer.analyze(chunk.semanticText()))
+                .thenThrow(new IllegalStateException("semantic analyzer unavailable"));
+        AdaptiveRetrievalPlanner subject = new AdaptiveRetrievalPlanner(
+                analyzer,
+                new AdaptiveRetrievalProperties(true, false, 0.65, 0.95)
+        );
+        RetrievalPlan baseline = new RetrievalPlanner().plan(List.of(chunk));
+
+        RetrievalPlan enforced = subject.enforce(List.of(chunk), baseline);
+
+        assertThat(enforced).isSameAs(baseline);
+        assertThat(types(enforced)).containsExactlyInAnyOrder(
+                RetrievalType.VECTOR,
+                RetrievalType.LEXICAL,
+                RetrievalType.CONCEPT,
+                RetrievalType.REFERENCE
+        );
+    }
+
+    @Test
+    void enforcementPreservesBaselineForChunkWithoutSemanticText() {
+        QueryChunk chunk = new QueryChunk(
+                "q1",
+                0,
+                "raw",
+                "normalized",
+                "",
+                "en",
+                List.of()
+        );
+        AdaptiveRetrievalPlanner subject = new AdaptiveRetrievalPlanner(
+                analyzer,
+                new AdaptiveRetrievalProperties(true, false, 0.65, 0.95)
+        );
+        RetrievalPlan baseline = new RetrievalPlanner().plan(List.of(chunk));
+
+        RetrievalPlan enforced = subject.enforce(List.of(chunk), baseline);
+
+        assertThat(enforced).isSameAs(baseline);
+        assertThat(types(enforced)).containsExactlyInAnyOrder(
+                RetrievalType.VECTOR,
+                RetrievalType.LEXICAL,
+                RetrievalType.CONCEPT,
+                RetrievalType.REFERENCE
+        );
+    }
+
+    @Test
     void disabledShadowDoesNotAnalyzeQuery() {
         AdaptiveRetrievalPlanner subject = new AdaptiveRetrievalPlanner(
                 analyzer,
@@ -108,6 +177,29 @@ class AdaptiveRetrievalPlannerTest {
                 List.of(chunk),
                 new RetrievalPlanner().plan(List.of(chunk))
         ).enabled()).isFalse();
+    }
+
+    private Set<RetrievalType> types(RetrievalPlan plan) {
+        return plan.steps().stream()
+                .map(RetrievalStep::type)
+                .collect(Collectors.toSet());
+    }
+
+    private SemanticQueryAnalysis exactConceptAnalysis() {
+        return new SemanticQueryAnalysis(
+                "en",
+                "en",
+                1.0,
+                List.of("finance_banking"),
+                List.of(new SemanticConceptMatch(
+                        "finance_banking.risk_capital.capital_adequacy_ratio",
+                        "finance_banking",
+                        "risk_capital",
+                        "capital adequacy ratio",
+                        3.0,
+                        SemanticMatchMode.EXACT
+                ))
+        );
     }
 
     private QueryChunk query(String text) {

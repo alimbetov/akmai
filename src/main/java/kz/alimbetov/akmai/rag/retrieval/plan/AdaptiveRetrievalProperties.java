@@ -9,10 +9,24 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties("akmai.retrieval.adaptive-planner")
 public record AdaptiveRetrievalProperties(
+        @DefaultValue("false") boolean enabled,
         @DefaultValue("false") boolean shadowEnabled,
         @DefaultValue("0.65") @DecimalMin("0.0") @DecimalMax("1.0") double conceptConfidenceThreshold,
         @DefaultValue("0.95") @DecimalMin("0.0") @DecimalMax("1.0") double exactConceptConfidenceThreshold
 ) {
+    public AdaptiveRetrievalProperties(
+            boolean shadowEnabled,
+            double conceptConfidenceThreshold,
+            double exactConceptConfidenceThreshold
+    ) {
+        this(
+                false,
+                shadowEnabled,
+                conceptConfidenceThreshold,
+                exactConceptConfidenceThreshold
+        );
+    }
+
     public AdaptiveRetrievalProperties {
         if (exactConceptConfidenceThreshold < conceptConfidenceThreshold) {
             throw new IllegalArgumentException(
@@ -22,6 +36,6 @@ public record AdaptiveRetrievalProperties(
     }
 
     public static AdaptiveRetrievalProperties defaults() {
-        return new AdaptiveRetrievalProperties(false, 0.65, 0.95);
+        return new AdaptiveRetrievalProperties(false, false, 0.65, 0.95);
     }
 }

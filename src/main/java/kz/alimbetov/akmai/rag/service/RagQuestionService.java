@@ -14,7 +14,9 @@ import kz.alimbetov.akmai.rag.query.QueryChunker;
 import kz.alimbetov.akmai.rag.retrieval.AnswerGroundingVerifier;
 import kz.alimbetov.akmai.rag.retrieval.ContextAssembler;
 import kz.alimbetov.akmai.rag.retrieval.ContextBudget;
+import kz.alimbetov.akmai.rag.retrieval.ContextDiversityFilter;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
+import kz.alimbetov.akmai.rag.retrieval.EvidenceQualityAssessor;
 import kz.alimbetov.akmai.rag.retrieval.KnowledgeExpansion;
 import kz.alimbetov.akmai.rag.retrieval.MeasuredRetrievalCoordinator;
 import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
@@ -57,6 +59,8 @@ public class RagQuestionService {
     private final AdaptiveGraphUtilityRecorder adaptiveGraphUtilityRecorder;
     private final MeasuredRetrievalCoordinator measuredRetrievalCoordinator;
     private ParentContextExpansion parentContextExpansion;
+    private ContextDiversityFilter contextDiversityFilter;
+    private EvidenceQualityAssessor evidenceQualityAssessor;
 
     public RagQuestionService(
             QueryChunker queryChunker,
@@ -156,6 +160,20 @@ public class RagQuestionService {
         this.parentContextExpansion = parentContextExpansion;
     }
 
+    @Autowired(required = false)
+    void setContextDiversityFilter(
+            ContextDiversityFilter contextDiversityFilter
+    ) {
+        this.contextDiversityFilter = contextDiversityFilter;
+    }
+
+    @Autowired(required = false)
+    void setEvidenceQualityAssessor(
+            EvidenceQualityAssessor evidenceQualityAssessor
+    ) {
+        this.evidenceQualityAssessor = evidenceQualityAssessor;
+    }
+
     public RagResponse ask(String question, Set<Long> accessLevels) {
         if (accessLevels == null || accessLevels.isEmpty()) {
             return insufficientInformation(question);
@@ -215,8 +233,11 @@ public class RagQuestionService {
                             authorityEligible,
                             accessLevels
                     );
+            List<RetrievalHit> diversified = contextDiversityFilter == null
+                    ? parentExpanded
+                    : contextDiversityFilter.apply(parentExpanded);
             List<RetrievalHit> bounded =
-                    contextBudget.apply(parentExpanded, question);
+                    contextBudget.apply(diversified, question);
             finalContext = contextRevalidator.revalidate(
                     bounded,
                     accessLevels
@@ -231,6 +252,9 @@ public class RagQuestionService {
 
         if (finalContext.isEmpty()) {
             return insufficientInformation(question);
+        }
+        if (evidenceQualityAssessor != null) {
+            evidenceQualityAssessor.observe(finalContext);
         }
 
         String context = contextAssembler.assemble(finalContext);

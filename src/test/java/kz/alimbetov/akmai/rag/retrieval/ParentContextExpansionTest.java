@@ -35,8 +35,8 @@ class ParentContextExpansionTest {
                 )
         );
 
-        RetrievalHit first = child("child-1", 0, 0.91);
-        RetrievalHit second = child("child-2", 1, 0.84);
+        RetrievalHit first = child("child-1", 0, 0.91, 0);
+        RetrievalHit second = child("child-2", 1, 0.84, 2);
         SearchProjection parent = parent();
 
         when(repository.findPublishedByKeys(anyList(), eq(Set.of(7L))))
@@ -53,6 +53,7 @@ class ParentContextExpansionTest {
         assertThat(expanded.text()).isEqualTo("Parent context");
         assertThat(expanded.fusedScore()).isEqualTo(0.91);
         assertThat(expanded.metadata())
+                .containsEntry("authorityTier", 0)
                 .containsEntry("akmaiParentExpansion", true)
                 .containsEntry("akmaiMatchedChildChunkId", "child-1")
                 .containsEntry(ChunkRole.METADATA_KEY, "PARENT");
@@ -62,7 +63,8 @@ class ParentContextExpansionTest {
     private RetrievalHit child(
             String chunkId,
             int childIndex,
-            double score
+            double score,
+            int authorityTier
     ) {
         return new RetrievalHit(
                 RetrievalType.VECTOR,
@@ -77,7 +79,9 @@ class ParentContextExpansionTest {
                         ChunkRole.PARENT_CHUNK_ID_KEY,
                         "parent-1",
                         ChunkRole.CHILD_INDEX_KEY,
-                        childIndex
+                        childIndex,
+                        "authorityTier",
+                        authorityTier
                 ),
                 List.of(),
                 score
