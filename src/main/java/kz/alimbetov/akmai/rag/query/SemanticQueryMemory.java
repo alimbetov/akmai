@@ -259,7 +259,7 @@ public class SemanticQueryMemory {
                                 value.observedAt()
                         ))
                         .toList();
-                clusters.putIfAbsent(
+                clusters.asMap().putIfAbsent(
                         stored.clusterId().toString(),
                         new MemoryCluster(
                                 stored.clusterId().toString(),
