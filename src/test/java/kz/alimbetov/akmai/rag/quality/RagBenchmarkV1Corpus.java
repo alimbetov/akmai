@@ -3,12 +3,12 @@ package kz.alimbetov.akmai.rag.quality;
 import java.util.List;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 
-final class RagBenchmarkV1Corpus {
+public final class RagBenchmarkV1Corpus {
 
     private RagBenchmarkV1Corpus() {
     }
 
-    static List<Case> smokeCases() {
+    public static List<Case> smokeCases() {
         return List.of(
                 new Case(
                         "kk-legal-termination",
@@ -101,7 +101,7 @@ final class RagBenchmarkV1Corpus {
         );
     }
 
-    record Case(
+    public record Case(
             String id,
             String language,
             KnowledgeDomain domain,
