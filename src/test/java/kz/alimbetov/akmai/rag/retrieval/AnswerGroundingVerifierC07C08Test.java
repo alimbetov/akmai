@@ -154,7 +154,7 @@ class AnswerGroundingVerifierC07C08Test {
     void acceptsEquivalentFinancialMinimumAcrossLocales() {
         var result = verifier.verify(
                 "Minimum capital is €1,500.00 [SOURCE 1].",
-                List.of(hit("Das Mindestkapital beträgt 1.500,00 €.", "de")),
+                List.of(hit("Mindestens 1.500,00 € Kapital sind erforderlich.", "de")),
                 "en"
         );
 
