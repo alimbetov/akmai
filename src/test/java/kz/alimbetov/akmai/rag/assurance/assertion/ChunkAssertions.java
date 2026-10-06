@@ -105,6 +105,25 @@ public final class ChunkAssertions {
         return this;
     }
 
+    public ChunkAssertions hasChunkIdsInOrder(List<String> expectedChunkIds) {
+        List<String> actualIds = actual.stream()
+                .map(chunk -> chunk == null ? null : chunk.chunkId())
+                .toList();
+        List<String> expected = expectedChunkIds == null
+                ? List.of()
+                : List.copyOf(expectedChunkIds);
+        if (!actualIds.equals(expected)) {
+            throw AssuranceFailure.violation(
+                    "W-02",
+                    fixtureId,
+                    "canonical input must preserve deterministic ordered chunk identity",
+                    "chunkSequence",
+                    "expectedIds=" + expected + ", actualIds=" + actualIds
+            );
+        }
+        return this;
+    }
+
     public ChunkAssertions respectsHardTokenLimit(
             TokenEstimator tokenEstimator,
             int hardMaxTokens
