@@ -49,10 +49,18 @@ class MeasuredRetrievalCoordinatorTest {
                 RetrievalType.VECTOR,
                 1
         );
+        verify(observer).attributionRequest(
+                RetrievalAttributionStage.FUSED,
+                RetrievalType.VECTOR
+        );
         verify(observer).attribution(
                 RetrievalAttributionStage.FUSED,
                 RetrievalType.LEXICAL,
                 1
+        );
+        verify(observer).attributionRequest(
+                RetrievalAttributionStage.FUSED,
+                RetrievalType.LEXICAL
         );
         verifyNoMoreInteractions(observer);
     }
@@ -86,6 +94,10 @@ class MeasuredRetrievalCoordinatorTest {
                 RetrievalAttributionStage.SELECTED,
                 RetrievalType.GRAPH,
                 1
+        );
+        verify(observer).attributionRequest(
+                RetrievalAttributionStage.SELECTED,
+                RetrievalType.GRAPH
         );
         verifyNoMoreInteractions(observer);
     }
