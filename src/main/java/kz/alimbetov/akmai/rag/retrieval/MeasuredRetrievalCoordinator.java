@@ -166,9 +166,10 @@ public class MeasuredRetrievalCoordinator {
             RetrievalAttributionStage stage,
             Map<RetrievalType, Integer> counts
     ) {
-        counts.forEach((type, count) ->
-                observer.attribution(stage, type, count)
-        );
+        counts.forEach((type, count) -> {
+            observer.attribution(stage, type, count);
+            observer.attributionRequest(stage, type);
+        });
     }
 
     private Set<RetrievalType> channels(RetrievalHit hit) {
