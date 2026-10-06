@@ -35,7 +35,7 @@ public class HydeVectorRetrievalStrategy implements RetrievalStrategy {
             RetrievalContext context
     ) {
         String hypothetical = hydeQueryGenerator.generate(
-                queryChunk.rawText(),
+                queryChunk.rootQuery(),
                 context.accessLevels()
         );
         if (hypothetical.isBlank()) {
@@ -56,6 +56,7 @@ public class HydeVectorRetrievalStrategy implements RetrievalStrategy {
                     metadata.put("score", match.score());
                     metadata.put("generation", match.generation());
                     metadata.put("queryMode", "HYDE");
+                    metadata.put("hydeRootQuery", queryChunk.rootQuery());
                     return new RetrievalHit(
                             RetrievalType.HYDE_VECTOR,
                             match.accessLevel(),
