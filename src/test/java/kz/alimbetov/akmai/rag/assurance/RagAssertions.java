@@ -7,6 +7,7 @@ import kz.alimbetov.akmai.rag.assurance.assertion.CitationAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.ContextAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.GroundingAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.LifecycleAssertions;
+import kz.alimbetov.akmai.rag.assurance.assertion.NormalizationAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.RetrievalAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.SecurityAssertions;
 import kz.alimbetov.akmai.rag.retrieval.AnswerGroundingVerifier;
@@ -23,6 +24,10 @@ import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 public final class RagAssertions {
 
     private RagAssertions() {
+    }
+
+    public static NormalizationAssertions normalization(String normalizedText) {
+        return new NormalizationAssertions(normalizedText);
     }
 
     public static ChunkAssertions chunks(List<KnowledgeChunk> chunks) {
