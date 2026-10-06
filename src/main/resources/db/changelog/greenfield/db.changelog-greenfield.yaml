@@ -29,3 +29,5 @@ databaseChangeLog:
       file: db/changelog/greenfield/014-reembedding-ha-lease.sql
   - include:
       file: db/changelog/greenfield/015-self-organizing-semantic-memory.sql
+  - include:
+      file: db/changelog/greenfield/016-self-optimizing-rag.sql
