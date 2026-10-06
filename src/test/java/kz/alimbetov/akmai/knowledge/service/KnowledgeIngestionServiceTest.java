@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.config.IdempotencyProperties;
 import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
-import kz.alimbetov.akmai.knowledge.chunking.SemanticChunker;
+import kz.alimbetov.akmai.knowledge.chunking.HierarchicalChunker;
 import kz.alimbetov.akmai.knowledge.idempotency.CanonicalRequestFingerprint;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyRepository;
 import kz.alimbetov.akmai.knowledge.ingestion.ParallelIngestionExecutor;
@@ -29,10 +29,11 @@ class KnowledgeIngestionServiceTest {
 
     @Test
     void canonicalizesLanguageAliasesBeforeChunkingAndPersistence() {
-        SemanticChunker chunker = mock(SemanticChunker.class);
+        HierarchicalChunker chunker = mock(HierarchicalChunker.class);
         ParallelIngestionExecutor executor = mock(ParallelIngestionExecutor.class);
         PersistenceCoordinator persistence = mock(PersistenceCoordinator.class);
         when(chunker.chunk(any())).thenReturn(List.of(chunk()));
+        when(chunker.searchableChunkCount(anyList())).thenReturn(1L);
         when(executor.execute(anyList())).thenReturn(List.of());
 
         KnowledgeIngestionService service = new KnowledgeIngestionService(
@@ -71,12 +72,13 @@ class KnowledgeIngestionServiceTest {
 
     @Test
     void acceptsExpandedLanguageAliasBeforeChunking() {
-        SemanticChunker chunker = mock(SemanticChunker.class);
+        HierarchicalChunker chunker = mock(HierarchicalChunker.class);
         ParallelIngestionExecutor executor =
                 mock(ParallelIngestionExecutor.class);
         PersistenceCoordinator persistence =
                 mock(PersistenceCoordinator.class);
         when(chunker.chunk(any())).thenReturn(List.of(chunk()));
+        when(chunker.searchableChunkCount(anyList())).thenReturn(1L);
         when(executor.execute(anyList())).thenReturn(List.of());
 
         KnowledgeIngestionService service = new KnowledgeIngestionService(
@@ -107,12 +109,13 @@ class KnowledgeIngestionServiceTest {
 
     @Test
     void rejectsDocumentThatNormalizesToNoIndexableChunks() {
-        SemanticChunker chunker = mock(SemanticChunker.class);
+        HierarchicalChunker chunker = mock(HierarchicalChunker.class);
         ParallelIngestionExecutor executor =
                 mock(ParallelIngestionExecutor.class);
         PersistenceCoordinator persistence =
                 mock(PersistenceCoordinator.class);
         when(chunker.chunk(any())).thenReturn(List.of());
+        when(chunker.searchableChunkCount(anyList())).thenReturn(0L);
 
         KnowledgeIngestionService service = new KnowledgeIngestionService(
                 chunker,
@@ -165,7 +168,7 @@ class KnowledgeIngestionServiceTest {
 
     @Test
     void rejectsUnsupportedLanguageBeforeAnyChunkingWork() {
-        SemanticChunker chunker = mock(SemanticChunker.class);
+        HierarchicalChunker chunker = mock(HierarchicalChunker.class);
         KnowledgeIngestionService service = new KnowledgeIngestionService(
                 chunker,
                 mock(ParallelIngestionExecutor.class),

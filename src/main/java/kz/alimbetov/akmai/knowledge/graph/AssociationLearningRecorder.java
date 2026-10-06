@@ -8,6 +8,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
+import kz.alimbetov.akmai.knowledge.model.ChunkRole;
 import kz.alimbetov.akmai.observability.AkmaiMetrics;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
@@ -237,13 +238,13 @@ public class AssociationLearningRecorder {
                                 pair -> pair.left().hit().documentId()
                         )
                         .thenComparing(
-                                pair -> pair.left().hit().chunkId()
+                                pair -> graphChunkId(pair.left().hit())
                         )
                         .thenComparing(
                                 pair -> pair.right().hit().documentId()
                         )
                         .thenComparing(
-                                pair -> pair.right().hit().chunkId()
+                                pair -> graphChunkId(pair.right().hit())
                         )
         );
         return result;
@@ -254,8 +255,13 @@ public class AssociationLearningRecorder {
                 hit.accessLevel(),
                 hit.documentId(),
                 hit.generation(),
-                hit.chunkId()
+                graphChunkId(hit)
         );
+    }
+
+    private String graphChunkId(RetrievalHit hit) {
+        String matchedChild = ChunkRole.matchedChildChunkId(hit.metadata());
+        return matchedChild == null ? hit.chunkId() : matchedChild;
     }
 
     private record IndexedHit(

@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.Map;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.lifecycle.VectorGenerationRepository.VectorGenerationEntry;
+import kz.alimbetov.akmai.knowledge.model.ChunkRole;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository.VectorRow;
 import org.springframework.stereotype.Component;
@@ -30,6 +31,9 @@ public class GenerationVectorAssembler {
 
         for (int index = 0; index < projections.size(); index++) {
             SearchProjection projection = projections.get(index);
+            if (!ChunkRole.isSearchable(projection.metadata())) {
+                continue;
+            }
             String vectorId = VectorIdentity.physicalId(
                     projection.documentId(),
                     generation,
@@ -82,7 +86,56 @@ public class GenerationVectorAssembler {
                         : projection.sectionPath()
         );
         metadata.put("chunkIndex", projection.chunkIndex());
+        copyHierarchyMetadata(projection, metadata);
         return Map.copyOf(metadata);
+    }
+
+    private void copyHierarchyMetadata(
+            SearchProjection projection,
+            Map<String, Object> metadata
+    ) {
+        ChunkRole role = ChunkRole.fromMetadata(projection.metadata());
+        if (role != null) {
+            metadata.put(ChunkRole.METADATA_KEY, role.name());
+        }
+        if (projection.parentChunkId() != null
+                && !projection.parentChunkId().isBlank()) {
+            metadata.put(
+                    ChunkRole.PARENT_CHUNK_ID_KEY,
+                    projection.parentChunkId()
+            );
+        }
+        copyIfPresent(
+                projection.metadata(),
+                metadata,
+                ChunkRole.PARENT_CHUNK_INDEX_KEY
+        );
+        copyIfPresent(
+                projection.metadata(),
+                metadata,
+                ChunkRole.CHILD_INDEX_KEY
+        );
+        copyIfPresent(
+                projection.metadata(),
+                metadata,
+                ChunkRole.CHILD_COUNT_KEY
+        );
+        copyIfPresent(
+                projection.metadata(),
+                metadata,
+                ChunkRole.ESTIMATED_TOKENS_KEY
+        );
+    }
+
+    private void copyIfPresent(
+            Map<String, Object> source,
+            Map<String, Object> target,
+            String key
+    ) {
+        Object value = source.get(key);
+        if (value != null) {
+            target.put(key, value);
+        }
     }
 
     public record Assembly(

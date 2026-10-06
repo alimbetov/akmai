@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import kz.alimbetov.akmai.knowledge.identifier.IdentifierExtractor;
+import kz.alimbetov.akmai.knowledge.model.ChunkRole;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticChunkAnnotator;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -133,6 +134,14 @@ public class ParallelIngestionExecutor {
     }
 
     private EnrichedKnowledgeChunk enrich(KnowledgeChunk chunk) {
+        if (ChunkRole.isParent(chunk.metadata())) {
+            return new EnrichedKnowledgeChunk(
+                    chunk,
+                    List.of(),
+                    List.of()
+            );
+        }
+
         KnowledgeChunk annotated = semanticChunkAnnotator == null
                 ? chunk
                 : semanticChunkAnnotator.annotate(chunk);

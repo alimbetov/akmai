@@ -18,6 +18,7 @@ import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.KnowledgeExpansion;
 import kz.alimbetov.akmai.rag.retrieval.MeasuredRetrievalCoordinator;
 import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
+import kz.alimbetov.akmai.rag.retrieval.ParentContextExpansion;
 import kz.alimbetov.akmai.rag.retrieval.PublishedContextRevalidator;
 import kz.alimbetov.akmai.rag.retrieval.Reranker;
 import kz.alimbetov.akmai.rag.retrieval.ResultFusion;
@@ -55,6 +56,7 @@ public class RagQuestionService {
     private final AdaptiveGraphCompetitiveAdmission adaptiveGraphCompetitiveAdmission;
     private final AdaptiveGraphUtilityRecorder adaptiveGraphUtilityRecorder;
     private final MeasuredRetrievalCoordinator measuredRetrievalCoordinator;
+    private ParentContextExpansion parentContextExpansion;
 
     public RagQuestionService(
             QueryChunker queryChunker,
@@ -147,6 +149,13 @@ public class RagQuestionService {
         this.measuredRetrievalCoordinator = measuredRetrievalCoordinator;
     }
 
+    @Autowired(required = false)
+    void setParentContextExpansion(
+            ParentContextExpansion parentContextExpansion
+    ) {
+        this.parentContextExpansion = parentContextExpansion;
+    }
+
     public RagResponse ask(String question, Set<Long> accessLevels) {
         if (accessLevels == null || accessLevels.isEmpty()) {
             return insufficientInformation(question);
@@ -200,8 +209,14 @@ public class RagQuestionService {
 
             List<RetrievalHit> authorityEligible =
                     temporalAuthorityFilter.filter(competitive);
+            List<RetrievalHit> parentExpanded = parentContextExpansion == null
+                    ? authorityEligible
+                    : parentContextExpansion.expand(
+                            authorityEligible,
+                            accessLevels
+                    );
             List<RetrievalHit> bounded =
-                    contextBudget.apply(authorityEligible, question);
+                    contextBudget.apply(parentExpanded, question);
             finalContext = contextRevalidator.revalidate(
                     bounded,
                     accessLevels

@@ -3,27 +3,27 @@ package kz.alimbetov.akmai.knowledge.service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import kz.alimbetov.akmai.config.IdempotencyProperties;
 import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
 import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResponse;
+import kz.alimbetov.akmai.knowledge.chunking.HierarchicalChunker;
 import kz.alimbetov.akmai.knowledge.idempotency.CanonicalRequestFingerprint;
 import kz.alimbetov.akmai.knowledge.idempotency.IdempotencyConflictException;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyContext;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyRepository;
-import kz.alimbetov.akmai.knowledge.model.DocumentMetadata;
-import kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage;
-import kz.alimbetov.akmai.config.IdempotencyProperties;
-import kz.alimbetov.akmai.knowledge.chunking.SemanticChunker;
 import kz.alimbetov.akmai.knowledge.ingestion.EnrichedKnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.ingestion.ParallelIngestionExecutor;
 import kz.alimbetov.akmai.knowledge.ingestion.PersistenceCoordinator;
+import kz.alimbetov.akmai.knowledge.model.DocumentMetadata;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDocument;
+import kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage;
 import org.springframework.stereotype.Service;
 
 @Service
 public class KnowledgeIngestionService {
 
-    private final SemanticChunker semanticChunker;
+    private final HierarchicalChunker hierarchicalChunker;
     private final ParallelIngestionExecutor parallelIngestionExecutor;
     private final PersistenceCoordinator persistenceCoordinator;
     private final IngestionIdempotencyRepository idempotencyRepository;
@@ -31,14 +31,14 @@ public class KnowledgeIngestionService {
     private final IdempotencyProperties idempotencyProperties;
 
     public KnowledgeIngestionService(
-            SemanticChunker semanticChunker,
+            HierarchicalChunker hierarchicalChunker,
             ParallelIngestionExecutor parallelIngestionExecutor,
             PersistenceCoordinator persistenceCoordinator,
             IngestionIdempotencyRepository idempotencyRepository,
             CanonicalRequestFingerprint requestFingerprint,
             IdempotencyProperties idempotencyProperties
     ) {
-        this.semanticChunker = semanticChunker;
+        this.hierarchicalChunker = hierarchicalChunker;
         this.parallelIngestionExecutor = parallelIngestionExecutor;
         this.persistenceCoordinator = persistenceCoordinator;
         this.idempotencyRepository = idempotencyRepository;
@@ -112,8 +112,10 @@ public class KnowledgeIngestionService {
                 metadata
         );
 
-        List<KnowledgeChunk> chunks = semanticChunker.chunk(document);
-        if (chunks.isEmpty()) {
+        List<KnowledgeChunk> chunks = hierarchicalChunker.chunk(document);
+        long searchableChunkCount =
+                hierarchicalChunker.searchableChunkCount(chunks);
+        if (searchableChunkCount == 0) {
             throw new IllegalArgumentException(
                     "Document produced no indexable chunks after normalization"
             );
@@ -126,7 +128,7 @@ public class KnowledgeIngestionService {
 
         KnowledgeIngestionResponse response = new KnowledgeIngestionResponse(
                 document.documentId(),
-                chunks.size()
+                Math.toIntExact(searchableChunkCount)
         );
         persistenceCoordinator.persist(
                 enriched,
