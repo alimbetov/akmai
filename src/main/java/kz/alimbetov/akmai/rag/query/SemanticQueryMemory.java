@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import org.springframework.ai.embedding.EmbeddingModel;
@@ -24,14 +25,17 @@ public class SemanticQueryMemory {
     private static final int MAX_CENTROID_WEIGHT = 32;
 
     private final EmbeddingModel embeddingModel;
+    private final EmbeddingProfileService profileService;
     private final AdvancedRetrievalProperties properties;
     private final Cache<String, MemoryCluster> clusters;
 
     public SemanticQueryMemory(
             @Qualifier("retrievalEmbeddingModel") EmbeddingModel embeddingModel,
+            EmbeddingProfileService profileService,
             AdvancedRetrievalProperties properties
     ) {
         this.embeddingModel = embeddingModel;
+        this.profileService = profileService;
         this.properties = properties;
         this.clusters = Caffeine.newBuilder()
                 .maximumSize(properties.queryMemoryMaxEntries())
@@ -51,22 +55,34 @@ public class SemanticQueryMemory {
         if (scope.isEmpty()) {
             return List.of();
         }
+        String profileId = activeProfileId();
+        if (profileId == null) {
+            return List.of();
+        }
         float[] queryVector = safeEmbed(question);
         if (queryVector == null) {
             return List.of();
         }
 
         return clusters.asMap().values().stream()
+                .filter(cluster -> profileId.equals(cluster.embeddingProfileId()))
                 .filter(cluster -> scope.containsAll(cluster.requiredAccessLevels()))
                 .map(cluster -> new MemoryMatch(
                         cluster.id(),
                         cosine(queryVector, cluster.centroid()),
+                        cluster.observationCount(),
                         cluster.observations()
                 ))
                 .filter(match -> Double.isFinite(match.similarity()))
                 .filter(match -> match.similarity()
                         >= properties.queryMemorySimilarityThreshold())
-                .sorted(Comparator.comparingDouble(MemoryMatch::similarity).reversed())
+                .sorted(Comparator
+                        .comparingDouble(MemoryMatch::similarity)
+                        .reversed()
+                        .thenComparing(
+                                Comparator.comparingInt(MemoryMatch::observationCount)
+                                        .reversed()
+                        ))
                 .limit(properties.queryMemoryMatches())
                 .toList();
     }
@@ -98,15 +114,18 @@ public class SemanticQueryMemory {
             }
             RetrievalHit hit = finalContext.get(index);
             requiredAccessLevels.add(hit.accessLevel());
-            sourceRefs.add(hit.documentId() + ":" + hit.chunkId());
-            if (sourceRefs.size() >= MAX_SOURCE_REFS_PER_OBSERVATION) {
-                break;
+            if (sourceRefs.size() < MAX_SOURCE_REFS_PER_OBSERVATION) {
+                sourceRefs.add(hit.documentId() + ":" + hit.chunkId());
             }
         }
         if (requiredAccessLevels.isEmpty()) {
             return;
         }
 
+        String profileId = activeProfileId();
+        if (profileId == null) {
+            return;
+        }
         float[] vector = safeEmbed(question);
         if (vector == null) {
             return;
@@ -121,6 +140,7 @@ public class SemanticQueryMemory {
         );
 
         MemoryCluster nearest = clusters.asMap().values().stream()
+                .filter(cluster -> profileId.equals(cluster.embeddingProfileId()))
                 .filter(cluster -> cluster.requiredAccessLevels().equals(requiredScope))
                 .filter(cluster -> cluster.centroid().length == vector.length)
                 .map(cluster -> new ClusterCandidate(
@@ -138,6 +158,7 @@ public class SemanticQueryMemory {
             String id = UUID.randomUUID().toString();
             clusters.put(id, new MemoryCluster(
                     id,
+                    profileId,
                     vector.clone(),
                     requiredScope,
                     1,
@@ -147,7 +168,8 @@ public class SemanticQueryMemory {
         }
 
         clusters.asMap().computeIfPresent(nearest.id(), (id, current) -> {
-            if (!current.requiredAccessLevels().equals(requiredScope)
+            if (!profileId.equals(current.embeddingProfileId())
+                    || !current.requiredAccessLevels().equals(requiredScope)
                     || current.centroid().length != vector.length) {
                 return current;
             }
@@ -162,12 +184,21 @@ public class SemanticQueryMemory {
             }
             return new MemoryCluster(
                     id,
+                    current.embeddingProfileId(),
                     centroid,
                     current.requiredAccessLevels(),
                     current.observationCount() + 1,
                     List.copyOf(observations)
             );
         });
+    }
+
+    private String activeProfileId() {
+        try {
+            return profileService.activeProfile().profileId();
+        } catch (RuntimeException exception) {
+            return null;
+        }
     }
 
     private float[] safeEmbed(String text) {
@@ -220,7 +251,7 @@ public class SemanticQueryMemory {
         }
         LinkedHashSet<Long> normalized = new LinkedHashSet<>();
         for (Long accessLevel : accessLevels) {
-            if (accessLevel != null) {
+            if (accessLevel != null && accessLevel > 0) {
                 normalized.add(accessLevel);
             }
         }
@@ -242,6 +273,7 @@ public class SemanticQueryMemory {
     public record MemoryMatch(
             String clusterId,
             double similarity,
+            int observationCount,
             List<MemoryObservation> observations
     ) {
         public MemoryMatch {
@@ -266,6 +298,7 @@ public class SemanticQueryMemory {
 
     private record MemoryCluster(
             String id,
+            String embeddingProfileId,
             float[] centroid,
             Set<Long> requiredAccessLevels,
             int observationCount,
