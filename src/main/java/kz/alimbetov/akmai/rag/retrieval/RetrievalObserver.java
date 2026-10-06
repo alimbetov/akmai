@@ -97,6 +97,13 @@ public class RetrievalObserver {
         ).increment();
     }
 
+    public void evidenceQuality(String quality) {
+        meterRegistry.counter(
+                "akmai.retrieval.evidence.quality",
+                "quality", boundedIdentifier(quality, "UNKNOWN")
+        ).increment();
+    }
+
     public void rerankSuccess(Duration duration, int candidates) {
         Timer.builder("akmai.retrieval.reranker")
                 .tag("outcome", "success")
