@@ -73,6 +73,7 @@ public class IngestionSemanticLinker {
         int languageRejected = 0;
         int duplicateRejected = 0;
         int budgetRejected = 0;
+        int degreeRejected = 0;
         int seededEdges = 0;
         Instant observedAt = Instant.now();
 
@@ -85,13 +86,7 @@ public class IngestionSemanticLinker {
             );
             searchedChunks++;
 
-            int searchLimit = Math.min(
-                    256,
-                    Math.max(
-                            properties.getTopK(),
-                            properties.getMaxEdgesPerChunk()
-                    ) + 1
-            );
+            int searchLimit = Math.min(256, properties.getTopK() + 1);
             List<SemanticNeighborSearchRepository.SemanticNeighbor> neighbors =
                     neighborRepository.search(
                             row.embedding(),
@@ -104,6 +99,7 @@ public class IngestionSemanticLinker {
 
             LinkedHashSet<ChunkGraphNode> acceptedTargets =
                     new LinkedHashSet<>();
+            int seededForSource = 0;
             for (SemanticNeighborSearchRepository.SemanticNeighbor neighbor
                     : neighbors) {
                 if (source.equals(neighbor.node())) {
@@ -119,7 +115,7 @@ public class IngestionSemanticLinker {
                     duplicateRejected++;
                     continue;
                 }
-                if (acceptedTargets.size() > properties.getMaxEdgesPerChunk()) {
+                if (seededForSource >= properties.getMaxEdgesPerChunk()) {
                     budgetRejected++;
                     continue;
                 }
@@ -133,13 +129,19 @@ public class IngestionSemanticLinker {
                     continue;
                 }
 
-                seedRepository.seedSymmetric(
+                boolean seeded = seedRepository.seedSymmetric(
                         source,
                         neighbor.node(),
                         neighbor.similarity(),
                         graphProperties.graphVersion(),
+                        properties.getMaxEdgesPerChunk(),
                         observedAt
                 );
+                if (!seeded) {
+                    degreeRejected++;
+                    continue;
+                }
+                seededForSource++;
                 seededEdges++;
             }
         }
@@ -151,7 +153,8 @@ public class IngestionSemanticLinker {
                 selfRejected,
                 languageRejected,
                 duplicateRejected,
-                budgetRejected
+                budgetRejected,
+                degreeRejected
         );
     }
 
@@ -184,14 +187,15 @@ public class IngestionSemanticLinker {
             int selfRejected,
             int languageRejected,
             int duplicateRejected,
-            int budgetRejected
+            int budgetRejected,
+            int degreeRejected
     ) {
         public static LinkingReport disabled() {
-            return new LinkingReport(false, 0, 0, 0, 0, 0, 0);
+            return new LinkingReport(false, 0, 0, 0, 0, 0, 0, 0);
         }
 
         public static LinkingReport empty() {
-            return new LinkingReport(true, 0, 0, 0, 0, 0, 0);
+            return new LinkingReport(true, 0, 0, 0, 0, 0, 0, 0);
         }
     }
 }
