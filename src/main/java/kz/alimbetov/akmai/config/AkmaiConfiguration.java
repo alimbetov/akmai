@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.config;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionProperties;
 import kz.alimbetov.akmai.rag.retrieval.ConceptRetrievalProperties;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalFusionProperties;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalIntelligenceProperties;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalProperties;
 import kz.alimbetov.akmai.rag.retrieval.plan.AdaptiveRetrievalProperties;
 import kz.alimbetov.akmai.runtimeconfig.AppParameterProperties;
@@ -17,6 +18,7 @@ import org.springframework.context.annotation.Configuration;
     ConceptRetrievalProperties.class,
     RetrievalFusionProperties.class,
     AdaptiveRetrievalProperties.class,
+    RetrievalIntelligenceProperties.class,
     ApiProperties.class,
     IdempotencyProperties.class,
     SecurityProperties.class,
