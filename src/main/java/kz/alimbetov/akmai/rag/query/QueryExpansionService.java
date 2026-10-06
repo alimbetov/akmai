@@ -3,7 +3,6 @@ package kz.alimbetov.akmai.rag.query;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -24,23 +23,32 @@ public class QueryExpansionService {
     }
 
     public List<QueryChunk> expand(String question) {
-        List<String> variants = Stream.concat(
-                        Stream.of(question),
-                        multiQueryGenerator.generate(question).stream()
-                )
-                .filter(value -> value != null && !value.isBlank())
-                .toList();
-
         Map<String, QueryChunk> unique = new LinkedHashMap<>();
-        for (String variant : variants) {
-            for (QueryChunk chunk : queryChunker.chunk(variant)) {
-                unique.putIfAbsent(key(chunk), chunk);
-                if (unique.size() >= properties.maxExpandedChunks()) {
-                    return List.copyOf(unique.values());
-                }
+        addChunks(unique, question, QueryOrigin.ORIGINAL);
+
+        for (String variant : multiQueryGenerator.generate(question)) {
+            if (unique.size() >= properties.maxExpandedChunks()) {
+                break;
             }
+            addChunks(unique, variant, QueryOrigin.MULTI_QUERY);
         }
         return List.copyOf(unique.values());
+    }
+
+    private void addChunks(
+            Map<String, QueryChunk> unique,
+            String query,
+            QueryOrigin origin
+    ) {
+        if (query == null || query.isBlank()) {
+            return;
+        }
+        for (QueryChunk chunk : queryChunker.chunk(query, origin)) {
+            unique.putIfAbsent(key(chunk), chunk);
+            if (unique.size() >= properties.maxExpandedChunks()) {
+                return;
+            }
+        }
     }
 
     private String key(QueryChunk chunk) {
