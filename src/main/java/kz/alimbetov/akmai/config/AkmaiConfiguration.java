@@ -32,6 +32,7 @@ import org.springframework.context.annotation.Configuration;
     AdaptiveGraphProperties.class,
     AdaptiveGraphCompetitionProperties.class,
     SemanticMemoryProperties.class,
+    SelfOptimizingRagProperties.class,
     AppParameterProperties.class
 })
 public class AkmaiConfiguration {
