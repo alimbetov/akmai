@@ -9,12 +9,14 @@ import kz.alimbetov.akmai.rag.assurance.assertion.ContextAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.GroundingAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.LifecycleAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.NormalizationAssertions;
+import kz.alimbetov.akmai.rag.assurance.assertion.PlanAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.ProjectionAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.RetrievalAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.SecurityAssertions;
 import kz.alimbetov.akmai.rag.retrieval.AnswerGroundingVerifier;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
+import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 
 /**
  * Entry point for reusable RAG contract assertions.
@@ -38,6 +40,10 @@ public final class RagAssertions {
 
     public static ProjectionAssertions projections(List<SearchProjection> projections) {
         return new ProjectionAssertions(projections);
+    }
+
+    public static PlanAssertions plan(RetrievalPlan plan) {
+        return new PlanAssertions(plan);
     }
 
     public static RetrievalAssertions retrieval(List<RetrievalHit> hits) {
