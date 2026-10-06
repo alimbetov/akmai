@@ -56,7 +56,11 @@ public class EvidenceQualityAssessor {
     public EvidenceQuality observe(List<RetrievalHit> hits) {
         EvidenceQuality quality = assess(hits);
         if (properties.evidenceQualityTelemetryEnabled()) {
-            observer.evidenceQuality(quality.name());
+            try {
+                observer.evidenceQuality(quality.name());
+            } catch (RuntimeException ignored) {
+                // Telemetry must never change retrieval or answer behavior.
+            }
         }
         return quality;
     }
