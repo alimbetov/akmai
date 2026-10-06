@@ -9,10 +9,24 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class RetrievalPlanner {
+
+    private final AdaptiveRetrievalPlanner adaptiveRetrievalPlanner;
+
+    public RetrievalPlanner() {
+        this(null);
+    }
+
+    @Autowired
+    public RetrievalPlanner(
+            AdaptiveRetrievalPlanner adaptiveRetrievalPlanner
+    ) {
+        this.adaptiveRetrievalPlanner = adaptiveRetrievalPlanner;
+    }
 
     public RetrievalPlan plan(List<QueryChunk> chunks) {
         List<RetrievalStep> steps = new ArrayList<>();
@@ -68,7 +82,10 @@ public class RetrievalPlanner {
             }
         }
 
-        return new RetrievalPlan(List.copyOf(steps));
+        RetrievalPlan baseline = new RetrievalPlan(List.copyOf(steps));
+        return adaptiveRetrievalPlanner == null
+                ? baseline
+                : adaptiveRetrievalPlanner.enforce(chunks, baseline);
     }
 
     private RetrievalStep step(
