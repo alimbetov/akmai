@@ -139,6 +139,15 @@ akmai:
     embedding-http-timeout: ${AKMAI_RETRIEVAL_EMBEDDING_TIMEOUT:3s}
     context-expansion-max-chunks: ${AKMAI_CONTEXT_EXPANSION_MAX_CHUNKS:3}
     answer-reserved-tokens: ${AKMAI_ANSWER_RESERVED_TOKENS:1024}
+    adaptive-planner:
+      enabled: ${AKMAI_RETRIEVAL_ADAPTIVE_PLANNER_ENABLED:false}
+      shadow-enabled: ${AKMAI_RETRIEVAL_ADAPTIVE_PLANNER_SHADOW_ENABLED:false}
+      concept-confidence-threshold: ${AKMAI_RETRIEVAL_ADAPTIVE_CONCEPT_THRESHOLD:0.65}
+      exact-concept-confidence-threshold: ${AKMAI_RETRIEVAL_ADAPTIVE_EXACT_CONCEPT_THRESHOLD:0.95}
+    intelligence:
+      section-diversity-enabled: ${AKMAI_RETRIEVAL_SECTION_DIVERSITY_ENABLED:false}
+      max-chunks-per-section: ${AKMAI_RETRIEVAL_MAX_CHUNKS_PER_SECTION:2}
+      evidence-quality-telemetry-enabled: ${AKMAI_RETRIEVAL_EVIDENCE_QUALITY_TELEMETRY_ENABLED:true}
   reembedding:
     auto-migrate: ${AKMAI_REEMBEDDING_AUTO_MIGRATE:false}
     drain-timeout: ${AKMAI_REEMBEDDING_DRAIN_TIMEOUT:2m}
