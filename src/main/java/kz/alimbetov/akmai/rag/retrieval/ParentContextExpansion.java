@@ -112,9 +112,6 @@ public class ParentContextExpansion {
         Set<String> uniqueParents = new HashSet<>();
 
         for (RetrievalHit hit : hits) {
-            if (requests.size() >= properties.maxParentExpansions()) {
-                break;
-            }
             if (hit == null
                     || !hit.hasRoutingIdentity()
                     || !accessLevels.contains(hit.accessLevel())) {
@@ -132,8 +129,13 @@ public class ParentContextExpansion {
                             hit.generation(),
                             parentChunkId
                     );
-            if (!uniqueParents.add(parentKey(parentKey))) {
-                continue;
+            String canonicalParent = parentKey(parentKey);
+            if (!uniqueParents.contains(canonicalParent)) {
+                if (uniqueParents.size()
+                        >= properties.maxParentExpansions()) {
+                    continue;
+                }
+                uniqueParents.add(canonicalParent);
             }
             requests.add(new ParentRequest(hit, parentKey));
         }
