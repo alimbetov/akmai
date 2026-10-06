@@ -1,9 +1,13 @@
 package kz.alimbetov.akmai.rag.assurance.assertion;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
 
 public final class RetrievalAssertions {
 
@@ -64,6 +68,108 @@ public final class RetrievalAssertions {
         return this;
     }
 
+    public RetrievalAssertions hasEvidenceTypes(
+            String chunkId,
+            RetrievalType... expectedTypes
+    ) {
+        RetrievalHit hit = findByChunkId(chunkId, "R-04");
+        Set<RetrievalType> expected = expectedTypes == null
+                ? Set.of()
+                : Arrays.stream(expectedTypes)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
+        Set<RetrievalType> actualTypes = hit.evidence().stream()
+                .map(evidence -> evidence.type())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (!actualTypes.containsAll(expected)) {
+            throw AssuranceFailure.violation(
+                    "R-04",
+                    fixtureId,
+                    "canonical fused hit must preserve all contributing retrieval evidence",
+                    chunkId,
+                    "expectedEvidence=" + expected + ", actualEvidence=" + actualTypes
+            );
+        }
+        return this;
+    }
+
+    public RetrievalAssertions hasAuthorityTier(String chunkId, int expectedTier) {
+        RetrievalHit hit = findByChunkId(chunkId, "R-05");
+        Object value = hit.metadata().get("authorityTier");
+        int actualTier = value instanceof Number number
+                ? number.intValue()
+                : Integer.MAX_VALUE;
+        if (actualTier != expectedTier) {
+            throw AssuranceFailure.violation(
+                    "R-05",
+                    fixtureId,
+                    "exact identifier/reference authority must survive fusion and reranking boundaries",
+                    chunkId,
+                    "expectedAuthorityTier=" + expectedTier
+                            + ", actualAuthorityTier=" + value
+            );
+        }
+        return this;
+    }
+
+    public RetrievalAssertions hasSameCanonicalSequenceAs(List<RetrievalHit> expectedHits) {
+        List<String> expected = canonicalSequence(expectedHits);
+        List<String> observed = canonicalSequence(actual);
+        if (!observed.equals(expected)) {
+            throw AssuranceFailure.violation(
+                    "R-06",
+                    fixtureId,
+                    "reranker fallback must preserve the candidate set and order",
+                    "retrievalSequence",
+                    "expected=" + expected + ", actual=" + observed
+            );
+        }
+        return this;
+    }
+
+    public RetrievalAssertions containsChunkIds(String... expectedChunkIds) {
+        Set<String> expected = expectedChunkIds == null
+                ? Set.of()
+                : Arrays.stream(expectedChunkIds)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
+        Set<String> ids = actual.stream()
+                .filter(Objects::nonNull)
+                .map(RetrievalHit::chunkId)
+                .collect(Collectors.toSet());
+        if (!ids.containsAll(expected)) {
+            throw AssuranceFailure.violation(
+                    "R-04",
+                    fixtureId,
+                    "retrieval output must contain expected canonical evidence",
+                    "retrievalSet",
+                    "expected=" + expected + ", actual=" + ids
+            );
+        }
+        return this;
+    }
+
+    public RetrievalAssertions excludesChunkIds(String... forbiddenChunkIds) {
+        Set<String> forbidden = forbiddenChunkIds == null
+                ? Set.of()
+                : Arrays.stream(forbiddenChunkIds)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
+        for (RetrievalHit hit : actual) {
+            if (hit != null && forbidden.contains(hit.chunkId())) {
+                throw AssuranceFailure.violation(
+                        "R-03",
+                        fixtureId,
+                        "stale or ineligible retrieval evidence must not survive canonicalization",
+                        hit.chunkId(),
+                        "forbiddenChunkIds=" + forbidden
+                );
+            }
+        }
+        return this;
+    }
+
     public RetrievalAssertions hasRoutingIdentity() {
         for (RetrievalHit hit : actual) {
             if (hit == null || !hit.hasRoutingIdentity()) {
@@ -81,6 +187,32 @@ public final class RetrievalAssertions {
 
     public String fixtureId() {
         return AssuranceFailure.fixture(fixtureId);
+    }
+
+    private RetrievalHit findByChunkId(String chunkId, String contractId) {
+        return actual.stream()
+                .filter(Objects::nonNull)
+                .filter(hit -> Objects.equals(chunkId, hit.chunkId()))
+                .findFirst()
+                .orElseThrow(() -> AssuranceFailure.violation(
+                        contractId,
+                        fixtureId,
+                        "expected canonical retrieval hit must exist",
+                        chunkId,
+                        "availableChunkIds=" + actual.stream()
+                                .filter(Objects::nonNull)
+                                .map(RetrievalHit::chunkId)
+                                .toList()
+                ));
+    }
+
+    private List<String> canonicalSequence(List<RetrievalHit> hits) {
+        if (hits == null) {
+            return List.of();
+        }
+        return hits.stream()
+                .map(hit -> hit == null ? "<null>" : canonicalIdentity(hit))
+                .toList();
     }
 
     private String canonicalIdentity(RetrievalHit hit) {

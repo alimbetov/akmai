@@ -40,6 +40,24 @@ public final class CitationAssertions {
         return this;
     }
 
+    public CitationAssertions rejectsSourceNumber(int sourceNumber) {
+        List<Integer> invalid = actual == null || actual.invalidSourceNumbers() == null
+                ? List.of()
+                : actual.invalidSourceNumbers();
+        if (actual == null || !invalid.contains(sourceNumber)) {
+            throw AssuranceFailure.violation(
+                    "R-11",
+                    fixtureId,
+                    "invalid generated source marker must be rejected",
+                    String.valueOf(sourceNumber),
+                    actual == null
+                            ? "citation validation is null"
+                            : "invalidSourceNumbers=" + invalid
+            );
+        }
+        return this;
+    }
+
     public CitationAssertions hasAtLeastOneCitedSource() {
         if (actual == null
                 || actual.citedSources() == null
