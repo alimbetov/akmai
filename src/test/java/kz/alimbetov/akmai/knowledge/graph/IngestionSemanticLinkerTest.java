@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -110,27 +111,27 @@ class IngestionSemanticLinkerTest {
         assertThat(report.budgetRejected()).isEqualTo(1);
         assertThat(report.degreeRejected()).isZero();
         verify(seeds).seedSymmetric(
-                self,
-                first,
-                0.97,
-                7,
-                2,
+                eq(self),
+                eq(first),
+                eq(0.97),
+                eq(7),
+                eq(2),
                 any()
         );
         verify(seeds).seedSymmetric(
-                self,
-                second,
-                0.95,
-                7,
-                2,
+                eq(self),
+                eq(second),
+                eq(0.95),
+                eq(7),
+                eq(2),
                 any()
         );
         verify(seeds, never()).seedSymmetric(
-                self,
-                overBudget,
-                0.94,
-                7,
-                2,
+                eq(self),
+                eq(overBudget),
+                eq(0.94),
+                eq(7),
+                eq(2),
                 any()
         );
     }
