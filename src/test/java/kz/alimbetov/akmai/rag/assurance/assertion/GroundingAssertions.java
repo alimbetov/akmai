@@ -39,6 +39,49 @@ public final class GroundingAssertions {
         return this;
     }
 
+    public GroundingAssertions isRejected() {
+        if (actual == null || actual.grounded()) {
+            throw AssuranceFailure.violation(
+                    "R-12",
+                    fixtureId,
+                    "unsupported factual output must be rejected as ungrounded",
+                    "answer",
+                    actual == null ? "grounding validation is null" : "grounded=true"
+            );
+        }
+        return this;
+    }
+
+    public GroundingAssertions hasUnsupportedClaims() {
+        if (actual == null || actual.unsupportedClaimCount() < 1) {
+            throw AssuranceFailure.violation(
+                    "R-12",
+                    fixtureId,
+                    "unsupported factual output must expose at least one unsupported claim",
+                    "answer",
+                    actual == null
+                            ? "grounding validation is null"
+                            : "unsupportedClaimCount=" + actual.unsupportedClaimCount()
+            );
+        }
+        return this;
+    }
+
+    public GroundingAssertions hasNumericMismatch() {
+        if (actual == null || actual.numericMismatchCount() < 1) {
+            throw AssuranceFailure.violation(
+                    "R-12",
+                    fixtureId,
+                    "numeric drift must be rejected by grounding",
+                    "answer",
+                    actual == null
+                            ? "grounding validation is null"
+                            : "numericMismatchCount=" + actual.numericMismatchCount()
+            );
+        }
+        return this;
+    }
+
     public GroundingAssertions isGroundedOrAbstains(boolean abstained) {
         if ((actual == null || !actual.grounded()) && !abstained) {
             throw AssuranceFailure.violation(
