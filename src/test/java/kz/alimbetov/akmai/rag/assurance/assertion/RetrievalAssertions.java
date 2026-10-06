@@ -113,6 +113,21 @@ public final class RetrievalAssertions {
         return this;
     }
 
+    public RetrievalAssertions hasSameCanonicalSequenceAs(List<RetrievalHit> expectedHits) {
+        List<String> expected = canonicalSequence(expectedHits);
+        List<String> observed = canonicalSequence(actual);
+        if (!observed.equals(expected)) {
+            throw AssuranceFailure.violation(
+                    "R-06",
+                    fixtureId,
+                    "reranker fallback must preserve the candidate set and order",
+                    "retrievalSequence",
+                    "expected=" + expected + ", actual=" + observed
+            );
+        }
+        return this;
+    }
+
     public RetrievalAssertions containsChunkIds(String... expectedChunkIds) {
         Set<String> expected = expectedChunkIds == null
                 ? Set.of()
@@ -189,6 +204,15 @@ public final class RetrievalAssertions {
                                 .map(RetrievalHit::chunkId)
                                 .toList()
                 ));
+    }
+
+    private List<String> canonicalSequence(List<RetrievalHit> hits) {
+        if (hits == null) {
+            return List.of();
+        }
+        return hits.stream()
+                .map(hit -> hit == null ? "<null>" : canonicalIdentity(hit))
+                .toList();
     }
 
     private String canonicalIdentity(RetrievalHit hit) {
