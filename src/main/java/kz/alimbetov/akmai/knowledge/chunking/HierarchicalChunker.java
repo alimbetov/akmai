@@ -14,6 +14,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class HierarchicalChunker {
 
+    private static final long BOUNDARY_RANK_PENALTY = 30L;
+
     private final SemanticChunker semanticChunker;
     private final ParentChildProperties properties;
     private final TokenEstimator tokenEstimator;
@@ -196,6 +198,10 @@ public class HierarchicalChunker {
                 1,
                 properties.childMaxTokens() - envelopeTokens
         );
+        int payloadMinimum = Math.max(
+                1,
+                properties.childMinTokens() - envelopeTokens
+        );
         SemanticUnit unit = new SemanticUnit(
                 text,
                 parent.sectionPath(),
@@ -203,7 +209,12 @@ public class HierarchicalChunker {
                 false
         );
         List<String> initial = oversizedUnitSplitter
-                .split(unit, payloadBudget)
+                .split(
+                        unit,
+                        payloadMinimum,
+                        payloadBudget,
+                        parent.language()
+                )
                 .stream()
                 .map(SemanticUnit::text)
                 .toList();
@@ -229,12 +240,17 @@ public class HierarchicalChunker {
         long bestScore = Long.MAX_VALUE;
 
         for (int index = 1; index < text.length(); index++) {
-            if (!isBoundary(text, index)) {
-                continue;
-            }
             if (index < text.length()
                     && Character.isLowSurrogate(text.charAt(index))
                     && Character.isHighSurrogate(text.charAt(index - 1))) {
+                continue;
+            }
+            int boundaryRank = ChunkBoundarySelector.rank(
+                    text,
+                    index,
+                    parent.language()
+            );
+            if (boundaryRank == ChunkBoundarySelector.RANK_NONE) {
                 continue;
             }
 
@@ -266,6 +282,9 @@ public class HierarchicalChunker {
                         properties.childMinTokens() - rightTokens
                 );
             }
+            score += BOUNDARY_RANK_PENALTY * (
+                    ChunkBoundarySelector.RANK_STRUCTURAL - boundaryRank
+            );
 
             if (score < bestScore) {
                 bestScore = score;
@@ -293,6 +312,11 @@ public class HierarchicalChunker {
             return List.of(text);
         }
 
+        int envelopeTokens = childTokens(document, parent, "");
+        int preferredMinimum = Math.max(
+                1,
+                properties.childMinTokens() - envelopeTokens
+        );
         int budget = Math.max(1, initialPayloadBudget - 1);
         while (budget >= 1) {
             SemanticUnit unit = new SemanticUnit(
@@ -301,7 +325,12 @@ public class HierarchicalChunker {
                     SemanticUnitType.PARAGRAPH,
                     false
             );
-            List<SemanticUnit> parts = oversizedUnitSplitter.split(unit, budget);
+            List<SemanticUnit> parts = oversizedUnitSplitter.split(
+                    unit,
+                    Math.min(preferredMinimum, budget),
+                    budget,
+                    parent.language()
+            );
             boolean allFit = parts.stream().allMatch(part ->
                     childTokens(document, parent, part.text())
                             <= properties.childMaxTokens()
@@ -333,17 +362,5 @@ public class HierarchicalChunker {
                         text
                 )
         );
-    }
-
-    private boolean isBoundary(String text, int index) {
-        char previous = text.charAt(index - 1);
-        char next = text.charAt(index);
-        return Character.isWhitespace(previous)
-                || Character.isWhitespace(next)
-                || switch (previous) {
-                    case '.', ',', ';', ':', '!', '?',
-                            '。', '，', '；', '：', '！', '？' -> true;
-                    default -> false;
-                };
     }
 }
