@@ -225,7 +225,7 @@ class SmartDelimiterLanguageMatrixTest {
                         text,
                         terminal,
                         spec.code(),
-                        ChunkBoundarySelector.RANK_NONE
+                        ChunkBoundarySelector.RANK_WHITESPACE
                 ));
             } else {
                 String reference = variant + "." + (variant + 1);
