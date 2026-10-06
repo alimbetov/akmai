@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.knowledge.chunking;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
+import kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage;
 
 /**
  * Unicode-safe, language-aware chunk boundary ranker.
@@ -88,12 +89,7 @@ final class ChunkBoundarySelector {
         int terminalIndex = terminalIndex(text, left);
         int terminal = text.codePointAt(terminalIndex);
         if (profile.terminalChars().contains((char) terminal)
-                && isSentenceTerminal(
-                        text,
-                        terminalIndex,
-                        right,
-                        profile
-                )) {
+                && isSentenceTerminal(text, terminalIndex, right, profile)) {
             return RANK_SENTENCE;
         }
 
@@ -170,16 +166,20 @@ final class ChunkBoundarySelector {
     }
 
     private static boolean isSingleLetterInitial(String text, int periodIndex) {
-        int before = previousNonWhitespace(text, periodIndex - 1);
-        if (before < 0 || !Character.isLetter(text.codePointAt(before))) {
+        if (periodIndex <= 0) {
             return false;
         }
-        int previous = before == 0
-                ? -1
-                : previousNonWhitespace(text, before - 1);
-        return previous < 0
-                || Character.isWhitespace(text.codePointAt(previous))
-                || isOpeningPunctuation(text.codePointAt(previous));
+        int letterIndex = text.offsetByCodePoints(periodIndex, -1);
+        int letter = text.codePointAt(letterIndex);
+        if (!Character.isLetter(letter)) {
+            return false;
+        }
+        if (letterIndex == 0) {
+            return true;
+        }
+        int previousIndex = text.offsetByCodePoints(letterIndex, -1);
+        int previous = text.codePointAt(previousIndex);
+        return Character.isWhitespace(previous) || isOpeningPunctuation(previous);
     }
 
     private static boolean isNumericSeparator(String text, int index) {
@@ -309,7 +309,7 @@ final class ChunkBoundarySelector {
         if (LIST_ITEM.matcher(prefix).find()) {
             return true;
         }
-        if (profile.language() == kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage.ZH
+        if (profile.language() == KnowledgeLanguage.ZH
                 && CJK_STRUCTURAL_ITEM.matcher(prefix).find()) {
             return true;
         }
@@ -331,16 +331,40 @@ final class ChunkBoundarySelector {
         if (keyword.equals("§")) {
             return line.startsWith("§");
         }
-        if (profile.language() == kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage.ZH) {
+        if (profile.language() == KnowledgeLanguage.ZH) {
             return line.startsWith(keyword);
         }
-        if (!line.startsWith(keyword)) {
-            return false;
-        }
-        if (line.length() == keyword.length()) {
+        if (startsKeyword(line, keyword)) {
             return true;
         }
-        int next = line.codePointAt(keyword.length());
+
+        int cursor = 0;
+        while (cursor < line.length()) {
+            int codePoint = line.codePointAt(cursor);
+            if (Character.isDigit(codePoint)
+                    || Character.isWhitespace(codePoint)
+                    || codePoint == '(' || codePoint == ')'
+                    || codePoint == '（' || codePoint == '）'
+                    || codePoint == '.' || codePoint == ':'
+                    || codePoint == '-' || codePoint == '–'
+                    || codePoint == '—' || codePoint == '№') {
+                cursor += Character.charCount(codePoint);
+                continue;
+            }
+            break;
+        }
+        return cursor > 0 && startsKeyword(line.substring(cursor), keyword);
+    }
+
+    private static boolean startsKeyword(String line, String keyword) {
+        String candidate = line.stripLeading();
+        if (!candidate.startsWith(keyword)) {
+            return false;
+        }
+        if (candidate.length() == keyword.length()) {
+            return true;
+        }
+        int next = candidate.codePointAt(keyword.length());
         return Character.isWhitespace(next)
                 || Character.isDigit(next)
                 || next == '.' || next == ':' || next == '№'
