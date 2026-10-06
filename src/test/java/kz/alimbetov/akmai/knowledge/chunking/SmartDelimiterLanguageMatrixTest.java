@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.function.Executable;
 
 class SmartDelimiterLanguageMatrixTest {
 
@@ -342,6 +343,6 @@ class SmartDelimiterLanguageMatrixTest {
         }
     }
 
-    private record BoundaryCase(String name, Runnable assertion) {
+    private record BoundaryCase(String name, Executable assertion) {
     }
 }
