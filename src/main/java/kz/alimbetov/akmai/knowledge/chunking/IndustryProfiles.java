@@ -42,7 +42,7 @@ public final class IndustryProfiles {
         return switch (domain) {
             case LEGAL -> LEGAL;
             case MEDICAL -> MEDICAL;
-            case GENERAL -> GENERAL;
+            case GENERAL, TECHNICAL -> GENERAL;
         };
     }
 
