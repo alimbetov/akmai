@@ -417,6 +417,11 @@ final class GroundingQuantityParser {
         if (minIndex < 0 && maxIndex < 0) {
             return MarkerRole.NONE;
         }
+        int markerIndex = Math.max(minIndex, maxIndex);
+        String trailing = prefix.substring(markerIndex);
+        if (trailing.codePoints().anyMatch(Character::isDigit)) {
+            return MarkerRole.NONE;
+        }
         return minIndex > maxIndex
                 ? MarkerRole.MINIMUM
                 : MarkerRole.MAXIMUM;
