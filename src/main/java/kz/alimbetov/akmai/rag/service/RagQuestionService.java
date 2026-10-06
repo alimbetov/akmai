@@ -14,6 +14,8 @@ import kz.alimbetov.akmai.rag.api.RagResponse;
 import kz.alimbetov.akmai.rag.grounding.SemanticGroundingVerifier;
 import kz.alimbetov.akmai.rag.learning.RagLearningEvent;
 import kz.alimbetov.akmai.rag.learning.RagLearningRecorder;
+import kz.alimbetov.akmai.rag.performance.RagPipelineObserver;
+import kz.alimbetov.akmai.rag.performance.RagPipelineStage;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
 import kz.alimbetov.akmai.rag.retrieval.AnswerGroundingVerifier;
@@ -68,6 +70,7 @@ public class RagQuestionService {
     private EvidenceQualityAssessor evidenceQualityAssessor;
     private RagLearningRecorder ragLearningRecorder;
     private SemanticGroundingVerifier semanticGroundingVerifier;
+    private RagPipelineObserver ragPipelineObserver;
 
     public RagQuestionService(
             QueryChunker queryChunker,
@@ -186,21 +189,47 @@ public class RagQuestionService {
         this.semanticGroundingVerifier = semanticGroundingVerifier;
     }
 
+    @Autowired(required = false)
+    void setRagPipelineObserver(RagPipelineObserver ragPipelineObserver) {
+        this.ragPipelineObserver = ragPipelineObserver;
+    }
+
     public RagResponse ask(String question, Set<Long> accessLevels) {
+        long totalStartedNanos = System.nanoTime();
+        try {
+            return askInternal(question, accessLevels, totalStartedNanos);
+        } finally {
+            recordPerformance(RagPipelineStage.TOTAL, totalStartedNanos);
+        }
+    }
+
+    private RagResponse askInternal(
+            String question,
+            Set<Long> accessLevels,
+            long startedNanos
+    ) {
         String requestId = UUID.randomUUID().toString();
-        long startedNanos = System.nanoTime();
         if (accessLevels == null || accessLevels.isEmpty()) {
             return insufficientInformation(question, requestId);
         }
 
+        long stageStarted = System.nanoTime();
         List<QueryChunk> queryChunks = queryChunker.chunk(question);
+        recordPerformance(RagPipelineStage.QUERY_ANALYSIS, stageStarted);
+
+        stageStarted = System.nanoTime();
         RetrievalPlan plan = retrievalPlanner.plan(queryChunks);
         if (measuredRetrievalCoordinator != null) {
             measuredRetrievalCoordinator.observePlan(queryChunks, plan);
         }
+        recordPerformance(RagPipelineStage.PLANNING, stageStarted);
 
-        RetrievalExecutionResult execution =
-                retrievalExecutor.executeDetailed(plan, accessLevels);
+        stageStarted = System.nanoTime();
+        RetrievalExecutionResult execution = retrievalExecutor.executeDetailed(
+                plan,
+                accessLevels
+        );
+        recordPerformance(RagPipelineStage.RETRIEVAL, stageStarted);
         recordStage(RetrievalAttributionStage.PRODUCED, execution.hits());
 
         if (execution.criticalFailure()) {
@@ -223,14 +252,18 @@ public class RagQuestionService {
 
         List<RetrievalHit> finalContext;
         try {
+            stageStarted = System.nanoTime();
             List<RetrievalHit> fused = resultFusion.fuse(execution.hits(), accessLevels);
+            recordPerformance(RagPipelineStage.FUSION, stageStarted);
             recordStage(RetrievalAttributionStage.FUSED, fused);
 
+            stageStarted = System.nanoTime();
             List<RetrievalHit> ranked = reranker.rerank(fused, question);
+            recordPerformance(RagPipelineStage.RERANK, stageStarted);
             recordStage(RetrievalAttributionStage.RERANKED, ranked);
 
+            stageStarted = System.nanoTime();
             List<RetrievalHit> expanded = knowledgeExpansion.expand(ranked, accessLevels);
-
             AdaptiveGraphShadowExpansion.ShadowExpansionReport graphReport =
                     adaptiveGraphShadowExpansion.observe(
                             ranked,
@@ -245,7 +278,9 @@ public class RagQuestionService {
             List<RetrievalHit> competitive = adaptiveGraphCompetitiveAdmission.admit(
                     graphExpanded
             );
+            recordPerformance(RagPipelineStage.EXPANSION, stageStarted);
 
+            stageStarted = System.nanoTime();
             List<RetrievalHit> authorityEligible = temporalAuthorityFilter.filter(
                     competitive
             );
@@ -257,6 +292,7 @@ public class RagQuestionService {
                     : contextDiversityFilter.apply(parentExpanded);
             List<RetrievalHit> bounded = contextBudget.apply(diversified, question);
             finalContext = contextRevalidator.revalidate(bounded, accessLevels);
+            recordPerformance(RagPipelineStage.CONTEXT_SELECTION, stageStarted);
             recordStage(RetrievalAttributionStage.SELECTED, finalContext);
         } catch (DataAccessException | TransactionException exception) {
             recordLearning(
@@ -297,12 +333,16 @@ public class RagQuestionService {
         }
 
         String context = contextAssembler.assemble(finalContext);
+        stageStarted = System.nanoTime();
         String answer = answerGenerationService.generate(question, context);
+        recordPerformance(RagPipelineStage.GENERATION, stageStarted);
 
+        stageStarted = System.nanoTime();
         CitationValidator.CitationValidation validation = citationValidator.validate(
                 answer,
                 finalContext
         );
+        recordPerformance(RagPipelineStage.CITATION, stageStarted);
         if (measuredRetrievalCoordinator != null) {
             measuredRetrievalCoordinator.recordCitations(finalContext, validation);
         }
@@ -325,12 +365,14 @@ public class RagQuestionService {
             return insufficientInformation(question, requestId);
         }
 
+        stageStarted = System.nanoTime();
         AnswerGroundingVerifier.GroundingValidation grounding =
                 answerGroundingVerifier.verify(
                         validation.answer(),
                         finalContext,
                         groundingLanguage(queryChunks)
                 );
+        recordPerformance(RagPipelineStage.DETERMINISTIC_GROUNDING, stageStarted);
         if (!grounding.grounded()) {
             adaptiveGraphUtilityRecorder.record(finalContext, validation, false);
             recordLearning(
@@ -348,9 +390,11 @@ public class RagQuestionService {
             return insufficientInformation(question, requestId);
         }
 
+        stageStarted = System.nanoTime();
         SemanticGroundingVerifier.Verification semantic = semanticGroundingVerifier == null
                 ? null
                 : semanticGroundingVerifier.verify(grounding, finalContext);
+        recordPerformance(RagPipelineStage.SEMANTIC_GROUNDING, stageStarted);
         if (semantic != null && !semantic.accepted()) {
             adaptiveGraphUtilityRecorder.record(finalContext, validation, false);
             RagLearningEvent.GroundingStatus status =
@@ -438,6 +482,16 @@ public class RagQuestionService {
                 answerStatus,
                 groundingStatus,
                 elapsedMillis(startedNanos)
+        );
+    }
+
+    private void recordPerformance(RagPipelineStage stage, long startedNanos) {
+        if (ragPipelineObserver == null) {
+            return;
+        }
+        ragPipelineObserver.record(
+                stage,
+                Math.max(0, System.nanoTime() - startedNanos)
         );
     }
 
