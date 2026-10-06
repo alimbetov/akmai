@@ -20,6 +20,7 @@ public class RagPipelineObserver {
                     Timer.builder("akmai.rag.stage")
                             .description("AkmAI RAG pipeline stage latency")
                             .tag("stage", stage.name().toLowerCase(java.util.Locale.ROOT))
+                            .publishPercentiles(0.50, 0.95, 0.99)
                             .publishPercentileHistogram()
                             .register(meterRegistry)
             );
