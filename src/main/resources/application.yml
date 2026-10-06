@@ -169,10 +169,17 @@ akmai:
     default-policy: ${AKMAI_RETENTION_DEFAULT_POLICY:PERMANENT}
     default-ttl: ${AKMAI_RETENTION_DEFAULT_TTL:90d}
   chunking:
-    target-tokens: 750
-    soft-max-tokens: 1200
-    hard-max-tokens: 1800
-    min-tokens: 250
+    target-tokens: ${AKMAI_PARENT_TARGET_TOKENS:550}
+    soft-max-tokens: ${AKMAI_PARENT_SOFT_MAX_TOKENS:650}
+    hard-max-tokens: ${AKMAI_PARENT_HARD_MAX_TOKENS:900}
+    min-tokens: ${AKMAI_PARENT_MIN_TOKENS:250}
+  parent-child:
+    enabled: ${AKMAI_PARENT_CHILD_ENABLED:true}
+    child-min-tokens: ${AKMAI_CHILD_MIN_TOKENS:250}
+    child-target-tokens: ${AKMAI_CHILD_TARGET_TOKENS:275}
+    child-max-tokens: ${AKMAI_CHILD_MAX_TOKENS:300}
+    expansion-enabled: ${AKMAI_PARENT_EXPANSION_ENABLED:true}
+    max-parent-expansions: ${AKMAI_PARENT_EXPANSION_MAX:8}
 
 server:
   port: ${SERVER_PORT:8080}
