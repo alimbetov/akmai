@@ -4,6 +4,12 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+/**
+ * Unicode-safe, language-aware chunk boundary ranker.
+ *
+ * <p>Token limits are hard constraints handled by the caller. This selector only chooses
+ * the semantically safest boundary inside the already valid [minimum, maximum] window.</p>
+ */
 final class ChunkBoundarySelector {
 
     static final int RANK_NONE = 0;
@@ -14,8 +20,13 @@ final class ChunkBoundarySelector {
     static final int RANK_STRUCTURAL = 5;
 
     private static final Pattern LIST_ITEM = Pattern.compile(
-            "^(?:[-–—•▪◦]|\\[\\d{1,4}]|\\(?\\d{1,4}[.)]|"
-                    + "\\(?\\p{L}[.)]|\\(?[IVXLCDMivxlcdm]{1,8}[.)])\\s+"
+            "^(?:[-–—•▪◦]|\\[\\d{1,4}]|\\(?\\d{1,4}[.)、）]|"
+                    + "\\(?\\p{L}[.)]|\\(?[IVXLCDMivxlcdm]{1,8}[.)])\\s*"
+    );
+    private static final Pattern CJK_STRUCTURAL_ITEM = Pattern.compile(
+            "^(?:第[一二三四五六七八九十百千〇零两\\d]{1,12}[章节条款项]|"
+                    + "[（(]?[一二三四五六七八九十百千〇零两]{1,8}[）)、.]|"
+                    + "\\d{1,4}[、.)）])"
     );
 
     private ChunkBoundarySelector() {
@@ -68,25 +79,30 @@ final class ChunkBoundarySelector {
             return RANK_NONE;
         }
 
+        LanguageProfile profile = LanguageProfiles.forCode(language);
         String gap = text.substring(left + 1, right);
-        if (gap.contains("\n\n") || startsListItem(text, right)) {
+        if (gap.contains("\n\n") || startsStructuralItem(text, right, profile)) {
             return RANK_STRUCTURAL;
         }
 
         int terminalIndex = terminalIndex(text, left);
         int terminal = text.codePointAt(terminalIndex);
-        LanguageProfile profile = LanguageProfiles.forCode(language);
         if (profile.terminalChars().contains((char) terminal)
-                && isSentenceTerminal(text, terminalIndex, right, profile)) {
+                && isSentenceTerminal(
+                        text,
+                        terminalIndex,
+                        right,
+                        profile
+                )) {
             return RANK_SENTENCE;
         }
 
-        if (terminal == ';' || terminal == ':'
-                || terminal == '；' || terminal == '：'
-                || terminal == '—') {
+        if (profile.clauseChars().contains((char) terminal)
+                && !isProtectedClausePunctuation(text, terminalIndex)) {
             return RANK_CLAUSE;
         }
-        if (terminal == ',' || terminal == '，') {
+        if (profile.weakChars().contains((char) terminal)
+                && !isNumericSeparator(text, terminalIndex)) {
             return RANK_COMMA;
         }
         if (!gap.isEmpty()
@@ -103,19 +119,93 @@ final class ChunkBoundarySelector {
             LanguageProfile profile
     ) {
         int terminal = text.codePointAt(terminalIndex);
-        if (terminal == '.') {
-            int before = previousNonWhitespace(text, terminalIndex - 1);
-            if (before >= 0
-                    && Character.isDigit(text.codePointAt(before))
-                    && right < text.length()
-                    && Character.isDigit(text.codePointAt(right))) {
-                return false;
-            }
-            if (isKnownAbbreviation(text, terminalIndex, profile.abbreviations())) {
-                return false;
-            }
+        if (isInsideTerminalCluster(text, terminalIndex, profile)) {
+            return false;
+        }
+        if (terminal == '.' && isProtectedPeriod(text, terminalIndex, profile)) {
+            return false;
         }
         return hasSeparatorAfterTerminal(text, terminalIndex, right);
+    }
+
+    private static boolean isProtectedPeriod(
+            String text,
+            int terminalIndex,
+            LanguageProfile profile
+    ) {
+        if (isNumericSeparator(text, terminalIndex)) {
+            return true;
+        }
+        if (isInternalTokenPeriod(text, terminalIndex)) {
+            return true;
+        }
+        if (isKnownAbbreviation(text, terminalIndex, profile.abbreviations())) {
+            return true;
+        }
+        return isSingleLetterInitial(text, terminalIndex);
+    }
+
+    private static boolean isInsideTerminalCluster(
+            String text,
+            int terminalIndex,
+            LanguageProfile profile
+    ) {
+        int next = terminalIndex + Character.charCount(text.codePointAt(terminalIndex));
+        return next < text.length()
+                && profile.terminalChars().contains(text.charAt(next));
+    }
+
+    private static boolean isInternalTokenPeriod(String text, int index) {
+        if (index <= 0 || index + 1 >= text.length()) {
+            return false;
+        }
+        int before = text.codePointBefore(index);
+        int afterIndex = index + Character.charCount(text.codePointAt(index));
+        if (afterIndex >= text.length()) {
+            return false;
+        }
+        int after = text.codePointAt(afterIndex);
+        return Character.isLetterOrDigit(before)
+                && Character.isLetterOrDigit(after);
+    }
+
+    private static boolean isSingleLetterInitial(String text, int periodIndex) {
+        int before = previousNonWhitespace(text, periodIndex - 1);
+        if (before < 0 || !Character.isLetter(text.codePointAt(before))) {
+            return false;
+        }
+        int previous = before == 0
+                ? -1
+                : previousNonWhitespace(text, before - 1);
+        return previous < 0
+                || Character.isWhitespace(text.codePointAt(previous))
+                || isOpeningPunctuation(text.codePointAt(previous));
+    }
+
+    private static boolean isNumericSeparator(String text, int index) {
+        if (index <= 0 || index + 1 >= text.length()) {
+            return false;
+        }
+        int before = text.codePointBefore(index);
+        int afterIndex = index + Character.charCount(text.codePointAt(index));
+        if (afterIndex >= text.length()) {
+            return false;
+        }
+        int after = text.codePointAt(afterIndex);
+        return Character.isDigit(before) && Character.isDigit(after);
+    }
+
+    private static boolean isProtectedClausePunctuation(String text, int index) {
+        int punctuation = text.codePointAt(index);
+        if (punctuation != ':') {
+            return false;
+        }
+        if (isNumericSeparator(text, index)) {
+            return true;
+        }
+        int after = index + Character.charCount(punctuation);
+        return after < text.length()
+                && (text.charAt(after) == '/' || text.charAt(after) == '\\');
     }
 
     private static boolean hasSeparatorAfterTerminal(
@@ -154,7 +244,18 @@ final class ChunkBoundarySelector {
         return codePoint == '"' || codePoint == '\''
                 || codePoint == '”' || codePoint == '’'
                 || codePoint == '»' || codePoint == ')'
-                || codePoint == ']' || codePoint == '}';
+                || codePoint == ']' || codePoint == '}'
+                || codePoint == '】' || codePoint == '》'
+                || codePoint == '）';
+    }
+
+    private static boolean isOpeningPunctuation(int codePoint) {
+        return codePoint == '"' || codePoint == '\''
+                || codePoint == '“' || codePoint == '‘'
+                || codePoint == '«' || codePoint == '('
+                || codePoint == '[' || codePoint == '{'
+                || codePoint == '【' || codePoint == '《'
+                || codePoint == '（';
     }
 
     private static boolean isKnownAbbreviation(
@@ -165,13 +266,17 @@ final class ChunkBoundarySelector {
         if (abbreviations.isEmpty()) {
             return false;
         }
-        int start = Math.max(0, terminalIndex - 24);
+        int start = Math.max(0, terminalIndex - 32);
         String left = text.substring(start, terminalIndex + 1)
                 .toLowerCase(Locale.ROOT);
         return abbreviations.stream().anyMatch(left::endsWith);
     }
 
-    private static boolean startsListItem(String text, int index) {
+    private static boolean startsStructuralItem(
+            String text,
+            int index,
+            LanguageProfile profile
+    ) {
         if (index <= 0 || index >= text.length()) {
             return false;
         }
@@ -187,8 +292,59 @@ final class ChunkBoundarySelector {
             }
             lineStart = previous;
         }
-        int end = Math.min(text.length(), index + 24);
-        return LIST_ITEM.matcher(text.substring(index, end)).find();
+
+        int lineEnd = index;
+        while (lineEnd < text.length()) {
+            int codePoint = text.codePointAt(lineEnd);
+            if (codePoint == '\n' || codePoint == '\r') {
+                break;
+            }
+            lineEnd += Character.charCount(codePoint);
+        }
+        String line = text.substring(index, lineEnd).stripLeading();
+        if (line.isEmpty()) {
+            return false;
+        }
+        String prefix = line.substring(0, Math.min(line.length(), 64));
+        if (LIST_ITEM.matcher(prefix).find()) {
+            return true;
+        }
+        if (profile.language() == kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage.ZH
+                && CJK_STRUCTURAL_ITEM.matcher(prefix).find()) {
+            return true;
+        }
+
+        String normalized = prefix.toLowerCase(Locale.ROOT);
+        for (String keyword : profile.structuralKeywords()) {
+            if (matchesStructuralKeyword(normalized, keyword, profile)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean matchesStructuralKeyword(
+            String line,
+            String keyword,
+            LanguageProfile profile
+    ) {
+        if (keyword.equals("§")) {
+            return line.startsWith("§");
+        }
+        if (profile.language() == kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage.ZH) {
+            return line.startsWith(keyword);
+        }
+        if (!line.startsWith(keyword)) {
+            return false;
+        }
+        if (line.length() == keyword.length()) {
+            return true;
+        }
+        int next = line.codePointAt(keyword.length());
+        return Character.isWhitespace(next)
+                || Character.isDigit(next)
+                || next == '.' || next == ':' || next == '№'
+                || next == '-' || next == '–' || next == '—';
     }
 
     private static int previousNonWhitespace(String text, int from) {
