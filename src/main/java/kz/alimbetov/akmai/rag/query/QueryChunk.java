@@ -11,7 +11,8 @@ public record QueryChunk(
         String semanticText,
         String language,
         List<DetectedIdentifier> identifiers,
-        QueryOrigin origin
+        QueryOrigin origin,
+        String rootQuery
 ) {
     public QueryChunk(
             String id,
@@ -30,12 +31,39 @@ public record QueryChunk(
                 semanticText,
                 language,
                 identifiers,
-                QueryOrigin.ORIGINAL
+                QueryOrigin.ORIGINAL,
+                rawText
+        );
+    }
+
+    public QueryChunk(
+            String id,
+            int index,
+            String rawText,
+            String normalizedText,
+            String semanticText,
+            String language,
+            List<DetectedIdentifier> identifiers,
+            QueryOrigin origin
+    ) {
+        this(
+                id,
+                index,
+                rawText,
+                normalizedText,
+                semanticText,
+                language,
+                identifiers,
+                origin,
+                rawText
         );
     }
 
     public QueryChunk {
         origin = origin == null ? QueryOrigin.ORIGINAL : origin;
         identifiers = identifiers == null ? List.of() : List.copyOf(identifiers);
+        rootQuery = rootQuery == null || rootQuery.isBlank()
+                ? rawText
+                : rootQuery.trim();
     }
 }
