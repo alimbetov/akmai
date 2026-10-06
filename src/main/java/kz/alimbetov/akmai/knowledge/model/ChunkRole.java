@@ -13,6 +13,9 @@ public enum ChunkRole {
     public static final String CHILD_INDEX_KEY = "akmaiChildIndex";
     public static final String CHILD_COUNT_KEY = "akmaiChildCount";
     public static final String ESTIMATED_TOKENS_KEY = "akmaiEstimatedTokens";
+    public static final String PARENT_EXPANSION_KEY = "akmaiParentExpansion";
+    public static final String MATCHED_CHILD_CHUNK_ID_KEY =
+            "akmaiMatchedChildChunkId";
 
     public static ChunkRole fromMetadata(Map<String, Object> metadata) {
         if (metadata == null || metadata.isEmpty()) {
@@ -38,5 +41,16 @@ public enum ChunkRole {
 
     public static boolean isSearchable(Map<String, Object> metadata) {
         return fromMetadata(metadata) != PARENT;
+    }
+
+    public static String matchedChildChunkId(Map<String, Object> metadata) {
+        if (metadata == null) {
+            return null;
+        }
+        Object raw = metadata.get(MATCHED_CHILD_CHUNK_ID_KEY);
+        if (raw instanceof String value && !value.isBlank()) {
+            return value;
+        }
+        return null;
     }
 }
