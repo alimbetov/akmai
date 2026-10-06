@@ -21,7 +21,7 @@ import kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage;
 import org.springframework.stereotype.Service;
 
 @Service
-public class KnowledgeIngestionService {
+public class KnowledgeIngestionService implements KnowledgeIngestionPort {
 
     private final HierarchicalChunker hierarchicalChunker;
     private final ParallelIngestionExecutor parallelIngestionExecutor;
@@ -50,6 +50,7 @@ public class KnowledgeIngestionService {
         return addText(request, null);
     }
 
+    @Override
     public KnowledgeIngestionResponse addText(
             AddKnowledgeRequest request,
             String idempotencyKey
@@ -113,8 +114,7 @@ public class KnowledgeIngestionService {
         );
 
         List<KnowledgeChunk> chunks = hierarchicalChunker.chunk(document);
-        long searchableChunkCount =
-                hierarchicalChunker.searchableChunkCount(chunks);
+        long searchableChunkCount = hierarchicalChunker.searchableChunkCount(chunks);
         if (searchableChunkCount == 0) {
             throw new IllegalArgumentException(
                     "Document produced no indexable chunks after normalization"
@@ -122,8 +122,7 @@ public class KnowledgeIngestionService {
         }
         heartbeat(idempotency);
 
-        List<EnrichedKnowledgeChunk> enriched =
-                parallelIngestionExecutor.execute(chunks);
+        List<EnrichedKnowledgeChunk> enriched = parallelIngestionExecutor.execute(chunks);
         heartbeat(idempotency);
 
         KnowledgeIngestionResponse response = new KnowledgeIngestionResponse(
