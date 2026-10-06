@@ -27,3 +27,5 @@ databaseChangeLog:
       file: db/changelog/greenfield/013-semantic-concept-retrieval.sql
   - include:
       file: db/changelog/greenfield/014-reembedding-ha-lease.sql
+  - include:
+      file: db/changelog/greenfield/015-experience-memory.sql
