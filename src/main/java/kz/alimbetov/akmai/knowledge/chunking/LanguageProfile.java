@@ -23,9 +23,8 @@ public record LanguageProfile(
 ) {
 
     private static final Set<Character> DEFAULT_CLAUSE_CHARS =
-            Set.of(';', ':', '；', '：', '—');
-    private static final Set<Character> DEFAULT_WEAK_CHARS =
-            Set.of(',', '，');
+            Set.of(';', ':', '—');
+    private static final Set<Character> DEFAULT_WEAK_CHARS = Set.of(',');
 
     public LanguageProfile {
         if (language == null) {
