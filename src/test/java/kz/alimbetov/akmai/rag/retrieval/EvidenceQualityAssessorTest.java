@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.rag.retrieval;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
 import java.util.List;
@@ -59,7 +60,26 @@ class EvidenceQualityAssessorTest {
     @Test
     void singleNonAuthoritativeLaneIsWeakAndObserved() {
         EvidenceQualityAssessor subject = subject();
-        List<RetrievalHit> hits = List.of(hit(
+        List<RetrievalHit> hits = weakEvidence();
+
+        assertThat(subject.observe(hits))
+                .isEqualTo(EvidenceQualityAssessor.EvidenceQuality.WEAK);
+        verify(observer).evidenceQuality("WEAK");
+    }
+
+    @Test
+    void telemetryFailureNeverChangesAssessmentOutcome() {
+        EvidenceQualityAssessor subject = subject();
+        doThrow(new IllegalStateException("metrics unavailable"))
+                .when(observer)
+                .evidenceQuality("WEAK");
+
+        assertThat(subject.observe(weakEvidence()))
+                .isEqualTo(EvidenceQualityAssessor.EvidenceQuality.WEAK);
+    }
+
+    private List<RetrievalHit> weakEvidence() {
+        return List.of(hit(
                 "doc-1",
                 "c1",
                 2,
@@ -69,10 +89,6 @@ class EvidenceQualityAssessorTest {
                         0.8
                 ))
         ));
-
-        assertThat(subject.observe(hits))
-                .isEqualTo(EvidenceQualityAssessor.EvidenceQuality.WEAK);
-        verify(observer).evidenceQuality("WEAK");
     }
 
     private EvidenceQualityAssessor subject() {
