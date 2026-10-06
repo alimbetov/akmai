@@ -24,14 +24,22 @@ public record AdvancedRetrievalProperties(
         double queryMemorySimilarityThreshold,
         @DefaultValue("1800") @Min(256) @Max(8000) int queryMemoryAnswerMaxChars,
         @DefaultValue("2s") @NotNull Duration modelTimeout,
-        @DefaultValue("false") boolean colbertEnabled
+        @DefaultValue("false") boolean colbertEnabled,
+        @DefaultValue("") String colbertEndpoint,
+        @DefaultValue("2s") @NotNull Duration colbertTimeout
 ) {
     public AdvancedRetrievalProperties {
-        if (modelTimeout == null
-                || modelTimeout.compareTo(Duration.ofMillis(50)) < 0
-                || modelTimeout.compareTo(Duration.ofSeconds(30)) > 0) {
+        validateDuration("model-timeout", modelTimeout);
+        validateDuration("colbert-timeout", colbertTimeout);
+        colbertEndpoint = colbertEndpoint == null ? "" : colbertEndpoint.trim();
+    }
+
+    private static void validateDuration(String name, Duration value) {
+        if (value == null
+                || value.compareTo(Duration.ofMillis(50)) < 0
+                || value.compareTo(Duration.ofSeconds(30)) > 0) {
             throw new IllegalArgumentException(
-                    "model-timeout must be between PT0.05S and PT30S"
+                    name + " must be between PT0.05S and PT30S"
             );
         }
     }
