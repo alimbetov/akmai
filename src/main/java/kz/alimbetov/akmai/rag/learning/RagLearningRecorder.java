@@ -1,17 +1,17 @@
 package kz.alimbetov.akmai.rag.learning;
 
 import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import kz.alimbetov.akmai.config.SelfOptimizingRagProperties;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
+import kz.alimbetov.akmai.rag.policy.ApprovedRetrievalPolicyProvider;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalExecutionResult;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
+import kz.alimbetov.akmai.rag.trace.RagExecutionTrace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -26,17 +26,20 @@ public class RagLearningRecorder {
     private final LearningPrivacyFingerprint fingerprint;
     private final SelfOptimizingRagProperties properties;
     private final EmbeddingProfileService embeddingProfileService;
+    private final ApprovedRetrievalPolicyProvider approvedRetrievalPolicyProvider;
 
     public RagLearningRecorder(
             RagLearningEventRepository repository,
             LearningPrivacyFingerprint fingerprint,
             SelfOptimizingRagProperties properties,
-            EmbeddingProfileService embeddingProfileService
+            EmbeddingProfileService embeddingProfileService,
+            ApprovedRetrievalPolicyProvider approvedRetrievalPolicyProvider
     ) {
         this.repository = repository;
         this.fingerprint = fingerprint;
         this.properties = properties;
         this.embeddingProfileService = embeddingProfileService;
+        this.approvedRetrievalPolicyProvider = approvedRetrievalPolicyProvider;
     }
 
     public void record(
@@ -60,27 +63,57 @@ public class RagLearningRecorder {
             if (queryFingerprint.isBlank()) {
                 return;
             }
+            String language = language(queryChunks);
+            String queryClass = queryClass(queryChunks);
+            String embeddingProfile = activeEmbeddingProfile();
+            String retrievalPolicyVersion = approvedRetrievalPolicyProvider
+                    .approvedVersion()
+                    .orElse(properties.retrievalPolicyVersion());
+            int retrievedCount = execution == null ? 0 : execution.hits().size();
+            int selectedCount = finalContext == null ? 0 : finalContext.size();
+            int citedCount = validation == null || validation.citedSources() == null
+                    ? 0
+                    : validation.citedSources().size();
+
+            RagExecutionTrace trace = new RagExecutionTrace(
+                    requestId,
+                    properties.corpusVersion(),
+                    embeddingProfile,
+                    retrievalPolicyVersion,
+                    properties.learningPolicyVersion(),
+                    properties.groundingPolicyVersion(),
+                    language,
+                    queryClass,
+                    execution != null && execution.degraded(),
+                    execution != null && execution.criticalFailure(),
+                    RagExecutionTrace.laneOutcomes(execution),
+                    retrievedCount,
+                    selectedCount,
+                    citedCount,
+                    answerStatus,
+                    groundingStatus,
+                    totalLatencyMs
+            );
+
             RagLearningEvent event = new RagLearningEvent(
                     UUID.randomUUID(),
                     parsedRequestId,
                     queryFingerprint,
                     accessLevels,
-                    language(queryChunks),
-                    queryClass(queryChunks),
+                    language,
+                    queryClass,
                     properties.corpusVersion(),
-                    activeEmbeddingProfile(),
-                    properties.retrievalPolicyVersion(),
+                    embeddingProfile,
+                    retrievalPolicyVersion,
                     properties.learningPolicyVersion(),
                     properties.groundingPolicyVersion(),
                     answerStatus,
                     groundingStatus,
-                    execution == null ? 0 : execution.hits().size(),
-                    finalContext == null ? 0 : finalContext.size(),
-                    validation == null || validation.citedSources() == null
-                            ? 0
-                            : validation.citedSources().size(),
+                    retrievedCount,
+                    selectedCount,
+                    citedCount,
                     Math.max(0, totalLatencyMs),
-                    trace(execution),
+                    trace.learningProjection(),
                     Instant.now()
             );
             repository.save(event);
@@ -90,24 +123,6 @@ public class RagLearningRecorder {
                     exception.getClass().getSimpleName()
             );
         }
-    }
-
-    private Map<String, Object> trace(RetrievalExecutionResult execution) {
-        if (execution == null) {
-            return Map.of();
-        }
-        LinkedHashMap<String, Integer> outcomes = new LinkedHashMap<>();
-        execution.outcomes().values().forEach(outcome -> {
-            String key = (outcome.type() == null ? "UNKNOWN" : outcome.type().name())
-                    + ":"
-                    + (outcome.status() == null ? "UNKNOWN" : outcome.status().name());
-            outcomes.merge(key, 1, Integer::sum);
-        });
-        LinkedHashMap<String, Object> result = new LinkedHashMap<>();
-        result.put("degraded", execution.degraded());
-        result.put("criticalFailure", execution.criticalFailure());
-        result.put("laneOutcomes", Map.copyOf(outcomes));
-        return Map.copyOf(result);
     }
 
     private String activeEmbeddingProfile() {
