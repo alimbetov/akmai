@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.knowledge.projection;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
+import kz.alimbetov.akmai.knowledge.model.ChunkRole;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
@@ -11,11 +12,18 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * Applies the configured retrieval transaction timeout to published read paths
  * without changing ingestion/write transaction semantics.
+ *
+ * <p>Parent projections are addressable context records, not primary retrieval
+ * candidates. Search-oriented methods therefore expose only searchable
+ * projections while direct keyed reads remain hierarchy-aware.</p>
  */
 @Component
 @Primary
 public class TimedPublishedSearchProjectionReader
         implements PublishedSearchProjectionReader {
+
+    private static final int SEARCH_OVERSAMPLE_FACTOR = 3;
+    private static final int SEARCH_OVERSAMPLE_MAX = 1000;
 
     private final PostgresSearchProjectionRepository delegate;
     private final TransactionTemplate transactionTemplate;
@@ -76,13 +84,13 @@ public class TimedPublishedSearchProjectionReader
             int radius,
             Set<Long> accessLevels
     ) {
-        return read(() -> delegate.findAdjacent(
+        return searchable(read(() -> delegate.findAdjacent(
                 documentId,
                 generation,
                 chunkIndex,
                 radius,
                 accessLevels
-        ));
+        )), Integer.MAX_VALUE);
     }
 
     @Override
@@ -93,13 +101,58 @@ public class TimedPublishedSearchProjectionReader
             Set<Long> accessLevels,
             int limit
     ) {
-        return read(() -> delegate.searchLexical(
+        if (limit <= 0) {
+            return List.of();
+        }
+        int oversampled = oversampledLimit(limit);
+        return searchable(read(() -> delegate.searchLexical(
                 query,
                 language,
                 documentIds,
                 accessLevels,
-                limit
-        ));
+                oversampled
+        )), limit);
+    }
+
+    @Override
+    public List<SearchProjection> searchSemanticConcepts(
+            List<String> conceptIds,
+            List<String> documentIds,
+            Set<Long> accessLevels,
+            int limit
+    ) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        int oversampled = oversampledLimit(limit);
+        return searchable(read(() -> delegate.searchSemanticConcepts(
+                conceptIds,
+                documentIds,
+                accessLevels,
+                oversampled
+        )), limit);
+    }
+
+    private List<SearchProjection> searchable(
+            List<SearchProjection> values,
+            int limit
+    ) {
+        if (values == null || values.isEmpty()) {
+            return List.of();
+        }
+        return values.stream()
+                .filter(value -> value != null
+                        && ChunkRole.isSearchable(value.metadata()))
+                .limit(limit)
+                .toList();
+    }
+
+    private int oversampledLimit(int limit) {
+        long candidate = (long) limit * SEARCH_OVERSAMPLE_FACTOR;
+        return (int) Math.min(
+                SEARCH_OVERSAMPLE_MAX,
+                Math.max(limit, candidate)
+        );
     }
 
     private <T> T read(Supplier<T> action) {
