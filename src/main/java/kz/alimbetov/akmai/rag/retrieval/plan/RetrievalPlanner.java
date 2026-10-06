@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import kz.alimbetov.akmai.rag.query.AdvancedRetrievalProperties;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
+import kz.alimbetov.akmai.rag.query.QueryOrigin;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -16,16 +18,25 @@ import org.springframework.stereotype.Component;
 public class RetrievalPlanner {
 
     private final AdaptiveRetrievalPlanner adaptiveRetrievalPlanner;
+    private final AdvancedRetrievalProperties advancedProperties;
 
     public RetrievalPlanner() {
-        this(null);
+        this(null, null);
+    }
+
+    public RetrievalPlanner(
+            AdaptiveRetrievalPlanner adaptiveRetrievalPlanner
+    ) {
+        this(adaptiveRetrievalPlanner, null);
     }
 
     @Autowired
     public RetrievalPlanner(
-            AdaptiveRetrievalPlanner adaptiveRetrievalPlanner
+            AdaptiveRetrievalPlanner adaptiveRetrievalPlanner,
+            AdvancedRetrievalProperties advancedProperties
     ) {
         this.adaptiveRetrievalPlanner = adaptiveRetrievalPlanner;
+        this.advancedProperties = advancedProperties;
     }
 
     public RetrievalPlan plan(List<QueryChunk> chunks) {
@@ -83,9 +94,48 @@ public class RetrievalPlanner {
         }
 
         RetrievalPlan baseline = new RetrievalPlan(List.copyOf(steps));
-        return adaptiveRetrievalPlanner == null
+        RetrievalPlan planned = adaptiveRetrievalPlanner == null
                 ? baseline
                 : adaptiveRetrievalPlanner.enforce(chunks, baseline);
+        return appendSelectiveHyde(chunks, planned);
+    }
+
+    private RetrievalPlan appendSelectiveHyde(
+            List<QueryChunk> chunks,
+            RetrievalPlan planned
+    ) {
+        if (advancedProperties == null
+                || !advancedProperties.hydeEnabled()
+                || chunks == null
+                || chunks.isEmpty()) {
+            return planned;
+        }
+
+        QueryChunk candidate = chunks.stream()
+                .filter(chunk -> chunk != null)
+                .filter(chunk -> chunk.origin() == QueryOrigin.ORIGINAL)
+                .filter(chunk -> chunk.index() == 0)
+                .filter(chunk -> chunk.identifiers() == null
+                        || chunk.identifiers().isEmpty())
+                .filter(chunk -> chunk.semanticText() != null
+                        && !chunk.semanticText().isBlank())
+                .findFirst()
+                .orElse(null);
+        if (candidate == null) {
+            return planned;
+        }
+
+        boolean vectorLanePresent = planned.steps().stream()
+                .anyMatch(existing -> existing.type() == RetrievalType.VECTOR
+                        && existing.queryChunk() != null
+                        && existing.queryChunk().id().equals(candidate.id()));
+        if (!vectorLanePresent) {
+            return planned;
+        }
+
+        List<RetrievalStep> result = new ArrayList<>(planned.steps());
+        result.add(step(candidate, RetrievalType.HYDE_VECTOR, List.of()));
+        return new RetrievalPlan(List.copyOf(result));
     }
 
     private RetrievalStep step(
