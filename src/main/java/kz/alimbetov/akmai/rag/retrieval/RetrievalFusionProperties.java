@@ -33,7 +33,7 @@ public record RetrievalFusionProperties(
         }
         return switch (type) {
             case IDENTIFIER -> identifierWeight;
-            case VECTOR -> vectorWeight;
+            case VECTOR, HYDE_VECTOR -> vectorWeight;
             case LEXICAL -> lexicalWeight;
             case CONCEPT -> conceptWeight;
             case REFERENCE -> referenceWeight;
