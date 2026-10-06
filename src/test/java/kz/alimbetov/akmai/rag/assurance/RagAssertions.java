@@ -2,12 +2,14 @@ package kz.alimbetov.akmai.rag.assurance;
 
 import java.util.List;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
+import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import kz.alimbetov.akmai.rag.assurance.assertion.ChunkAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.CitationAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.ContextAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.GroundingAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.LifecycleAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.NormalizationAssertions;
+import kz.alimbetov.akmai.rag.assurance.assertion.ProjectionAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.RetrievalAssertions;
 import kz.alimbetov.akmai.rag.assurance.assertion.SecurityAssertions;
 import kz.alimbetov.akmai.rag.retrieval.AnswerGroundingVerifier;
@@ -32,6 +34,10 @@ public final class RagAssertions {
 
     public static ChunkAssertions chunks(List<KnowledgeChunk> chunks) {
         return new ChunkAssertions(chunks);
+    }
+
+    public static ProjectionAssertions projections(List<SearchProjection> projections) {
+        return new ProjectionAssertions(projections);
     }
 
     public static RetrievalAssertions retrieval(List<RetrievalHit> hits) {
