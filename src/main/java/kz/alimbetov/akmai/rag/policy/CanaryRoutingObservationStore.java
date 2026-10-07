@@ -19,6 +19,10 @@ public class CanaryRoutingObservationStore {
         current.set(decision);
     }
 
+    public Optional<Decision> peekCurrent() {
+        return Optional.ofNullable(current.get());
+    }
+
     public Optional<Decision> consumeCurrent() {
         Decision decision = current.get();
         current.remove();

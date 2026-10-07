@@ -14,6 +14,7 @@ import kz.alimbetov.akmai.rag.policy.RagPolicyPromotionService;
 import kz.alimbetov.akmai.rag.policy.RagPolicyRegistryRepository;
 import kz.alimbetov.akmai.rag.policy.RagPolicyStatus;
 import kz.alimbetov.akmai.rag.policy.RagPolicyType;
+import kz.alimbetov.akmai.rag.query.SemanticQueryMemoryNamespace;
 import kz.alimbetov.akmai.rag.query.SemanticQueryMemoryRepository;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
@@ -30,6 +31,14 @@ import org.testcontainers.utility.DockerImageName;
 
 @Testcontainers
 class SelfOptimizingRagPersistenceIntegrationTest {
+
+    private static final SemanticQueryMemoryNamespace QUERY_MEMORY_NAMESPACE =
+            new SemanticQueryMemoryNamespace(
+                    "embedding-v1",
+                    "retrieval-v1",
+                    "learning-v1",
+                    "grounding-v1"
+            );
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
@@ -88,7 +97,7 @@ class SelfOptimizingRagPersistenceIntegrationTest {
         memoryRepository.persist(
                 new SemanticQueryMemoryRepository.StoredCluster(
                         clusterId,
-                        "embedding-v1",
+                        QUERY_MEMORY_NAMESPACE,
                         Set.of(1L, 7L),
                         new float[]{0.25f, 0.75f},
                         3,
@@ -102,11 +111,19 @@ class SelfOptimizingRagPersistenceIntegrationTest {
                 4
         );
 
-        var clusters = memoryRepository.findClustersByProfile("embedding-v1", 10);
-        var observations = memoryRepository.findObservations(clusterId, 10);
+        var clusters = memoryRepository.findClustersByNamespace(
+                QUERY_MEMORY_NAMESPACE,
+                10
+        );
+        var observations = memoryRepository.findObservations(
+                clusterId,
+                QUERY_MEMORY_NAMESPACE,
+                10
+        );
 
         assertThat(clusters).hasSize(1);
         assertThat(clusters.getFirst().refreshRevision()).isPositive();
+        assertThat(clusters.getFirst().namespace()).isEqualTo(QUERY_MEMORY_NAMESPACE);
         assertThat(clusters.getFirst().requiredAccessLevels())
                 .containsExactlyInAnyOrder(1L, 7L);
         assertThat(clusters.getFirst().centroid())
@@ -122,16 +139,18 @@ class SelfOptimizingRagPersistenceIntegrationTest {
         UUID secondId = UUID.randomUUID();
         Instant now = Instant.now();
 
-        persistCluster(firstId, "embedding-v1", now.minusSeconds(2));
-        var first = memoryRepository.findClustersByProfile("embedding-v1", 10)
-                .stream()
+        persistCluster(firstId, now.minusSeconds(2));
+        var first = memoryRepository.findClustersByNamespace(
+                        QUERY_MEMORY_NAMESPACE,
+                        10
+                ).stream()
                 .filter(value -> value.clusterId().equals(firstId))
                 .findFirst()
                 .orElseThrow();
 
-        persistCluster(secondId, "embedding-v1", now.minusSeconds(1));
+        persistCluster(secondId, now.minusSeconds(1));
         var incremental = memoryRepository.findClustersUpdatedAfter(
-                "embedding-v1",
+                QUERY_MEMORY_NAMESPACE,
                 first.cursor(),
                 10
         );
@@ -151,14 +170,20 @@ class SelfOptimizingRagPersistenceIntegrationTest {
                 firstId
         );
         int deleted = memoryRepository.deleteExpired(
-                "embedding-v1",
+                QUERY_MEMORY_NAMESPACE,
                 Instant.now().minus(Duration.ofDays(30))
         );
 
         assertThat(deleted).isEqualTo(1);
-        assertThat(memoryRepository.findObservations(firstId, 10)).isEmpty();
-        assertThat(memoryRepository.findClustersByProfile("embedding-v1", 10))
-                .extracting(SemanticQueryMemoryRepository.StoredCluster::clusterId)
+        assertThat(memoryRepository.findObservations(
+                firstId,
+                QUERY_MEMORY_NAMESPACE,
+                10
+        )).isEmpty();
+        assertThat(memoryRepository.findClustersByNamespace(
+                QUERY_MEMORY_NAMESPACE,
+                10
+        )).extracting(SemanticQueryMemoryRepository.StoredCluster::clusterId)
                 .containsExactly(secondId);
     }
 
@@ -271,13 +296,12 @@ class SelfOptimizingRagPersistenceIntegrationTest {
 
     private void persistCluster(
             UUID clusterId,
-            String profile,
             Instant observedAt
     ) {
         memoryRepository.persist(
                 new SemanticQueryMemoryRepository.StoredCluster(
                         clusterId,
-                        profile,
+                        QUERY_MEMORY_NAMESPACE,
                         Set.of(1L),
                         new float[]{0.1f, 0.9f},
                         1,

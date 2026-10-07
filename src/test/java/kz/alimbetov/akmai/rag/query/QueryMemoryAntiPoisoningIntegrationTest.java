@@ -23,6 +23,14 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers
 class QueryMemoryAntiPoisoningIntegrationTest {
 
+    private static final SemanticQueryMemoryNamespace BASE_NAMESPACE =
+            new SemanticQueryMemoryNamespace(
+                    "embedding-v1",
+                    "retrieval-v1",
+                    "learning-v1",
+                    "grounding-v1"
+            );
+
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>(
@@ -73,6 +81,7 @@ class QueryMemoryAntiPoisoningIntegrationTest {
         assertThat(repository.persist(
                 cluster(
                         clusterId,
+                        BASE_NAMESPACE,
                         1,
                         new float[]{1.0f, 0.0f},
                         first
@@ -86,13 +95,14 @@ class QueryMemoryAntiPoisoningIntegrationTest {
         )).isTrue();
 
         long revisionBeforeDuplicate = repository
-                .findClustersByProfile("embedding-v1", 10)
+                .findClustersByNamespace(BASE_NAMESPACE, 10)
                 .getFirst()
                 .refreshRevision();
 
         assertThat(repository.persist(
                 cluster(
                         clusterId,
+                        BASE_NAMESPACE,
                         2,
                         new float[]{0.5f, 0.5f},
                         first.plusSeconds(1)
@@ -105,12 +115,13 @@ class QueryMemoryAntiPoisoningIntegrationTest {
                 4
         )).isFalse();
 
-        var stored = repository.findClustersByProfile("embedding-v1", 10)
+        var stored = repository.findClustersByNamespace(BASE_NAMESPACE, 10)
                 .getFirst();
         assertThat(stored.observationCount()).isEqualTo(1);
         assertThat(stored.centroid()).containsExactly(1.0f, 0.0f);
         assertThat(stored.refreshRevision()).isGreaterThan(revisionBeforeDuplicate);
-        assertThat(repository.findObservations(clusterId, 10)).hasSize(1);
+        assertThat(repository.findObservations(clusterId, BASE_NAMESPACE, 10))
+                .hasSize(1);
     }
 
     @Test
@@ -118,7 +129,13 @@ class QueryMemoryAntiPoisoningIntegrationTest {
         UUID clusterId = UUID.randomUUID();
         Instant first = Instant.parse("2026-10-07T00:00:00Z");
         repository.persist(
-                cluster(clusterId, 1, new float[]{1.0f, 0.0f}, first),
+                cluster(
+                        clusterId,
+                        BASE_NAMESPACE,
+                        1,
+                        new float[]{1.0f, 0.0f},
+                        first
+                ),
                 "a".repeat(64),
                 "first",
                 List.of("doc:c1"),
@@ -130,6 +147,7 @@ class QueryMemoryAntiPoisoningIntegrationTest {
         assertThat(repository.persist(
                 cluster(
                         clusterId,
+                        BASE_NAMESPACE,
                         2,
                         new float[]{0.75f, 0.25f},
                         first.plusSeconds(1)
@@ -142,24 +160,159 @@ class QueryMemoryAntiPoisoningIntegrationTest {
                 4
         )).isTrue();
 
-        assertThat(repository.findClustersByProfile("embedding-v1", 10)
+        assertThat(repository.findClustersByNamespace(BASE_NAMESPACE, 10)
                 .getFirst().observationCount()).isEqualTo(2);
-        assertThat(repository.findObservations(clusterId, 10)).hasSize(2);
+        assertThat(repository.findObservations(clusterId, BASE_NAMESPACE, 10))
+                .hasSize(2);
+    }
+
+    @Test
+    void policyIdentityPreventsCrossPolicyReuse() {
+        UUID clusterId = UUID.randomUUID();
+        Instant observedAt = Instant.parse("2026-10-07T00:00:00Z");
+        repository.persist(
+                cluster(
+                        clusterId,
+                        BASE_NAMESPACE,
+                        1,
+                        new float[]{1.0f, 0.0f},
+                        observedAt
+                ),
+                "c".repeat(64),
+                "grounded",
+                List.of("doc:c1"),
+                observedAt,
+                128,
+                4
+        );
+
+        assertThat(repository.findClustersByNamespace(BASE_NAMESPACE, 10))
+                .hasSize(1);
+        assertThat(repository.findClustersByNamespace(namespace(
+                "retrieval-v2",
+                "learning-v1",
+                "grounding-v1"
+        ), 10)).isEmpty();
+        assertThat(repository.findClustersByNamespace(namespace(
+                "retrieval-v1",
+                "learning-v2",
+                "grounding-v1"
+        ), 10)).isEmpty();
+        assertThat(repository.findClustersByNamespace(namespace(
+                "retrieval-v1",
+                "learning-v1",
+                "grounding-v2"
+        ), 10)).isEmpty();
+        assertThat(repository.findObservations(
+                clusterId,
+                namespace("retrieval-v2", "learning-v1", "grounding-v1"),
+                10
+        )).isEmpty();
+    }
+
+    @Test
+    void clusterIdCannotBeReboundToAnotherPolicyNamespace() {
+        UUID clusterId = UUID.randomUUID();
+        Instant observedAt = Instant.parse("2026-10-07T00:00:00Z");
+        repository.persist(
+                cluster(
+                        clusterId,
+                        BASE_NAMESPACE,
+                        1,
+                        new float[]{1.0f, 0.0f},
+                        observedAt
+                ),
+                "d".repeat(64),
+                "baseline",
+                List.of("doc:c1"),
+                observedAt,
+                128,
+                4
+        );
+
+        SemanticQueryMemoryNamespace candidate = namespace(
+                "retrieval-v2",
+                "learning-v1",
+                "grounding-v1"
+        );
+        assertThat(repository.persist(
+                cluster(
+                        clusterId,
+                        candidate,
+                        2,
+                        new float[]{0.5f, 0.5f},
+                        observedAt.plusSeconds(1)
+                ),
+                "e".repeat(64),
+                "candidate",
+                List.of("doc:c2"),
+                observedAt.plusSeconds(1),
+                128,
+                4
+        )).isFalse();
+
+        assertThat(repository.findClustersByNamespace(BASE_NAMESPACE, 10))
+                .singleElement()
+                .extracting(SemanticQueryMemoryRepository.StoredCluster::namespace)
+                .isEqualTo(BASE_NAMESPACE);
+        assertThat(repository.findClustersByNamespace(candidate, 10)).isEmpty();
+        assertThat(repository.findObservations(clusterId, BASE_NAMESPACE, 10))
+                .hasSize(1);
+    }
+
+    @Test
+    void legacyUnscopedRowsAreNotVisibleToActivePolicyNamespace() {
+        UUID clusterId = UUID.randomUUID();
+        Instant observedAt = Instant.parse("2026-10-07T00:00:00Z");
+        SemanticQueryMemoryNamespace legacy =
+                SemanticQueryMemoryNamespace.legacy("embedding-v1");
+        repository.persist(
+                cluster(
+                        clusterId,
+                        legacy,
+                        1,
+                        new float[]{1.0f, 0.0f},
+                        observedAt
+                ),
+                "f".repeat(64),
+                "legacy",
+                List.of("doc:c1"),
+                observedAt,
+                128,
+                4
+        );
+
+        assertThat(repository.findClustersByNamespace(legacy, 10)).hasSize(1);
+        assertThat(repository.findClustersByNamespace(BASE_NAMESPACE, 10)).isEmpty();
     }
 
     private SemanticQueryMemoryRepository.StoredCluster cluster(
             UUID id,
+            SemanticQueryMemoryNamespace namespace,
             int count,
             float[] centroid,
             Instant updatedAt
     ) {
         return new SemanticQueryMemoryRepository.StoredCluster(
                 id,
-                "embedding-v1",
+                namespace,
                 Set.of(1L),
                 centroid,
                 count,
                 updatedAt
+        );
+    }
+
+    private SemanticQueryMemoryNamespace namespace(
+            String retrieval,
+            String learning,
+            String grounding
+    ) {
+        return new SemanticQueryMemoryNamespace(
+                "embedding-v1",
+                retrieval,
+                learning,
+                grounding
         );
     }
 }
