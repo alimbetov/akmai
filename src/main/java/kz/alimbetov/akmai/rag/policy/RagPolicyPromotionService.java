@@ -10,10 +10,12 @@ public class RagPolicyPromotionService {
     private final RagPolicyRegistryRepository repository;
     private final ApprovedRetrievalPolicyProvider approvedRetrievalPolicyProvider;
     private final ShadowRetrievalPolicyProvider shadowRetrievalPolicyProvider;
+    private final CanaryRetrievalPolicyProvider canaryRetrievalPolicyProvider;
     private final RagPolicyShadowGateService shadowGateService;
+    private final RagPolicyCanaryGateService canaryGateService;
 
     public RagPolicyPromotionService(RagPolicyRegistryRepository repository) {
-        this(repository, null, null, null);
+        this(repository, null, null, null, null, null);
     }
 
     public RagPolicyPromotionService(
@@ -25,6 +27,24 @@ public class RagPolicyPromotionService {
                 repository,
                 approvedRetrievalPolicyProvider,
                 shadowRetrievalPolicyProvider,
+                null,
+                null,
+                null
+        );
+    }
+
+    public RagPolicyPromotionService(
+            RagPolicyRegistryRepository repository,
+            ApprovedRetrievalPolicyProvider approvedRetrievalPolicyProvider,
+            ShadowRetrievalPolicyProvider shadowRetrievalPolicyProvider,
+            RagPolicyShadowGateService shadowGateService
+    ) {
+        this(
+                repository,
+                approvedRetrievalPolicyProvider,
+                shadowRetrievalPolicyProvider,
+                null,
+                shadowGateService,
                 null
         );
     }
@@ -34,12 +54,16 @@ public class RagPolicyPromotionService {
             RagPolicyRegistryRepository repository,
             ApprovedRetrievalPolicyProvider approvedRetrievalPolicyProvider,
             ShadowRetrievalPolicyProvider shadowRetrievalPolicyProvider,
-            RagPolicyShadowGateService shadowGateService
+            CanaryRetrievalPolicyProvider canaryRetrievalPolicyProvider,
+            RagPolicyShadowGateService shadowGateService,
+            RagPolicyCanaryGateService canaryGateService
     ) {
         this.repository = repository;
         this.approvedRetrievalPolicyProvider = approvedRetrievalPolicyProvider;
         this.shadowRetrievalPolicyProvider = shadowRetrievalPolicyProvider;
+        this.canaryRetrievalPolicyProvider = canaryRetrievalPolicyProvider;
         this.shadowGateService = shadowGateService;
+        this.canaryGateService = canaryGateService;
     }
 
     public void makeShadow(RagPolicyType type, String version) {
@@ -65,6 +89,7 @@ public class RagPolicyPromotionService {
         requireShadowGate(policy);
         repository.markCanary(type, version);
         invalidateShadow(type);
+        invalidateCanary(type);
     }
 
     public void approve(RagPolicyType type, String version) {
@@ -74,9 +99,14 @@ public class RagPolicyPromotionService {
         }
         requireEvaluationGates(policy);
         requireShadowGate(policy);
+        if (type == RagPolicyType.RETRIEVAL && canaryGateService != null) {
+            canaryGateService.evaluateAndAttach(version);
+            policy = policy(type, version);
+        }
         requireCanaryGate(policy);
         repository.approve(type, version);
         invalidateApproved(type);
+        invalidateCanary(type);
     }
 
     public void rollback(RagPolicyType type, String targetVersion) {
@@ -140,6 +170,13 @@ public class RagPolicyPromotionService {
         if (type == RagPolicyType.RETRIEVAL
                 && shadowRetrievalPolicyProvider != null) {
             shadowRetrievalPolicyProvider.invalidate();
+        }
+    }
+
+    private void invalidateCanary(RagPolicyType type) {
+        if (type == RagPolicyType.RETRIEVAL
+                && canaryRetrievalPolicyProvider != null) {
+            canaryRetrievalPolicyProvider.invalidate();
         }
     }
 }
