@@ -37,7 +37,7 @@ class CanonicalDocumentChunkingTest {
     private final CanonicalDocumentMapper mapper = new CanonicalDocumentMapper();
 
     @Test
-    void blockAndPageProvenanceSurvivesSemanticGrouping() {
+    void blockPageAndBoundingBoxProvenanceSurvivesSemanticGrouping() {
         CanonicalDocument source = new CanonicalDocument(
                 "contract-1",
                 "7",
@@ -65,7 +65,12 @@ class CanonicalDocumentChunkingTest {
                                 7,
                                 7,
                                 "Раздел II > Статья 25",
-                                null
+                                new CanonicalDocument.BoundingBox(
+                                        10.0,
+                                        20.0,
+                                        300.0,
+                                        40.0
+                                )
                         ),
                         new CanonicalDocument.Block(
                                 "b-exception",
@@ -88,13 +93,32 @@ class CanonicalDocumentChunkingTest {
         );
 
         assertThat(chunks).hasSize(1);
-        assertThat(chunks.getFirst().metadata().get("blockIds"))
+        Map<String, Object> metadata = chunks.getFirst().metadata();
+        assertThat(metadata.get("blockIds"))
                 .isEqualTo(List.of("b-heading", "b-rule", "b-exception"));
-        assertThat(chunks.getFirst().metadata().get("pageFrom")).isEqualTo(7);
-        assertThat(chunks.getFirst().metadata().get("pageTo")).isEqualTo(8);
-        assertThat(chunks.getFirst().metadata().get("canonicalVersion"))
-                .isEqualTo("7");
+        assertThat(metadata.get("pageFrom")).isEqualTo(7);
+        assertThat(metadata.get("pageTo")).isEqualTo(8);
+        assertThat(metadata.get("canonicalVersion")).isEqualTo("7");
         assertThat(chunks.getFirst().sectionPath())
                 .isEqualTo("Раздел II > Статья 25");
+
+        assertThat(metadata.get("canonicalBlocks")).isInstanceOf(List.class);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blocks =
+                (List<Map<String, Object>>) metadata.get("canonicalBlocks");
+        Map<String, Object> rule = blocks.stream()
+                .filter(block -> "b-rule".equals(block.get("blockId")))
+                .findFirst()
+                .orElseThrow();
+        assertThat(rule)
+                .containsEntry("pageFrom", 7)
+                .containsEntry("pageTo", 7)
+                .containsEntry("sectionPath", "Раздел II > Статья 25");
+        assertThat(rule.get("boundingBox")).isEqualTo(Map.of(
+                "x", 10.0,
+                "y", 20.0,
+                "width", 300.0,
+                "height", 40.0
+        ));
     }
 }
