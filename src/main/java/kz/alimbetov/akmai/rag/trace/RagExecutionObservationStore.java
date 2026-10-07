@@ -11,6 +11,7 @@ import kz.alimbetov.akmai.config.SelfOptimizingRagProperties;
 import kz.alimbetov.akmai.knowledge.chunking.TokenEstimator;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
+import kz.alimbetov.akmai.rag.retrieval.SourceRef;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -60,7 +61,7 @@ public class RagExecutionObservationStore {
                 || validation.citedSources() == null
                 ? List.of()
                 : validation.citedSources().stream()
-                        .map(CitationValidator.SourceRef::chunkId)
+                        .map(SourceRef::chunkId)
                         .filter(java.util.Objects::nonNull)
                         .distinct()
                         .toList();
