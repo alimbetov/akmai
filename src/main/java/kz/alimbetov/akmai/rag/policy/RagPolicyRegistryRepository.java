@@ -107,25 +107,7 @@ public class RagPolicyRegistryRepository {
     public void approve(RagPolicyType type, String version) {
         validate(type, version);
         transactionTemplate.executeWithoutResult(status -> {
-            List<PolicyRecord> target = jdbcTemplate.query(
-                    """
-                    SELECT policy_type,
-                           policy_version,
-                           policy_status,
-                           configuration_json::text,
-                           quality_report_json::text,
-                           performance_report_json::text,
-                           created_at,
-                           decided_at
-                    FROM rag_policy_registry
-                    WHERE policy_type = ?
-                      AND policy_version = ?
-                    FOR UPDATE
-                    """,
-                    (rs, rowNum) -> mapRecord(rs),
-                    type.name(),
-                    version
-            );
+            List<PolicyRecord> target = lock(type, version);
             if (target.isEmpty()
                     || target.getFirst().status() != RagPolicyStatus.CANARY
                     || target.getFirst().qualityReport().isEmpty()
@@ -138,7 +120,7 @@ public class RagPolicyRegistryRepository {
             jdbcTemplate.update(
                     """
                     UPDATE rag_policy_registry
-                    SET policy_status = 'ROLLED_BACK',
+                    SET policy_status = 'SUPERSEDED',
                         decided_at = clock_timestamp()
                     WHERE policy_type = ?
                       AND policy_status = 'APPROVED'
@@ -159,6 +141,71 @@ public class RagPolicyRegistryRepository {
             );
             if (updated != 1) {
                 throw new IllegalStateException("Policy approval lost its fencing state");
+            }
+        });
+    }
+
+    public void rollbackTo(RagPolicyType type, String targetVersion) {
+        validate(type, targetVersion);
+        transactionTemplate.executeWithoutResult(status -> {
+            List<PolicyRecord> target = lock(type, targetVersion);
+            if (target.isEmpty()
+                    || target.getFirst().status() != RagPolicyStatus.SUPERSEDED) {
+                throw new IllegalStateException(
+                        "Rollback target must be a previously approved SUPERSEDED policy"
+                );
+            }
+
+            List<PolicyRecord> current = jdbcTemplate.query(
+                    """
+                    SELECT policy_type,
+                           policy_version,
+                           policy_status,
+                           configuration_json::text,
+                           quality_report_json::text,
+                           performance_report_json::text,
+                           created_at,
+                           decided_at
+                    FROM rag_policy_registry
+                    WHERE policy_type = ?
+                      AND policy_status = 'APPROVED'
+                    FOR UPDATE
+                    """,
+                    (rs, rowNum) -> mapRecord(rs),
+                    type.name()
+            );
+            if (current.size() != 1) {
+                throw new IllegalStateException(
+                        "Rollback requires exactly one current APPROVED policy"
+                );
+            }
+
+            int demoted = jdbcTemplate.update(
+                    """
+                    UPDATE rag_policy_registry
+                    SET policy_status = 'ROLLED_BACK',
+                        decided_at = clock_timestamp()
+                    WHERE policy_type = ?
+                      AND policy_version = ?
+                      AND policy_status = 'APPROVED'
+                    """,
+                    type.name(),
+                    current.getFirst().version()
+            );
+            int restored = jdbcTemplate.update(
+                    """
+                    UPDATE rag_policy_registry
+                    SET policy_status = 'APPROVED',
+                        decided_at = clock_timestamp()
+                    WHERE policy_type = ?
+                      AND policy_version = ?
+                      AND policy_status = 'SUPERSEDED'
+                    """,
+                    type.name(),
+                    targetVersion
+            );
+            if (demoted != 1 || restored != 1) {
+                throw new IllegalStateException("Policy rollback lost its fencing state");
             }
         });
     }
@@ -218,6 +265,28 @@ public class RagPolicyRegistryRepository {
                 type.name(),
                 version
         ).stream().findFirst();
+    }
+
+    private List<PolicyRecord> lock(RagPolicyType type, String version) {
+        return jdbcTemplate.query(
+                """
+                SELECT policy_type,
+                       policy_version,
+                       policy_status,
+                       configuration_json::text,
+                       quality_report_json::text,
+                       performance_report_json::text,
+                       created_at,
+                       decided_at
+                FROM rag_policy_registry
+                WHERE policy_type = ?
+                  AND policy_version = ?
+                FOR UPDATE
+                """,
+                (rs, rowNum) -> mapRecord(rs),
+                type.name(),
+                version
+        );
     }
 
     private void transition(
