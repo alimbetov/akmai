@@ -2,6 +2,7 @@ package kz.alimbetov.akmai.rag.policy;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -36,6 +37,15 @@ public class RetrievalPolicyShadowEvaluator {
 
     private static final Logger LOGGER =
             LoggerFactory.getLogger(RetrievalPolicyShadowEvaluator.class);
+    private static final Set<RetrievalType> ROUTER_CONTROLLED_LANES = Set.copyOf(
+            EnumSet.of(
+                    RetrievalType.IDENTIFIER,
+                    RetrievalType.VECTOR,
+                    RetrievalType.LEXICAL,
+                    RetrievalType.CONCEPT,
+                    RetrievalType.REFERENCE
+            )
+    );
 
     private final ShadowRetrievalPolicyProvider shadowPolicyProvider;
     private final AdaptiveRetrievalPlanner adaptivePlanner;
@@ -125,8 +135,6 @@ public class RetrievalPolicyShadowEvaluator {
                     targetDocuments
             ));
         } catch (RejectedExecutionException exception) {
-            // Shadow is observational only. Saturation must never move work to
-            // the production caller or change the user-visible answer.
             LOGGER.debug("rag_shadow event=rejected policy={}", policyVersion);
         }
     }
@@ -243,10 +251,7 @@ public class RetrievalPolicyShadowEvaluator {
             );
         }
         List<RetrievalStep> kept = productionPlan.steps().stream()
-                .filter(step -> step != null
-                        && step.queryChunk() != null
-                        && (desired.get(step.queryChunk().id()) == null
-                        || desired.get(step.queryChunk().id()).contains(step.type())))
+                .filter(step -> keepShadowStep(step, desired))
                 .toList();
         Set<String> keptIds = kept.stream()
                 .map(RetrievalStep::id)
@@ -265,6 +270,20 @@ public class RetrievalPolicyShadowEvaluator {
             ));
         }
         return new RetrievalPlan(List.copyOf(normalized));
+    }
+
+    private boolean keepShadowStep(
+            RetrievalStep step,
+            Map<String, Set<RetrievalType>> desired
+    ) {
+        if (step == null || step.queryChunk() == null || step.type() == null) {
+            return false;
+        }
+        if (!ROUTER_CONTROLLED_LANES.contains(step.type())) {
+            return true;
+        }
+        Set<RetrievalType> requested = desired.get(step.queryChunk().id());
+        return requested == null || requested.contains(step.type());
     }
 
     private boolean samePlan(RetrievalPlan left, RetrievalPlan right) {
