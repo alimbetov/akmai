@@ -29,6 +29,7 @@ import kz.alimbetov.akmai.knowledge.service.KnowledgeIngestionPort;
 import kz.alimbetov.akmai.rag.api.RagResponse;
 import kz.alimbetov.akmai.rag.quality.RagBenchmarkV1Corpus;
 import kz.alimbetov.akmai.rag.service.RagQuestionService;
+import kz.alimbetov.akmai.rag.trace.RagRuntimeAttribution;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -84,6 +85,8 @@ class LiveRagPerformanceHarnessTest {
     MeterRegistry meterRegistry;
     @Autowired
     ObjectMapper objectMapper;
+    @Autowired
+    RagRuntimeAttribution runtimeAttribution;
 
     private final AtomicInteger writeSequence = new AtomicInteger();
 
@@ -130,16 +133,19 @@ class LiveRagPerformanceHarnessTest {
         Map<String, Object> report = new LinkedHashMap<>();
         report.put("benchmarkVersion", "rag-performance-v1.1");
         report.put("generatedAt", Instant.now().toString());
-        report.put("gitSha", env("GITHUB_SHA", "local"));
+        report.put("attribution", runtimeAttribution.snapshot().asMap());
         report.put("corpusTier", env("AKMAI_LIVE_PERFORMANCE_CORPUS_TIER", "SMOKE"));
-        report.put("runtimeProfile", env("AKMAI_RUNTIME_PROFILE", "live-performance"));
         report.put("hardware", hardwareProfile());
         report.put("scenarios", scenarios);
         report.put("stages", stageSnapshot());
         report.put("saturation", akmaiMeterSnapshot());
         report.put(
-                "pendingFaultProfiles",
-                List.of("slow-postgres", "slow-model", "slow-reranker")
+                "faultRecoveryContracts",
+                List.of(
+                        "slow-postgres-query-timeout-connection-reuse",
+                        "slow-model-timeout-worker-recovery",
+                        "slow-reranker-timeout-worker-recovery"
+                )
         );
 
         Path output = Path.of(
