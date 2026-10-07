@@ -23,6 +23,8 @@ class RagBenchmarkDatasetValidatorTest {
             Arrays.stream(RagBenchmarkDataset.QueryClass.values())
                     .filter(value -> value != RagBenchmarkDataset.QueryClass.UNANSWERABLE)
                     .toList();
+    private static final List<RagBenchmarkDataset.Difficulty> DIFFICULTIES =
+            List.of(RagBenchmarkDataset.Difficulty.values());
 
     @Test
     void releaseCorpusMustHaveThreeHundredQueriesAndChunkLevelTruth() {
@@ -65,6 +67,8 @@ class RagBenchmarkDatasetValidatorTest {
             RagBenchmarkDataset.QueryClass queryClass = answerable
                     ? ANSWERABLE_CLASSES.get(index % ANSWERABLE_CLASSES.size())
                     : RagBenchmarkDataset.QueryClass.UNANSWERABLE;
+            RagBenchmarkDataset.Difficulty difficulty =
+                    DIFFICULTIES.get(index % DIFFICULTIES.size());
 
             String documentId = "doc-" + index;
             documents.add(new RagBenchmarkDataset.Document(
@@ -82,7 +86,7 @@ class RagBenchmarkDatasetValidatorTest {
                     language,
                     domain,
                     queryClass,
-                    RagBenchmarkDataset.Difficulty.MEDIUM,
+                    difficulty,
                     "Question " + index,
                     answerable,
                     answerable ? List.of(documentId) : List.of(),
