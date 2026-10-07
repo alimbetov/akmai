@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.rag.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -60,6 +61,10 @@ class RagQuestionServiceAssuranceTest {
                     assertThat(source.number()).isEqualTo(1);
                     assertThat(source.chunkId()).isEqualTo("chunk-1");
                 });
+        verify(fixture.planner()).plan(
+                anyList(),
+                eq(response.requestId())
+        );
         verify(fixture.learning()).record(
                 anyList(),
                 eq(SCOPE),
@@ -150,7 +155,7 @@ class RagQuestionServiceAssuranceTest {
         );
         RetrievalPlan plan = new RetrievalPlan(List.of());
         when(chunker.chunk("What dose?")).thenReturn(List.of(query));
-        when(planner.plan(List.of(query))).thenReturn(plan);
+        when(planner.plan(eq(List.of(query)), anyString())).thenReturn(plan);
         when(executor.executeDetailed(plan, SCOPE)).thenReturn(
                 new RetrievalExecutionResult(
                         List.of(hit),
@@ -213,7 +218,7 @@ class RagQuestionServiceAssuranceTest {
                 utility
         );
 
-        return new Fixture(service, learning, generation, utility);
+        return new Fixture(service, planner, learning, generation, utility);
     }
 
     private RetrievalHit hit(
@@ -240,6 +245,7 @@ class RagQuestionServiceAssuranceTest {
 
     private record Fixture(
             RagQuestionService service,
+            RetrievalPlanner planner,
             AssociationLearningRecorder learning,
             AnswerGenerationService generation,
             AdaptiveGraphUtilityRecorder utility
