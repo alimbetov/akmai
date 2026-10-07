@@ -8,9 +8,14 @@ on:
         required: false
         default: "1"
       corpus_tier:
-        description: Attribution label for the loaded corpus tier (SMOKE/SMALL/MEDIUM)
-        required: false
-        default: "SMOKE"
+        description: Application-level corpus tier to qualify
+        required: true
+        type: choice
+        options:
+          - ALL
+          - SMALL
+          - MEDIUM
+        default: ALL
       ingest_concurrency:
         description: Concurrent ingestion operations for ingest-only scenarios
         required: false
@@ -26,43 +31,67 @@ on:
 jobs:
   rag-performance:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tier: SMALL
+            documents: 256
+          - tier: MEDIUM
+            documents: 2048
     steps:
+      - name: Select requested tier
+        id: selected
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "push" || "${{ inputs.corpus_tier }}" == "ALL" || "${{ inputs.corpus_tier }}" == "${{ matrix.tier }}" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.selected.outputs.run == 'true'
 
       - uses: actions/setup-java@v5
+        if: steps.selected.outputs.run == 'true'
         with:
           distribution: temurin
           java-version: "21"
           cache: maven
 
       - name: Formatting
+        if: steps.selected.outputs.run == 'true'
         run: mvn -B spotless:check
 
       - name: Require live Ollama configuration
+        if: steps.selected.outputs.run == 'true'
         env:
           AKMAI_LIVE_OLLAMA_BASE_URL: ${{ secrets.AKMAI_LIVE_OLLAMA_BASE_URL }}
         run: test -n "$AKMAI_LIVE_OLLAMA_BASE_URL"
 
       - name: Run application-level RAG performance matrix
+        if: steps.selected.outputs.run == 'true'
         env:
           AKMAI_LIVE_PERFORMANCE: "true"
           AKMAI_LIVE_OLLAMA_BASE_URL: ${{ secrets.AKMAI_LIVE_OLLAMA_BASE_URL }}
           AKMAI_LIVE_PERFORMANCE_SCALE: ${{ inputs.scale || '1' }}
-          AKMAI_LIVE_PERFORMANCE_CORPUS_TIER: ${{ inputs.corpus_tier || 'SMOKE' }}
+          AKMAI_LIVE_PERFORMANCE_CORPUS_TIER: ${{ matrix.tier }}
+          AKMAI_LIVE_PERFORMANCE_DOCUMENTS: ${{ matrix.documents }}
           AKMAI_LIVE_INGEST_CONCURRENCY: ${{ inputs.ingest_concurrency || '8' }}
           AKMAI_LIVE_PERFORMANCE_P95_MS: ${{ inputs.p95_ms || '15000' }}
           GITHUB_SHA: ${{ github.sha }}
-          AKMAI_RUNTIME_PROFILE: github-actions
+          AKMAI_RUNTIME_PROFILE: github-actions-${{ matrix.tier }}
         run: >
           mvn -B
           -Dtest=LiveRagPerformanceHarnessTest
           test
 
       - name: Upload RAG performance baseline
-        if: always()
+        if: always() && steps.selected.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: rag-performance-v1.1-${{ inputs.corpus_tier || 'SMOKE' }}
+          name: rag-performance-v1.1-${{ matrix.tier }}
           path: target/performance/performance-baseline.json
           if-no-files-found: warn
