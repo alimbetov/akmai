@@ -106,6 +106,33 @@ public class AdaptiveRetrievalPlanner {
         return new RetrievalPlan(List.copyOf(normalized));
     }
 
+    public QueryClass classifyPrimary(List<QueryChunk> chunks) {
+        if (chunks == null || chunks.isEmpty()) {
+            return QueryClass.ANALYSIS_UNAVAILABLE;
+        }
+        List<QueryClass> classes = chunks.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(this::recommend)
+                .map(Recommendation::queryClass)
+                .toList();
+        if (classes.isEmpty()) {
+            return QueryClass.ANALYSIS_UNAVAILABLE;
+        }
+        if (classes.stream().distinct().count() == 1) {
+            return classes.getFirst();
+        }
+        if (classes.contains(QueryClass.IDENTIFIER_CONCEPTUAL)) {
+            return QueryClass.IDENTIFIER_CONCEPTUAL;
+        }
+        if (classes.contains(QueryClass.IDENTIFIER_SEMANTIC)) {
+            return QueryClass.IDENTIFIER_SEMANTIC;
+        }
+        if (classes.contains(QueryClass.IDENTIFIER_ONLY)) {
+            return QueryClass.IDENTIFIER_ONLY;
+        }
+        return QueryClass.GENERIC;
+    }
+
     public ShadowPlanReport shadow(
             List<QueryChunk> chunks,
             RetrievalPlan currentPlan
@@ -261,42 +288,42 @@ public class AdaptiveRetrievalPlanner {
                 return lanes;
             }
         }
-
-        lanes.add(RetrievalType.VECTOR);
-        lanes.add(RetrievalType.LEXICAL);
-        lanes.add(RetrievalType.CONCEPT);
-        lanes.add(RetrievalType.REFERENCE);
+        if (hasSemanticText) {
+            lanes.add(RetrievalType.VECTOR);
+            lanes.add(RetrievalType.LEXICAL);
+            lanes.add(RetrievalType.REFERENCE);
+            lanes.add(RetrievalType.CONCEPT);
+        }
         return lanes;
     }
 
-    private SemanticQueryAnalysis safeAnalyze(String text) {
+    private SemanticQueryAnalysis safeAnalyze(String semanticText) {
         try {
-            return semanticQueryAnalyzer.analyze(text);
+            return semanticQueryAnalyzer.analyze(semanticText);
         } catch (RuntimeException exception) {
             return null;
         }
     }
 
-    private Map<String, Set<RetrievalType>> currentLanes(
-            RetrievalPlan currentPlan
-    ) {
-        LinkedHashMap<String, EnumSet<RetrievalType>> collected =
-                new LinkedHashMap<>();
-        if (currentPlan != null && currentPlan.steps() != null) {
-            for (RetrievalStep step : currentPlan.steps()) {
-                if (step == null || step.queryChunk() == null || step.type() == null) {
-                    continue;
-                }
-                collected.computeIfAbsent(
-                                step.queryChunk().id(),
-                                ignored -> EnumSet.noneOf(RetrievalType.class)
-                        )
-                        .add(step.type());
-            }
+    private Map<String, Set<RetrievalType>> currentLanes(RetrievalPlan currentPlan) {
+        Map<String, Set<RetrievalType>> result = new LinkedHashMap<>();
+        if (currentPlan == null || currentPlan.steps() == null) {
+            return Map.of();
         }
-        LinkedHashMap<String, Set<RetrievalType>> result = new LinkedHashMap<>();
-        collected.forEach((key, value) -> result.put(key, Set.copyOf(value)));
-        return Map.copyOf(result);
+        for (RetrievalStep step : currentPlan.steps()) {
+            if (step == null || step.queryChunk() == null || step.type() == null) {
+                continue;
+            }
+            result.computeIfAbsent(
+                    step.queryChunk().id(),
+                    ignored -> EnumSet.noneOf(RetrievalType.class)
+            ).add(step.type());
+        }
+        return result.entrySet().stream()
+                .collect(java.util.stream.Collectors.toUnmodifiableMap(
+                        Map.Entry::getKey,
+                        entry -> Set.copyOf(entry.getValue())
+                ));
     }
 
     public enum QueryClass {
