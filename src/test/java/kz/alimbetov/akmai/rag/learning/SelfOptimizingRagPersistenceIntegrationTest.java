@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -105,6 +106,7 @@ class SelfOptimizingRagPersistenceIntegrationTest {
         var observations = memoryRepository.findObservations(clusterId, 10);
 
         assertThat(clusters).hasSize(1);
+        assertThat(clusters.getFirst().refreshRevision()).isPositive();
         assertThat(clusters.getFirst().requiredAccessLevels())
                 .containsExactlyInAnyOrder(1L, 7L);
         assertThat(clusters.getFirst().centroid())
@@ -112,6 +114,52 @@ class SelfOptimizingRagPersistenceIntegrationTest {
         assertThat(observations).hasSize(1);
         assertThat(observations.getFirst().groundedAnswer())
                 .isEqualTo("Grounded answer");
+    }
+
+    @Test
+    void queryMemoryRevisionSupportsReplicaRefreshAndTtlCleanup() {
+        UUID firstId = UUID.randomUUID();
+        UUID secondId = UUID.randomUUID();
+        Instant now = Instant.now();
+
+        persistCluster(firstId, "embedding-v1", now.minusSeconds(2));
+        var first = memoryRepository.findClustersByProfile("embedding-v1", 10)
+                .stream()
+                .filter(value -> value.clusterId().equals(firstId))
+                .findFirst()
+                .orElseThrow();
+
+        persistCluster(secondId, "embedding-v1", now.minusSeconds(1));
+        var incremental = memoryRepository.findClustersUpdatedAfter(
+                "embedding-v1",
+                first.cursor(),
+                10
+        );
+
+        assertThat(incremental)
+                .extracting(SemanticQueryMemoryRepository.StoredCluster::clusterId)
+                .contains(secondId);
+        assertThat(incremental)
+                .allMatch(value -> value.refreshRevision() > first.refreshRevision());
+
+        jdbc.update(
+                """
+                UPDATE rag_query_memory_cluster
+                SET updated_at = clock_timestamp() - interval '31 days'
+                WHERE cluster_id = ?
+                """,
+                firstId
+        );
+        int deleted = memoryRepository.deleteExpired(
+                "embedding-v1",
+                Instant.now().minus(Duration.ofDays(30))
+        );
+
+        assertThat(deleted).isEqualTo(1);
+        assertThat(memoryRepository.findObservations(firstId, 10)).isEmpty();
+        assertThat(memoryRepository.findClustersByProfile("embedding-v1", 10))
+                .extracting(SemanticQueryMemoryRepository.StoredCluster::clusterId)
+                .containsExactly(secondId);
     }
 
     @Test
@@ -204,6 +252,30 @@ class SelfOptimizingRagPersistenceIntegrationTest {
                 .get()
                 .extracting(RagPolicyRegistryRepository.PolicyRecord::version)
                 .isEqualTo("retrieval-candidate-1");
+    }
+
+    private void persistCluster(
+            UUID clusterId,
+            String profile,
+            Instant observedAt
+    ) {
+        memoryRepository.persist(
+                new SemanticQueryMemoryRepository.StoredCluster(
+                        clusterId,
+                        profile,
+                        Set.of(1L),
+                        new float[]{0.1f, 0.9f},
+                        1,
+                        observedAt
+                ),
+                UUID.randomUUID().toString().replace("-", "")
+                        + UUID.randomUUID().toString().replace("-", ""),
+                "Grounded answer " + clusterId,
+                List.of("doc:chunk"),
+                observedAt,
+                128,
+                4
+        );
     }
 
     private RagLearningEvent event(UUID requestId, Set<Long> scope) {
