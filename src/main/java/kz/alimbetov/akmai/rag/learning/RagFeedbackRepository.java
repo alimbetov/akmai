@@ -2,6 +2,7 @@ package kz.alimbetov.akmai.rag.learning;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -73,31 +74,61 @@ public class RagFeedbackRepository {
             return Result.CREATED;
         }
 
-        ExistingFeedback existing = findByIdempotencyKey(idempotencyKey)
-                .orElseGet(() -> findByRequestId(requestId).orElse(null));
-        if (existing == null) {
-            throw new IllegalStateException(
-                    "Feedback conflict could not be resolved"
-            );
-        }
-        if (!requestId.equals(existing.requestId())
-                || reason != existing.reason()
-                || !Objects.equals(details, existing.details())
-                || trustClass != existing.trustClass()
-                || !Objects.equals(normalizedSource, existing.sourceFingerprint())) {
-            if (requestId.equals(existing.requestId())) {
-                throw new IllegalArgumentException(
-                        "RAG requestId already has a different feedback signal"
-                );
+        Optional<ExistingFeedback> byKey = findByIdempotencyKey(idempotencyKey);
+        if (byKey.isPresent()) {
+            if (samePayload(
+                    byKey.get(),
+                    requestId,
+                    reason,
+                    details,
+                    trustClass,
+                    normalizedSource
+            )) {
+                return Result.REPLAY;
             }
             throw new IllegalArgumentException(
                     "Idempotency-Key is already used for another feedback payload"
             );
         }
-        return Result.REPLAY;
+
+        Optional<ExistingFeedback> byRequest = findByRequestId(requestId);
+        if (byRequest.isPresent()) {
+            if (samePayload(
+                    byRequest.get(),
+                    requestId,
+                    reason,
+                    details,
+                    trustClass,
+                    normalizedSource
+            )) {
+                return Result.REPLAY;
+            }
+            throw new IllegalArgumentException(
+                    "RAG requestId already has a different feedback signal"
+            );
+        }
+
+        throw new IllegalStateException(
+                "Feedback conflict could not be resolved"
+        );
     }
 
-    private java.util.Optional<ExistingFeedback> findByIdempotencyKey(String key) {
+    private boolean samePayload(
+            ExistingFeedback existing,
+            UUID requestId,
+            RagFeedbackReason reason,
+            String details,
+            RagFeedbackTrustClass trustClass,
+            String sourceFingerprint
+    ) {
+        return requestId.equals(existing.requestId())
+                && reason == existing.reason()
+                && Objects.equals(details, existing.details())
+                && trustClass == existing.trustClass()
+                && Objects.equals(sourceFingerprint, existing.sourceFingerprint());
+    }
+
+    private Optional<ExistingFeedback> findByIdempotencyKey(String key) {
         return query(
                 """
                 SELECT request_id, reason, details, trust_class, source_fingerprint
@@ -108,7 +139,7 @@ public class RagFeedbackRepository {
         );
     }
 
-    private java.util.Optional<ExistingFeedback> findByRequestId(UUID requestId) {
+    private Optional<ExistingFeedback> findByRequestId(UUID requestId) {
         return query(
                 """
                 SELECT request_id, reason, details, trust_class, source_fingerprint
@@ -119,7 +150,7 @@ public class RagFeedbackRepository {
         );
     }
 
-    private java.util.Optional<ExistingFeedback> query(String sql, Object argument) {
+    private Optional<ExistingFeedback> query(String sql, Object argument) {
         List<ExistingFeedback> existing = jdbcTemplate.query(
                 sql,
                 (rs, rowNum) -> new ExistingFeedback(
