@@ -310,12 +310,19 @@ public class AdaptiveRetrievalPlanner {
                 return lanes;
             }
         }
-        if (hasSemanticText) {
+
+        if (!hasSemanticText) {
             lanes.add(RetrievalType.VECTOR);
             lanes.add(RetrievalType.LEXICAL);
             lanes.add(RetrievalType.REFERENCE);
             lanes.add(RetrievalType.CONCEPT);
+            return lanes;
         }
+
+        lanes.add(RetrievalType.VECTOR);
+        lanes.add(RetrievalType.LEXICAL);
+        lanes.add(RetrievalType.REFERENCE);
+        lanes.add(RetrievalType.CONCEPT);
         return lanes;
     }
 
