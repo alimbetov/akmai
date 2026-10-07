@@ -36,7 +36,13 @@ public class OllamaTransportConfiguration {
             String baseUrl,
             RetrievalProperties properties
     ) {
-        return api(baseUrl, properties.embeddingHttpTimeout());
+        return api(
+                baseUrl,
+                minimum(
+                        properties.embeddingHttpTimeout(),
+                        properties.strategyTimeout()
+                )
+        );
     }
 
     @Bean(name = "chatOllamaApi")
@@ -123,6 +129,10 @@ public class OllamaTransportConfiguration {
                 .webClientBuilder(WebClient.builder())
                 .responseErrorHandler(new DefaultResponseErrorHandler())
                 .build();
+    }
+
+    private Duration minimum(Duration left, Duration right) {
+        return left.compareTo(right) <= 0 ? left : right;
     }
 
     private int toMillis(Duration timeout) {
