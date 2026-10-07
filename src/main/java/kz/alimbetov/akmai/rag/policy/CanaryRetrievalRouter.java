@@ -46,9 +46,8 @@ public class CanaryRetrievalRouter {
             RetrievalPlan baselinePlan,
             RetrievalPlan productionPlan
     ) {
-        if (requestId == null
-                || requestId.isBlank()
-                || chunks == null
+        observationStore.clearCurrent();
+        if (chunks == null
                 || chunks.isEmpty()
                 || baselinePlan == null
                 || productionPlan == null) {
@@ -98,12 +97,14 @@ public class CanaryRetrievalRouter {
             return productionPlan;
         }
 
-        CanaryRoutingObservationStore.Cohort cohort = sampled(requestId)
+        String routingKey = requestId == null || requestId.isBlank()
+                ? UUID.randomUUID().toString()
+                : requestId;
+        CanaryRoutingObservationStore.Cohort cohort = sampled(routingKey)
                 ? CanaryRoutingObservationStore.Cohort.CANARY
                 : CanaryRoutingObservationStore.Cohort.CONTROL;
         String queryClass = adaptiveRetrievalPlanner.classifyPrimary(chunks).name();
-        observationStore.record(
-                requestId,
+        observationStore.recordCurrent(
                 new CanaryRoutingObservationStore.Decision(
                         policyVersion,
                         cohort,
