@@ -98,6 +98,11 @@ public record RetrievalProperties(
                 Duration.ofMillis(10),
                 Duration.ofMinutes(1)
         );
+        if (strategyTimeout.compareTo(requestTimeout) > 0) {
+            throw new IllegalArgumentException(
+                    "strategy-timeout must be <= request-timeout"
+            );
+        }
         if (contextExpansionMaxChunks > contextMaxChunks) {
             throw new IllegalArgumentException(
                     "context-expansion-max-chunks must be <= context-max-chunks"
