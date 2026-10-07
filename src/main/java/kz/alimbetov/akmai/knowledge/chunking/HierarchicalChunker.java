@@ -46,7 +46,23 @@ public class HierarchicalChunker {
     }
 
     public List<KnowledgeChunk> chunk(KnowledgeDocument document) {
-        List<KnowledgeChunk> base = semanticChunker.chunk(document);
+        return hierarchical(document, semanticChunker.chunk(document));
+    }
+
+    public List<KnowledgeChunk> chunk(
+            KnowledgeDocument document,
+            List<SemanticUnit> sourceUnits
+    ) {
+        return hierarchical(
+                document,
+                semanticChunker.chunk(document, sourceUnits)
+        );
+    }
+
+    private List<KnowledgeChunk> hierarchical(
+            KnowledgeDocument document,
+            List<KnowledgeChunk> base
+    ) {
         if (!properties.enabled() || base.isEmpty()) {
             return base;
         }
