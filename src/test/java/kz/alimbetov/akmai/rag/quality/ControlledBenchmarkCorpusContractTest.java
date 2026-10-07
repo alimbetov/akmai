@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.knowledge.chunking.AtomicUnitProtector;
 import kz.alimbetov.akmai.knowledge.chunking.ChunkIdentity;
