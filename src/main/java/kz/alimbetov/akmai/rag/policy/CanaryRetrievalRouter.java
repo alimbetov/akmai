@@ -12,6 +12,7 @@ import java.util.UUID;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
 import kz.alimbetov.akmai.rag.retrieval.plan.AdaptiveRetrievalPlanner;
+import kz.alimbetov.akmai.rag.retrieval.plan.AdaptiveRetrievalProperties;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalStep;
 import kz.alimbetov.akmai.rag.retrieval.plan.ShadowRetrievalPlanBuilder;
@@ -22,6 +23,7 @@ public class CanaryRetrievalRouter {
 
     private final CanaryRetrievalPolicyProvider policyProvider;
     private final CanaryEvaluationProperties properties;
+    private final AdaptiveRetrievalProperties adaptiveProperties;
     private final AdaptiveRetrievalPlanner adaptiveRetrievalPlanner;
     private final ShadowRetrievalPlanBuilder planBuilder;
     private final CanaryRoutingObservationStore observationStore;
@@ -29,12 +31,14 @@ public class CanaryRetrievalRouter {
     public CanaryRetrievalRouter(
             CanaryRetrievalPolicyProvider policyProvider,
             CanaryEvaluationProperties properties,
+            AdaptiveRetrievalProperties adaptiveProperties,
             AdaptiveRetrievalPlanner adaptiveRetrievalPlanner,
             ShadowRetrievalPlanBuilder planBuilder,
             CanaryRoutingObservationStore observationStore
     ) {
         this.policyProvider = policyProvider;
         this.properties = properties;
+        this.adaptiveProperties = adaptiveProperties;
         this.adaptiveRetrievalPlanner = adaptiveRetrievalPlanner;
         this.planBuilder = planBuilder;
         this.observationStore = observationStore;
@@ -47,7 +51,8 @@ public class CanaryRetrievalRouter {
             RetrievalPlan productionPlan
     ) {
         observationStore.clearCurrent();
-        if (chunks == null
+        if (!adaptiveProperties.enabled()
+                || chunks == null
                 || chunks.isEmpty()
                 || baselinePlan == null
                 || productionPlan == null) {
