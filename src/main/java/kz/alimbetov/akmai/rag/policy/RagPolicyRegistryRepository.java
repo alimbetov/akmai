@@ -63,7 +63,7 @@ public class RagPolicyRegistryRepository {
                     performance_report_json = ?::jsonb
                 WHERE policy_type = ?
                   AND policy_version = ?
-                  AND policy_status IN ('CANDIDATE', 'CANARY')
+                  AND policy_status IN ('CANDIDATE', 'SHADOW', 'CANARY')
                 """,
                 writeJson(qualityReport == null ? Map.of() : qualityReport),
                 writeJson(performanceReport == null ? Map.of() : performanceReport),
@@ -77,8 +77,12 @@ public class RagPolicyRegistryRepository {
         }
     }
 
+    public void markShadow(RagPolicyType type, String version) {
+        transition(type, version, RagPolicyStatus.CANDIDATE, RagPolicyStatus.SHADOW);
+    }
+
     public void markCanary(RagPolicyType type, String version) {
-        transition(type, version, RagPolicyStatus.CANDIDATE, RagPolicyStatus.CANARY);
+        transition(type, version, RagPolicyStatus.SHADOW, RagPolicyStatus.CANARY);
     }
 
     public void reject(RagPolicyType type, String version) {
@@ -90,7 +94,7 @@ public class RagPolicyRegistryRepository {
                     decided_at = clock_timestamp()
                 WHERE policy_type = ?
                   AND policy_version = ?
-                  AND policy_status IN ('CANDIDATE', 'CANARY')
+                  AND policy_status IN ('CANDIDATE', 'SHADOW', 'CANARY')
                 """,
                 type.name(),
                 version
