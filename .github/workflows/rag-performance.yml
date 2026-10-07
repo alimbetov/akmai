@@ -24,9 +24,27 @@ on:
         description: Maximum allowed read-10 p95 latency in milliseconds
         required: false
         default: "15000"
-  push:
-    tags:
-      - "v*"
+  workflow_call:
+    inputs:
+      scale:
+        required: false
+        type: string
+        default: "1"
+      corpus_tier:
+        required: false
+        type: string
+        default: "ALL"
+      ingest_concurrency:
+        required: false
+        type: string
+        default: "8"
+      p95_ms:
+        required: false
+        type: string
+        default: "15000"
+    secrets:
+      AKMAI_LIVE_OLLAMA_BASE_URL:
+        required: true
 
 jobs:
   rag-performance:
@@ -45,7 +63,7 @@ jobs:
         id: selected
         shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "push" || "${{ inputs.corpus_tier }}" == "ALL" || "${{ inputs.corpus_tier }}" == "${{ matrix.tier }}" ]]; then
+          if [[ "${{ inputs.corpus_tier || 'ALL' }}" == "ALL" || "${{ inputs.corpus_tier || 'ALL' }}" == "${{ matrix.tier }}" ]]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -92,6 +110,6 @@ jobs:
         if: always() && steps.selected.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: rag-performance-v1.1-${{ matrix.tier }}
+          name: rag-performance-v1.1-${{ matrix.tier }}-${{ github.sha }}
           path: target/performance/performance-baseline.json
           if-no-files-found: warn
