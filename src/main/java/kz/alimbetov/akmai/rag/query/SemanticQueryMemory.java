@@ -35,10 +35,11 @@ public class SemanticQueryMemory {
     private final SemanticQueryMemoryRepository repository;
     private final SelfOptimizingRagProperties selfOptimizingProperties;
     private final LearningPrivacyFingerprint fingerprint;
+    private final SemanticQueryMemoryNamespaceResolver namespaceResolver;
     private final Cache<String, MemoryCluster> clusters;
-    private final ConcurrentHashMap<String, RefreshState> refreshStates =
+    private final ConcurrentHashMap<SemanticQueryMemoryNamespace, RefreshState> refreshStates =
             new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Object> refreshLocks =
+    private final ConcurrentHashMap<SemanticQueryMemoryNamespace, Object> refreshLocks =
             new ConcurrentHashMap<>();
 
     public SemanticQueryMemory(
@@ -52,6 +53,7 @@ public class SemanticQueryMemory {
                 properties,
                 null,
                 null,
+                null,
                 null
         );
     }
@@ -63,7 +65,8 @@ public class SemanticQueryMemory {
             AdvancedRetrievalProperties properties,
             SemanticQueryMemoryRepository repository,
             SelfOptimizingRagProperties selfOptimizingProperties,
-            LearningPrivacyFingerprint fingerprint
+            LearningPrivacyFingerprint fingerprint,
+            SemanticQueryMemoryNamespaceResolver namespaceResolver
     ) {
         this.embeddingModel = embeddingModel;
         this.profileService = profileService;
@@ -71,6 +74,7 @@ public class SemanticQueryMemory {
         this.repository = repository;
         this.selfOptimizingProperties = selfOptimizingProperties;
         this.fingerprint = fingerprint;
+        this.namespaceResolver = namespaceResolver;
         this.clusters = Caffeine.newBuilder()
                 .maximumSize(properties.queryMemoryMaxEntries())
                 .build();
@@ -89,18 +93,18 @@ public class SemanticQueryMemory {
         if (scope.isEmpty()) {
             return List.of();
         }
-        String profileId = activeProfileId();
-        if (profileId == null) {
+        SemanticQueryMemoryNamespace namespace = activeNamespace();
+        if (namespace == null) {
             return List.of();
         }
-        refreshPersisted(profileId);
+        refreshPersisted(namespace);
         float[] queryVector = safeEmbed(question);
         if (queryVector == null) {
             return List.of();
         }
 
         return clusters.asMap().values().stream()
-                .filter(cluster -> profileId.equals(cluster.embeddingProfileId()))
+                .filter(cluster -> namespace.equals(cluster.namespace()))
                 .filter(cluster -> scope.containsAll(cluster.requiredAccessLevels()))
                 .map(cluster -> new MemoryMatch(
                         cluster.id(),
@@ -157,11 +161,11 @@ public class SemanticQueryMemory {
             return;
         }
 
-        String profileId = activeProfileId();
-        if (profileId == null) {
+        SemanticQueryMemoryNamespace namespace = activeNamespace();
+        if (namespace == null) {
             return;
         }
-        refreshPersisted(profileId);
+        refreshPersisted(namespace);
         float[] vector = safeEmbed(question);
         if (vector == null) {
             return;
@@ -177,7 +181,7 @@ public class SemanticQueryMemory {
         );
 
         MemoryCluster nearest = clusters.asMap().values().stream()
-                .filter(cluster -> profileId.equals(cluster.embeddingProfileId()))
+                .filter(cluster -> namespace.equals(cluster.namespace()))
                 .filter(cluster -> cluster.requiredAccessLevels().equals(requiredScope))
                 .filter(cluster -> cluster.centroid().length == vector.length)
                 .map(cluster -> new ClusterCandidate(
@@ -196,7 +200,7 @@ public class SemanticQueryMemory {
             String id = UUID.randomUUID().toString();
             updated = new MemoryCluster(
                     id,
-                    profileId,
+                    namespace,
                     vector.clone(),
                     requiredScope,
                     1,
@@ -207,7 +211,7 @@ public class SemanticQueryMemory {
         } else {
             updated = merge(
                     nearest,
-                    profileId,
+                    namespace,
                     requiredScope,
                     vector,
                     observation
@@ -219,12 +223,12 @@ public class SemanticQueryMemory {
 
     private MemoryCluster merge(
             MemoryCluster current,
-            String profileId,
+            SemanticQueryMemoryNamespace namespace,
             Set<Long> requiredScope,
             float[] vector,
             MemoryObservation observation
     ) {
-        if (!profileId.equals(current.embeddingProfileId())
+        if (!namespace.equals(current.namespace())
                 || !current.requiredAccessLevels().equals(requiredScope)
                 || current.centroid().length != vector.length) {
             return current;
@@ -239,7 +243,7 @@ public class SemanticQueryMemory {
         }
         return new MemoryCluster(
                 current.id(),
-                current.embeddingProfileId(),
+                current.namespace(),
                 centroid,
                 current.requiredAccessLevels(),
                 current.observationCount() + 1,
@@ -248,29 +252,29 @@ public class SemanticQueryMemory {
         );
     }
 
-    private void refreshPersisted(String profileId) {
+    private void refreshPersisted(SemanticQueryMemoryNamespace namespace) {
         if (!persistentEnabled()) {
             return;
         }
         Instant now = Instant.now();
-        RefreshState current = refreshStates.get(profileId);
+        RefreshState current = refreshStates.get(namespace);
         if (current != null && now.isBefore(current.nextRefreshAt())) {
             return;
         }
 
-        Object lock = refreshLocks.computeIfAbsent(profileId, ignored -> new Object());
+        Object lock = refreshLocks.computeIfAbsent(namespace, ignored -> new Object());
         synchronized (lock) {
             now = Instant.now();
-            current = refreshStates.get(profileId);
+            current = refreshStates.get(namespace);
             if (current != null && now.isBefore(current.nextRefreshAt())) {
                 return;
             }
             try {
                 Instant cutoff = now.minus(selfOptimizingProperties.persistentMemoryTtl());
-                repository.deleteExpired(profileId, cutoff);
+                repository.deleteExpired(namespace, cutoff);
                 clusters.asMap().entrySet().removeIf(entry -> {
                     MemoryCluster cluster = entry.getValue();
-                    return profileId.equals(cluster.embeddingProfileId())
+                    return namespace.equals(cluster.namespace())
                             && cluster.updatedAt().isBefore(cutoff);
                 });
 
@@ -279,13 +283,13 @@ public class SemanticQueryMemory {
                         ? null
                         : current.cursor();
                 if (cursor == null) {
-                    persisted = repository.findClustersByProfile(
-                            profileId,
+                    persisted = repository.findClustersByNamespace(
+                            namespace,
                             selfOptimizingProperties.persistentMemoryMaxEntries()
                     );
                 } else {
                     persisted = repository.findClustersUpdatedAfter(
-                            profileId,
+                            namespace,
                             cursor,
                             selfOptimizingProperties.persistentMemoryMaxEntries()
                     );
@@ -295,6 +299,7 @@ public class SemanticQueryMemory {
                 for (var stored : persisted) {
                     List<MemoryObservation> observations = repository.findObservations(
                                     stored.clusterId(),
+                                    namespace,
                                     persistentObservationLimit()
                             ).stream()
                             .map(value -> new MemoryObservation(
@@ -308,7 +313,7 @@ public class SemanticQueryMemory {
                             stored.clusterId().toString(),
                             new MemoryCluster(
                                     stored.clusterId().toString(),
-                                    stored.embeddingProfileId(),
+                                    stored.namespace(),
                                     stored.centroid(),
                                     stored.requiredAccessLevels(),
                                     stored.observationCount(),
@@ -323,7 +328,7 @@ public class SemanticQueryMemory {
                 }
 
                 refreshStates.put(
-                        profileId,
+                        namespace,
                         new RefreshState(
                                 nextCursor,
                                 now.plus(
@@ -334,7 +339,7 @@ public class SemanticQueryMemory {
                 );
             } catch (RuntimeException exception) {
                 refreshStates.put(
-                        profileId,
+                        namespace,
                         new RefreshState(
                                 current == null ? null : current.cursor(),
                                 now.plus(
@@ -363,7 +368,7 @@ public class SemanticQueryMemory {
             repository.persist(
                     new SemanticQueryMemoryRepository.StoredCluster(
                             UUID.fromString(cluster.id()),
-                            cluster.embeddingProfileId(),
+                            cluster.namespace(),
                             cluster.requiredAccessLevels(),
                             cluster.centroid(),
                             cluster.observationCount(),
@@ -386,6 +391,7 @@ public class SemanticQueryMemory {
         return repository != null
                 && selfOptimizingProperties != null
                 && fingerprint != null
+                && namespaceResolver != null
                 && selfOptimizingProperties.persistentQueryMemoryEnabled();
     }
 
@@ -397,6 +403,18 @@ public class SemanticQueryMemory {
                 MAX_OBSERVATIONS_PER_CLUSTER,
                 selfOptimizingProperties.persistentMemoryObservationsPerCluster()
         );
+    }
+
+    private SemanticQueryMemoryNamespace activeNamespace() {
+        if (namespaceResolver != null) {
+            try {
+                return namespaceResolver.resolve().orElse(null);
+            } catch (RuntimeException exception) {
+                return null;
+            }
+        }
+        String profileId = activeProfileId();
+        return profileId == null ? null : SemanticQueryMemoryNamespace.legacy(profileId);
     }
 
     private String activeProfileId() {
@@ -504,7 +522,7 @@ public class SemanticQueryMemory {
 
     private record MemoryCluster(
             String id,
-            String embeddingProfileId,
+            SemanticQueryMemoryNamespace namespace,
             float[] centroid,
             Set<Long> requiredAccessLevels,
             int observationCount,
