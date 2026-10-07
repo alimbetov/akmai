@@ -1,0 +1,76 @@
+name: RAG v1.1 Release Qualification
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  quality:
+    uses: ./.github/workflows/rag-release-quality.yml
+    with:
+      benchmark_root: "benchmarks/rag-benchmark-v1/release"
+      baseline_file: "benchmarks/rag-benchmark-v1/baselines/approved.json"
+      establish_baseline: false
+    secrets: inherit
+
+  performance:
+    uses: ./.github/workflows/rag-performance.yml
+    with:
+      scale: "1"
+      corpus_tier: "ALL"
+      ingest_concurrency: "8"
+      p95_ms: "15000"
+    secrets: inherit
+
+  grounding:
+    uses: ./.github/workflows/semantic-grounding-calibration.yml
+    secrets: inherit
+
+  qualification:
+    if: always()
+    needs:
+      - quality
+      - performance
+      - grounding
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write qualification manifest
+        env:
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          PERFORMANCE_RESULT: ${{ needs.performance.result }}
+          GROUNDING_RESULT: ${{ needs.grounding.result }}
+        shell: bash
+        run: |
+          mkdir -p target/release
+          cat > target/release/rag-v1.1-qualification.json <<EOF
+          {
+            "schemaVersion": 1,
+            "gitSha": "${GITHUB_SHA}",
+            "gitRef": "${GITHUB_REF}",
+            "quality": "${QUALITY_RESULT}",
+            "performance": "${PERFORMANCE_RESULT}",
+            "grounding": "${GROUNDING_RESULT}",
+            "qualified": $([[ "${QUALITY_RESULT}" == "success" && "${PERFORMANCE_RESULT}" == "success" && "${GROUNDING_RESULT}" == "success" ]] && echo true || echo false)
+          }
+          EOF
+
+      - name: Require complete v1.1 qualification
+        env:
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          PERFORMANCE_RESULT: ${{ needs.performance.result }}
+          GROUNDING_RESULT: ${{ needs.grounding.result }}
+        shell: bash
+        run: |
+          test "$QUALITY_RESULT" = "success"
+          test "$PERFORMANCE_RESULT" = "success"
+          test "$GROUNDING_RESULT" = "success"
+
+      - name: Upload qualification manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-v1.1-release-qualification-${{ github.sha }}
+          path: target/release/rag-v1.1-qualification.json
+          if-no-files-found: error
