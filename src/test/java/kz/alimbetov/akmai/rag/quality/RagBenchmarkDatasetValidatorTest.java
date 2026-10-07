@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.rag.quality;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
@@ -18,8 +19,10 @@ class RagBenchmarkDatasetValidatorTest {
             KnowledgeDomain.MEDICAL,
             KnowledgeDomain.TECHNICAL
     );
-    private static final List<RagBenchmarkDataset.QueryClass> CLASSES =
-            List.of(RagBenchmarkDataset.QueryClass.values());
+    private static final List<RagBenchmarkDataset.QueryClass> ANSWERABLE_CLASSES =
+            Arrays.stream(RagBenchmarkDataset.QueryClass.values())
+                    .filter(value -> value != RagBenchmarkDataset.QueryClass.UNANSWERABLE)
+                    .toList();
 
     @Test
     void releaseCorpusMustHaveThreeHundredQueriesAndChunkLevelTruth() {
@@ -58,14 +61,10 @@ class RagBenchmarkDatasetValidatorTest {
             String id = "case-" + index;
             String language = LANGUAGES.get(index % LANGUAGES.size());
             KnowledgeDomain domain = DOMAINS.get(index % DOMAINS.size());
-            RagBenchmarkDataset.QueryClass queryClass =
-                    CLASSES.get(index % CLASSES.size());
             boolean answerable = index >= unanswerableCount;
-            if (queryClass == RagBenchmarkDataset.QueryClass.UNANSWERABLE) {
-                answerable = false;
-            } else if (!answerable && index >= CLASSES.size()) {
-                queryClass = RagBenchmarkDataset.QueryClass.UNANSWERABLE;
-            }
+            RagBenchmarkDataset.QueryClass queryClass = answerable
+                    ? ANSWERABLE_CLASSES.get(index % ANSWERABLE_CLASSES.size())
+                    : RagBenchmarkDataset.QueryClass.UNANSWERABLE;
 
             String documentId = "doc-" + index;
             documents.add(new RagBenchmarkDataset.Document(
