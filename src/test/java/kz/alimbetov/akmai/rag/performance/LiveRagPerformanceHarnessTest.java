@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -23,12 +24,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.service.KnowledgeIngestionPort;
 import kz.alimbetov.akmai.rag.api.RagResponse;
+import kz.alimbetov.akmai.rag.policy.CandidateRetrievalPolicyTestInstaller;
 import kz.alimbetov.akmai.rag.quality.RagBenchmarkV1Corpus;
 import kz.alimbetov.akmai.rag.service.RagQuestionService;
+import kz.alimbetov.akmai.rag.trace.RagRuntimeAttribution;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -49,7 +53,7 @@ import org.testcontainers.utility.DockerImageName;
         "akmai.reembedding.auto-migrate=false",
         "akmai.adaptive-graph.learning-enabled=false",
         "akmai.adaptive-graph.expansion-enabled=false",
-        "akmai.retrieval.adaptive-planner.enabled=false"
+        "akmai.retrieval.adaptive-planner.enabled=true"
 })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @EnabledIfEnvironmentVariable(named = "AKMAI_LIVE_PERFORMANCE", matches = "true")
@@ -84,98 +88,173 @@ class LiveRagPerformanceHarnessTest {
     MeterRegistry meterRegistry;
     @Autowired
     ObjectMapper objectMapper;
+    @Autowired
+    RagRuntimeAttribution runtimeAttribution;
+    @Autowired
+    CandidateRetrievalPolicyTestInstaller candidatePolicyInstaller;
+
+    private final AtomicInteger writeSequence = new AtomicInteger();
+    private final AtomicLong loadedChunks = new AtomicLong();
+    private CorpusTier corpusTier;
+    private int loadedDocuments;
 
     @BeforeAll
-    void ingestCorpusAndWarmUp() {
-        int index = 0;
-        for (RagBenchmarkV1Corpus.Case testCase : RagBenchmarkV1Corpus.smokeCases()) {
-            ingestion.addText(
+    void ingestCorpusAndWarmUp() throws Exception {
+        candidatePolicyInstaller.installIfConfigured();
+        corpusTier = CorpusTier.parse(
+                env("AKMAI_LIVE_PERFORMANCE_CORPUS_TIER", "SMOKE")
+        );
+        int targetDocuments = intEnv(
+                "AKMAI_LIVE_PERFORMANCE_DOCUMENTS",
+                corpusTier.defaultDocuments()
+        );
+        if (targetDocuments < corpusTier.minimumDocuments()) {
+            throw new IllegalArgumentException(
+                    "performance corpus tier " + corpusTier
+                            + " requires at least "
+                            + corpusTier.minimumDocuments()
+                            + " documents"
+            );
+        }
+
+        List<RagBenchmarkV1Corpus.Case> base = RagBenchmarkV1Corpus.smokeCases();
+        if (base.isEmpty()) {
+            throw new IllegalStateException("performance seed corpus is empty");
+        }
+        for (int index = 0; index < targetDocuments; index++) {
+            RagBenchmarkV1Corpus.Case testCase = base.get(index % base.size());
+            String documentId = "perf-" + testCase.id() + "-" + index;
+            var response = ingestion.addText(
                     new AddKnowledgeRequest(
-                            "perf-" + testCase.id(),
-                            testCase.title(),
-                            testCase.text(),
-                            "benchmark://performance/" + testCase.id(),
+                            documentId,
+                            testCase.title() + " [perf " + index + "]",
+                            testCase.text()
+                                    + "\n\nPerformance corpus replica " + index + ".",
+                            "benchmark://performance/" + documentId,
                             testCase.language(),
                             testCase.domain(),
                             1L,
-                            Map.of("performanceCase", testCase.id())
+                            Map.of(
+                                    "performanceCase", testCase.id(),
+                                    "performanceTier", corpusTier.name(),
+                                    "performanceReplica", index
+                            )
                     ),
-                    "perf-ingest-" + testCase.id()
+                    "perf-ingest-" + documentId
             );
-            if (index++ < 3) {
-                questionService.ask(testCase.question(), Set.of(1L));
-            }
+            loadedChunks.addAndGet(response.chunkCount());
+        }
+        loadedDocuments = targetDocuments;
+
+        for (int index = 0; index < Math.min(3, base.size()); index++) {
+            questionService.ask(base.get(index).question(), Set.of(1L));
         }
     }
 
     @Test
-    void producesConcurrentReadAndMixedLoadPerformanceBaseline() throws Exception {
-        ScenarioResult read = runReadScenario(
-                intEnv("AKMAI_LIVE_PERFORMANCE_CONCURRENCY", 4),
-                intEnv("AKMAI_LIVE_PERFORMANCE_REQUESTS", 22)
-        );
-        ScenarioResult mixed = runMixedScenario(
-                Math.max(2, intEnv("AKMAI_LIVE_PERFORMANCE_CONCURRENCY", 4)),
-                Math.max(10, intEnv("AKMAI_LIVE_PERFORMANCE_MIXED_REQUESTS", 20))
+    void producesReadBurstIngestAndMixedPerformanceMatrix() throws Exception {
+        int scale = Math.max(1, intEnv("AKMAI_LIVE_PERFORMANCE_SCALE", 1));
+        List<ScenarioResult> scenarios = List.of(
+                runReadScenario("read-1", 1, 12 * scale),
+                runReadScenario("read-10", 10, 30 * scale),
+                runReadScenario("read-50", 50, 100 * scale),
+                runReadScenario("read-100", 100, 200 * scale),
+                runReadScenario("read-burst", 100, 300 * scale),
+                runIngestScenario(
+                        Math.max(1, intEnv("AKMAI_LIVE_INGEST_CONCURRENCY", 8)),
+                        24 * scale
+                ),
+                runMixedScenario("mixed-light", 10, 60 * scale, 10),
+                runMixedScenario("mixed-heavy", 25, 100 * scale, 3)
         );
 
         Map<String, Object> report = new LinkedHashMap<>();
-        report.put("benchmarkVersion", "rag-performance-v1");
+        report.put("benchmarkVersion", "rag-performance-v1.1");
         report.put("generatedAt", Instant.now().toString());
+        report.put("attribution", runtimeAttribution.snapshot().asMap());
+        report.put("corpusTier", corpusTier.name());
+        report.put("corpusDocuments", loadedDocuments);
+        report.put("corpusSearchableChunks", loadedChunks.get());
+        report.put("minimumDocumentsForTier", corpusTier.minimumDocuments());
         report.put("hardware", hardwareProfile());
-        report.put("scenarios", List.of(read, mixed));
+        report.put("scenarios", scenarios);
         report.put("stages", stageSnapshot());
         report.put("saturation", akmaiMeterSnapshot());
+        report.put(
+                "faultRecoveryContracts",
+                List.of(
+                        "slow-postgres-query-timeout-connection-reuse",
+                        "slow-model-timeout-worker-recovery",
+                        "slow-reranker-timeout-worker-recovery"
+                )
+        );
 
-        Path output = Path.of("target", "performance", "performance-baseline.json");
+        Path output = Path.of(
+                "target",
+                "performance",
+                "performance-baseline.json"
+        );
         Files.createDirectories(output.getParent());
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(output.toFile(), report);
 
-        double p95Limit = doubleEnv("AKMAI_LIVE_PERFORMANCE_P95_MS", 15_000.0);
-        assertThat(read.failed()).isZero();
-        assertThat(mixed.failed()).isZero();
-        assertThat(read.p95Millis()).isLessThanOrEqualTo(p95Limit);
+        double p95Limit = doubleEnv(
+                "AKMAI_LIVE_PERFORMANCE_P95_MS",
+                15_000.0
+        );
+        ScenarioResult read10 = scenarios.stream()
+                .filter(value -> value.scenario().equals("read-10"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(scenarios).allMatch(value -> value.failed() == 0);
+        assertThat(read10.p95Millis()).isLessThanOrEqualTo(p95Limit);
+        assertThat(loadedDocuments).isGreaterThanOrEqualTo(
+                corpusTier.minimumDocuments()
+        );
+        assertThat(loadedChunks.get()).isGreaterThanOrEqualTo(loadedDocuments);
     }
 
-    private ScenarioResult runReadScenario(int concurrency, int requestCount)
-            throws Exception {
+    private ScenarioResult runReadScenario(
+            String name,
+            int concurrency,
+            int requestCount
+    ) throws Exception {
         List<RagBenchmarkV1Corpus.Case> corpus = RagBenchmarkV1Corpus.smokeCases();
         List<Callable<Boolean>> tasks = new ArrayList<>();
         for (int index = 0; index < requestCount; index++) {
             var testCase = corpus.get(index % corpus.size());
             tasks.add(() -> {
-                RagResponse response = questionService.ask(testCase.question(), Set.of(1L));
+                RagResponse response = questionService.ask(
+                        testCase.question(),
+                        Set.of(1L)
+                );
                 return !response.sources().isEmpty();
             });
         }
-        return execute("read-concurrent", concurrency, tasks);
+        return execute(name, concurrency, tasks);
     }
 
-    private ScenarioResult runMixedScenario(int concurrency, int operationCount)
-            throws Exception {
-        List<RagBenchmarkV1Corpus.Case> corpus = RagBenchmarkV1Corpus.smokeCases();
-        AtomicInteger writeSequence = new AtomicInteger();
+    private ScenarioResult runIngestScenario(
+            int concurrency,
+            int operationCount
+    ) throws Exception {
         List<Callable<Boolean>> tasks = new ArrayList<>();
         for (int index = 0; index < operationCount; index++) {
-            if (index % 10 == 0) {
-                tasks.add(() -> {
-                    int sequence = writeSequence.incrementAndGet();
-                    ingestion.addText(
-                            new AddKnowledgeRequest(
-                                    "perf-mixed-write-" + sequence,
-                                    "Performance write " + sequence,
-                                    "Technical runbook entry " + sequence
-                                            + ": bounded ingestion must preserve publication isolation and idempotency.",
-                                    "benchmark://performance/mixed/" + sequence,
-                                    "en",
-                                    KnowledgeDomain.TECHNICAL,
-                                    1L,
-                                    Map.of("scenario", "mixed-light")
-                            ),
-                            "perf-mixed-idempotency-" + sequence
-                    );
-                    return true;
-                });
+            tasks.add(this::writePerformanceDocument);
+        }
+        return execute("ingest-only", concurrency, tasks);
+    }
+
+    private ScenarioResult runMixedScenario(
+            String name,
+            int concurrency,
+            int operationCount,
+            int writeEvery
+    ) throws Exception {
+        List<RagBenchmarkV1Corpus.Case> corpus = RagBenchmarkV1Corpus.smokeCases();
+        List<Callable<Boolean>> tasks = new ArrayList<>();
+        for (int index = 0; index < operationCount; index++) {
+            if (index % writeEvery == 0) {
+                tasks.add(this::writePerformanceDocument);
             } else {
                 var testCase = corpus.get(index % corpus.size());
                 tasks.add(() -> {
@@ -187,7 +266,26 @@ class LiveRagPerformanceHarnessTest {
                 });
             }
         }
-        return execute("mixed-light", concurrency, tasks);
+        return execute(name, concurrency, tasks);
+    }
+
+    private boolean writePerformanceDocument() {
+        int sequence = writeSequence.incrementAndGet();
+        ingestion.addText(
+                new AddKnowledgeRequest(
+                        "perf-write-" + sequence,
+                        "Performance write " + sequence,
+                        "Technical runbook entry " + sequence
+                                + ": bounded ingestion must preserve publication isolation, idempotency, lifecycle fencing and deterministic retrieval metadata.",
+                        "benchmark://performance/write/" + sequence,
+                        "en",
+                        KnowledgeDomain.TECHNICAL,
+                        1L,
+                        Map.of("scenario", "performance-matrix")
+                ),
+                "perf-write-idempotency-" + sequence
+        );
+        return true;
     }
 
     private ScenarioResult execute(
@@ -223,7 +321,7 @@ class LiveRagPerformanceHarnessTest {
                 }));
             }
             for (Future<TimedResult> future : futures) {
-                TimedResult result = future.get(60, TimeUnit.SECONDS);
+                TimedResult result = future.get(120, TimeUnit.SECONDS);
                 latenciesMillis.add(result.latencyMillis());
                 if (result.failed()) {
                     failed++;
@@ -258,7 +356,7 @@ class LiveRagPerformanceHarnessTest {
         LinkedHashMap<String, Object> result = new LinkedHashMap<>();
         for (RagPipelineStage stage : RagPipelineStage.values()) {
             Timer timer = meterRegistry.find("akmai.rag.stage")
-                    .tag("stage", stage.name().toLowerCase(java.util.Locale.ROOT))
+                    .tag("stage", stage.name().toLowerCase(Locale.ROOT))
                     .timer();
             if (timer == null || timer.count() == 0) {
                 continue;
@@ -318,7 +416,9 @@ class LiveRagPerformanceHarnessTest {
         if (values.isEmpty()) {
             return 0.0;
         }
-        List<Double> sorted = values.stream().sorted(Comparator.naturalOrder()).toList();
+        List<Double> sorted = values.stream()
+                .sorted(Comparator.naturalOrder())
+                .toList();
         int index = (int) Math.ceil(percentile * sorted.size()) - 1;
         return sorted.get(Math.max(0, Math.min(index, sorted.size() - 1)));
     }
@@ -349,6 +449,44 @@ class LiveRagPerformanceHarnessTest {
             throw new IllegalStateException("Missing environment variable " + name);
         }
         return value;
+    }
+
+    private static String env(String name, String fallback) {
+        String value = System.getenv(name);
+        return value == null || value.isBlank() ? fallback : value.trim();
+    }
+
+    private enum CorpusTier {
+        SMOKE(16, 1),
+        SMALL(256, 128),
+        MEDIUM(2048, 1024);
+
+        private final int defaultDocuments;
+        private final int minimumDocuments;
+
+        CorpusTier(int defaultDocuments, int minimumDocuments) {
+            this.defaultDocuments = defaultDocuments;
+            this.minimumDocuments = minimumDocuments;
+        }
+
+        int defaultDocuments() {
+            return defaultDocuments;
+        }
+
+        int minimumDocuments() {
+            return minimumDocuments;
+        }
+
+        static CorpusTier parse(String value) {
+            try {
+                return CorpusTier.valueOf(value.trim().toUpperCase(Locale.ROOT));
+            } catch (RuntimeException exception) {
+                throw new IllegalArgumentException(
+                        "AKMAI_LIVE_PERFORMANCE_CORPUS_TIER must be SMOKE, SMALL or MEDIUM",
+                        exception
+                );
+            }
+        }
     }
 
     private record TimedResult(

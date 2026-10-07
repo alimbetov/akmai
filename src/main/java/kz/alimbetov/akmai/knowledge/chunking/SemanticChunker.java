@@ -10,6 +10,7 @@ import kz.alimbetov.akmai.knowledge.model.KnowledgeDocument;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.model.SemanticUnit;
 import kz.alimbetov.akmai.knowledge.model.SemanticUnitType;
+import kz.alimbetov.akmai.knowledge.model.UnitProvenance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -69,29 +70,32 @@ public class SemanticChunker {
 
     public List<KnowledgeChunk> chunk(KnowledgeDocument document) {
         String normalized = normalizer.normalize(document.rawText());
+        return chunk(
+                document,
+                unitExtractor.extract(document, normalized)
+        );
+    }
+
+    public List<KnowledgeChunk> chunk(
+            KnowledgeDocument document,
+            List<SemanticUnit> sourceUnits
+    ) {
         LanguageProfile languageProfile =
                 LanguageProfiles.forCode(document.language());
         IndustryProfile industryProfile = industryProfileRegistry == null
                 ? IndustryProfiles.defaultFor(document.domain())
                 : industryProfileRegistry.forDocument(document);
 
-        List<SemanticUnit> classified = unitExtractor.extract(document, normalized)
+        List<SemanticUnit> classified = (sourceUnits == null ? List.<SemanticUnit>of() : sourceUnits)
                 .stream()
-                .map(unit -> new SemanticUnit(
-                        unit.text(),
-                        unit.sectionPath(),
-                        unit.type() == SemanticUnitType.HEADING
-                                ? SemanticUnitType.HEADING
-                                : industryProfile.classifyType(
-                                        unit.text(),
-                                        languageProfile
-                                ).orElseGet(() -> classifier.classify(
-                                        unit.text(),
-                                        document.domain()
-                                )),
-                        unit.protectedAtom(),
-                        unit.structuralRole()
+                .filter(java.util.Objects::nonNull)
+                .map(unit -> classifyUnit(
+                        unit,
+                        document,
+                        languageProfile,
+                        industryProfile
                 ))
+                .filter(java.util.Objects::nonNull)
                 .toList();
 
         List<SemanticUnit> protectedUnits =
@@ -137,6 +141,7 @@ public class SemanticChunker {
             metadata.put("domain", document.domain().name());
             metadata.put("industryProfile", industryProfile.code().id());
             metadata.put("sectionPath", sectionPath);
+            applyProvenance(metadata, provenance(group));
 
             chunks.add(new KnowledgeChunk(
                     chunkIdentity.create(
@@ -161,6 +166,99 @@ public class SemanticChunker {
         }
 
         return List.copyOf(chunks);
+    }
+
+    private SemanticUnit classifyUnit(
+            SemanticUnit unit,
+            KnowledgeDocument document,
+            LanguageProfile languageProfile,
+            IndustryProfile industryProfile
+    ) {
+        String text = normalizer.normalize(unit.text());
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        SemanticUnitType type = unit.type() == SemanticUnitType.HEADING
+                ? SemanticUnitType.HEADING
+                : industryProfile.classifyType(
+                        text,
+                        languageProfile
+                ).orElseGet(() -> classifier.classify(
+                        text,
+                        document.domain()
+                ));
+        String sectionPath = unit.sectionPath() == null
+                || unit.sectionPath().isBlank()
+                ? document.title()
+                : unit.sectionPath();
+        return new SemanticUnit(
+                text,
+                sectionPath,
+                type,
+                unit.protectedAtom(),
+                unit.structuralRole(),
+                unit.provenance()
+        );
+    }
+
+    private void applyProvenance(
+            Map<String, Object> metadata,
+            UnitProvenance provenance
+    ) {
+        if (provenance == null) {
+            return;
+        }
+        if (!provenance.blockIds().isEmpty()) {
+            metadata.put("blockIds", provenance.blockIds());
+        }
+        if (provenance.pageFrom() != null) {
+            metadata.put("pageFrom", provenance.pageFrom());
+        }
+        if (provenance.pageTo() != null) {
+            metadata.put("pageTo", provenance.pageTo());
+        }
+        if (!provenance.blockRefs().isEmpty()) {
+            metadata.put(
+                    "canonicalBlocks",
+                    provenance.blockRefs().stream()
+                            .map(this::blockMetadata)
+                            .toList()
+            );
+        }
+    }
+
+    private Map<String, Object> blockMetadata(UnitProvenance.BlockRef block) {
+        LinkedHashMap<String, Object> value = new LinkedHashMap<>();
+        value.put("blockId", block.blockId());
+        if (block.pageFrom() != null) {
+            value.put("pageFrom", block.pageFrom());
+        }
+        if (block.pageTo() != null) {
+            value.put("pageTo", block.pageTo());
+        }
+        if (block.sectionPath() != null && !block.sectionPath().isBlank()) {
+            value.put("sectionPath", block.sectionPath());
+        }
+        if (block.boundingBox() != null) {
+            value.put(
+                    "boundingBox",
+                    Map.of(
+                            "x", block.boundingBox().x(),
+                            "y", block.boundingBox().y(),
+                            "width", block.boundingBox().width(),
+                            "height", block.boundingBox().height()
+                    )
+            );
+        }
+        return Map.copyOf(value);
+    }
+
+    private UnitProvenance provenance(List<SemanticUnit> group) {
+        UnitProvenance result = null;
+        for (SemanticUnit unit : group) {
+            result = UnitProvenance.merge(result, unit.provenance());
+        }
+        return result;
     }
 
     private List<SemanticUnit> splitToEmbeddingBudget(

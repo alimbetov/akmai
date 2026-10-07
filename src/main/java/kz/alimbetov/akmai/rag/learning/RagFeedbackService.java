@@ -2,6 +2,7 @@ package kz.alimbetov.akmai.rag.learning;
 
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
@@ -10,13 +11,24 @@ public class RagFeedbackService {
 
     private final RagLearningEventRepository learningEventRepository;
     private final RagFeedbackRepository feedbackRepository;
+    private final LearningSourceFingerprint sourceFingerprint;
 
     public RagFeedbackService(
             RagLearningEventRepository learningEventRepository,
             RagFeedbackRepository feedbackRepository
     ) {
+        this(learningEventRepository, feedbackRepository, null);
+    }
+
+    @Autowired
+    public RagFeedbackService(
+            RagLearningEventRepository learningEventRepository,
+            RagFeedbackRepository feedbackRepository,
+            LearningSourceFingerprint sourceFingerprint
+    ) {
         this.learningEventRepository = learningEventRepository;
         this.feedbackRepository = feedbackRepository;
+        this.sourceFingerprint = sourceFingerprint;
     }
 
     public RagFeedbackRepository.Result record(
@@ -52,7 +64,9 @@ public class RagFeedbackService {
                 idempotencyKey,
                 parsedRequestId,
                 reason,
-                normalizedDetails
+                normalizedDetails,
+                RagFeedbackTrustClass.USER_UNVERIFIED,
+                sourceFingerprint == null ? null : sourceFingerprint.current()
         );
     }
 }

@@ -5,6 +5,7 @@ import java.util.List;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.model.SemanticUnit;
 import kz.alimbetov.akmai.knowledge.model.SemanticUnitType;
+import kz.alimbetov.akmai.knowledge.model.UnitProvenance;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -22,7 +23,8 @@ public class AtomicUnitProtector {
                         current.sectionPath(),
                         current.type(),
                         true,
-                        current.structuralRole()
+                        current.structuralRole(),
+                        current.provenance()
                 ));
                 continue;
             }
@@ -37,7 +39,11 @@ public class AtomicUnitProtector {
                             current.sectionPath(),
                             current.type(),
                             true,
-                            current.structuralRole()
+                            current.structuralRole(),
+                            UnitProvenance.merge(
+                                    current.provenance(),
+                                    next.provenance()
+                            )
                     ));
                     i++;
                     continue;

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -67,6 +68,8 @@ class ParallelRetrievalExecutorCancellationTest {
             assertThat(started.await(1, TimeUnit.SECONDS)).isTrue();
             assertThat(result.outcomes().get("v").status())
                     .isEqualTo(RetrievalOutcomeStatus.TIMED_OUT);
+            assertThat(result.outcomes().get("v").failureCategory())
+                    .isEqualTo("STRATEGY_TIMEOUT");
             assertThat(interrupted.await(1, TimeUnit.SECONDS))
                     .as("timeout must interrupt the actual retrieval worker")
                     .isTrue();
@@ -77,10 +80,38 @@ class ParallelRetrievalExecutorCancellationTest {
     }
 
     @Test
-    void requestDeadlineInterruptsActualWorkerTask() throws Exception {
+    void dependentStepDoesNotStartWithoutFullRequestBudget() {
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        CountDownLatch interrupted = new CountDownLatch(1);
+        AtomicBoolean vectorInvoked = new AtomicBoolean(false);
         try {
+            RetrievalStrategy identifier = new RetrievalStrategy() {
+                @Override
+                public RetrievalType type() {
+                    return RetrievalType.IDENTIFIER;
+                }
+
+                @Override
+                public List<RetrievalHit> retrieve(
+                        QueryChunk queryChunk,
+                        RetrievalContext context
+                ) {
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException exception) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException(exception);
+                    }
+                    return List.of(new RetrievalHit(
+                            RetrievalType.IDENTIFIER,
+                            1L,
+                            "doc-1",
+                            1L,
+                            "chunk-1",
+                            "identifier evidence",
+                            Map.of()
+                    ));
+                }
+            };
             RetrievalStrategy vector = new RetrievalStrategy() {
                 @Override
                 public RetrievalType type() {
@@ -92,36 +123,31 @@ class ParallelRetrievalExecutorCancellationTest {
                         QueryChunk queryChunk,
                         RetrievalContext context
                 ) {
-                    try {
-                        Thread.sleep(10_000);
-                    } catch (InterruptedException exception) {
-                        interrupted.countDown();
-                        Thread.currentThread().interrupt();
-                        throw new IllegalStateException(
-                                "worker interrupted",
-                                exception
-                        );
-                    }
+                    vectorInvoked.set(true);
                     return List.of();
                 }
             };
             ParallelRetrievalExecutor subject = new ParallelRetrievalExecutor(
-                    List.of(vector),
+                    List.of(identifier, vector),
                     executor,
                     new RetrievalObserver(new SimpleMeterRegistry()),
-                    properties(Duration.ofMillis(50), Duration.ofSeconds(5))
+                    properties(Duration.ofMillis(550), Duration.ofMillis(400))
             );
 
             RetrievalExecutionResult result = subject.executeDetailed(
-                    plan(),
+                    dependentPlan(),
                     Set.of(1L)
             );
 
+            assertThat(result.outcomes().get("id").status())
+                    .isEqualTo(RetrievalOutcomeStatus.SUCCESS);
             assertThat(result.outcomes().get("v").status())
                     .isEqualTo(RetrievalOutcomeStatus.TIMED_OUT);
-            assertThat(interrupted.await(1, TimeUnit.SECONDS))
-                    .as("request deadline must interrupt the actual retrieval worker")
-                    .isTrue();
+            assertThat(result.outcomes().get("v").failureCategory())
+                    .isEqualTo("REQUEST_DEADLINE_BUDGET_EXHAUSTED");
+            assertThat(vectorInvoked)
+                    .as("dependent work must not start without a full resource budget")
+                    .isFalse();
         } finally {
             executor.shutdownNow();
         }
@@ -195,6 +221,23 @@ class ParallelRetrievalExecutorCancellationTest {
                 RetrievalType.VECTOR,
                 List.of()
         )));
+    }
+
+    private RetrievalPlan dependentPlan() {
+        return new RetrievalPlan(List.of(
+                new RetrievalStep(
+                        "id",
+                        query(),
+                        RetrievalType.IDENTIFIER,
+                        List.of()
+                ),
+                new RetrievalStep(
+                        "v",
+                        query(),
+                        RetrievalType.VECTOR,
+                        List.of("id")
+                )
+        ));
     }
 
     private RetrievalProperties properties(

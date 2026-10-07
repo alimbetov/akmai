@@ -81,7 +81,7 @@ public class ParallelRetrievalExecutor {
         Instant deadline = Instant.now().plus(properties.requestTimeout());
         Map<String, StepExecution> executions = new HashMap<>();
         for (RetrievalStep step : plan.steps()) {
-            schedule(step, plan, executions, scope);
+            schedule(step, plan, executions, scope, deadline);
         }
 
         LinkedHashMap<String, RetrievalStepOutcome> outcomes =
@@ -99,8 +99,11 @@ public class ParallelRetrievalExecutor {
                             completedOutcome(step, future)
                     );
                 } else {
-                    execution.cancel();
-                    outcomes.put(step.id(), timeout(step));
+                    execution.cancel("REQUEST_DEADLINE");
+                    outcomes.put(
+                            step.id(),
+                            timeout(step, "REQUEST_DEADLINE")
+                    );
                 }
                 continue;
             }
@@ -117,11 +120,14 @@ public class ParallelRetrievalExecutor {
                             completedOutcome(step, future)
                     );
                 } else {
-                    execution.cancel();
-                    outcomes.put(step.id(), timeout(step));
+                    execution.cancel("REQUEST_DEADLINE");
+                    outcomes.put(
+                            step.id(),
+                            timeout(step, "REQUEST_DEADLINE")
+                    );
                 }
             } catch (InterruptedException exception) {
-                execution.cancel();
+                execution.cancel("INTERRUPTED");
                 Thread.currentThread().interrupt();
                 outcomes.put(
                         step.id(),
@@ -155,7 +161,8 @@ public class ParallelRetrievalExecutor {
             RetrievalStep step,
             RetrievalPlan plan,
             Map<String, StepExecution> executions,
-            Set<Long> accessLevels
+            Set<Long> accessLevels,
+            Instant deadline
     ) {
         StepExecution existing = executions.get(step.id());
         if (existing != null) {
@@ -163,7 +170,6 @@ public class ParallelRetrievalExecutor {
         }
 
         StepExecution execution = new StepExecution(
-                step,
                 properties.strategyTimeout(),
                 throwable -> outcomeFromFailure(step, throwable)
         );
@@ -176,7 +182,8 @@ public class ParallelRetrievalExecutor {
                                 dependency,
                                 plan,
                                 executions,
-                                accessLevels
+                                accessLevels,
+                                deadline
                         )
                 )
                 .toList();
@@ -195,6 +202,7 @@ public class ParallelRetrievalExecutor {
             }
             execution.start(
                     retrievalExecutor,
+                    deadline,
                     () -> executeStep(
                             step,
                             dependencies.stream()
@@ -245,7 +253,11 @@ public class ParallelRetrievalExecutor {
                     retrieved,
                     accessLevels
             );
-            observer.success(step.type(), Duration.between(started, Instant.now()), hits.size());
+            observer.success(
+                    step.type(),
+                    Duration.between(started, Instant.now()),
+                    hits.size()
+            );
             return new RetrievalStepOutcome(
                     step.id(),
                     step.type(),
@@ -256,7 +268,11 @@ public class ParallelRetrievalExecutor {
                     null
             );
         } catch (RuntimeException exception) {
-            observer.failure(step.type(), Duration.between(started, Instant.now()), exception);
+            observer.failure(
+                    step.type(),
+                    Duration.between(started, Instant.now()),
+                    exception
+            );
             throw exception;
         }
     }
@@ -320,20 +336,43 @@ public class ParallelRetrievalExecutor {
             Throwable throwable
     ) {
         Throwable root = unwrap(throwable);
+        if (root instanceof RetrievalStepTimeoutException timeout) {
+            return timeout(step, timeout.category());
+        }
         if (root instanceof TimeoutException) {
-            return timeout(step);
+            return timeout(step, "STRATEGY_TIMEOUT");
+        }
+        if (isResourceTimeout(root)) {
+            return timeout(step, "RESOURCE_TIMEOUT");
         }
         if (root instanceof RejectedExecutionException) {
-            return failed(step, RetrievalOutcomeStatus.REJECTED, "EXECUTOR_REJECTED");
+            return failed(
+                    step,
+                    RetrievalOutcomeStatus.REJECTED,
+                    "EXECUTOR_REJECTED"
+            );
         }
         if (root instanceof java.util.concurrent.CancellationException) {
-            return timeout(step);
+            return timeout(step, "CANCELLED");
         }
         return failed(
                 step,
                 RetrievalOutcomeStatus.FAILED,
                 root == null ? "UNKNOWN" : root.getClass().getSimpleName()
         );
+    }
+
+    private boolean isResourceTimeout(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof org.springframework.dao.QueryTimeoutException
+                    || current instanceof java.net.SocketTimeoutException
+                    || current instanceof java.net.http.HttpTimeoutException) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private Throwable unwrap(Throwable throwable) {
@@ -353,14 +392,17 @@ public class ParallelRetrievalExecutor {
         try {
             return future.join();
         } catch (java.util.concurrent.CancellationException exception) {
-            return timeout(step);
+            return timeout(step, "CANCELLED");
         } catch (CompletionException exception) {
             return outcomeFromFailure(step, exception.getCause());
         }
     }
 
-    private RetrievalStepOutcome timeout(RetrievalStep step) {
-        return failed(step, RetrievalOutcomeStatus.TIMED_OUT, "TIMEOUT");
+    private RetrievalStepOutcome timeout(
+            RetrievalStep step,
+            String category
+    ) {
+        return failed(step, RetrievalOutcomeStatus.TIMED_OUT, category);
     }
 
     private RetrievalStepOutcome failed(
@@ -393,14 +435,23 @@ public class ParallelRetrievalExecutor {
                     .orElse(null);
             if (identifierStep != null) {
                 RetrievalStepOutcome identifier = outcomes.get(identifierStep.id());
-                if (identifier != null && isInfrastructureFailure(identifier.status())) {
+                if (identifier != null
+                        && isInfrastructureFailure(identifier.status())) {
                     return true;
                 }
                 continue;
             }
 
-            RetrievalStepOutcome vector = outcome(steps, outcomes, RetrievalType.VECTOR);
-            RetrievalStepOutcome lexical = outcome(steps, outcomes, RetrievalType.LEXICAL);
+            RetrievalStepOutcome vector = outcome(
+                    steps,
+                    outcomes,
+                    RetrievalType.VECTOR
+            );
+            RetrievalStepOutcome lexical = outcome(
+                    steps,
+                    outcomes,
+                    RetrievalType.LEXICAL
+            );
             if (vector != null
                     && lexical != null
                     && isInfrastructureFailure(vector.status())
@@ -482,7 +533,8 @@ public class ParallelRetrievalExecutor {
         }
         if (!visiting.add(step.id())) {
             throw new IllegalArgumentException(
-                    "Retrieval plan contains a dependency cycle at step: " + step.id()
+                    "Retrieval plan contains a dependency cycle at step: "
+                            + step.id()
             );
         }
         for (String dependencyId : step.dependsOn()) {
@@ -512,7 +564,6 @@ public class ParallelRetrievalExecutor {
                 new java.util.concurrent.atomic.AtomicBoolean(false);
 
         private StepExecution(
-                RetrievalStep step,
                 Duration timeout,
                 Function<Throwable, RetrievalStepOutcome> failureMapper
         ) {
@@ -520,11 +571,42 @@ public class ParallelRetrievalExecutor {
             this.outcome = raw.exceptionally(failureMapper);
         }
 
-        private void start(Executor executor, Supplier<RetrievalStepOutcome> work) {
+        private void start(
+                Executor executor,
+                Instant requestDeadline,
+                Supplier<RetrievalStepOutcome> work
+        ) {
             if (cancelled.get() || raw.isDone()) {
                 return;
             }
+            if (!hasFullBudget(requestDeadline)) {
+                completeTimeout("REQUEST_DEADLINE_BUDGET_EXHAUSTED");
+                return;
+            }
+
             FutureTask<Void> futureTask = new FutureTask<>(() -> {
+                if (cancelled.get() || raw.isDone()) {
+                    return null;
+                }
+                if (!hasFullBudget(requestDeadline)) {
+                    completeTimeout("REQUEST_DEADLINE_BUDGET_EXHAUSTED");
+                    return null;
+                }
+
+                raw.orTimeout(
+                        timeout.toMillis(),
+                        TimeUnit.MILLISECONDS
+                ).whenComplete((value, failure) -> {
+                    Throwable root = failure;
+                    while (root instanceof CompletionException
+                            && root.getCause() != null) {
+                        root = root.getCause();
+                    }
+                    if (root instanceof TimeoutException) {
+                        cancelTaskOnly();
+                    }
+                });
+
                 try {
                     raw.complete(work.get());
                 } catch (Throwable throwable) {
@@ -540,25 +622,21 @@ public class ParallelRetrievalExecutor {
                 return;
             }
 
-            raw.orTimeout(
-                    timeout.toMillis(),
-                    TimeUnit.MILLISECONDS
-            ).whenComplete((value, failure) -> {
-                Throwable root = failure;
-                while (root instanceof CompletionException
-                        && root.getCause() != null) {
-                    root = root.getCause();
-                }
-                if (root instanceof TimeoutException) {
-                    cancelTaskOnly();
-                }
-            });
-
             try {
                 executor.execute(futureTask);
             } catch (RejectedExecutionException exception) {
                 raw.completeExceptionally(exception);
             }
+        }
+
+        private boolean hasFullBudget(Instant requestDeadline) {
+            Duration remaining = Duration.between(
+                    Instant.now(),
+                    requestDeadline
+            );
+            return !remaining.isZero()
+                    && !remaining.isNegative()
+                    && remaining.compareTo(timeout) >= 0;
         }
 
         private void complete(RetrievalStepOutcome value) {
@@ -569,10 +647,20 @@ public class ParallelRetrievalExecutor {
             return outcome;
         }
 
-        private void cancel() {
+        private void cancel(String category) {
             cancelled.set(true);
+            raw.completeExceptionally(
+                    new RetrievalStepTimeoutException(category)
+            );
             cancelTaskOnly();
-            raw.cancel(true);
+        }
+
+        private void completeTimeout(String category) {
+            cancelled.set(true);
+            raw.completeExceptionally(
+                    new RetrievalStepTimeoutException(category)
+            );
+            cancelTaskOnly();
         }
 
         private void cancelTaskOnly() {
@@ -580,6 +668,20 @@ public class ParallelRetrievalExecutor {
             if (running != null) {
                 running.cancel(true);
             }
+        }
+    }
+
+    private static final class RetrievalStepTimeoutException
+            extends RuntimeException {
+        private final String category;
+
+        private RetrievalStepTimeoutException(String category) {
+            super(category);
+            this.category = category;
+        }
+
+        private String category() {
+            return category;
         }
     }
 }

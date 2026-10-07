@@ -29,54 +29,128 @@ public class SemanticQueryMemoryRepository {
         this.objectMapper = objectMapper;
     }
 
-    public List<StoredCluster> findClustersByProfile(
-            String embeddingProfileId,
+    public List<StoredCluster> findClustersByNamespace(
+            SemanticQueryMemoryNamespace namespace,
             int limit
     ) {
-        if (embeddingProfileId == null || embeddingProfileId.isBlank() || limit <= 0) {
+        if (namespace == null || limit <= 0) {
             return List.of();
         }
         return jdbcTemplate.query(
                 """
                 SELECT cluster_id,
                        embedding_profile_id,
+                       retrieval_policy_version,
+                       learning_policy_version,
+                       grounding_policy_version,
                        required_access_levels::text,
                        centroid::text,
                        observation_count,
+                       refresh_revision,
                        updated_at
                 FROM rag_query_memory_cluster
                 WHERE embedding_profile_id = ?
-                ORDER BY updated_at DESC, cluster_id
+                  AND retrieval_policy_version = ?
+                  AND learning_policy_version = ?
+                  AND grounding_policy_version = ?
+                ORDER BY refresh_revision DESC
                 LIMIT ?
                 """,
-                (rs, rowNum) -> new StoredCluster(
-                        rs.getObject("cluster_id", UUID.class),
-                        rs.getString("embedding_profile_id"),
-                        readScope(rs.getString("required_access_levels")),
-                        readCentroid(rs.getString("centroid")),
-                        rs.getInt("observation_count"),
-                        rs.getTimestamp("updated_at").toInstant()
-                ),
-                embeddingProfileId,
+                (rs, rowNum) -> mapCluster(rs),
+                namespace.embeddingProfileId(),
+                namespace.retrievalPolicyVersion(),
+                namespace.learningPolicyVersion(),
+                namespace.groundingPolicyVersion(),
                 limit
+        );
+    }
+
+    public List<StoredCluster> findClustersUpdatedAfter(
+            SemanticQueryMemoryNamespace namespace,
+            RefreshCursor cursor,
+            int limit
+    ) {
+        if (namespace == null || cursor == null || limit <= 0) {
+            return List.of();
+        }
+        return jdbcTemplate.query(
+                """
+                SELECT cluster_id,
+                       embedding_profile_id,
+                       retrieval_policy_version,
+                       learning_policy_version,
+                       grounding_policy_version,
+                       required_access_levels::text,
+                       centroid::text,
+                       observation_count,
+                       refresh_revision,
+                       updated_at
+                FROM rag_query_memory_cluster
+                WHERE embedding_profile_id = ?
+                  AND retrieval_policy_version = ?
+                  AND learning_policy_version = ?
+                  AND grounding_policy_version = ?
+                  AND refresh_revision > ?
+                ORDER BY refresh_revision
+                LIMIT ?
+                """,
+                (rs, rowNum) -> mapCluster(rs),
+                namespace.embeddingProfileId(),
+                namespace.retrievalPolicyVersion(),
+                namespace.learningPolicyVersion(),
+                namespace.groundingPolicyVersion(),
+                cursor.revision(),
+                limit
+        );
+    }
+
+    public int deleteExpired(
+            SemanticQueryMemoryNamespace namespace,
+            Instant cutoff
+    ) {
+        if (namespace == null || cutoff == null) {
+            return 0;
+        }
+        return jdbcTemplate.update(
+                """
+                DELETE FROM rag_query_memory_cluster
+                WHERE embedding_profile_id = ?
+                  AND retrieval_policy_version = ?
+                  AND learning_policy_version = ?
+                  AND grounding_policy_version = ?
+                  AND updated_at < ?
+                """,
+                namespace.embeddingProfileId(),
+                namespace.retrievalPolicyVersion(),
+                namespace.learningPolicyVersion(),
+                namespace.groundingPolicyVersion(),
+                java.sql.Timestamp.from(cutoff)
         );
     }
 
     public List<StoredObservation> findObservations(
             UUID clusterId,
+            SemanticQueryMemoryNamespace namespace,
             int limit
     ) {
-        if (clusterId == null || limit <= 0) {
+        if (clusterId == null || namespace == null || limit <= 0) {
             return List.of();
         }
         return jdbcTemplate.query(
                 """
-                SELECT grounded_answer,
-                       source_refs::text,
-                       observed_at
-                FROM rag_query_memory_observation
-                WHERE cluster_id = ?
-                ORDER BY observed_at DESC, observation_id DESC
+                SELECT observation.grounded_answer,
+                       observation.source_refs::text,
+                       observation.observed_at
+                FROM rag_query_memory_observation observation
+                JOIN rag_query_memory_cluster cluster
+                  ON cluster.cluster_id = observation.cluster_id
+                WHERE observation.cluster_id = ?
+                  AND cluster.embedding_profile_id = ?
+                  AND cluster.retrieval_policy_version = ?
+                  AND cluster.learning_policy_version = ?
+                  AND cluster.grounding_policy_version = ?
+                ORDER BY observation.observed_at DESC,
+                         observation.observation_id DESC
                 LIMIT ?
                 """,
                 (rs, rowNum) -> new StoredObservation(
@@ -85,11 +159,15 @@ public class SemanticQueryMemoryRepository {
                         rs.getTimestamp("observed_at").toInstant()
                 ),
                 clusterId,
+                namespace.embeddingProfileId(),
+                namespace.retrievalPolicyVersion(),
+                namespace.learningPolicyVersion(),
+                namespace.groundingPolicyVersion(),
                 limit
         );
     }
 
-    public void persist(
+    public boolean persist(
             StoredCluster cluster,
             String queryFingerprint,
             String groundedAnswer,
@@ -104,37 +182,47 @@ public class SemanticQueryMemoryRepository {
                 || groundedAnswer == null
                 || groundedAnswer.isBlank()
                 || observedAt == null) {
-            return;
+            return false;
         }
-        transactionTemplate.executeWithoutResult(status -> {
-            jdbcTemplate.update(
+        Boolean admitted = transactionTemplate.execute(status -> {
+            SemanticQueryMemoryNamespace namespace = cluster.namespace();
+            int clusterInserted = jdbcTemplate.update(
                     """
                     INSERT INTO rag_query_memory_cluster (
                         cluster_id,
                         embedding_profile_id,
+                        retrieval_policy_version,
+                        learning_policy_version,
+                        grounding_policy_version,
                         required_access_levels,
                         centroid,
                         observation_count,
                         created_at,
                         updated_at
                     ) VALUES (
-                        ?, ?, ?::jsonb, ?::jsonb, ?, clock_timestamp(), clock_timestamp()
+                        ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?,
+                        clock_timestamp(), clock_timestamp()
                     )
-                    ON CONFLICT (cluster_id) DO UPDATE
-                    SET embedding_profile_id = EXCLUDED.embedding_profile_id,
-                        required_access_levels = EXCLUDED.required_access_levels,
-                        centroid = EXCLUDED.centroid,
-                        observation_count = EXCLUDED.observation_count,
-                        updated_at = clock_timestamp()
+                    ON CONFLICT (cluster_id) DO NOTHING
                     """,
                     cluster.clusterId(),
-                    cluster.embeddingProfileId(),
+                    namespace.embeddingProfileId(),
+                    namespace.retrievalPolicyVersion(),
+                    namespace.learningPolicyVersion(),
+                    namespace.groundingPolicyVersion(),
                     writeJson(cluster.requiredAccessLevels().stream().sorted().toList()),
                     writeJson(cluster.centroid()),
                     cluster.observationCount()
             );
 
-            jdbcTemplate.update(
+            if (clusterInserted == 0 && !clusterNamespaceMatches(
+                    cluster.clusterId(),
+                    namespace
+            )) {
+                return false;
+            }
+
+            int observationInserted = jdbcTemplate.update(
                     """
                     INSERT INTO rag_query_memory_observation (
                         observation_id,
@@ -144,6 +232,7 @@ public class SemanticQueryMemoryRepository {
                         source_refs,
                         observed_at
                     ) VALUES (?, ?, ?, ?, ?::jsonb, ?)
+                    ON CONFLICT (cluster_id, query_fingerprint) DO NOTHING
                     """,
                     UUID.randomUUID(),
                     cluster.clusterId(),
@@ -152,6 +241,36 @@ public class SemanticQueryMemoryRepository {
                     writeJson(sourceRefs == null ? List.of() : sourceRefs),
                     java.sql.Timestamp.from(observedAt)
             );
+            if (observationInserted == 0) {
+                touchRevision(cluster.clusterId(), namespace);
+                return false;
+            }
+
+            if (clusterInserted == 0) {
+                jdbcTemplate.update(
+                        """
+                        UPDATE rag_query_memory_cluster
+                        SET required_access_levels = ?::jsonb,
+                            centroid = ?::jsonb,
+                            observation_count = ?,
+                            refresh_revision = nextval('rag_query_memory_refresh_revision_seq'),
+                            updated_at = clock_timestamp()
+                        WHERE cluster_id = ?
+                          AND embedding_profile_id = ?
+                          AND retrieval_policy_version = ?
+                          AND learning_policy_version = ?
+                          AND grounding_policy_version = ?
+                        """,
+                        writeJson(cluster.requiredAccessLevels().stream().sorted().toList()),
+                        writeJson(cluster.centroid()),
+                        cluster.observationCount(),
+                        cluster.clusterId(),
+                        namespace.embeddingProfileId(),
+                        namespace.retrievalPolicyVersion(),
+                        namespace.learningPolicyVersion(),
+                        namespace.groundingPolicyVersion()
+                );
+            }
 
             jdbcTemplate.update(
                     """
@@ -175,14 +294,86 @@ public class SemanticQueryMemoryRepository {
                         SELECT cluster_id
                         FROM rag_query_memory_cluster
                         WHERE embedding_profile_id = ?
-                        ORDER BY updated_at DESC, cluster_id
+                          AND retrieval_policy_version = ?
+                          AND learning_policy_version = ?
+                          AND grounding_policy_version = ?
+                        ORDER BY refresh_revision DESC
                         OFFSET ?
                     )
                     """,
-                    cluster.embeddingProfileId(),
+                    namespace.embeddingProfileId(),
+                    namespace.retrievalPolicyVersion(),
+                    namespace.learningPolicyVersion(),
+                    namespace.groundingPolicyVersion(),
                     Math.max(32, maxClusters)
             );
+            return true;
         });
+        return Boolean.TRUE.equals(admitted);
+    }
+
+    private boolean clusterNamespaceMatches(
+            UUID clusterId,
+            SemanticQueryMemoryNamespace namespace
+    ) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM rag_query_memory_cluster
+                WHERE cluster_id = ?
+                  AND embedding_profile_id = ?
+                  AND retrieval_policy_version = ?
+                  AND learning_policy_version = ?
+                  AND grounding_policy_version = ?
+                """,
+                Integer.class,
+                clusterId,
+                namespace.embeddingProfileId(),
+                namespace.retrievalPolicyVersion(),
+                namespace.learningPolicyVersion(),
+                namespace.groundingPolicyVersion()
+        );
+        return count != null && count == 1;
+    }
+
+    private void touchRevision(
+            UUID clusterId,
+            SemanticQueryMemoryNamespace namespace
+    ) {
+        jdbcTemplate.update(
+                """
+                UPDATE rag_query_memory_cluster
+                SET refresh_revision = nextval('rag_query_memory_refresh_revision_seq')
+                WHERE cluster_id = ?
+                  AND embedding_profile_id = ?
+                  AND retrieval_policy_version = ?
+                  AND learning_policy_version = ?
+                  AND grounding_policy_version = ?
+                """,
+                clusterId,
+                namespace.embeddingProfileId(),
+                namespace.retrievalPolicyVersion(),
+                namespace.learningPolicyVersion(),
+                namespace.groundingPolicyVersion()
+        );
+    }
+
+    private StoredCluster mapCluster(java.sql.ResultSet rs)
+            throws java.sql.SQLException {
+        return new StoredCluster(
+                rs.getObject("cluster_id", UUID.class),
+                new SemanticQueryMemoryNamespace(
+                        rs.getString("embedding_profile_id"),
+                        rs.getString("retrieval_policy_version"),
+                        rs.getString("learning_policy_version"),
+                        rs.getString("grounding_policy_version")
+                ),
+                readScope(rs.getString("required_access_levels")),
+                readCentroid(rs.getString("centroid")),
+                rs.getInt("observation_count"),
+                rs.getLong("refresh_revision"),
+                rs.getTimestamp("updated_at").toInstant()
+        );
     }
 
     private String writeJson(Object value) {
@@ -224,19 +415,61 @@ public class SemanticQueryMemoryRepository {
         }
     }
 
+    public record RefreshCursor(long revision) {
+        public RefreshCursor {
+            if (revision < 0) {
+                throw new IllegalArgumentException(
+                        "query memory refresh revision must not be negative"
+                );
+            }
+        }
+    }
+
     public record StoredCluster(
             UUID clusterId,
-            String embeddingProfileId,
+            SemanticQueryMemoryNamespace namespace,
             Set<Long> requiredAccessLevels,
             float[] centroid,
             int observationCount,
+            long refreshRevision,
             Instant updatedAt
     ) {
+        public StoredCluster(
+                UUID clusterId,
+                SemanticQueryMemoryNamespace namespace,
+                Set<Long> requiredAccessLevels,
+                float[] centroid,
+                int observationCount,
+                Instant updatedAt
+        ) {
+            this(
+                    clusterId,
+                    namespace,
+                    requiredAccessLevels,
+                    centroid,
+                    observationCount,
+                    0L,
+                    updatedAt
+            );
+        }
+
         public StoredCluster {
+            if (namespace == null) {
+                throw new IllegalArgumentException("namespace must not be null");
+            }
             requiredAccessLevels = requiredAccessLevels == null
                     ? Set.of()
                     : Set.copyOf(requiredAccessLevels);
             centroid = centroid == null ? new float[0] : centroid.clone();
+            if (refreshRevision < 0) {
+                throw new IllegalArgumentException(
+                        "refreshRevision must not be negative"
+                );
+            }
+        }
+
+        public RefreshCursor cursor() {
+            return new RefreshCursor(refreshRevision);
         }
     }
 

@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.rag.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -81,7 +82,7 @@ class RagQuestionServiceTest {
         );
 
         when(chunker.chunk("question")).thenReturn(List.of(query));
-        when(planner.plan(List.of(query))).thenReturn(plan);
+        when(planner.plan(eq(List.of(query)), anyString())).thenReturn(plan);
         Set<Long> scope = Set.of(1L);
         when(executor.executeDetailed(plan, scope)).thenReturn(
                 new RetrievalExecutionResult(

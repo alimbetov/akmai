@@ -3,6 +3,8 @@ package kz.alimbetov.akmai.config;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
@@ -13,14 +15,46 @@ public record SelfOptimizingRagProperties(
         @DefaultValue("false") boolean learningEventsEnabled,
         @DefaultValue("false") boolean persistentQueryMemoryEnabled,
         @DefaultValue("false") boolean semanticGroundingEnabled,
+        @DefaultValue("false") boolean executionObservationsEnabled,
         @DefaultValue("") String fingerprintSecret,
         @DefaultValue("runtime-v1") @NotBlank String corpusVersion,
         @DefaultValue("retrieval-v1") @NotBlank String retrievalPolicyVersion,
         @DefaultValue("learning-v1") @NotBlank String learningPolicyVersion,
         @DefaultValue("grounding-v1") @NotBlank String groundingPolicyVersion,
         @DefaultValue("2048") @Min(32) @Max(10000) int persistentMemoryMaxEntries,
-        @DefaultValue("4") @Min(1) @Max(16) int persistentMemoryObservationsPerCluster
+        @DefaultValue("4") @Min(1) @Max(16) int persistentMemoryObservationsPerCluster,
+        @DefaultValue("5s") @NotNull Duration persistentMemoryRefreshInterval,
+        @DefaultValue("30d") @NotNull Duration persistentMemoryTtl
 ) {
+    public SelfOptimizingRagProperties(
+            boolean learningEventsEnabled,
+            boolean persistentQueryMemoryEnabled,
+            boolean semanticGroundingEnabled,
+            String fingerprintSecret,
+            String corpusVersion,
+            String retrievalPolicyVersion,
+            String learningPolicyVersion,
+            String groundingPolicyVersion,
+            int persistentMemoryMaxEntries,
+            int persistentMemoryObservationsPerCluster
+    ) {
+        this(
+                learningEventsEnabled,
+                persistentQueryMemoryEnabled,
+                semanticGroundingEnabled,
+                false,
+                fingerprintSecret,
+                corpusVersion,
+                retrievalPolicyVersion,
+                learningPolicyVersion,
+                groundingPolicyVersion,
+                persistentMemoryMaxEntries,
+                persistentMemoryObservationsPerCluster,
+                Duration.ofSeconds(5),
+                Duration.ofDays(30)
+        );
+    }
+
     public SelfOptimizingRagProperties {
         fingerprintSecret = fingerprintSecret == null
                 ? ""
@@ -38,6 +72,23 @@ public record SelfOptimizingRagProperties(
                 "grounding-policy-version",
                 groundingPolicyVersion
         );
+        validateDuration(
+                "persistent-memory-refresh-interval",
+                persistentMemoryRefreshInterval,
+                Duration.ofMillis(100),
+                Duration.ofMinutes(5)
+        );
+        validateDuration(
+                "persistent-memory-ttl",
+                persistentMemoryTtl,
+                Duration.ofMinutes(1),
+                Duration.ofDays(365)
+        );
+        if (persistentMemoryRefreshInterval.compareTo(persistentMemoryTtl) >= 0) {
+            throw new IllegalArgumentException(
+                    "persistent-memory-refresh-interval must be < persistent-memory-ttl"
+            );
+        }
         if ((learningEventsEnabled || persistentQueryMemoryEnabled)
                 && fingerprintSecret.length() < 32) {
             throw new IllegalArgumentException(
@@ -59,5 +110,21 @@ public record SelfOptimizingRagProperties(
             );
         }
         return normalized;
+    }
+
+    private static void validateDuration(
+            String name,
+            Duration value,
+            Duration minimum,
+            Duration maximum
+    ) {
+        if (value == null
+                || value.compareTo(minimum) < 0
+                || value.compareTo(maximum) > 0) {
+            throw new IllegalArgumentException(
+                    "self-optimizing " + name + " must be between "
+                            + minimum + " and " + maximum
+            );
+        }
     }
 }

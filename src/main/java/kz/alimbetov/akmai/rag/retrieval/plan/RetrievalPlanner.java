@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import kz.alimbetov.akmai.rag.policy.CanaryRetrievalRouter;
 import kz.alimbetov.akmai.rag.query.AdvancedRetrievalProperties;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.query.QueryOrigin;
@@ -19,27 +20,41 @@ public class RetrievalPlanner {
 
     private final AdaptiveRetrievalPlanner adaptiveRetrievalPlanner;
     private final AdvancedRetrievalProperties advancedProperties;
+    private final CanaryRetrievalRouter canaryRetrievalRouter;
 
     public RetrievalPlanner() {
-        this(null, null);
+        this(null, null, null);
     }
 
     public RetrievalPlanner(
             AdaptiveRetrievalPlanner adaptiveRetrievalPlanner
     ) {
-        this(adaptiveRetrievalPlanner, null);
+        this(adaptiveRetrievalPlanner, null, null);
+    }
+
+    public RetrievalPlanner(
+            AdaptiveRetrievalPlanner adaptiveRetrievalPlanner,
+            AdvancedRetrievalProperties advancedProperties
+    ) {
+        this(adaptiveRetrievalPlanner, advancedProperties, null);
     }
 
     @Autowired
     public RetrievalPlanner(
             AdaptiveRetrievalPlanner adaptiveRetrievalPlanner,
-            AdvancedRetrievalProperties advancedProperties
+            AdvancedRetrievalProperties advancedProperties,
+            CanaryRetrievalRouter canaryRetrievalRouter
     ) {
         this.adaptiveRetrievalPlanner = adaptiveRetrievalPlanner;
         this.advancedProperties = advancedProperties;
+        this.canaryRetrievalRouter = canaryRetrievalRouter;
     }
 
     public RetrievalPlan plan(List<QueryChunk> chunks) {
+        return plan(chunks, null);
+    }
+
+    public RetrievalPlan plan(List<QueryChunk> chunks, String requestId) {
         List<RetrievalStep> steps = new ArrayList<>();
         Set<String> plannedUnits = new LinkedHashSet<>();
 
@@ -94,10 +109,18 @@ public class RetrievalPlanner {
         }
 
         RetrievalPlan baseline = new RetrievalPlan(List.copyOf(steps));
-        RetrievalPlan planned = adaptiveRetrievalPlanner == null
+        RetrievalPlan production = adaptiveRetrievalPlanner == null
                 ? baseline
                 : adaptiveRetrievalPlanner.enforce(chunks, baseline);
-        return appendSelectiveHyde(chunks, planned);
+        RetrievalPlan routed = canaryRetrievalRouter == null
+                ? production
+                : canaryRetrievalRouter.route(
+                        requestId,
+                        chunks,
+                        baseline,
+                        production
+                );
+        return appendSelectiveHyde(chunks, routed);
     }
 
     private RetrievalPlan appendSelectiveHyde(

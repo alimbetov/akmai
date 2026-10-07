@@ -1,6 +1,9 @@
 package kz.alimbetov.akmai.config;
 
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionProperties;
+import kz.alimbetov.akmai.rag.policy.CanaryEvaluationProperties;
+import kz.alimbetov.akmai.rag.policy.RouterLearningProperties;
+import kz.alimbetov.akmai.rag.policy.ShadowEvaluationProperties;
 import kz.alimbetov.akmai.rag.query.AdvancedRetrievalProperties;
 import kz.alimbetov.akmai.rag.retrieval.ConceptRetrievalProperties;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalFusionProperties;
@@ -21,6 +24,9 @@ import org.springframework.context.annotation.Configuration;
     AdaptiveRetrievalProperties.class,
     RetrievalIntelligenceProperties.class,
     AdvancedRetrievalProperties.class,
+    RouterLearningProperties.class,
+    ShadowEvaluationProperties.class,
+    CanaryEvaluationProperties.class,
     ApiProperties.class,
     IdempotencyProperties.class,
     SecurityProperties.class,

@@ -1,0 +1,46 @@
+name: Semantic Grounding Calibration
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      AKMAI_LIVE_OLLAMA_BASE_URL:
+        required: true
+
+jobs:
+  semantic-grounding-calibration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Formatting
+        run: mvn -B spotless:check
+
+      - name: Require live Ollama configuration
+        env:
+          AKMAI_LIVE_OLLAMA_BASE_URL: ${{ secrets.AKMAI_LIVE_OLLAMA_BASE_URL }}
+        run: test -n "$AKMAI_LIVE_OLLAMA_BASE_URL"
+
+      - name: Run RU KK EN semantic grounding calibration
+        env:
+          AKMAI_SEMANTIC_GROUNDING_CALIBRATION: "true"
+          AKMAI_LIVE_OLLAMA_BASE_URL: ${{ secrets.AKMAI_LIVE_OLLAMA_BASE_URL }}
+        run: >
+          mvn -B
+          -Dtest=LiveSemanticGroundingCalibrationTest
+          test
+
+      - name: Upload calibration report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semantic-grounding-calibration-v1-${{ github.sha }}
+          path: target/quality/semantic-grounding-calibration.json
+          if-no-files-found: warn

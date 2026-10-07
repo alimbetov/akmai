@@ -35,8 +35,12 @@ public class SemanticQueryMemory {
     private final SemanticQueryMemoryRepository repository;
     private final SelfOptimizingRagProperties selfOptimizingProperties;
     private final LearningPrivacyFingerprint fingerprint;
+    private final SemanticQueryMemoryNamespaceResolver namespaceResolver;
     private final Cache<String, MemoryCluster> clusters;
-    private final Set<String> loadedProfiles = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<SemanticQueryMemoryNamespace, RefreshState> refreshStates =
+            new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<SemanticQueryMemoryNamespace, Object> refreshLocks =
+            new ConcurrentHashMap<>();
 
     public SemanticQueryMemory(
             @Qualifier("retrievalEmbeddingModel") EmbeddingModel embeddingModel,
@@ -47,6 +51,7 @@ public class SemanticQueryMemory {
                 embeddingModel,
                 profileService,
                 properties,
+                null,
                 null,
                 null,
                 null
@@ -60,7 +65,8 @@ public class SemanticQueryMemory {
             AdvancedRetrievalProperties properties,
             SemanticQueryMemoryRepository repository,
             SelfOptimizingRagProperties selfOptimizingProperties,
-            LearningPrivacyFingerprint fingerprint
+            LearningPrivacyFingerprint fingerprint,
+            SemanticQueryMemoryNamespaceResolver namespaceResolver
     ) {
         this.embeddingModel = embeddingModel;
         this.profileService = profileService;
@@ -68,6 +74,7 @@ public class SemanticQueryMemory {
         this.repository = repository;
         this.selfOptimizingProperties = selfOptimizingProperties;
         this.fingerprint = fingerprint;
+        this.namespaceResolver = namespaceResolver;
         this.clusters = Caffeine.newBuilder()
                 .maximumSize(properties.queryMemoryMaxEntries())
                 .build();
@@ -86,18 +93,18 @@ public class SemanticQueryMemory {
         if (scope.isEmpty()) {
             return List.of();
         }
-        String profileId = activeProfileId();
-        if (profileId == null) {
+        SemanticQueryMemoryNamespace namespace = activeNamespace();
+        if (namespace == null) {
             return List.of();
         }
-        loadPersisted(profileId);
+        refreshPersisted(namespace);
         float[] queryVector = safeEmbed(question);
         if (queryVector == null) {
             return List.of();
         }
 
         return clusters.asMap().values().stream()
-                .filter(cluster -> profileId.equals(cluster.embeddingProfileId()))
+                .filter(cluster -> namespace.equals(cluster.namespace()))
                 .filter(cluster -> scope.containsAll(cluster.requiredAccessLevels()))
                 .map(cluster -> new MemoryMatch(
                         cluster.id(),
@@ -154,26 +161,27 @@ public class SemanticQueryMemory {
             return;
         }
 
-        String profileId = activeProfileId();
-        if (profileId == null) {
+        SemanticQueryMemoryNamespace namespace = activeNamespace();
+        if (namespace == null) {
             return;
         }
-        loadPersisted(profileId);
+        refreshPersisted(namespace);
         float[] vector = safeEmbed(question);
         if (vector == null) {
             return;
         }
 
+        Instant observedAt = Instant.now();
         Set<Long> requiredScope = Set.copyOf(requiredAccessLevels);
         MemoryObservation observation = new MemoryObservation(
                 normalizeQuestion(question),
                 truncate(validation.answer(), properties.queryMemoryAnswerMaxChars()),
                 List.copyOf(sourceRefs),
-                Instant.now()
+                observedAt
         );
 
         MemoryCluster nearest = clusters.asMap().values().stream()
-                .filter(cluster -> profileId.equals(cluster.embeddingProfileId()))
+                .filter(cluster -> namespace.equals(cluster.namespace()))
                 .filter(cluster -> cluster.requiredAccessLevels().equals(requiredScope))
                 .filter(cluster -> cluster.centroid().length == vector.length)
                 .map(cluster -> new ClusterCandidate(
@@ -192,15 +200,22 @@ public class SemanticQueryMemory {
             String id = UUID.randomUUID().toString();
             updated = new MemoryCluster(
                     id,
-                    profileId,
+                    namespace,
                     vector.clone(),
                     requiredScope,
                     1,
-                    List.of(observation)
+                    List.of(observation),
+                    observedAt
             );
             clusters.put(id, updated);
         } else {
-            updated = merge(nearest, profileId, requiredScope, vector, observation);
+            updated = merge(
+                    nearest,
+                    namespace,
+                    requiredScope,
+                    vector,
+                    observation
+            );
             clusters.put(updated.id(), updated);
         }
         persist(updated, question, observation);
@@ -208,12 +223,12 @@ public class SemanticQueryMemory {
 
     private MemoryCluster merge(
             MemoryCluster current,
-            String profileId,
+            SemanticQueryMemoryNamespace namespace,
             Set<Long> requiredScope,
             float[] vector,
             MemoryObservation observation
     ) {
-        if (!profileId.equals(current.embeddingProfileId())
+        if (!namespace.equals(current.namespace())
                 || !current.requiredAccessLevels().equals(requiredScope)
                 || current.centroid().length != vector.length) {
             return current;
@@ -228,51 +243,112 @@ public class SemanticQueryMemory {
         }
         return new MemoryCluster(
                 current.id(),
-                current.embeddingProfileId(),
+                current.namespace(),
                 centroid,
                 current.requiredAccessLevels(),
                 current.observationCount() + 1,
-                List.copyOf(observations)
+                List.copyOf(observations),
+                observation.observedAt()
         );
     }
 
-    private void loadPersisted(String profileId) {
-        if (!persistentEnabled()
-                || !loadedProfiles.add(profileId)) {
+    private void refreshPersisted(SemanticQueryMemoryNamespace namespace) {
+        if (!persistentEnabled()) {
             return;
         }
-        try {
-            List<SemanticQueryMemoryRepository.StoredCluster> persisted =
-                    repository.findClustersByProfile(
-                            profileId,
+        Instant now = Instant.now();
+        RefreshState current = refreshStates.get(namespace);
+        if (current != null && now.isBefore(current.nextRefreshAt())) {
+            return;
+        }
+
+        Object lock = refreshLocks.computeIfAbsent(namespace, ignored -> new Object());
+        synchronized (lock) {
+            now = Instant.now();
+            current = refreshStates.get(namespace);
+            if (current != null && now.isBefore(current.nextRefreshAt())) {
+                return;
+            }
+            try {
+                Instant cutoff = now.minus(selfOptimizingProperties.persistentMemoryTtl());
+                repository.deleteExpired(namespace, cutoff);
+                clusters.asMap().entrySet().removeIf(entry -> {
+                    MemoryCluster cluster = entry.getValue();
+                    return namespace.equals(cluster.namespace())
+                            && cluster.updatedAt().isBefore(cutoff);
+                });
+
+                List<SemanticQueryMemoryRepository.StoredCluster> persisted;
+                SemanticQueryMemoryRepository.RefreshCursor cursor = current == null
+                        ? null
+                        : current.cursor();
+                if (cursor == null) {
+                    persisted = repository.findClustersByNamespace(
+                            namespace,
                             selfOptimizingProperties.persistentMemoryMaxEntries()
                     );
-            for (var stored : persisted) {
-                List<MemoryObservation> observations = repository.findObservations(
-                                stored.clusterId(),
-                                persistentObservationLimit()
-                        ).stream()
-                        .map(value -> new MemoryObservation(
-                                REDACTED_QUESTION,
-                                value.groundedAnswer(),
-                                value.sourceRefs(),
-                                value.observedAt()
-                        ))
-                        .toList();
-                clusters.asMap().putIfAbsent(
-                        stored.clusterId().toString(),
-                        new MemoryCluster(
-                                stored.clusterId().toString(),
-                                stored.embeddingProfileId(),
-                                stored.centroid(),
-                                stored.requiredAccessLevels(),
-                                stored.observationCount(),
-                                observations
+                } else {
+                    persisted = repository.findClustersUpdatedAfter(
+                            namespace,
+                            cursor,
+                            selfOptimizingProperties.persistentMemoryMaxEntries()
+                    );
+                }
+
+                SemanticQueryMemoryRepository.RefreshCursor nextCursor = cursor;
+                for (var stored : persisted) {
+                    List<MemoryObservation> observations = repository.findObservations(
+                                    stored.clusterId(),
+                                    namespace,
+                                    persistentObservationLimit()
+                            ).stream()
+                            .map(value -> new MemoryObservation(
+                                    REDACTED_QUESTION,
+                                    value.groundedAnswer(),
+                                    value.sourceRefs(),
+                                    value.observedAt()
+                            ))
+                            .toList();
+                    clusters.put(
+                            stored.clusterId().toString(),
+                            new MemoryCluster(
+                                    stored.clusterId().toString(),
+                                    stored.namespace(),
+                                    stored.centroid(),
+                                    stored.requiredAccessLevels(),
+                                    stored.observationCount(),
+                                    observations,
+                                    stored.updatedAt()
+                            )
+                    );
+                    if (nextCursor == null
+                            || stored.cursor().revision() > nextCursor.revision()) {
+                        nextCursor = stored.cursor();
+                    }
+                }
+
+                refreshStates.put(
+                        namespace,
+                        new RefreshState(
+                                nextCursor,
+                                now.plus(
+                                        selfOptimizingProperties
+                                                .persistentMemoryRefreshInterval()
+                                )
+                        )
+                );
+            } catch (RuntimeException exception) {
+                refreshStates.put(
+                        namespace,
+                        new RefreshState(
+                                current == null ? null : current.cursor(),
+                                now.plus(
+                                        selfOptimizingProperties
+                                                .persistentMemoryRefreshInterval()
+                                )
                         )
                 );
             }
-        } catch (RuntimeException exception) {
-            loadedProfiles.remove(profileId);
         }
     }
 
@@ -292,11 +368,11 @@ public class SemanticQueryMemory {
             repository.persist(
                     new SemanticQueryMemoryRepository.StoredCluster(
                             UUID.fromString(cluster.id()),
-                            cluster.embeddingProfileId(),
+                            cluster.namespace(),
                             cluster.requiredAccessLevels(),
                             cluster.centroid(),
                             cluster.observationCount(),
-                            observation.observedAt()
+                            cluster.updatedAt()
                     ),
                     queryFingerprint,
                     observation.groundedAnswer(),
@@ -315,6 +391,7 @@ public class SemanticQueryMemory {
         return repository != null
                 && selfOptimizingProperties != null
                 && fingerprint != null
+                && namespaceResolver != null
                 && selfOptimizingProperties.persistentQueryMemoryEnabled();
     }
 
@@ -326,6 +403,18 @@ public class SemanticQueryMemory {
                 MAX_OBSERVATIONS_PER_CLUSTER,
                 selfOptimizingProperties.persistentMemoryObservationsPerCluster()
         );
+    }
+
+    private SemanticQueryMemoryNamespace activeNamespace() {
+        if (namespaceResolver != null) {
+            try {
+                return namespaceResolver.resolve().orElse(null);
+            } catch (RuntimeException exception) {
+                return null;
+            }
+        }
+        String profileId = activeProfileId();
+        return profileId == null ? null : SemanticQueryMemoryNamespace.legacy(profileId);
     }
 
     private String activeProfileId() {
@@ -433,22 +522,30 @@ public class SemanticQueryMemory {
 
     private record MemoryCluster(
             String id,
-            String embeddingProfileId,
+            SemanticQueryMemoryNamespace namespace,
             float[] centroid,
             Set<Long> requiredAccessLevels,
             int observationCount,
-            List<MemoryObservation> observations
+            List<MemoryObservation> observations,
+            Instant updatedAt
     ) {
         private MemoryCluster {
             centroid = centroid.clone();
             requiredAccessLevels = Set.copyOf(requiredAccessLevels);
             observations = List.copyOf(observations);
+            updatedAt = updatedAt == null ? Instant.EPOCH : updatedAt;
         }
     }
 
     private record ClusterCandidate(
             MemoryCluster cluster,
             double similarity
+    ) {
+    }
+
+    private record RefreshState(
+            SemanticQueryMemoryRepository.RefreshCursor cursor,
+            Instant nextRefreshAt
     ) {
     }
 }

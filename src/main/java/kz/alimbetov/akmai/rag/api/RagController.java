@@ -6,6 +6,7 @@ import kz.alimbetov.akmai.rag.access.AccessLevelResolver;
 import kz.alimbetov.akmai.rag.learning.RagFeedbackService;
 import kz.alimbetov.akmai.rag.service.RagQuestionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,14 +24,24 @@ public class RagController {
     private final ApiRequestValidator requestValidator;
     private final AccessLevelResolver accessLevelResolver;
     private final RagFeedbackService feedbackService;
+    private RagSourceProvenanceEnricher provenanceEnricher;
+
+    @Autowired(required = false)
+    void setProvenanceEnricher(RagSourceProvenanceEnricher provenanceEnricher) {
+        this.provenanceEnricher = provenanceEnricher;
+    }
 
     @PostMapping("/ask")
     public RagResponse ask(@Valid @RequestBody QuestionRequest request) {
         requestValidator.validateQuestion(request.question());
-        return questionService.ask(
+        var accessLevels = accessLevelResolver.resolve(request);
+        RagResponse response = questionService.ask(
                 request.question(),
-                accessLevelResolver.resolve(request)
+                accessLevels
         );
+        return provenanceEnricher == null
+                ? response
+                : provenanceEnricher.enrich(response, accessLevels);
     }
 
     @PostMapping("/feedback")

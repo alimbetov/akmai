@@ -12,6 +12,7 @@ import kz.alimbetov.akmai.knowledge.semantic.SemanticMatchMode;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalysis;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalyzer;
 import kz.alimbetov.akmai.rag.policy.ApprovedRetrievalPolicyProvider;
+import kz.alimbetov.akmai.rag.policy.ShadowRetrievalPolicyProvider;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,30 +24,46 @@ public class AdaptiveRetrievalPlanner {
     private final SemanticQueryAnalyzer semanticQueryAnalyzer;
     private final AdaptiveRetrievalProperties properties;
     private final ApprovedRetrievalPolicyProvider approvedPolicyProvider;
+    private final ShadowRetrievalPolicyProvider shadowPolicyProvider;
 
     public AdaptiveRetrievalPlanner(
             SemanticQueryAnalyzer semanticQueryAnalyzer,
             AdaptiveRetrievalProperties properties
     ) {
-        this(semanticQueryAnalyzer, properties, null);
+        this(semanticQueryAnalyzer, properties, null, null);
+    }
+
+    public AdaptiveRetrievalPlanner(
+            SemanticQueryAnalyzer semanticQueryAnalyzer,
+            AdaptiveRetrievalProperties properties,
+            ApprovedRetrievalPolicyProvider approvedPolicyProvider
+    ) {
+        this(
+                semanticQueryAnalyzer,
+                properties,
+                approvedPolicyProvider,
+                null
+        );
     }
 
     @Autowired
     public AdaptiveRetrievalPlanner(
             SemanticQueryAnalyzer semanticQueryAnalyzer,
             AdaptiveRetrievalProperties properties,
-            ApprovedRetrievalPolicyProvider approvedPolicyProvider
+            ApprovedRetrievalPolicyProvider approvedPolicyProvider,
+            ShadowRetrievalPolicyProvider shadowPolicyProvider
     ) {
         this.semanticQueryAnalyzer = semanticQueryAnalyzer;
         this.properties = properties;
         this.approvedPolicyProvider = approvedPolicyProvider;
+        this.shadowPolicyProvider = shadowPolicyProvider;
     }
 
     /**
      * Production execution is evidence-gated. With the Spring policy provider
      * present, an enabled planner changes the baseline only when an APPROVED
-     * retrieval policy contains a route for the classified query. The older
-     * two-argument constructor retains heuristic behavior for isolated tests.
+     * retrieval policy contains a route for the classified query. Older
+     * constructors retain heuristic behavior for isolated tests.
      */
     public RetrievalPlan enforce(
             List<QueryChunk> chunks,
@@ -75,7 +92,7 @@ public class AdaptiveRetrievalPlanner {
             }
             recommended.put(
                     chunk.id(),
-                    safeApprovedLanes(chunk, approved.get())
+                    safePolicyLanes(chunk, approved.get())
             );
         }
         if (recommended.isEmpty()) {
@@ -106,6 +123,38 @@ public class AdaptiveRetrievalPlanner {
         return new RetrievalPlan(List.copyOf(normalized));
     }
 
+    public QueryClass classifyPrimary(List<QueryChunk> chunks) {
+        if (chunks == null || chunks.isEmpty()) {
+            return QueryClass.ANALYSIS_UNAVAILABLE;
+        }
+        List<QueryClass> classes = chunks.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(this::recommend)
+                .map(Recommendation::queryClass)
+                .toList();
+        if (classes.isEmpty()) {
+            return QueryClass.ANALYSIS_UNAVAILABLE;
+        }
+        if (classes.stream().distinct().count() == 1) {
+            return classes.getFirst();
+        }
+        if (classes.contains(QueryClass.IDENTIFIER_CONCEPTUAL)) {
+            return QueryClass.IDENTIFIER_CONCEPTUAL;
+        }
+        if (classes.contains(QueryClass.IDENTIFIER_SEMANTIC)) {
+            return QueryClass.IDENTIFIER_SEMANTIC;
+        }
+        if (classes.contains(QueryClass.IDENTIFIER_ONLY)) {
+            return QueryClass.IDENTIFIER_ONLY;
+        }
+        return QueryClass.GENERIC;
+    }
+
+    /**
+     * Shadow recommendations never alter the execution plan. If a SHADOW
+     * policy exists it is evaluated here; otherwise the deterministic heuristic
+     * remains available as observational telemetry.
+     */
     public ShadowPlanReport shadow(
             List<QueryChunk> chunks,
             RetrievalPlan currentPlan
@@ -124,10 +173,10 @@ public class AdaptiveRetrievalPlanner {
                 continue;
             }
             Recommendation heuristic = recommend(chunk);
-            Set<RetrievalType> lanes = approvedPolicyProvider == null
+            Set<RetrievalType> lanes = shadowPolicyProvider == null
                     ? heuristic.lanes()
-                    : approvedPolicyProvider.lanes(heuristic.queryClass())
-                            .map(value -> safeApprovedLanes(chunk, value))
+                    : shadowPolicyProvider.lanes(heuristic.queryClass())
+                            .map(value -> safePolicyLanes(chunk, value))
                             .orElse(heuristic.lanes());
             recommendations.add(new ChunkRecommendation(
                     chunk.id(),
@@ -139,7 +188,7 @@ public class AdaptiveRetrievalPlanner {
         return new ShadowPlanReport(true, List.copyOf(recommendations));
     }
 
-    private Set<RetrievalType> safeApprovedLanes(
+    private Set<RetrievalType> safePolicyLanes(
             QueryChunk chunk,
             Set<RetrievalType> requested
     ) {
@@ -261,42 +310,42 @@ public class AdaptiveRetrievalPlanner {
                 return lanes;
             }
         }
-
-        lanes.add(RetrievalType.VECTOR);
-        lanes.add(RetrievalType.LEXICAL);
-        lanes.add(RetrievalType.CONCEPT);
-        lanes.add(RetrievalType.REFERENCE);
+        if (hasSemanticText) {
+            lanes.add(RetrievalType.VECTOR);
+            lanes.add(RetrievalType.LEXICAL);
+            lanes.add(RetrievalType.REFERENCE);
+            lanes.add(RetrievalType.CONCEPT);
+        }
         return lanes;
     }
 
-    private SemanticQueryAnalysis safeAnalyze(String text) {
+    private SemanticQueryAnalysis safeAnalyze(String semanticText) {
         try {
-            return semanticQueryAnalyzer.analyze(text);
+            return semanticQueryAnalyzer.analyze(semanticText);
         } catch (RuntimeException exception) {
             return null;
         }
     }
 
-    private Map<String, Set<RetrievalType>> currentLanes(
-            RetrievalPlan currentPlan
-    ) {
-        LinkedHashMap<String, EnumSet<RetrievalType>> collected =
-                new LinkedHashMap<>();
-        if (currentPlan != null && currentPlan.steps() != null) {
-            for (RetrievalStep step : currentPlan.steps()) {
-                if (step == null || step.queryChunk() == null || step.type() == null) {
-                    continue;
-                }
-                collected.computeIfAbsent(
-                                step.queryChunk().id(),
-                                ignored -> EnumSet.noneOf(RetrievalType.class)
-                        )
-                        .add(step.type());
-            }
+    private Map<String, Set<RetrievalType>> currentLanes(RetrievalPlan currentPlan) {
+        Map<String, Set<RetrievalType>> result = new LinkedHashMap<>();
+        if (currentPlan == null || currentPlan.steps() == null) {
+            return Map.of();
         }
-        LinkedHashMap<String, Set<RetrievalType>> result = new LinkedHashMap<>();
-        collected.forEach((key, value) -> result.put(key, Set.copyOf(value)));
-        return Map.copyOf(result);
+        for (RetrievalStep step : currentPlan.steps()) {
+            if (step == null || step.queryChunk() == null || step.type() == null) {
+                continue;
+            }
+            result.computeIfAbsent(
+                    step.queryChunk().id(),
+                    ignored -> EnumSet.noneOf(RetrievalType.class)
+            ).add(step.type());
+        }
+        return result.entrySet().stream()
+                .collect(java.util.stream.Collectors.toUnmodifiableMap(
+                        Map.Entry::getKey,
+                        entry -> Set.copyOf(entry.getValue())
+                ));
     }
 
     public enum QueryClass {

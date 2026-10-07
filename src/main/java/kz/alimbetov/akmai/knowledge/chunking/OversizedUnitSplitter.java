@@ -137,7 +137,8 @@ public class OversizedUnitSplitter {
                 source.sectionPath(),
                 source.type(),
                 source.protectedAtom(),
-                source.structuralRole()
+                source.structuralRole(),
+                source.provenance()
         );
     }
 }

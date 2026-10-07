@@ -13,6 +13,8 @@ import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalProperties;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalTestProperties;
 import org.junit.jupiter.api.Test;
 
 class OllamaTransportConfigurationTest {
@@ -41,14 +43,71 @@ class OllamaTransportConfigurationTest {
         server.start();
 
         try {
-            String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
-            VectorStorageProperties properties = vectorProperties(Duration.ofMillis(50));
+            String baseUrl = "http://127.0.0.1:"
+                    + server.getAddress().getPort();
+            VectorStorageProperties properties = vectorProperties(
+                    Duration.ofMillis(50)
+            );
             OllamaTransportConfiguration configuration =
                     new OllamaTransportConfiguration();
             var api = configuration.vectorWriteOllamaApi(baseUrl, properties);
             var model = configuration.vectorWriteEmbeddingModel(
                     api,
                     properties,
+                    CanonicalEmbeddingContract.MODEL
+            );
+
+            assertTimeoutPreemptively(
+                    Duration.ofSeconds(1),
+                    () -> assertThatThrownBy(() -> model.embed("payload"))
+                            .isInstanceOf(RuntimeException.class)
+            );
+        } finally {
+            server.stop(0);
+            serverExecutor.shutdownNow();
+        }
+    }
+
+    @Test
+    void retrievalEmbeddingTransportUsesStrategyDeadlineAsUpperBound()
+            throws Exception {
+        ExecutorService serverExecutor = Executors.newCachedThreadPool();
+        HttpServer server = HttpServer.create(
+                new InetSocketAddress("127.0.0.1", 0),
+                0
+        );
+        server.setExecutor(serverExecutor);
+        server.createContext("/", exchange -> {
+            try {
+                Thread.sleep(2_000);
+                byte[] body = "{}".getBytes(StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(500, body.length);
+                exchange.getResponseBody().write(body);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+            } finally {
+                exchange.close();
+            }
+        });
+        server.start();
+
+        try {
+            String baseUrl = "http://127.0.0.1:"
+                    + server.getAddress().getPort();
+            RetrievalProperties properties = retrievalProperties(
+                    Duration.ofSeconds(1),
+                    Duration.ofMillis(75),
+                    Duration.ofMillis(500)
+            );
+            VectorStorageProperties vectorProperties = vectorProperties(
+                    Duration.ofSeconds(1)
+            );
+            OllamaTransportConfiguration configuration =
+                    new OllamaTransportConfiguration();
+            var api = configuration.retrievalOllamaApi(baseUrl, properties);
+            var model = configuration.retrievalEmbeddingModel(
+                    api,
+                    vectorProperties,
                     CanonicalEmbeddingContract.MODEL
             );
 
@@ -81,7 +140,10 @@ class OllamaTransportConfigurationTest {
                     + "\"load_duration\":1,"
                     + "\"prompt_eval_count\":1}")
                     .getBytes(StandardCharsets.UTF_8);
-            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.getResponseHeaders().add(
+                    "Content-Type",
+                    "application/json"
+            );
             exchange.sendResponseHeaders(200, body.length);
             exchange.getResponseBody().write(body);
             exchange.close();
@@ -89,8 +151,11 @@ class OllamaTransportConfigurationTest {
         server.start();
 
         try {
-            String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
-            VectorStorageProperties properties = vectorProperties(Duration.ofSeconds(1));
+            String baseUrl = "http://127.0.0.1:"
+                    + server.getAddress().getPort();
+            VectorStorageProperties properties = vectorProperties(
+                    Duration.ofSeconds(1)
+            );
             OllamaTransportConfiguration configuration =
                     new OllamaTransportConfiguration();
             var api = configuration.vectorWriteOllamaApi(baseUrl, properties);
@@ -110,6 +175,40 @@ class OllamaTransportConfigurationTest {
         } finally {
             server.stop(0);
         }
+    }
+
+    private RetrievalProperties retrievalProperties(
+            Duration requestTimeout,
+            Duration strategyTimeout,
+            Duration embeddingTimeout
+    ) {
+        RetrievalProperties defaults = RetrievalTestProperties.defaults();
+        return new RetrievalProperties(
+                defaults.parallelism(),
+                defaults.queueCapacity(),
+                defaults.vectorTopK(),
+                defaults.vectorSimilarityThreshold(),
+                defaults.lexicalLimit(),
+                defaults.identifierLimit(),
+                defaults.referenceLimit(),
+                defaults.rrfK(),
+                defaults.expansionSeeds(),
+                defaults.expansionRadius(),
+                defaults.expansionMax(),
+                defaults.contextMaxTokens(),
+                defaults.contextMaxChunks(),
+                defaults.contextMaxChunksPerDocument(),
+                defaults.rerankerEnabled(),
+                defaults.rerankerCandidates(),
+                defaults.rerankerTimeout(),
+                defaults.rerankerFusedWeight(),
+                requestTimeout,
+                strategyTimeout,
+                defaults.answerTimeout(),
+                embeddingTimeout,
+                defaults.contextExpansionMaxChunks(),
+                defaults.answerReservedTokens()
+        );
     }
 
     private VectorStorageProperties vectorProperties(Duration embeddingTimeout) {

@@ -2,8 +2,12 @@ package kz.alimbetov.akmai.rag.learning;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -12,6 +16,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class RagLearningEventRepository {
+
+    private static final String LEGACY_SOURCE = "legacy-or-unknown";
 
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
@@ -105,12 +111,110 @@ public class RagLearningEventRepository {
         return count != null && count > 0;
     }
 
+    public List<RouterTrainingSample> findRouterTrainingSamples(
+            Instant since,
+            int limit
+    ) {
+        if (since == null || limit <= 0) {
+            return List.of();
+        }
+        return jdbcTemplate.query(
+                """
+                SELECT query_fingerprint,
+                       query_class,
+                       source_fingerprint,
+                       trace_json::text,
+                       total_latency_ms,
+                       created_at
+                FROM (
+                    SELECT DISTINCT ON (query_fingerprint, query_class)
+                           query_fingerprint,
+                           query_class,
+                           COALESCE(
+                               NULLIF(trace_json ->> 'sourceFingerprint', ''),
+                               'legacy-or-unknown'
+                           ) AS source_fingerprint,
+                           trace_json,
+                           total_latency_ms,
+                           created_at
+                    FROM rag_learning_event
+                    WHERE created_at >= ?
+                      AND answer_status = 'GROUNDED'
+                      AND grounding_status = 'SUPPORTED'
+                      AND cited_count > 0
+                      AND query_class IS NOT NULL
+                      AND query_class <> 'ANALYSIS_UNAVAILABLE'
+                      AND COALESCE(
+                            (trace_json ->> 'retrievalDegraded')::boolean,
+                            false
+                          ) = false
+                      AND COALESCE(
+                            (trace_json ->> 'retrievalCriticalFailure')::boolean,
+                            false
+                          ) = false
+                    ORDER BY query_fingerprint,
+                             query_class,
+                             CASE
+                                 WHEN NULLIF(trace_json ->> 'sourceFingerprint', '')
+                                      IS NULL THEN 1
+                                 ELSE 0
+                             END,
+                             created_at ASC
+                ) deduplicated
+                ORDER BY created_at DESC, query_fingerprint
+                LIMIT ?
+                """,
+                (rs, rowNum) -> {
+                    Map<String, Object> trace = readMap(rs.getString("trace_json"));
+                    return new RouterTrainingSample(
+                            rs.getString("query_fingerprint"),
+                            rs.getString("query_class"),
+                            rs.getString("source_fingerprint"),
+                            intMap(trace.get("selectedLaneContributions")),
+                            intMap(trace.get("citedLaneContributions")),
+                            rs.getLong("total_latency_ms"),
+                            rs.getTimestamp("created_at").toInstant()
+                    );
+                },
+                java.sql.Timestamp.from(since),
+                limit
+        );
+    }
+
     private String writeJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Cannot serialize RAG learning event", exception);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> readMap(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return Map.copyOf(objectMapper.readValue(json, Map.class));
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Cannot read RAG learning trace", exception);
+        }
+    }
+
+    private Map<String, Integer> intMap(Object value) {
+        if (!(value instanceof Map<?, ?> raw) || raw.isEmpty()) {
+            return Map.of();
+        }
+        LinkedHashMap<String, Integer> result = new LinkedHashMap<>();
+        raw.forEach((key, item) -> {
+            if (key instanceof String text && item instanceof Number number) {
+                int count = Math.max(0, number.intValue());
+                if (count > 0) {
+                    result.put(text, count);
+                }
+            }
+        });
+        return Map.copyOf(result);
     }
 
     private Set<Long> readScope(String json) {
@@ -124,6 +228,53 @@ public class RagLearningEventRepository {
             return Set.copyOf(result);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Cannot read RAG learning access scope", exception);
+        }
+    }
+
+    public record RouterTrainingSample(
+            String queryFingerprint,
+            String queryClass,
+            String sourceFingerprint,
+            Map<String, Integer> selectedLaneContributions,
+            Map<String, Integer> citedLaneContributions,
+            long totalLatencyMs,
+            Instant createdAt
+    ) {
+        public RouterTrainingSample(
+                String queryFingerprint,
+                String queryClass,
+                Map<String, Integer> selectedLaneContributions,
+                Map<String, Integer> citedLaneContributions,
+                long totalLatencyMs,
+                Instant createdAt
+        ) {
+            this(
+                    queryFingerprint,
+                    queryClass,
+                    LEGACY_SOURCE,
+                    selectedLaneContributions,
+                    citedLaneContributions,
+                    totalLatencyMs,
+                    createdAt
+            );
+        }
+
+        public RouterTrainingSample {
+            sourceFingerprint = sourceFingerprint == null
+                    || sourceFingerprint.isBlank()
+                    ? LEGACY_SOURCE
+                    : sourceFingerprint.trim();
+            selectedLaneContributions = selectedLaneContributions == null
+                    ? Map.of()
+                    : Map.copyOf(selectedLaneContributions);
+            citedLaneContributions = citedLaneContributions == null
+                    ? Map.of()
+                    : Map.copyOf(citedLaneContributions);
+            totalLatencyMs = Math.max(0, totalLatencyMs);
+        }
+
+        public boolean attributedSource() {
+            return !LEGACY_SOURCE.equals(sourceFingerprint);
         }
     }
 }

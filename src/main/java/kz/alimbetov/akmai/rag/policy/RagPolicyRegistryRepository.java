@@ -63,7 +63,7 @@ public class RagPolicyRegistryRepository {
                     performance_report_json = ?::jsonb
                 WHERE policy_type = ?
                   AND policy_version = ?
-                  AND policy_status IN ('CANDIDATE', 'CANARY')
+                  AND policy_status IN ('CANDIDATE', 'SHADOW', 'CANARY')
                 """,
                 writeJson(qualityReport == null ? Map.of() : qualityReport),
                 writeJson(performanceReport == null ? Map.of() : performanceReport),
@@ -77,8 +77,12 @@ public class RagPolicyRegistryRepository {
         }
     }
 
+    public void markShadow(RagPolicyType type, String version) {
+        transition(type, version, RagPolicyStatus.CANDIDATE, RagPolicyStatus.SHADOW);
+    }
+
     public void markCanary(RagPolicyType type, String version) {
-        transition(type, version, RagPolicyStatus.CANDIDATE, RagPolicyStatus.CANARY);
+        transition(type, version, RagPolicyStatus.SHADOW, RagPolicyStatus.CANARY);
     }
 
     public void reject(RagPolicyType type, String version) {
@@ -90,7 +94,7 @@ public class RagPolicyRegistryRepository {
                     decided_at = clock_timestamp()
                 WHERE policy_type = ?
                   AND policy_version = ?
-                  AND policy_status IN ('CANDIDATE', 'CANARY')
+                  AND policy_status IN ('CANDIDATE', 'SHADOW', 'CANARY')
                 """,
                 type.name(),
                 version
@@ -103,25 +107,7 @@ public class RagPolicyRegistryRepository {
     public void approve(RagPolicyType type, String version) {
         validate(type, version);
         transactionTemplate.executeWithoutResult(status -> {
-            List<PolicyRecord> target = jdbcTemplate.query(
-                    """
-                    SELECT policy_type,
-                           policy_version,
-                           policy_status,
-                           configuration_json::text,
-                           quality_report_json::text,
-                           performance_report_json::text,
-                           created_at,
-                           decided_at
-                    FROM rag_policy_registry
-                    WHERE policy_type = ?
-                      AND policy_version = ?
-                    FOR UPDATE
-                    """,
-                    (rs, rowNum) -> mapRecord(rs),
-                    type.name(),
-                    version
-            );
+            List<PolicyRecord> target = lock(type, version);
             if (target.isEmpty()
                     || target.getFirst().status() != RagPolicyStatus.CANARY
                     || target.getFirst().qualityReport().isEmpty()
@@ -134,7 +120,7 @@ public class RagPolicyRegistryRepository {
             jdbcTemplate.update(
                     """
                     UPDATE rag_policy_registry
-                    SET policy_status = 'ROLLED_BACK',
+                    SET policy_status = 'SUPERSEDED',
                         decided_at = clock_timestamp()
                     WHERE policy_type = ?
                       AND policy_status = 'APPROVED'
@@ -159,8 +145,88 @@ public class RagPolicyRegistryRepository {
         });
     }
 
+    public void rollbackTo(RagPolicyType type, String targetVersion) {
+        validate(type, targetVersion);
+        transactionTemplate.executeWithoutResult(status -> {
+            List<PolicyRecord> target = lock(type, targetVersion);
+            if (target.isEmpty()
+                    || target.getFirst().status() != RagPolicyStatus.SUPERSEDED) {
+                throw new IllegalStateException(
+                        "Rollback target must be a previously approved SUPERSEDED policy"
+                );
+            }
+
+            List<PolicyRecord> current = jdbcTemplate.query(
+                    """
+                    SELECT policy_type,
+                           policy_version,
+                           policy_status,
+                           configuration_json::text,
+                           quality_report_json::text,
+                           performance_report_json::text,
+                           created_at,
+                           decided_at
+                    FROM rag_policy_registry
+                    WHERE policy_type = ?
+                      AND policy_status = 'APPROVED'
+                    FOR UPDATE
+                    """,
+                    (rs, rowNum) -> mapRecord(rs),
+                    type.name()
+            );
+            if (current.size() != 1) {
+                throw new IllegalStateException(
+                        "Rollback requires exactly one current APPROVED policy"
+                );
+            }
+
+            int demoted = jdbcTemplate.update(
+                    """
+                    UPDATE rag_policy_registry
+                    SET policy_status = 'ROLLED_BACK',
+                        decided_at = clock_timestamp()
+                    WHERE policy_type = ?
+                      AND policy_version = ?
+                      AND policy_status = 'APPROVED'
+                    """,
+                    type.name(),
+                    current.getFirst().version()
+            );
+            int restored = jdbcTemplate.update(
+                    """
+                    UPDATE rag_policy_registry
+                    SET policy_status = 'APPROVED',
+                        decided_at = clock_timestamp()
+                    WHERE policy_type = ?
+                      AND policy_version = ?
+                      AND policy_status = 'SUPERSEDED'
+                    """,
+                    type.name(),
+                    targetVersion
+            );
+            if (demoted != 1 || restored != 1) {
+                throw new IllegalStateException("Policy rollback lost its fencing state");
+            }
+        });
+    }
+
     public Optional<PolicyRecord> approved(RagPolicyType type) {
-        if (type == null) {
+        return findByStatus(type, RagPolicyStatus.APPROVED);
+    }
+
+    public Optional<PolicyRecord> shadow(RagPolicyType type) {
+        return findByStatus(type, RagPolicyStatus.SHADOW);
+    }
+
+    public Optional<PolicyRecord> canary(RagPolicyType type) {
+        return findByStatus(type, RagPolicyStatus.CANARY);
+    }
+
+    private Optional<PolicyRecord> findByStatus(
+            RagPolicyType type,
+            RagPolicyStatus status
+    ) {
+        if (type == null || status == null) {
             return Optional.empty();
         }
         return jdbcTemplate.query(
@@ -175,10 +241,11 @@ public class RagPolicyRegistryRepository {
                        decided_at
                 FROM rag_policy_registry
                 WHERE policy_type = ?
-                  AND policy_status = 'APPROVED'
+                  AND policy_status = ?
                 """,
                 (rs, rowNum) -> mapRecord(rs),
-                type.name()
+                type.name(),
+                status.name()
         ).stream().findFirst();
     }
 
@@ -202,6 +269,28 @@ public class RagPolicyRegistryRepository {
                 type.name(),
                 version
         ).stream().findFirst();
+    }
+
+    private List<PolicyRecord> lock(RagPolicyType type, String version) {
+        return jdbcTemplate.query(
+                """
+                SELECT policy_type,
+                       policy_version,
+                       policy_status,
+                       configuration_json::text,
+                       quality_report_json::text,
+                       performance_report_json::text,
+                       created_at,
+                       decided_at
+                FROM rag_policy_registry
+                WHERE policy_type = ?
+                  AND policy_version = ?
+                FOR UPDATE
+                """,
+                (rs, rowNum) -> mapRecord(rs),
+                type.name(),
+                version
+        );
     }
 
     private void transition(

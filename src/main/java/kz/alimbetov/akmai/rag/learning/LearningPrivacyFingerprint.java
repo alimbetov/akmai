@@ -23,6 +23,16 @@ public class LearningPrivacyFingerprint {
         if (!properties.persistentLearningEnabled()) {
             return "";
         }
+        return fingerprintOperational(value);
+    }
+
+    /**
+     * Creates a privacy-preserving operational fingerprint when a secret is
+     * configured, regardless of whether persistent learning is enabled. This is
+     * used by bounded rollout evidence such as CANARY source-diversity checks.
+     * Raw identity/query values are never returned or persisted.
+     */
+    public String fingerprintOperational(String value) {
         String secret = properties.fingerprintSecret();
         if (secret == null || secret.length() < 32) {
             return "";
@@ -46,7 +56,7 @@ public class LearningPrivacyFingerprint {
             return mac.doFinal(value.getBytes(StandardCharsets.UTF_8));
         } catch (GeneralSecurityException exception) {
             throw new IllegalStateException(
-                    "Cannot calculate learning query fingerprint",
+                    "Cannot calculate learning privacy fingerprint",
                     exception
             );
         }

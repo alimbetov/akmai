@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,7 @@ import kz.alimbetov.akmai.rag.policy.RagPolicyPromotionService;
 import kz.alimbetov.akmai.rag.policy.RagPolicyRegistryRepository;
 import kz.alimbetov.akmai.rag.policy.RagPolicyStatus;
 import kz.alimbetov.akmai.rag.policy.RagPolicyType;
+import kz.alimbetov.akmai.rag.query.SemanticQueryMemoryNamespace;
 import kz.alimbetov.akmai.rag.query.SemanticQueryMemoryRepository;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
@@ -29,6 +31,14 @@ import org.testcontainers.utility.DockerImageName;
 
 @Testcontainers
 class SelfOptimizingRagPersistenceIntegrationTest {
+
+    private static final SemanticQueryMemoryNamespace QUERY_MEMORY_NAMESPACE =
+            new SemanticQueryMemoryNamespace(
+                    "embedding-v1",
+                    "retrieval-v1",
+                    "learning-v1",
+                    "grounding-v1"
+            );
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
@@ -87,7 +97,7 @@ class SelfOptimizingRagPersistenceIntegrationTest {
         memoryRepository.persist(
                 new SemanticQueryMemoryRepository.StoredCluster(
                         clusterId,
-                        "embedding-v1",
+                        QUERY_MEMORY_NAMESPACE,
                         Set.of(1L, 7L),
                         new float[]{0.25f, 0.75f},
                         3,
@@ -101,10 +111,19 @@ class SelfOptimizingRagPersistenceIntegrationTest {
                 4
         );
 
-        var clusters = memoryRepository.findClustersByProfile("embedding-v1", 10);
-        var observations = memoryRepository.findObservations(clusterId, 10);
+        var clusters = memoryRepository.findClustersByNamespace(
+                QUERY_MEMORY_NAMESPACE,
+                10
+        );
+        var observations = memoryRepository.findObservations(
+                clusterId,
+                QUERY_MEMORY_NAMESPACE,
+                10
+        );
 
         assertThat(clusters).hasSize(1);
+        assertThat(clusters.getFirst().refreshRevision()).isPositive();
+        assertThat(clusters.getFirst().namespace()).isEqualTo(QUERY_MEMORY_NAMESPACE);
         assertThat(clusters.getFirst().requiredAccessLevels())
                 .containsExactlyInAnyOrder(1L, 7L);
         assertThat(clusters.getFirst().centroid())
@@ -112,6 +131,60 @@ class SelfOptimizingRagPersistenceIntegrationTest {
         assertThat(observations).hasSize(1);
         assertThat(observations.getFirst().groundedAnswer())
                 .isEqualTo("Grounded answer");
+    }
+
+    @Test
+    void queryMemoryRevisionSupportsReplicaRefreshAndTtlCleanup() {
+        UUID firstId = UUID.randomUUID();
+        UUID secondId = UUID.randomUUID();
+        Instant now = Instant.now();
+
+        persistCluster(firstId, now.minusSeconds(2));
+        var first = memoryRepository.findClustersByNamespace(
+                        QUERY_MEMORY_NAMESPACE,
+                        10
+                ).stream()
+                .filter(value -> value.clusterId().equals(firstId))
+                .findFirst()
+                .orElseThrow();
+
+        persistCluster(secondId, now.minusSeconds(1));
+        var incremental = memoryRepository.findClustersUpdatedAfter(
+                QUERY_MEMORY_NAMESPACE,
+                first.cursor(),
+                10
+        );
+
+        assertThat(incremental)
+                .extracting(SemanticQueryMemoryRepository.StoredCluster::clusterId)
+                .contains(secondId);
+        assertThat(incremental)
+                .allMatch(value -> value.refreshRevision() > first.refreshRevision());
+
+        jdbc.update(
+                """
+                UPDATE rag_query_memory_cluster
+                SET updated_at = clock_timestamp() - interval '31 days'
+                WHERE cluster_id = ?
+                """,
+                firstId
+        );
+        int deleted = memoryRepository.deleteExpired(
+                QUERY_MEMORY_NAMESPACE,
+                Instant.now().minus(Duration.ofDays(30))
+        );
+
+        assertThat(deleted).isEqualTo(1);
+        assertThat(memoryRepository.findObservations(
+                firstId,
+                QUERY_MEMORY_NAMESPACE,
+                10
+        )).isEmpty();
+        assertThat(memoryRepository.findClustersByNamespace(
+                QUERY_MEMORY_NAMESPACE,
+                10
+        )).extracting(SemanticQueryMemoryRepository.StoredCluster::clusterId)
+                .containsExactly(secondId);
     }
 
     @Test
@@ -144,66 +217,104 @@ class SelfOptimizingRagPersistenceIntegrationTest {
     }
 
     @Test
-    void policyRequiresMeasuredGatesBeforeApproval() {
+    void policyRequiresOfflineShadowAndCanaryEvidenceBeforeApproval() {
+        String version = "retrieval-candidate-1";
         policyRepository.registerCandidate(
                 RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1",
+                version,
                 Map.of("routes", Map.of("GENERIC", List.of("VECTOR", "LEXICAL")))
         );
 
-        assertThatThrownBy(() -> promotionService.makeCanary(
+        assertThatThrownBy(() -> promotionService.makeShadow(
                 RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1"
+                version
         )).isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("securityPassed");
 
         policyRepository.attachReports(
                 RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1",
-                Map.of(
-                        "securityPassed", true,
-                        "correctnessPassed", true,
-                        "qualityPassed", true,
-                        "canaryPassed", false
-                ),
+                version,
+                quality(false, false),
                 Map.of("performancePassed", true)
         );
-        promotionService.makeCanary(
+        promotionService.makeShadow(RagPolicyType.RETRIEVAL, version);
+        assertThat(policyRepository.find(RagPolicyType.RETRIEVAL, version))
+                .get()
+                .extracting(RagPolicyRegistryRepository.PolicyRecord::status)
+                .isEqualTo(RagPolicyStatus.SHADOW);
+
+        assertThatThrownBy(() -> promotionService.makeCanary(
                 RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1"
+                version
+        )).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("shadowPassed");
+
+        policyRepository.attachReports(
+                RagPolicyType.RETRIEVAL,
+                version,
+                quality(true, false),
+                Map.of("performancePassed", true)
         );
-        assertThat(policyRepository.find(
-                RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1"
-        )).get().extracting(RagPolicyRegistryRepository.PolicyRecord::status)
+        promotionService.makeCanary(RagPolicyType.RETRIEVAL, version);
+        assertThat(policyRepository.find(RagPolicyType.RETRIEVAL, version))
+                .get()
+                .extracting(RagPolicyRegistryRepository.PolicyRecord::status)
                 .isEqualTo(RagPolicyStatus.CANARY);
 
         assertThatThrownBy(() -> promotionService.approve(
                 RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1"
+                version
         )).isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("canaryPassed");
 
         policyRepository.attachReports(
                 RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1",
-                Map.of(
-                        "securityPassed", true,
-                        "correctnessPassed", true,
-                        "qualityPassed", true,
-                        "canaryPassed", true
-                ),
+                version,
+                quality(true, true),
                 Map.of("performancePassed", true)
         );
-        promotionService.approve(
-                RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1"
-        );
+        promotionService.approve(RagPolicyType.RETRIEVAL, version);
 
         assertThat(policyRepository.approved(RagPolicyType.RETRIEVAL))
                 .get()
                 .extracting(RagPolicyRegistryRepository.PolicyRecord::version)
-                .isEqualTo("retrieval-candidate-1");
+                .isEqualTo(version);
+    }
+
+    private Map<String, Object> quality(
+            boolean shadowPassed,
+            boolean canaryPassed
+    ) {
+        return Map.of(
+                "securityPassed", true,
+                "correctnessPassed", true,
+                "qualityPassed", true,
+                "shadowPassed", shadowPassed,
+                "canaryPassed", canaryPassed
+        );
+    }
+
+    private void persistCluster(
+            UUID clusterId,
+            Instant observedAt
+    ) {
+        memoryRepository.persist(
+                new SemanticQueryMemoryRepository.StoredCluster(
+                        clusterId,
+                        QUERY_MEMORY_NAMESPACE,
+                        Set.of(1L),
+                        new float[]{0.1f, 0.9f},
+                        1,
+                        observedAt
+                ),
+                UUID.randomUUID().toString().replace("-", "")
+                        + UUID.randomUUID().toString().replace("-", ""),
+                "Grounded answer " + clusterId,
+                List.of("doc:chunk"),
+                observedAt,
+                128,
+                4
+        );
     }
 
     private RagLearningEvent event(UUID requestId, Set<Long> scope) {
@@ -213,7 +324,7 @@ class SelfOptimizingRagPersistenceIntegrationTest {
                 "b".repeat(64),
                 scope,
                 "en",
-                "SEMANTIC",
+                "GENERIC",
                 "corpus-v1",
                 "embedding-v1",
                 "retrieval-v1",

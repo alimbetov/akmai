@@ -189,6 +189,50 @@ akmai:
     child-max-tokens: ${AKMAI_CHILD_MAX_TOKENS:300}
     expansion-enabled: ${AKMAI_PARENT_EXPANSION_ENABLED:true}
     max-parent-expansions: ${AKMAI_PARENT_EXPANSION_MAX:8}
+  self-optimizing:
+    learning-events-enabled: ${AKMAI_SELF_OPTIMIZING_LEARNING_EVENTS_ENABLED:false}
+    persistent-query-memory-enabled: ${AKMAI_SELF_OPTIMIZING_PERSISTENT_QUERY_MEMORY_ENABLED:false}
+    semantic-grounding-enabled: ${AKMAI_SELF_OPTIMIZING_SEMANTIC_GROUNDING_ENABLED:false}
+    execution-observations-enabled: ${AKMAI_SELF_OPTIMIZING_EXECUTION_OBSERVATIONS_ENABLED:false}
+    fingerprint-secret: ${AKMAI_SELF_OPTIMIZING_FINGERPRINT_SECRET:}
+    corpus-version: ${AKMAI_SELF_OPTIMIZING_CORPUS_VERSION:runtime-v1}
+    retrieval-policy-version: ${AKMAI_SELF_OPTIMIZING_RETRIEVAL_POLICY_VERSION:retrieval-v1}
+    learning-policy-version: ${AKMAI_SELF_OPTIMIZING_LEARNING_POLICY_VERSION:learning-v1}
+    grounding-policy-version: ${AKMAI_SELF_OPTIMIZING_GROUNDING_POLICY_VERSION:grounding-v1}
+    persistent-memory-max-entries: ${AKMAI_SELF_OPTIMIZING_MEMORY_MAX_ENTRIES:2048}
+    persistent-memory-observations-per-cluster: ${AKMAI_SELF_OPTIMIZING_MEMORY_OBSERVATIONS_PER_CLUSTER:4}
+    persistent-memory-refresh-interval: ${AKMAI_SELF_OPTIMIZING_MEMORY_REFRESH_INTERVAL:5s}
+    persistent-memory-ttl: ${AKMAI_SELF_OPTIMIZING_MEMORY_TTL:30d}
+    router-learning:
+      enabled: ${AKMAI_ROUTER_LEARNING_ENABLED:false}
+      lookback: ${AKMAI_ROUTER_LEARNING_LOOKBACK:30d}
+      max-events: ${AKMAI_ROUTER_LEARNING_MAX_EVENTS:20000}
+      min-distinct-queries-per-class: ${AKMAI_ROUTER_LEARNING_MIN_DISTINCT_QUERIES:50}
+      optional-lane-min-citation-support: ${AKMAI_ROUTER_LEARNING_MIN_CITATION_SUPPORT:0.03}
+      optional-lane-min-selected-support: ${AKMAI_ROUTER_LEARNING_MIN_SELECTED_SUPPORT:0.10}
+      reinforcement-window: ${AKMAI_ROUTER_LEARNING_REINFORCEMENT_WINDOW:1d}
+      max-samples-per-source-window: ${AKMAI_ROUTER_LEARNING_MAX_SAMPLES_PER_SOURCE_WINDOW:20}
+      min-distinct-sources-per-class: ${AKMAI_ROUTER_LEARNING_MIN_DISTINCT_SOURCES:3}
+      max-source-share: ${AKMAI_ROUTER_LEARNING_MAX_SOURCE_SHARE:0.60}
+    shadow-evaluation:
+      min-samples: ${AKMAI_SHADOW_MIN_SAMPLES:100}
+      min-distinct-sources: ${AKMAI_SHADOW_MIN_DISTINCT_SOURCES:3}
+      min-document-evidence-recall: ${AKMAI_SHADOW_MIN_DOCUMENT_RECALL:0.99}
+      min-chunk-evidence-recall: ${AKMAI_SHADOW_MIN_CHUNK_RECALL:0.95}
+      max-failure-rate: ${AKMAI_SHADOW_MAX_FAILURE_RATE:0.02}
+      max-p95-latency-ms: ${AKMAI_SHADOW_MAX_P95_LATENCY_MS:15000}
+      max-observations-per-policy: ${AKMAI_SHADOW_MAX_OBSERVATIONS_PER_POLICY:5000}
+    canary-evaluation:
+      traffic-percent: ${AKMAI_CANARY_TRAFFIC_PERCENT:5.0}
+      min-canary-samples: ${AKMAI_CANARY_MIN_SAMPLES:100}
+      min-control-samples: ${AKMAI_CANARY_MIN_CONTROL_SAMPLES:300}
+      min-distinct-sources: ${AKMAI_CANARY_MIN_DISTINCT_SOURCES:3}
+      max-grounded-rate-regression: ${AKMAI_CANARY_MAX_GROUNDED_RATE_REGRESSION:0.03}
+      max-unavailable-rate-regression: ${AKMAI_CANARY_MAX_UNAVAILABLE_RATE_REGRESSION:0.01}
+      max-critical-failure-rate: ${AKMAI_CANARY_MAX_CRITICAL_FAILURE_RATE:0.01}
+      max-degraded-rate-regression: ${AKMAI_CANARY_MAX_DEGRADED_RATE_REGRESSION:0.05}
+      max-p95-latency-regression: ${AKMAI_CANARY_MAX_P95_LATENCY_REGRESSION:0.20}
+      max-observations-per-policy: ${AKMAI_CANARY_MAX_OBSERVATIONS_PER_POLICY:10000}
 
 server:
   port: ${SERVER_PORT:8080}

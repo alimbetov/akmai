@@ -3,59 +3,113 @@ name: RAG Performance Harness
 on:
   workflow_dispatch:
     inputs:
-      concurrency:
-        description: Concurrent RAG operations
+      scale:
+        description: Operation multiplier for the performance matrix
         required: false
-        default: "4"
-      requests:
-        description: Read operations
+        default: "1"
+      corpus_tier:
+        description: Application-level corpus tier to qualify
+        required: true
+        type: choice
+        options:
+          - ALL
+          - SMALL
+          - MEDIUM
+        default: ALL
+      ingest_concurrency:
+        description: Concurrent ingestion operations for ingest-only scenarios
         required: false
-        default: "22"
-      mixed_requests:
-        description: Mixed read/write operations
+        default: "8"
+      p95_ms:
+        description: Maximum allowed read-10 p95 latency in milliseconds
         required: false
-        default: "20"
-  push:
-    tags:
-      - "v*"
+        default: "15000"
+  workflow_call:
+    inputs:
+      scale:
+        required: false
+        type: string
+        default: "1"
+      corpus_tier:
+        required: false
+        type: string
+        default: "ALL"
+      ingest_concurrency:
+        required: false
+        type: string
+        default: "8"
+      p95_ms:
+        required: false
+        type: string
+        default: "15000"
+    secrets:
+      AKMAI_LIVE_OLLAMA_BASE_URL:
+        required: true
 
 jobs:
   rag-performance:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tier: SMALL
+            documents: 256
+          - tier: MEDIUM
+            documents: 2048
     steps:
+      - name: Select requested tier
+        id: selected
+        shell: bash
+        run: |
+          if [[ "${{ inputs.corpus_tier || 'ALL' }}" == "ALL" || "${{ inputs.corpus_tier || 'ALL' }}" == "${{ matrix.tier }}" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.selected.outputs.run == 'true'
 
       - uses: actions/setup-java@v5
+        if: steps.selected.outputs.run == 'true'
         with:
           distribution: temurin
           java-version: "21"
           cache: maven
 
       - name: Formatting
+        if: steps.selected.outputs.run == 'true'
         run: mvn -B spotless:check
 
       - name: Require live Ollama configuration
+        if: steps.selected.outputs.run == 'true'
         env:
           AKMAI_LIVE_OLLAMA_BASE_URL: ${{ secrets.AKMAI_LIVE_OLLAMA_BASE_URL }}
         run: test -n "$AKMAI_LIVE_OLLAMA_BASE_URL"
 
-      - name: Run application-level RAG performance harness
+      - name: Run application-level RAG performance matrix
+        if: steps.selected.outputs.run == 'true'
         env:
           AKMAI_LIVE_PERFORMANCE: "true"
           AKMAI_LIVE_OLLAMA_BASE_URL: ${{ secrets.AKMAI_LIVE_OLLAMA_BASE_URL }}
-          AKMAI_LIVE_PERFORMANCE_CONCURRENCY: ${{ inputs.concurrency || '4' }}
-          AKMAI_LIVE_PERFORMANCE_REQUESTS: ${{ inputs.requests || '22' }}
-          AKMAI_LIVE_PERFORMANCE_MIXED_REQUESTS: ${{ inputs.mixed_requests || '20' }}
+          AKMAI_LIVE_PERFORMANCE_SCALE: ${{ inputs.scale || '1' }}
+          AKMAI_LIVE_PERFORMANCE_CORPUS_TIER: ${{ matrix.tier }}
+          AKMAI_LIVE_PERFORMANCE_DOCUMENTS: ${{ matrix.documents }}
+          AKMAI_LIVE_INGEST_CONCURRENCY: ${{ inputs.ingest_concurrency || '8' }}
+          AKMAI_LIVE_PERFORMANCE_P95_MS: ${{ inputs.p95_ms || '15000' }}
+          GITHUB_SHA: ${{ github.sha }}
+          AKMAI_RUNTIME_PROFILE: github-actions-${{ matrix.tier }}
         run: >
           mvn -B
           -Dtest=LiveRagPerformanceHarnessTest
           test
 
       - name: Upload RAG performance baseline
-        if: always()
+        if: always() && steps.selected.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: rag-performance-v1
+          name: rag-performance-v1.1-${{ matrix.tier }}-${{ github.sha }}
           path: target/performance/performance-baseline.json
           if-no-files-found: warn

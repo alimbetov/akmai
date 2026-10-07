@@ -8,10 +8,12 @@ import java.security.NoSuchAlgorithmException;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
+import kz.alimbetov.akmai.knowledge.api.CanonicalDocument;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage;
 import org.springframework.stereotype.Component;
 
@@ -37,7 +39,52 @@ public class CanonicalRequestFingerprint {
         canonical.put("domain", request.domain().name());
         canonical.put("accessLevel", request.accessLevel());
         canonical.put("metadata", canonicalValue(request.metadata()));
+        return digest(canonical);
+    }
 
+    public String fingerprint(CanonicalDocument document) {
+        TreeMap<String, Object> canonical = new TreeMap<>();
+        canonical.put("documentId", text(document.documentId()));
+        canonical.put("version", text(document.version()));
+        canonical.put("title", text(document.title()));
+        canonical.put("source", text(document.source()));
+        canonical.put(
+                "language",
+                KnowledgeLanguage.parse(document.language()).code()
+        );
+        canonical.put("domain", document.domain().name());
+        canonical.put("accessLevel", document.accessLevel());
+        canonical.put("metadata", canonicalValue(document.metadata()));
+        canonical.put(
+                "blocks",
+                document.blocks().stream()
+                        .map(this::canonicalBlock)
+                        .toList()
+        );
+        return digest(canonical);
+    }
+
+    private Map<String, Object> canonicalBlock(CanonicalDocument.Block block) {
+        LinkedHashMap<String, Object> value = new LinkedHashMap<>();
+        value.put("blockId", text(block.blockId()));
+        value.put("type", block.type().name());
+        value.put("text", text(block.text()));
+        value.put("headingLevel", block.headingLevel());
+        value.put("pageFrom", block.pageFrom());
+        value.put("pageTo", block.pageTo());
+        value.put("sectionPath", text(block.sectionPath()));
+        if (block.boundingBox() != null) {
+            value.put("boundingBox", Map.of(
+                    "x", block.boundingBox().x(),
+                    "y", block.boundingBox().y(),
+                    "width", block.boundingBox().width(),
+                    "height", block.boundingBox().height()
+            ));
+        }
+        return value;
+    }
+
+    private String digest(Map<String, Object> canonical) {
         try {
             byte[] json = objectMapper.writeValueAsBytes(canonical);
             return HexFormat.of().formatHex(
