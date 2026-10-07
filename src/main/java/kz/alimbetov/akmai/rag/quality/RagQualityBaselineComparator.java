@@ -1,9 +1,11 @@
 package kz.alimbetov.akmai.rag.quality;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -22,6 +24,7 @@ public class RagQualityBaselineComparator {
 
         List<Failure> failures = new ArrayList<>();
         LinkedHashMap<String, Double> deltas = new LinkedHashMap<>();
+        requireComparableDataset(baseline, candidate, failures);
 
         if (spec.requireReleaseQualifiedCorpus()
                 && !candidate.releaseCorpusQualified()) {
@@ -34,6 +37,10 @@ public class RagQualityBaselineComparator {
             ));
         }
 
+        // Absolute release floors are evaluated on the overall sample. Slice
+        // quality is protected by relative regression budgets against the same
+        // immutable corpus, which avoids applying answerable-only metrics to
+        // the UNANSWERABLE query-class slice.
         evaluateAbsolute(candidate.overall(), "overall", spec, failures);
         evaluateRelative(
                 baseline.overall(),
@@ -76,6 +83,44 @@ public class RagQualityBaselineComparator {
         );
     }
 
+    private void requireComparableDataset(
+            RagQualitySnapshot baseline,
+            RagQualitySnapshot candidate,
+            List<Failure> failures
+    ) {
+        if (!java.util.Objects.equals(
+                baseline.benchmarkVersion(),
+                candidate.benchmarkVersion()
+        )) {
+            failures.add(identityFailure("benchmarkVersion"));
+        }
+        if (!java.util.Objects.equals(
+                baseline.corpusVersion(),
+                candidate.corpusVersion()
+        )) {
+            failures.add(identityFailure("corpusVersion"));
+        }
+        if (baseline.caseCount() != candidate.caseCount()) {
+            failures.add(new Failure(
+                    "caseCount",
+                    "overall",
+                    baseline.caseCount(),
+                    candidate.caseCount(),
+                    "baseline and candidate must use the same case set"
+            ));
+        }
+    }
+
+    private Failure identityFailure(String field) {
+        return new Failure(
+                field,
+                "overall",
+                1.0,
+                0.0,
+                "baseline and candidate must use the same " + field
+        );
+    }
+
     private void compareSlices(
             String dimension,
             Map<String, RagQualityMetrics> baseline,
@@ -84,20 +129,39 @@ public class RagQualityBaselineComparator {
             List<Failure> failures,
             Map<String, Double> deltas
     ) {
+        Set<String> missing = new HashSet<>(baseline.keySet());
+        missing.removeAll(candidate.keySet());
+        missing.forEach(slice -> failures.add(new Failure(
+                "slicePresence",
+                dimension + ":" + slice,
+                1.0,
+                0.0,
+                "candidate is missing a baseline slice"
+        )));
+
+        Set<String> added = new HashSet<>(candidate.keySet());
+        added.removeAll(baseline.keySet());
+        added.forEach(slice -> failures.add(new Failure(
+                "slicePresence",
+                dimension + ":" + slice,
+                1.0,
+                0.0,
+                "candidate contains a slice not present in the immutable baseline corpus"
+        )));
+
         candidate.forEach((slice, candidateMetrics) -> {
-            String scope = dimension + ":" + slice;
-            evaluateAbsolute(candidateMetrics, scope, spec, failures);
             RagQualityMetrics baselineMetrics = baseline.get(slice);
-            if (baselineMetrics != null) {
-                evaluateRelative(
-                        baselineMetrics,
-                        candidateMetrics,
-                        scope,
-                        spec,
-                        failures,
-                        deltas
-                );
+            if (baselineMetrics == null) {
+                return;
             }
+            evaluateRelative(
+                    baselineMetrics,
+                    candidateMetrics,
+                    dimension + ":" + slice,
+                    spec,
+                    failures,
+                    deltas
+            );
         });
     }
 
