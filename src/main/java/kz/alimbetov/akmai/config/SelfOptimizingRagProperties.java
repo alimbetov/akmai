@@ -25,6 +25,34 @@ public record SelfOptimizingRagProperties(
         @DefaultValue("5s") @NotNull Duration persistentMemoryRefreshInterval,
         @DefaultValue("30d") @NotNull Duration persistentMemoryTtl
 ) {
+    public SelfOptimizingRagProperties(
+            boolean learningEventsEnabled,
+            boolean persistentQueryMemoryEnabled,
+            boolean semanticGroundingEnabled,
+            String fingerprintSecret,
+            String corpusVersion,
+            String retrievalPolicyVersion,
+            String learningPolicyVersion,
+            String groundingPolicyVersion,
+            int persistentMemoryMaxEntries,
+            int persistentMemoryObservationsPerCluster
+    ) {
+        this(
+                learningEventsEnabled,
+                persistentQueryMemoryEnabled,
+                semanticGroundingEnabled,
+                fingerprintSecret,
+                corpusVersion,
+                retrievalPolicyVersion,
+                learningPolicyVersion,
+                groundingPolicyVersion,
+                persistentMemoryMaxEntries,
+                persistentMemoryObservationsPerCluster,
+                Duration.ofSeconds(5),
+                Duration.ofDays(30)
+        );
+    }
+
     public SelfOptimizingRagProperties {
         fingerprintSecret = fingerprintSecret == null
                 ? ""
