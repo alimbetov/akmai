@@ -136,7 +136,7 @@ public class SemanticQueryMemoryRepository {
         );
     }
 
-    public void persist(
+    public boolean persist(
             StoredCluster cluster,
             String queryFingerprint,
             String groundedAnswer,
@@ -151,10 +151,10 @@ public class SemanticQueryMemoryRepository {
                 || groundedAnswer == null
                 || groundedAnswer.isBlank()
                 || observedAt == null) {
-            return;
+            return false;
         }
-        transactionTemplate.executeWithoutResult(status -> {
-            jdbcTemplate.update(
+        Boolean admitted = transactionTemplate.execute(status -> {
+            int clusterInserted = jdbcTemplate.update(
                     """
                     INSERT INTO rag_query_memory_cluster (
                         cluster_id,
@@ -167,13 +167,7 @@ public class SemanticQueryMemoryRepository {
                     ) VALUES (
                         ?, ?, ?::jsonb, ?::jsonb, ?, clock_timestamp(), clock_timestamp()
                     )
-                    ON CONFLICT (cluster_id) DO UPDATE
-                    SET embedding_profile_id = EXCLUDED.embedding_profile_id,
-                        required_access_levels = EXCLUDED.required_access_levels,
-                        centroid = EXCLUDED.centroid,
-                        observation_count = EXCLUDED.observation_count,
-                        refresh_revision = nextval('rag_query_memory_refresh_revision_seq'),
-                        updated_at = clock_timestamp()
+                    ON CONFLICT (cluster_id) DO NOTHING
                     """,
                     cluster.clusterId(),
                     cluster.embeddingProfileId(),
@@ -182,7 +176,7 @@ public class SemanticQueryMemoryRepository {
                     cluster.observationCount()
             );
 
-            jdbcTemplate.update(
+            int observationInserted = jdbcTemplate.update(
                     """
                     INSERT INTO rag_query_memory_observation (
                         observation_id,
@@ -192,6 +186,7 @@ public class SemanticQueryMemoryRepository {
                         source_refs,
                         observed_at
                     ) VALUES (?, ?, ?, ?, ?::jsonb, ?)
+                    ON CONFLICT (cluster_id, query_fingerprint) DO NOTHING
                     """,
                     UUID.randomUUID(),
                     cluster.clusterId(),
@@ -200,6 +195,29 @@ public class SemanticQueryMemoryRepository {
                     writeJson(sourceRefs == null ? List.of() : sourceRefs),
                     java.sql.Timestamp.from(observedAt)
             );
+            if (observationInserted == 0) {
+                return false;
+            }
+
+            if (clusterInserted == 0) {
+                jdbcTemplate.update(
+                        """
+                        UPDATE rag_query_memory_cluster
+                        SET embedding_profile_id = ?,
+                            required_access_levels = ?::jsonb,
+                            centroid = ?::jsonb,
+                            observation_count = ?,
+                            refresh_revision = nextval('rag_query_memory_refresh_revision_seq'),
+                            updated_at = clock_timestamp()
+                        WHERE cluster_id = ?
+                        """,
+                        cluster.embeddingProfileId(),
+                        writeJson(cluster.requiredAccessLevels().stream().sorted().toList()),
+                        writeJson(cluster.centroid()),
+                        cluster.observationCount(),
+                        cluster.clusterId()
+                );
+            }
 
             jdbcTemplate.update(
                     """
@@ -230,7 +248,9 @@ public class SemanticQueryMemoryRepository {
                     cluster.embeddingProfileId(),
                     Math.max(32, maxClusters)
             );
+            return true;
         });
+        return Boolean.TRUE.equals(admitted);
     }
 
     private StoredCluster mapCluster(java.sql.ResultSet rs)
