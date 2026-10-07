@@ -17,6 +17,7 @@ import kz.alimbetov.akmai.rag.trace.RagExecutionTrace;
 import kz.alimbetov.akmai.rag.trace.RagRuntimeAttribution;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -31,6 +32,7 @@ public class RagLearningRecorder {
     private final AdaptiveRetrievalPlanner adaptiveRetrievalPlanner;
     private final RagRuntimeAttribution runtimeAttribution;
     private final RagExecutionObservationStore observationStore;
+    private final LearningSourceFingerprint sourceFingerprint;
 
     public RagLearningRecorder(
             RagLearningEventRepository repository,
@@ -40,12 +42,34 @@ public class RagLearningRecorder {
             RagRuntimeAttribution runtimeAttribution,
             RagExecutionObservationStore observationStore
     ) {
+        this(
+                repository,
+                fingerprint,
+                properties,
+                adaptiveRetrievalPlanner,
+                runtimeAttribution,
+                observationStore,
+                null
+        );
+    }
+
+    @Autowired
+    public RagLearningRecorder(
+            RagLearningEventRepository repository,
+            LearningPrivacyFingerprint fingerprint,
+            SelfOptimizingRagProperties properties,
+            AdaptiveRetrievalPlanner adaptiveRetrievalPlanner,
+            RagRuntimeAttribution runtimeAttribution,
+            RagExecutionObservationStore observationStore,
+            LearningSourceFingerprint sourceFingerprint
+    ) {
         this.repository = repository;
         this.fingerprint = fingerprint;
         this.properties = properties;
         this.adaptiveRetrievalPlanner = adaptiveRetrievalPlanner;
         this.runtimeAttribution = runtimeAttribution;
         this.observationStore = observationStore;
+        this.sourceFingerprint = sourceFingerprint;
     }
 
     public void record(
@@ -117,6 +141,12 @@ public class RagLearningRecorder {
                     trace.learningProjection()
             );
             tracePayload.put("attribution", attribution.asMap());
+            String source = sourceFingerprint == null
+                    ? ""
+                    : sourceFingerprint.current();
+            if (!source.isBlank()) {
+                tracePayload.put("sourceFingerprint", source);
+            }
 
             RagLearningEvent event = new RagLearningEvent(
                     UUID.randomUUID(),
