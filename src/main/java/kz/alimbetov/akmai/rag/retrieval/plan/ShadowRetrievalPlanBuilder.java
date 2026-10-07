@@ -2,6 +2,7 @@ package kz.alimbetov.akmai.rag.retrieval.plan;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -16,16 +17,42 @@ import org.springframework.stereotype.Component;
 @Component
 public class ShadowRetrievalPlanBuilder {
 
+    private static final Set<RetrievalType> ROUTER_CONTROLLED_LANES = Set.copyOf(
+            EnumSet.of(
+                    RetrievalType.IDENTIFIER,
+                    RetrievalType.VECTOR,
+                    RetrievalType.LEXICAL,
+                    RetrievalType.CONCEPT,
+                    RetrievalType.REFERENCE
+            )
+    );
+
     public RetrievalPlan build(
             List<QueryChunk> chunks,
             AdaptiveRetrievalPlanner.ShadowPlanReport report
+    ) {
+        return build(chunks, report, null);
+    }
+
+    /**
+     * Builds the router-controlled shadow plan from recommendations while
+     * preserving production steps that are outside the router policy surface
+     * (for example HYDE_VECTOR). Their dependencies are re-fenced against the
+     * resulting step set so shadow replay remains a valid DAG.
+     */
+    public RetrievalPlan build(
+            List<QueryChunk> chunks,
+            AdaptiveRetrievalPlanner.ShadowPlanReport report,
+            RetrievalPlan productionPlan
     ) {
         if (chunks == null
                 || chunks.isEmpty()
                 || report == null
                 || !report.enabled()
                 || report.recommendations().isEmpty()) {
-            return new RetrievalPlan(List.of());
+            return productionPlan == null
+                    ? new RetrievalPlan(List.of())
+                    : productionPlan;
         }
 
         Map<String, Set<RetrievalType>> recommended = new LinkedHashMap<>();
@@ -45,7 +72,38 @@ public class ShadowRetrievalPlanBuilder {
             }
             append(chunk, lanes, steps);
         }
-        return new RetrievalPlan(List.copyOf(steps));
+
+        if (productionPlan != null && productionPlan.steps() != null) {
+            for (RetrievalStep step : productionPlan.steps()) {
+                if (step == null
+                        || step.type() == null
+                        || ROUTER_CONTROLLED_LANES.contains(step.type())) {
+                    continue;
+                }
+                boolean alreadyPresent = steps.stream()
+                        .anyMatch(existing -> existing.id().equals(step.id()));
+                if (!alreadyPresent) {
+                    steps.add(step);
+                }
+            }
+        }
+
+        Set<String> ids = steps.stream()
+                .map(RetrievalStep::id)
+                .collect(Collectors.toUnmodifiableSet());
+        List<RetrievalStep> normalized = steps.stream()
+                .map(step -> new RetrievalStep(
+                        step.id(),
+                        step.queryChunk(),
+                        step.type(),
+                        step.dependsOn() == null
+                                ? List.of()
+                                : step.dependsOn().stream()
+                                        .filter(ids::contains)
+                                        .toList()
+                ))
+                .toList();
+        return new RetrievalPlan(List.copyOf(normalized));
     }
 
     private void append(
