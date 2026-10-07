@@ -32,18 +32,47 @@ public class RagPolicyEvaluationService {
             boolean canaryPassed,
             Map<String, Object> performanceReport
     ) {
-        RagQualityBaselineComparator.Comparison comparison =
-                qualityComparator.compare(baseline, candidate, gateSpec);
-        Map<String, Object> qualityReport = comparison.toPolicyQualityReport(
+        return attachEvaluation(
+                type,
+                version,
+                baseline,
+                candidate,
+                gateSpec,
                 securityPassed,
                 correctnessPassed,
+                false,
                 canaryPassed,
-                candidate
+                performanceReport
         );
+    }
+
+    public RagQualityBaselineComparator.Comparison attachEvaluation(
+            RagPolicyType type,
+            String version,
+            RagQualitySnapshot baseline,
+            RagQualitySnapshot candidate,
+            RagQualityGateSpec gateSpec,
+            boolean securityPassed,
+            boolean correctnessPassed,
+            boolean shadowPassed,
+            boolean canaryPassed,
+            Map<String, Object> performanceReport
+    ) {
+        RagQualityBaselineComparator.Comparison comparison =
+                qualityComparator.compare(baseline, candidate, gateSpec);
+        LinkedHashMap<String, Object> qualityReport = new LinkedHashMap<>(
+                comparison.toPolicyQualityReport(
+                        securityPassed,
+                        correctnessPassed,
+                        canaryPassed,
+                        candidate
+                )
+        );
+        qualityReport.put("shadowPassed", shadowPassed);
         repository.attachReports(
                 type,
                 version,
-                qualityReport,
+                Map.copyOf(qualityReport),
                 normalizePerformanceReport(performanceReport)
         );
         return comparison;
