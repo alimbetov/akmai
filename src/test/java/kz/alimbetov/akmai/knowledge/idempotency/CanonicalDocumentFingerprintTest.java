@@ -46,7 +46,7 @@ class CanonicalDocumentFingerprintTest {
     @Test
     void sameCanonicalDocumentProducesStableFingerprint() {
         assertThat(fingerprint.fingerprint(document(7, "block-1")))
-                .isEqualTo(fingerprint.fingerprint(document(7, "block-1"))));
+                .isEqualTo(fingerprint.fingerprint(document(7, "block-1")));
     }
 
     private CanonicalDocument document(int page, String blockId) {
