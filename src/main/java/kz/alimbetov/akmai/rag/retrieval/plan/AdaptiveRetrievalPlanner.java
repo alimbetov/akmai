@@ -12,6 +12,7 @@ import kz.alimbetov.akmai.knowledge.semantic.SemanticMatchMode;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalysis;
 import kz.alimbetov.akmai.knowledge.semantic.SemanticQueryAnalyzer;
 import kz.alimbetov.akmai.rag.policy.ApprovedRetrievalPolicyProvider;
+import kz.alimbetov.akmai.rag.policy.ShadowRetrievalPolicyProvider;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,30 +24,46 @@ public class AdaptiveRetrievalPlanner {
     private final SemanticQueryAnalyzer semanticQueryAnalyzer;
     private final AdaptiveRetrievalProperties properties;
     private final ApprovedRetrievalPolicyProvider approvedPolicyProvider;
+    private final ShadowRetrievalPolicyProvider shadowPolicyProvider;
 
     public AdaptiveRetrievalPlanner(
             SemanticQueryAnalyzer semanticQueryAnalyzer,
             AdaptiveRetrievalProperties properties
     ) {
-        this(semanticQueryAnalyzer, properties, null);
+        this(semanticQueryAnalyzer, properties, null, null);
+    }
+
+    public AdaptiveRetrievalPlanner(
+            SemanticQueryAnalyzer semanticQueryAnalyzer,
+            AdaptiveRetrievalProperties properties,
+            ApprovedRetrievalPolicyProvider approvedPolicyProvider
+    ) {
+        this(
+                semanticQueryAnalyzer,
+                properties,
+                approvedPolicyProvider,
+                null
+        );
     }
 
     @Autowired
     public AdaptiveRetrievalPlanner(
             SemanticQueryAnalyzer semanticQueryAnalyzer,
             AdaptiveRetrievalProperties properties,
-            ApprovedRetrievalPolicyProvider approvedPolicyProvider
+            ApprovedRetrievalPolicyProvider approvedPolicyProvider,
+            ShadowRetrievalPolicyProvider shadowPolicyProvider
     ) {
         this.semanticQueryAnalyzer = semanticQueryAnalyzer;
         this.properties = properties;
         this.approvedPolicyProvider = approvedPolicyProvider;
+        this.shadowPolicyProvider = shadowPolicyProvider;
     }
 
     /**
      * Production execution is evidence-gated. With the Spring policy provider
      * present, an enabled planner changes the baseline only when an APPROVED
-     * retrieval policy contains a route for the classified query. The older
-     * two-argument constructor retains heuristic behavior for isolated tests.
+     * retrieval policy contains a route for the classified query. Older
+     * constructors retain heuristic behavior for isolated tests.
      */
     public RetrievalPlan enforce(
             List<QueryChunk> chunks,
@@ -75,7 +92,7 @@ public class AdaptiveRetrievalPlanner {
             }
             recommended.put(
                     chunk.id(),
-                    safeApprovedLanes(chunk, approved.get())
+                    safePolicyLanes(chunk, approved.get())
             );
         }
         if (recommended.isEmpty()) {
@@ -133,6 +150,11 @@ public class AdaptiveRetrievalPlanner {
         return QueryClass.GENERIC;
     }
 
+    /**
+     * Shadow recommendations never alter the execution plan. If a SHADOW
+     * policy exists it is evaluated here; otherwise the deterministic heuristic
+     * remains available as observational telemetry.
+     */
     public ShadowPlanReport shadow(
             List<QueryChunk> chunks,
             RetrievalPlan currentPlan
@@ -151,10 +173,10 @@ public class AdaptiveRetrievalPlanner {
                 continue;
             }
             Recommendation heuristic = recommend(chunk);
-            Set<RetrievalType> lanes = approvedPolicyProvider == null
+            Set<RetrievalType> lanes = shadowPolicyProvider == null
                     ? heuristic.lanes()
-                    : approvedPolicyProvider.lanes(heuristic.queryClass())
-                            .map(value -> safeApprovedLanes(chunk, value))
+                    : shadowPolicyProvider.lanes(heuristic.queryClass())
+                            .map(value -> safePolicyLanes(chunk, value))
                             .orElse(heuristic.lanes());
             recommendations.add(new ChunkRecommendation(
                     chunk.id(),
@@ -166,7 +188,7 @@ public class AdaptiveRetrievalPlanner {
         return new ShadowPlanReport(true, List.copyOf(recommendations));
     }
 
-    private Set<RetrievalType> safeApprovedLanes(
+    private Set<RetrievalType> safePolicyLanes(
             QueryChunk chunk,
             Set<RetrievalType> requested
     ) {
