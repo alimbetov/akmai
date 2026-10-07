@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -23,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.service.KnowledgeIngestionPort;
@@ -92,28 +94,60 @@ class LiveRagPerformanceHarnessTest {
     CandidateRetrievalPolicyTestInstaller candidatePolicyInstaller;
 
     private final AtomicInteger writeSequence = new AtomicInteger();
+    private final AtomicLong loadedChunks = new AtomicLong();
+    private CorpusTier corpusTier;
+    private int loadedDocuments;
 
     @BeforeAll
     void ingestCorpusAndWarmUp() throws Exception {
         candidatePolicyInstaller.installIfConfigured();
-        int index = 0;
-        for (RagBenchmarkV1Corpus.Case testCase : RagBenchmarkV1Corpus.smokeCases()) {
-            ingestion.addText(
+        corpusTier = CorpusTier.parse(
+                env("AKMAI_LIVE_PERFORMANCE_CORPUS_TIER", "SMOKE")
+        );
+        int targetDocuments = intEnv(
+                "AKMAI_LIVE_PERFORMANCE_DOCUMENTS",
+                corpusTier.defaultDocuments()
+        );
+        if (targetDocuments < corpusTier.minimumDocuments()) {
+            throw new IllegalArgumentException(
+                    "performance corpus tier " + corpusTier
+                            + " requires at least "
+                            + corpusTier.minimumDocuments()
+                            + " documents"
+            );
+        }
+
+        List<RagBenchmarkV1Corpus.Case> base = RagBenchmarkV1Corpus.smokeCases();
+        if (base.isEmpty()) {
+            throw new IllegalStateException("performance seed corpus is empty");
+        }
+        for (int index = 0; index < targetDocuments; index++) {
+            RagBenchmarkV1Corpus.Case testCase = base.get(index % base.size());
+            String documentId = "perf-" + testCase.id() + "-" + index;
+            var response = ingestion.addText(
                     new AddKnowledgeRequest(
-                            "perf-" + testCase.id(),
-                            testCase.title(),
-                            testCase.text(),
-                            "benchmark://performance/" + testCase.id(),
+                            documentId,
+                            testCase.title() + " [perf " + index + "]",
+                            testCase.text()
+                                    + "\n\nPerformance corpus replica " + index + ".",
+                            "benchmark://performance/" + documentId,
                             testCase.language(),
                             testCase.domain(),
                             1L,
-                            Map.of("performanceCase", testCase.id())
+                            Map.of(
+                                    "performanceCase", testCase.id(),
+                                    "performanceTier", corpusTier.name(),
+                                    "performanceReplica", index
+                            )
                     ),
-                    "perf-ingest-" + testCase.id()
+                    "perf-ingest-" + documentId
             );
-            if (index++ < 3) {
-                questionService.ask(testCase.question(), Set.of(1L));
-            }
+            loadedChunks.addAndGet(response.chunkCount());
+        }
+        loadedDocuments = targetDocuments;
+
+        for (int index = 0; index < Math.min(3, base.size()); index++) {
+            questionService.ask(base.get(index).question(), Set.of(1L));
         }
     }
 
@@ -138,7 +172,10 @@ class LiveRagPerformanceHarnessTest {
         report.put("benchmarkVersion", "rag-performance-v1.1");
         report.put("generatedAt", Instant.now().toString());
         report.put("attribution", runtimeAttribution.snapshot().asMap());
-        report.put("corpusTier", env("AKMAI_LIVE_PERFORMANCE_CORPUS_TIER", "SMOKE"));
+        report.put("corpusTier", corpusTier.name());
+        report.put("corpusDocuments", loadedDocuments);
+        report.put("corpusSearchableChunks", loadedChunks.get());
+        report.put("minimumDocumentsForTier", corpusTier.minimumDocuments());
         report.put("hardware", hardwareProfile());
         report.put("scenarios", scenarios);
         report.put("stages", stageSnapshot());
@@ -170,6 +207,10 @@ class LiveRagPerformanceHarnessTest {
                 .orElseThrow();
         assertThat(scenarios).allMatch(value -> value.failed() == 0);
         assertThat(read10.p95Millis()).isLessThanOrEqualTo(p95Limit);
+        assertThat(loadedDocuments).isGreaterThanOrEqualTo(
+                corpusTier.minimumDocuments()
+        );
+        assertThat(loadedChunks.get()).isGreaterThanOrEqualTo(loadedDocuments);
     }
 
     private ScenarioResult runReadScenario(
@@ -315,7 +356,7 @@ class LiveRagPerformanceHarnessTest {
         LinkedHashMap<String, Object> result = new LinkedHashMap<>();
         for (RagPipelineStage stage : RagPipelineStage.values()) {
             Timer timer = meterRegistry.find("akmai.rag.stage")
-                    .tag("stage", stage.name().toLowerCase(java.util.Locale.ROOT))
+                    .tag("stage", stage.name().toLowerCase(Locale.ROOT))
                     .timer();
             if (timer == null || timer.count() == 0) {
                 continue;
@@ -413,6 +454,39 @@ class LiveRagPerformanceHarnessTest {
     private static String env(String name, String fallback) {
         String value = System.getenv(name);
         return value == null || value.isBlank() ? fallback : value.trim();
+    }
+
+    private enum CorpusTier {
+        SMOKE(16, 1),
+        SMALL(256, 128),
+        MEDIUM(2048, 1024);
+
+        private final int defaultDocuments;
+        private final int minimumDocuments;
+
+        CorpusTier(int defaultDocuments, int minimumDocuments) {
+            this.defaultDocuments = defaultDocuments;
+            this.minimumDocuments = minimumDocuments;
+        }
+
+        int defaultDocuments() {
+            return defaultDocuments;
+        }
+
+        int minimumDocuments() {
+            return minimumDocuments;
+        }
+
+        static CorpusTier parse(String value) {
+            try {
+                return CorpusTier.valueOf(value.trim().toUpperCase(Locale.ROOT));
+            } catch (RuntimeException exception) {
+                throw new IllegalArgumentException(
+                        "AKMAI_LIVE_PERFORMANCE_CORPUS_TIER must be SMOKE, SMALL or MEDIUM",
+                        exception
+                );
+            }
+        }
     }
 
     private record TimedResult(
