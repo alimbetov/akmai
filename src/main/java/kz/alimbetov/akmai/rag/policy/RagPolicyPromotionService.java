@@ -109,6 +109,20 @@ public class RagPolicyPromotionService {
         invalidateCanary(type);
     }
 
+    public void reject(RagPolicyType type, String version) {
+        RagPolicyRegistryRepository.PolicyRecord policy = policy(type, version);
+        if (policy.status() != RagPolicyStatus.CANDIDATE
+                && policy.status() != RagPolicyStatus.SHADOW
+                && policy.status() != RagPolicyStatus.CANARY) {
+            throw new IllegalStateException(
+                    "Only CANDIDATE, SHADOW or CANARY policy can be rejected"
+            );
+        }
+        repository.reject(type, version);
+        invalidateShadow(type);
+        invalidateCanary(type);
+    }
+
     public void rollback(RagPolicyType type, String targetVersion) {
         RagPolicyRegistryRepository.PolicyRecord target = policy(type, targetVersion);
         if (target.status() != RagPolicyStatus.SUPERSEDED) {
