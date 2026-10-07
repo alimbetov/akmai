@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import kz.alimbetov.akmai.config.SelfOptimizingRagProperties;
+import kz.alimbetov.akmai.rag.policy.RagPolicyCanaryOutcomeRecorder;
 import kz.alimbetov.akmai.rag.policy.RetrievalPolicyShadowEvaluator;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
@@ -35,6 +36,7 @@ public class RagLearningRecorder {
     private final RagExecutionObservationStore observationStore;
     private final LearningSourceFingerprint sourceFingerprint;
     private final RetrievalPolicyShadowEvaluator shadowEvaluator;
+    private final RagPolicyCanaryOutcomeRecorder canaryOutcomeRecorder;
 
     public RagLearningRecorder(
             RagLearningEventRepository repository,
@@ -51,6 +53,7 @@ public class RagLearningRecorder {
                 adaptiveRetrievalPlanner,
                 runtimeAttribution,
                 observationStore,
+                null,
                 null,
                 null
         );
@@ -73,6 +76,30 @@ public class RagLearningRecorder {
                 runtimeAttribution,
                 observationStore,
                 sourceFingerprint,
+                null,
+                null
+        );
+    }
+
+    public RagLearningRecorder(
+            RagLearningEventRepository repository,
+            LearningPrivacyFingerprint fingerprint,
+            SelfOptimizingRagProperties properties,
+            AdaptiveRetrievalPlanner adaptiveRetrievalPlanner,
+            RagRuntimeAttribution runtimeAttribution,
+            RagExecutionObservationStore observationStore,
+            LearningSourceFingerprint sourceFingerprint,
+            RetrievalPolicyShadowEvaluator shadowEvaluator
+    ) {
+        this(
+                repository,
+                fingerprint,
+                properties,
+                adaptiveRetrievalPlanner,
+                runtimeAttribution,
+                observationStore,
+                sourceFingerprint,
+                shadowEvaluator,
                 null
         );
     }
@@ -86,7 +113,8 @@ public class RagLearningRecorder {
             RagRuntimeAttribution runtimeAttribution,
             RagExecutionObservationStore observationStore,
             LearningSourceFingerprint sourceFingerprint,
-            RetrievalPolicyShadowEvaluator shadowEvaluator
+            RetrievalPolicyShadowEvaluator shadowEvaluator,
+            RagPolicyCanaryOutcomeRecorder canaryOutcomeRecorder
     ) {
         this.repository = repository;
         this.fingerprint = fingerprint;
@@ -96,6 +124,7 @@ public class RagLearningRecorder {
         this.observationStore = observationStore;
         this.sourceFingerprint = sourceFingerprint;
         this.shadowEvaluator = shadowEvaluator;
+        this.canaryOutcomeRecorder = canaryOutcomeRecorder;
     }
 
     public void record(
@@ -110,6 +139,16 @@ public class RagLearningRecorder {
             RagLearningEvent.GroundingStatus groundingStatus,
             long totalLatencyMs
     ) {
+        if (canaryOutcomeRecorder != null) {
+            canaryOutcomeRecorder.record(
+                    requestId,
+                    execution,
+                    answerStatus,
+                    groundingStatus,
+                    totalLatencyMs
+            );
+        }
+
         boolean persistentLearning = properties.learningEventsEnabled();
         boolean executionObservation = properties.executionObservationsEnabled();
         boolean grounded = answerStatus == RagLearningEvent.AnswerStatus.GROUNDED
