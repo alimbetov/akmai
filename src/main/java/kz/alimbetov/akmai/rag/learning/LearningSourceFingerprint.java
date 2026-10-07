@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Produces a privacy-preserving identity for the caller contributing learning
- * evidence. Raw principal/API-key names are never persisted in learning data.
+ * or rollout evidence. Raw principal/API-key names are never persisted.
  * Unauthenticated/local traffic deliberately collapses into one source so it
  * cannot manufacture independent-source support by itself.
  */
@@ -23,13 +23,23 @@ public class LearningSourceFingerprint {
     }
 
     public String current() {
+        return value(false);
+    }
+
+    public String currentOperational() {
+        return value(true);
+    }
+
+    private String value(boolean operational) {
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null
+        String raw = authentication != null
                 && authentication.isAuthenticated()
-                && authentication.getPrincipal() instanceof ApiKeyPrincipal principal) {
-            return fingerprint.fingerprint("source:" + principal.name());
-        }
-        return fingerprint.fingerprint("source:" + LOCAL_OR_UNKNOWN);
+                && authentication.getPrincipal() instanceof ApiKeyPrincipal principal
+                ? "source:" + principal.name()
+                : "source:" + LOCAL_OR_UNKNOWN;
+        return operational
+                ? fingerprint.fingerprintOperational(raw)
+                : fingerprint.fingerprint(raw);
     }
 }
