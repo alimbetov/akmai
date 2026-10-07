@@ -35,3 +35,5 @@ databaseChangeLog:
       file: db/changelog/greenfield/017-query-memory-ha-revision.sql
   - include:
       file: db/changelog/greenfield/018-query-memory-distinct-support.sql
+  - include:
+      file: db/changelog/greenfield/019-policy-shadow-lifecycle.sql
