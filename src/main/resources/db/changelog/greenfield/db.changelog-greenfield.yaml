@@ -45,3 +45,5 @@ databaseChangeLog:
       file: db/changelog/greenfield/022-learning-anti-poisoning.sql
   - include:
       file: db/changelog/greenfield/023-policy-shadow-evidence.sql
+  - include:
+      file: db/changelog/greenfield/024-policy-canary-evidence.sql
