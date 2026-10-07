@@ -3,7 +3,9 @@ package kz.alimbetov.akmai.rag.policy;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -14,6 +16,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class RagRouterPolicyTrainer {
+
+    private static final double LATENCY_OUTLIER_FACTOR = 4.0;
 
     private final RagLearningEventRepository learningRepository;
     private final RagPolicyRegistryRepository policyRepository;
@@ -55,6 +59,10 @@ public class RagRouterPolicyTrainer {
         configuration.put("training", candidate.evidence());
         configuration.put("generatedAt", Instant.now().toString());
         configuration.put("lookback", properties.lookback().toString());
+        configuration.put(
+                "reinforcementWindow",
+                properties.reinforcementWindow().toString()
+        );
         configuration.put("sampleCount", samples.size());
         configuration.put("trainer", "evidence-router-v1.1");
 
@@ -84,11 +92,38 @@ public class RagRouterPolicyTrainer {
             if (queryClass == AdaptiveRetrievalPlanner.QueryClass.ANALYSIS_UNAVAILABLE) {
                 continue;
             }
-            List<RagLearningEventRepository.RouterTrainingSample> classSamples =
+            List<RagLearningEventRepository.RouterTrainingSample> rawClassSamples =
                     safeSamples.stream()
                             .filter(sample -> queryClass.name().equals(sample.queryClass()))
                             .toList();
-            if (classSamples.size() < properties.minDistinctQueriesPerClass()) {
+            BoundedEvidence bounded = bound(rawClassSamples);
+            List<RagLearningEventRepository.RouterTrainingSample> classSamples =
+                    bounded.samples();
+
+            int distinctSources = distinctAttributedSources(classSamples);
+            double sourceShare = maxSourceShare(classSamples);
+            double unknownSourceShare = unknownSourceShare(classSamples);
+            double latencyOutlierRate = latencyOutlierRate(classSamples);
+
+            String blockedReason = blockedReason(
+                    classSamples,
+                    distinctSources,
+                    sourceShare
+            );
+            if (blockedReason != null) {
+                evidence.put(
+                        queryClass.name(),
+                        antiPoisoningEvidence(
+                                rawClassSamples,
+                                bounded,
+                                distinctSources,
+                                sourceShare,
+                                unknownSourceShare,
+                                latencyOutlierRate,
+                                blockedReason,
+                                Map.of()
+                        )
+                );
                 continue;
             }
 
@@ -97,16 +132,8 @@ public class RagRouterPolicyTrainer {
             LinkedHashMap<String, Object> laneEvidence = new LinkedHashMap<>();
 
             for (RetrievalType lane : baseline) {
-                double selectedSupport = support(
-                        classSamples,
-                        lane,
-                        false
-                );
-                double citedSupport = support(
-                        classSamples,
-                        lane,
-                        true
-                );
+                double selectedSupport = support(classSamples, lane, false);
+                double citedSupport = support(classSamples, lane, true);
                 boolean mandatory = mandatory(queryClass, lane);
                 boolean keep = mandatory
                         || citedSupport >= properties.optionalLaneMinCitationSupport()
@@ -131,15 +158,151 @@ public class RagRouterPolicyTrainer {
             );
             evidence.put(
                     queryClass.name(),
-                    Map.of(
-                            "distinctQueries", classSamples.size(),
-                            "lanes", Map.copyOf(laneEvidence),
-                            "p50LatencyMs", percentileLatency(classSamples, 0.50),
-                            "p95LatencyMs", percentileLatency(classSamples, 0.95)
+                    antiPoisoningEvidence(
+                            rawClassSamples,
+                            bounded,
+                            distinctSources,
+                            sourceShare,
+                            unknownSourceShare,
+                            latencyOutlierRate,
+                            "ACCEPTED",
+                            Map.copyOf(laneEvidence)
                     )
             );
         }
         return new Candidate(Map.copyOf(routes), Map.copyOf(evidence));
+    }
+
+    private BoundedEvidence bound(
+            List<RagLearningEventRepository.RouterTrainingSample> samples
+    ) {
+        if (samples == null || samples.isEmpty()) {
+            return new BoundedEvidence(List.of(), 0);
+        }
+        long windowMillis = Math.max(
+                1L,
+                properties.reinforcementWindow().toMillis()
+        );
+        Map<SourceWindow, Integer> admitted = new HashMap<>();
+        List<RagLearningEventRepository.RouterTrainingSample> kept = new ArrayList<>();
+        int dropped = 0;
+
+        for (RagLearningEventRepository.RouterTrainingSample sample : samples) {
+            long timestamp = sample.createdAt() == null
+                    ? 0L
+                    : sample.createdAt().toEpochMilli();
+            SourceWindow key = new SourceWindow(
+                    sample.sourceFingerprint(),
+                    Math.floorDiv(timestamp, windowMillis)
+            );
+            int count = admitted.getOrDefault(key, 0);
+            if (count >= properties.maxSamplesPerSourceWindow()) {
+                dropped++;
+                continue;
+            }
+            admitted.put(key, count + 1);
+            kept.add(sample);
+        }
+        return new BoundedEvidence(List.copyOf(kept), dropped);
+    }
+
+    private String blockedReason(
+            List<RagLearningEventRepository.RouterTrainingSample> samples,
+            int distinctSources,
+            double sourceShare
+    ) {
+        if (samples.size() < properties.minDistinctQueriesPerClass()) {
+            return "INSUFFICIENT_DISTINCT_QUERIES";
+        }
+        if (properties.minDistinctSourcesPerClass() > 1
+                && distinctSources < properties.minDistinctSourcesPerClass()) {
+            return "INSUFFICIENT_DISTINCT_SOURCES";
+        }
+        if (sourceShare > properties.maxSourceShare() + 1.0e-12) {
+            return "SOURCE_CONCENTRATION_EXCEEDED";
+        }
+        return null;
+    }
+
+    private Map<String, Object> antiPoisoningEvidence(
+            List<RagLearningEventRepository.RouterTrainingSample> rawSamples,
+            BoundedEvidence bounded,
+            int distinctSources,
+            double sourceShare,
+            double unknownSourceShare,
+            double latencyOutlierRate,
+            String status,
+            Map<String, Object> laneEvidence
+    ) {
+        List<RagLearningEventRepository.RouterTrainingSample> samples =
+                bounded.samples();
+        LinkedHashMap<String, Object> result = new LinkedHashMap<>();
+        result.put("status", status);
+        result.put("rawDistinctQueries", rawSamples == null ? 0 : rawSamples.size());
+        result.put("admittedDistinctQueries", samples.size());
+        result.put("droppedBySourceWindowCap", bounded.dropped());
+        result.put("distinctAttributedSources", distinctSources);
+        result.put("maxSourceShare", sourceShare);
+        result.put("unknownSourceShare", unknownSourceShare);
+        result.put("latencyOutlierRate", latencyOutlierRate);
+        result.put("p50LatencyMs", percentileLatency(samples, 0.50));
+        result.put("p95LatencyMs", percentileLatency(samples, 0.95));
+        result.put("lanes", laneEvidence);
+        return Map.copyOf(result);
+    }
+
+    private int distinctAttributedSources(
+            List<RagLearningEventRepository.RouterTrainingSample> samples
+    ) {
+        LinkedHashSet<String> sources = new LinkedHashSet<>();
+        samples.stream()
+                .filter(RagLearningEventRepository.RouterTrainingSample::attributedSource)
+                .map(RagLearningEventRepository.RouterTrainingSample::sourceFingerprint)
+                .forEach(sources::add);
+        return sources.size();
+    }
+
+    private double maxSourceShare(
+            List<RagLearningEventRepository.RouterTrainingSample> samples
+    ) {
+        if (samples.isEmpty()) {
+            return 0.0;
+        }
+        Map<String, Integer> counts = new HashMap<>();
+        for (var sample : samples) {
+            counts.merge(sample.sourceFingerprint(), 1, Integer::sum);
+        }
+        int maximum = counts.values().stream()
+                .mapToInt(Integer::intValue)
+                .max()
+                .orElse(0);
+        return (double) maximum / samples.size();
+    }
+
+    private double unknownSourceShare(
+            List<RagLearningEventRepository.RouterTrainingSample> samples
+    ) {
+        if (samples.isEmpty()) {
+            return 0.0;
+        }
+        long unknown = samples.stream()
+                .filter(sample -> !sample.attributedSource())
+                .count();
+        return (double) unknown / samples.size();
+    }
+
+    private double latencyOutlierRate(
+            List<RagLearningEventRepository.RouterTrainingSample> samples
+    ) {
+        if (samples.isEmpty()) {
+            return 0.0;
+        }
+        double median = percentileLatency(samples, 0.50);
+        double threshold = Math.max(1.0, median) * LATENCY_OUTLIER_FACTOR;
+        long outliers = samples.stream()
+                .filter(sample -> sample.totalLatencyMs() > threshold)
+                .count();
+        return (double) outliers / samples.size();
     }
 
     private double support(
@@ -224,6 +387,19 @@ public class RagRouterPolicyTrainer {
             return queryClass != AdaptiveRetrievalPlanner.QueryClass.IDENTIFIER_ONLY;
         }
         return false;
+    }
+
+    private record SourceWindow(String sourceFingerprint, long bucket) {
+    }
+
+    private record BoundedEvidence(
+            List<RagLearningEventRepository.RouterTrainingSample> samples,
+            int dropped
+    ) {
+        private BoundedEvidence {
+            samples = samples == null ? List.of() : List.copyOf(samples);
+            dropped = Math.max(0, dropped);
+        }
     }
 
     record Candidate(
