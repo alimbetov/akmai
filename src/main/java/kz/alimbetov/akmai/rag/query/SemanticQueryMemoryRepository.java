@@ -43,10 +43,11 @@ public class SemanticQueryMemoryRepository {
                        required_access_levels::text,
                        centroid::text,
                        observation_count,
+                       refresh_revision,
                        updated_at
                 FROM rag_query_memory_cluster
                 WHERE embedding_profile_id = ?
-                ORDER BY updated_at DESC, cluster_id DESC
+                ORDER BY refresh_revision DESC
                 LIMIT ?
                 """,
                 (rs, rowNum) -> mapCluster(rs),
@@ -73,17 +74,17 @@ public class SemanticQueryMemoryRepository {
                        required_access_levels::text,
                        centroid::text,
                        observation_count,
+                       refresh_revision,
                        updated_at
                 FROM rag_query_memory_cluster
                 WHERE embedding_profile_id = ?
-                  AND (updated_at, cluster_id) > (?, ?)
-                ORDER BY updated_at, cluster_id
+                  AND refresh_revision > ?
+                ORDER BY refresh_revision
                 LIMIT ?
                 """,
                 (rs, rowNum) -> mapCluster(rs),
                 embeddingProfileId,
-                java.sql.Timestamp.from(cursor.updatedAt()),
-                cursor.clusterId(),
+                cursor.revision(),
                 limit
         );
     }
@@ -171,6 +172,7 @@ public class SemanticQueryMemoryRepository {
                         required_access_levels = EXCLUDED.required_access_levels,
                         centroid = EXCLUDED.centroid,
                         observation_count = EXCLUDED.observation_count,
+                        refresh_revision = nextval('rag_query_memory_refresh_revision_seq'),
                         updated_at = clock_timestamp()
                     """,
                     cluster.clusterId(),
@@ -221,7 +223,7 @@ public class SemanticQueryMemoryRepository {
                         SELECT cluster_id
                         FROM rag_query_memory_cluster
                         WHERE embedding_profile_id = ?
-                        ORDER BY updated_at DESC, cluster_id DESC
+                        ORDER BY refresh_revision DESC
                         OFFSET ?
                     )
                     """,
@@ -239,6 +241,7 @@ public class SemanticQueryMemoryRepository {
                 readScope(rs.getString("required_access_levels")),
                 readCentroid(rs.getString("centroid")),
                 rs.getInt("observation_count"),
+                rs.getLong("refresh_revision"),
                 rs.getTimestamp("updated_at").toInstant()
         );
     }
@@ -282,14 +285,11 @@ public class SemanticQueryMemoryRepository {
         }
     }
 
-    public record RefreshCursor(
-            Instant updatedAt,
-            UUID clusterId
-    ) {
+    public record RefreshCursor(long revision) {
         public RefreshCursor {
-            if (updatedAt == null || clusterId == null) {
+            if (revision < 0) {
                 throw new IllegalArgumentException(
-                        "query memory refresh cursor must be complete"
+                        "query memory refresh revision must not be negative"
                 );
             }
         }
@@ -301,17 +301,42 @@ public class SemanticQueryMemoryRepository {
             Set<Long> requiredAccessLevels,
             float[] centroid,
             int observationCount,
+            long refreshRevision,
             Instant updatedAt
     ) {
+        public StoredCluster(
+                UUID clusterId,
+                String embeddingProfileId,
+                Set<Long> requiredAccessLevels,
+                float[] centroid,
+                int observationCount,
+                Instant updatedAt
+        ) {
+            this(
+                    clusterId,
+                    embeddingProfileId,
+                    requiredAccessLevels,
+                    centroid,
+                    observationCount,
+                    0L,
+                    updatedAt
+            );
+        }
+
         public StoredCluster {
             requiredAccessLevels = requiredAccessLevels == null
                     ? Set.of()
                     : Set.copyOf(requiredAccessLevels);
             centroid = centroid == null ? new float[0] : centroid.clone();
+            if (refreshRevision < 0) {
+                throw new IllegalArgumentException(
+                        "refreshRevision must not be negative"
+                );
+            }
         }
 
         public RefreshCursor cursor() {
-            return new RefreshCursor(updatedAt, clusterId);
+            return new RefreshCursor(refreshRevision);
         }
     }
 
