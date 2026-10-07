@@ -96,8 +96,8 @@ public class RetrievalPolicyShadowEvaluator {
             return;
         }
 
-        String queryKey = queryFingerprint.fingerprint(question);
-        String sourceKey = sourceFingerprint.current();
+        String queryKey = queryFingerprint.fingerprintOperational(question);
+        String sourceKey = sourceFingerprint.currentOperational();
         if (queryKey.isBlank() || sourceKey.isBlank()) {
             return;
         }
