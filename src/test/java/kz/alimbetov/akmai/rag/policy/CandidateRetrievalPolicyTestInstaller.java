@@ -7,9 +7,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * Installs a retrieval candidate only inside an isolated benchmark Testcontainers
- * database. This deliberately uses evaluation-only evidence so the candidate
- * can be replayed through the production planner without changing an operational
- * policy registry.
+ * database. This deliberately bypasses online SHADOW/CANARY evidence collection
+ * so the candidate can be replayed through the production planner before it is
+ * eligible for operational promotion.
  */
 @Component
 public class CandidateRetrievalPolicyTestInstaller {
@@ -60,7 +60,7 @@ public class CandidateRetrievalPolicyTestInstaller {
                 quality(false, false),
                 performance()
         );
-        promotionService.makeShadow(
+        repository.markShadow(
                 RagPolicyType.RETRIEVAL,
                 candidate.version()
         );
@@ -71,7 +71,7 @@ public class CandidateRetrievalPolicyTestInstaller {
                 quality(true, false),
                 performance()
         );
-        promotionService.makeCanary(
+        repository.markCanary(
                 RagPolicyType.RETRIEVAL,
                 candidate.version()
         );
