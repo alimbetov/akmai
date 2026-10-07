@@ -87,6 +87,11 @@ public class RagLearningRecorder {
                     execution != null && execution.degraded(),
                     execution != null && execution.criticalFailure(),
                     RagExecutionTrace.laneOutcomes(execution),
+                    RagExecutionTrace.laneContributions(finalContext),
+                    RagExecutionTrace.citedLaneContributions(
+                            finalContext,
+                            validation
+                    ),
                     retrievedCount,
                     selectedCount,
                     citedCount,
@@ -169,6 +174,6 @@ public class RagLearningRecorder {
         if (identifier) {
             return "IDENTIFIER_ONLY";
         }
-        return semantic ? "SEMANTIC" : "UNKNOWN";
+        return semantic ? "GENERIC" : "UNKNOWN";
     }
 }
