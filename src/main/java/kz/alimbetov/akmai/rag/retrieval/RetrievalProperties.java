@@ -98,9 +98,9 @@ public record RetrievalProperties(
                 Duration.ofMillis(10),
                 Duration.ofMinutes(1)
         );
-        if (strategyTimeout.compareTo(requestTimeout) > 0) {
+        if (strategyTimeout.compareTo(requestTimeout) >= 0) {
             throw new IllegalArgumentException(
-                    "strategy-timeout must be <= request-timeout"
+                    "strategy-timeout must be < request-timeout"
             );
         }
         if (contextExpansionMaxChunks > contextMaxChunks) {
