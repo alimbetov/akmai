@@ -218,6 +218,10 @@ public class RagPolicyRegistryRepository {
         return findByStatus(type, RagPolicyStatus.SHADOW);
     }
 
+    public Optional<PolicyRecord> canary(RagPolicyType type) {
+        return findByStatus(type, RagPolicyStatus.CANARY);
+    }
+
     private Optional<PolicyRecord> findByStatus(
             RagPolicyType type,
             RagPolicyStatus status
