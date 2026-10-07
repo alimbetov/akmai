@@ -27,6 +27,7 @@ import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.service.KnowledgeIngestionPort;
 import kz.alimbetov.akmai.rag.api.RagResponse;
+import kz.alimbetov.akmai.rag.policy.CandidateRetrievalPolicyTestInstaller;
 import kz.alimbetov.akmai.rag.quality.RagBenchmarkV1Corpus;
 import kz.alimbetov.akmai.rag.service.RagQuestionService;
 import kz.alimbetov.akmai.rag.trace.RagRuntimeAttribution;
@@ -50,7 +51,7 @@ import org.testcontainers.utility.DockerImageName;
         "akmai.reembedding.auto-migrate=false",
         "akmai.adaptive-graph.learning-enabled=false",
         "akmai.adaptive-graph.expansion-enabled=false",
-        "akmai.retrieval.adaptive-planner.enabled=false"
+        "akmai.retrieval.adaptive-planner.enabled=true"
 })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @EnabledIfEnvironmentVariable(named = "AKMAI_LIVE_PERFORMANCE", matches = "true")
@@ -87,11 +88,14 @@ class LiveRagPerformanceHarnessTest {
     ObjectMapper objectMapper;
     @Autowired
     RagRuntimeAttribution runtimeAttribution;
+    @Autowired
+    CandidateRetrievalPolicyTestInstaller candidatePolicyInstaller;
 
     private final AtomicInteger writeSequence = new AtomicInteger();
 
     @BeforeAll
-    void ingestCorpusAndWarmUp() {
+    void ingestCorpusAndWarmUp() throws Exception {
+        candidatePolicyInstaller.installIfConfigured();
         int index = 0;
         for (RagBenchmarkV1Corpus.Case testCase : RagBenchmarkV1Corpus.smokeCases()) {
             ingestion.addText(
