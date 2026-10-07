@@ -43,3 +43,5 @@ databaseChangeLog:
       file: db/changelog/greenfield/021-policy-rollback-semantics.sql
   - include:
       file: db/changelog/greenfield/022-learning-anti-poisoning.sql
+  - include:
+      file: db/changelog/greenfield/023-policy-shadow-evidence.sql
