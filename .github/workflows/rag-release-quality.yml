@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       benchmark_root:
-        description: Path to the curated >=300-query release corpus
+        description: Path to a release corpus; default materializes the versioned controlled corpus
         required: false
         default: "benchmarks/rag-benchmark-v1/release"
       baseline_file:
@@ -36,15 +36,37 @@ jobs:
       - name: Formatting
         run: mvn -B spotless:check
 
-      - name: Require release corpus and live Ollama
+      - name: Materialize default controlled corpus
         env:
           BENCHMARK_ROOT: ${{ inputs.benchmark_root || 'benchmarks/rag-benchmark-v1/release' }}
-          AKMAI_LIVE_OLLAMA_BASE_URL: ${{ secrets.AKMAI_LIVE_OLLAMA_BASE_URL }}
+        shell: bash
         run: |
-          test -n "$AKMAI_LIVE_OLLAMA_BASE_URL"
+          if [[ "$BENCHMARK_ROOT" == "benchmarks/rag-benchmark-v1/release" ]]; then
+            python3 benchmarks/rag-benchmark-v1/generate_controlled_corpus.py \
+              --out "$BENCHMARK_ROOT"
+          fi
+
+      - name: Require release corpus files
+        env:
+          BENCHMARK_ROOT: ${{ inputs.benchmark_root || 'benchmarks/rag-benchmark-v1/release' }}
+        run: |
           test -f "$BENCHMARK_ROOT/manifest.json"
           test -f "$BENCHMARK_ROOT/documents.jsonl"
           test -f "$BENCHMARK_ROOT/queries.jsonl"
+
+      - name: Verify release corpus contract and production chunk identities
+        env:
+          AKMAI_CONTROLLED_BENCHMARK_CONTRACT: "true"
+          AKMAI_RAG_BENCHMARK_ROOT: ${{ inputs.benchmark_root || 'benchmarks/rag-benchmark-v1/release' }}
+        run: >
+          mvn -B
+          -Dtest=ControlledBenchmarkCorpusContractTest
+          test
+
+      - name: Require live Ollama configuration
+        env:
+          AKMAI_LIVE_OLLAMA_BASE_URL: ${{ secrets.AKMAI_LIVE_OLLAMA_BASE_URL }}
+        run: test -n "$AKMAI_LIVE_OLLAMA_BASE_URL"
 
       - name: Run release corpus through production RAG pipeline
         env:
@@ -82,4 +104,5 @@ jobs:
           path: |
             target/quality/rag-benchmark-v1-release.json
             target/quality/quality-gate-comparison.json
+            benchmarks/rag-benchmark-v1/release/manifest.json
           if-no-files-found: warn
