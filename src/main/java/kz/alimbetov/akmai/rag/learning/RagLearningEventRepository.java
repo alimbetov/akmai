@@ -17,6 +17,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class RagLearningEventRepository {
 
+    private static final String LEGACY_SOURCE = "legacy-or-unknown";
+
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
@@ -120,6 +122,7 @@ public class RagLearningEventRepository {
                 """
                 SELECT query_fingerprint,
                        query_class,
+                       source_fingerprint,
                        trace_json::text,
                        total_latency_ms,
                        created_at
@@ -127,6 +130,10 @@ public class RagLearningEventRepository {
                     SELECT DISTINCT ON (query_fingerprint, query_class)
                            query_fingerprint,
                            query_class,
+                           COALESCE(
+                               NULLIF(trace_json ->> 'sourceFingerprint', ''),
+                               'legacy-or-unknown'
+                           ) AS source_fingerprint,
                            trace_json,
                            total_latency_ms,
                            created_at
@@ -145,7 +152,14 @@ public class RagLearningEventRepository {
                             (trace_json ->> 'retrievalCriticalFailure')::boolean,
                             false
                           ) = false
-                    ORDER BY query_fingerprint, query_class, created_at DESC
+                    ORDER BY query_fingerprint,
+                             query_class,
+                             CASE
+                                 WHEN NULLIF(trace_json ->> 'sourceFingerprint', '')
+                                      IS NULL THEN 1
+                                 ELSE 0
+                             END,
+                             created_at ASC
                 ) deduplicated
                 ORDER BY created_at DESC, query_fingerprint
                 LIMIT ?
@@ -155,6 +169,7 @@ public class RagLearningEventRepository {
                     return new RouterTrainingSample(
                             rs.getString("query_fingerprint"),
                             rs.getString("query_class"),
+                            rs.getString("source_fingerprint"),
                             intMap(trace.get("selectedLaneContributions")),
                             intMap(trace.get("citedLaneContributions")),
                             rs.getLong("total_latency_ms"),
@@ -219,12 +234,36 @@ public class RagLearningEventRepository {
     public record RouterTrainingSample(
             String queryFingerprint,
             String queryClass,
+            String sourceFingerprint,
             Map<String, Integer> selectedLaneContributions,
             Map<String, Integer> citedLaneContributions,
             long totalLatencyMs,
             Instant createdAt
     ) {
+        public RouterTrainingSample(
+                String queryFingerprint,
+                String queryClass,
+                Map<String, Integer> selectedLaneContributions,
+                Map<String, Integer> citedLaneContributions,
+                long totalLatencyMs,
+                Instant createdAt
+        ) {
+            this(
+                    queryFingerprint,
+                    queryClass,
+                    LEGACY_SOURCE,
+                    selectedLaneContributions,
+                    citedLaneContributions,
+                    totalLatencyMs,
+                    createdAt
+            );
+        }
+
         public RouterTrainingSample {
+            sourceFingerprint = sourceFingerprint == null
+                    || sourceFingerprint.isBlank()
+                    ? LEGACY_SOURCE
+                    : sourceFingerprint.trim();
             selectedLaneContributions = selectedLaneContributions == null
                     ? Map.of()
                     : Map.copyOf(selectedLaneContributions);
@@ -232,6 +271,10 @@ public class RagLearningEventRepository {
                     ? Map.of()
                     : Map.copyOf(citedLaneContributions);
             totalLatencyMs = Math.max(0, totalLatencyMs);
+        }
+
+        public boolean attributedSource() {
+            return !LEGACY_SOURCE.equals(sourceFingerprint);
         }
     }
 }
