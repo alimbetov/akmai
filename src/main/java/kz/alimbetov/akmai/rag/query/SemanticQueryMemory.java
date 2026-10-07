@@ -36,7 +36,10 @@ public class SemanticQueryMemory {
     private final SelfOptimizingRagProperties selfOptimizingProperties;
     private final LearningPrivacyFingerprint fingerprint;
     private final Cache<String, MemoryCluster> clusters;
-    private final Set<String> loadedProfiles = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<String, RefreshState> refreshStates =
+            new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Object> refreshLocks =
+            new ConcurrentHashMap<>();
 
     public SemanticQueryMemory(
             @Qualifier("retrievalEmbeddingModel") EmbeddingModel embeddingModel,
@@ -90,7 +93,7 @@ public class SemanticQueryMemory {
         if (profileId == null) {
             return List.of();
         }
-        loadPersisted(profileId);
+        refreshPersisted(profileId);
         float[] queryVector = safeEmbed(question);
         if (queryVector == null) {
             return List.of();
@@ -158,18 +161,19 @@ public class SemanticQueryMemory {
         if (profileId == null) {
             return;
         }
-        loadPersisted(profileId);
+        refreshPersisted(profileId);
         float[] vector = safeEmbed(question);
         if (vector == null) {
             return;
         }
 
+        Instant observedAt = Instant.now();
         Set<Long> requiredScope = Set.copyOf(requiredAccessLevels);
         MemoryObservation observation = new MemoryObservation(
                 normalizeQuestion(question),
                 truncate(validation.answer(), properties.queryMemoryAnswerMaxChars()),
                 List.copyOf(sourceRefs),
-                Instant.now()
+                observedAt
         );
 
         MemoryCluster nearest = clusters.asMap().values().stream()
@@ -196,11 +200,18 @@ public class SemanticQueryMemory {
                     vector.clone(),
                     requiredScope,
                     1,
-                    List.of(observation)
+                    List.of(observation),
+                    observedAt
             );
             clusters.put(id, updated);
         } else {
-            updated = merge(nearest, profileId, requiredScope, vector, observation);
+            updated = merge(
+                    nearest,
+                    profileId,
+                    requiredScope,
+                    vector,
+                    observation
+            );
             clusters.put(updated.id(), updated);
         }
         persist(updated, question, observation);
@@ -232,48 +243,119 @@ public class SemanticQueryMemory {
                 centroid,
                 current.requiredAccessLevels(),
                 current.observationCount() + 1,
-                List.copyOf(observations)
+                List.copyOf(observations),
+                observation.observedAt()
         );
     }
 
-    private void loadPersisted(String profileId) {
-        if (!persistentEnabled()
-                || !loadedProfiles.add(profileId)) {
+    private void refreshPersisted(String profileId) {
+        if (!persistentEnabled()) {
             return;
         }
-        try {
-            List<SemanticQueryMemoryRepository.StoredCluster> persisted =
-                    repository.findClustersByProfile(
+        Instant now = Instant.now();
+        RefreshState current = refreshStates.get(profileId);
+        if (current != null && now.isBefore(current.nextRefreshAt())) {
+            return;
+        }
+
+        Object lock = refreshLocks.computeIfAbsent(profileId, ignored -> new Object());
+        synchronized (lock) {
+            now = Instant.now();
+            current = refreshStates.get(profileId);
+            if (current != null && now.isBefore(current.nextRefreshAt())) {
+                return;
+            }
+            try {
+                Instant cutoff = now.minus(selfOptimizingProperties.persistentMemoryTtl());
+                repository.deleteExpired(profileId, cutoff);
+                clusters.asMap().entrySet().removeIf(entry -> {
+                    MemoryCluster cluster = entry.getValue();
+                    return profileId.equals(cluster.embeddingProfileId())
+                            && cluster.updatedAt().isBefore(cutoff);
+                });
+
+                List<SemanticQueryMemoryRepository.StoredCluster> persisted;
+                SemanticQueryMemoryRepository.RefreshCursor cursor = current == null
+                        ? null
+                        : current.cursor();
+                if (cursor == null) {
+                    persisted = repository.findClustersByProfile(
                             profileId,
                             selfOptimizingProperties.persistentMemoryMaxEntries()
                     );
-            for (var stored : persisted) {
-                List<MemoryObservation> observations = repository.findObservations(
-                                stored.clusterId(),
-                                persistentObservationLimit()
-                        ).stream()
-                        .map(value -> new MemoryObservation(
-                                REDACTED_QUESTION,
-                                value.groundedAnswer(),
-                                value.sourceRefs(),
-                                value.observedAt()
-                        ))
-                        .toList();
-                clusters.asMap().putIfAbsent(
-                        stored.clusterId().toString(),
-                        new MemoryCluster(
-                                stored.clusterId().toString(),
-                                stored.embeddingProfileId(),
-                                stored.centroid(),
-                                stored.requiredAccessLevels(),
-                                stored.observationCount(),
-                                observations
+                } else {
+                    persisted = repository.findClustersUpdatedAfter(
+                            profileId,
+                            cursor,
+                            selfOptimizingProperties.persistentMemoryMaxEntries()
+                    );
+                }
+
+                SemanticQueryMemoryRepository.RefreshCursor nextCursor = cursor;
+                for (var stored : persisted) {
+                    List<MemoryObservation> observations = repository.findObservations(
+                                    stored.clusterId(),
+                                    persistentObservationLimit()
+                            ).stream()
+                            .map(value -> new MemoryObservation(
+                                    REDACTED_QUESTION,
+                                    value.groundedAnswer(),
+                                    value.sourceRefs(),
+                                    value.observedAt()
+                            ))
+                            .toList();
+                    clusters.put(
+                            stored.clusterId().toString(),
+                            new MemoryCluster(
+                                    stored.clusterId().toString(),
+                                    stored.embeddingProfileId(),
+                                    stored.centroid(),
+                                    stored.requiredAccessLevels(),
+                                    stored.observationCount(),
+                                    observations,
+                                    stored.updatedAt()
+                            )
+                    );
+                    if (nextCursor == null
+                            || compare(stored.cursor(), nextCursor) > 0) {
+                        nextCursor = stored.cursor();
+                    }
+                }
+
+                refreshStates.put(
+                        profileId,
+                        new RefreshState(
+                                nextCursor,
+                                now.plus(
+                                        selfOptimizingProperties
+                                                .persistentMemoryRefreshInterval()
+                                )
+                        )
+                );
+            } catch (RuntimeException exception) {
+                refreshStates.put(
+                        profileId,
+                        new RefreshState(
+                                current == null ? null : current.cursor(),
+                                now.plus(
+                                        selfOptimizingProperties
+                                                .persistentMemoryRefreshInterval()
+                                )
                         )
                 );
             }
-        } catch (RuntimeException exception) {
-            loadedProfiles.remove(profileId);
         }
+    }
+
+    private int compare(
+            SemanticQueryMemoryRepository.RefreshCursor left,
+            SemanticQueryMemoryRepository.RefreshCursor right
+    ) {
+        int byTime = left.updatedAt().compareTo(right.updatedAt());
+        if (byTime != 0) {
+            return byTime;
+        }
+        return left.clusterId().compareTo(right.clusterId());
     }
 
     private void persist(
@@ -296,7 +378,7 @@ public class SemanticQueryMemory {
                             cluster.requiredAccessLevels(),
                             cluster.centroid(),
                             cluster.observationCount(),
-                            observation.observedAt()
+                            cluster.updatedAt()
                     ),
                     queryFingerprint,
                     observation.groundedAnswer(),
@@ -437,18 +519,26 @@ public class SemanticQueryMemory {
             float[] centroid,
             Set<Long> requiredAccessLevels,
             int observationCount,
-            List<MemoryObservation> observations
+            List<MemoryObservation> observations,
+            Instant updatedAt
     ) {
         private MemoryCluster {
             centroid = centroid.clone();
             requiredAccessLevels = Set.copyOf(requiredAccessLevels);
             observations = List.copyOf(observations);
+            updatedAt = updatedAt == null ? Instant.EPOCH : updatedAt;
         }
     }
 
     private record ClusterCandidate(
             MemoryCluster cluster,
             double similarity
+    ) {
+    }
+
+    private record RefreshState(
+            SemanticQueryMemoryRepository.RefreshCursor cursor,
+            Instant nextRefreshAt
     ) {
     }
 }
