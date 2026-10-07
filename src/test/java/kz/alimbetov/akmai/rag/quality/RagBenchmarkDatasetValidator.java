@@ -1,9 +1,12 @@
 package kz.alimbetov.akmai.rag.quality;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
@@ -11,6 +14,9 @@ import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 public final class RagBenchmarkDatasetValidator {
 
     private static final int MIN_RELEASE_QUERIES = 300;
+    private static final int MIN_CASES_PER_LANGUAGE = 10;
+    private static final int MIN_CASES_PER_DOMAIN = 40;
+    private static final int MIN_CASES_PER_QUERY_CLASS = 10;
     private static final double MIN_UNANSWERABLE_RATIO = 0.20;
     private static final double MAX_UNANSWERABLE_RATIO = 0.30;
     private static final Set<String> REQUIRED_LANGUAGES = Set.of(
@@ -50,36 +56,81 @@ public final class RagBenchmarkDatasetValidator {
             failures.add("unanswerable ratio must be between 0.20 and 0.30");
         }
 
-        Set<String> languages = dataset.queries().stream()
+        Map<String, Long> languageCounts = dataset.queries().stream()
                 .map(RagBenchmarkDataset.Query::language)
                 .filter(value -> value != null && !value.isBlank())
                 .map(String::toLowerCase)
-                .collect(Collectors.toSet());
+                .collect(Collectors.groupingBy(
+                        value -> value,
+                        Collectors.counting()
+                ));
+        Set<String> languages = languageCounts.keySet();
         if (!languages.containsAll(REQUIRED_LANGUAGES)) {
             Set<String> missing = new HashSet<>(REQUIRED_LANGUAGES);
             missing.removeAll(languages);
             failures.add("missing languages: " + missing);
         }
+        REQUIRED_LANGUAGES.forEach(language -> {
+            long count = languageCounts.getOrDefault(language, 0L);
+            if (count < MIN_CASES_PER_LANGUAGE) {
+                failures.add(
+                        "language " + language + " requires at least "
+                                + MIN_CASES_PER_LANGUAGE + " queries; found " + count
+                );
+            }
+        });
 
-        Set<KnowledgeDomain> domains = dataset.queries().stream()
+        Map<KnowledgeDomain, Long> domainCounts = new EnumMap<>(
+                KnowledgeDomain.class
+        );
+        dataset.queries().stream()
                 .map(RagBenchmarkDataset.Query::domain)
-                .filter(value -> value != null)
-                .collect(Collectors.toSet());
-        if (!domains.containsAll(REQUIRED_DOMAINS)) {
+                .filter(java.util.Objects::nonNull)
+                .forEach(domain -> domainCounts.merge(domain, 1L, Long::sum));
+        if (!domainCounts.keySet().containsAll(REQUIRED_DOMAINS)) {
             Set<KnowledgeDomain> missing = new HashSet<>(REQUIRED_DOMAINS);
-            missing.removeAll(domains);
+            missing.removeAll(domainCounts.keySet());
             failures.add("missing domains: " + missing);
         }
+        REQUIRED_DOMAINS.forEach(domain -> {
+            long count = domainCounts.getOrDefault(domain, 0L);
+            if (count < MIN_CASES_PER_DOMAIN) {
+                failures.add(
+                        "domain " + domain + " requires at least "
+                                + MIN_CASES_PER_DOMAIN + " queries; found " + count
+                );
+            }
+        });
 
-        Set<RagBenchmarkDataset.QueryClass> queryClasses = dataset.queries().stream()
+        Map<RagBenchmarkDataset.QueryClass, Long> classCounts = new EnumMap<>(
+                RagBenchmarkDataset.QueryClass.class
+        );
+        dataset.queries().stream()
                 .map(RagBenchmarkDataset.Query::queryClass)
-                .filter(value -> value != null)
-                .collect(Collectors.toSet());
-        if (!queryClasses.containsAll(REQUIRED_QUERY_CLASSES)) {
+                .filter(java.util.Objects::nonNull)
+                .forEach(queryClass -> classCounts.merge(queryClass, 1L, Long::sum));
+        if (!classCounts.keySet().containsAll(REQUIRED_QUERY_CLASSES)) {
             Set<RagBenchmarkDataset.QueryClass> missing =
                     EnumSet.copyOf(REQUIRED_QUERY_CLASSES);
-            missing.removeAll(queryClasses);
+            missing.removeAll(classCounts.keySet());
             failures.add("missing query classes: " + missing);
+        }
+        REQUIRED_QUERY_CLASSES.forEach(queryClass -> {
+            long count = classCounts.getOrDefault(queryClass, 0L);
+            if (count < MIN_CASES_PER_QUERY_CLASS) {
+                failures.add(
+                        "query class " + queryClass + " requires at least "
+                                + MIN_CASES_PER_QUERY_CLASS + " queries; found " + count
+                );
+            }
+        });
+
+        Set<RagBenchmarkDataset.Difficulty> difficulties = dataset.queries().stream()
+                .map(RagBenchmarkDataset.Query::difficulty)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (!difficulties.containsAll(EnumSet.allOf(RagBenchmarkDataset.Difficulty.class))) {
+            failures.add("release corpus must cover EASY, MEDIUM and HARD difficulty");
         }
 
         Set<String> documentIds = dataset.documents().stream()
@@ -104,7 +155,21 @@ public final class RagBenchmarkDatasetValidator {
             if (query.question() == null || query.question().isBlank()) {
                 failures.add(query.id() + ": question is required");
             }
+            if (query.language() == null
+                    || !REQUIRED_LANGUAGES.contains(query.language().toLowerCase())) {
+                failures.add(query.id() + ": unsupported release language");
+            }
+            if (query.domain() == null || !REQUIRED_DOMAINS.contains(query.domain())) {
+                failures.add(query.id() + ": release query requires a target domain");
+            }
+            if (query.queryClass() == null || query.difficulty() == null) {
+                failures.add(query.id() + ": queryClass and difficulty are required");
+            }
+
             if (query.answerable()) {
+                if (query.queryClass() == RagBenchmarkDataset.QueryClass.UNANSWERABLE) {
+                    failures.add(query.id() + ": answerable query cannot use UNANSWERABLE class");
+                }
                 if (query.relevantDocumentIds().isEmpty()) {
                     failures.add(query.id() + ": answerable query needs relevantDocumentIds");
                 }
@@ -118,11 +183,23 @@ public final class RagBenchmarkDatasetValidator {
                         );
                     }
                 }
-            } else if (!query.relevantChunkIds().isEmpty()
-                    || !query.relevantDocumentIds().isEmpty()) {
-                failures.add(
-                        query.id() + ": unanswerable query cannot declare relevant evidence"
-                );
+                Set<String> overlap = new HashSet<>(query.relevantChunkIds());
+                overlap.retainAll(query.forbiddenChunkIds());
+                if (!overlap.isEmpty()) {
+                    failures.add(
+                            query.id() + ": relevant and forbidden chunks overlap " + overlap
+                    );
+                }
+            } else {
+                if (query.queryClass() != RagBenchmarkDataset.QueryClass.UNANSWERABLE) {
+                    failures.add(query.id() + ": unanswerable query must use UNANSWERABLE class");
+                }
+                if (!query.relevantChunkIds().isEmpty()
+                        || !query.relevantDocumentIds().isEmpty()) {
+                    failures.add(
+                            query.id() + ": unanswerable query cannot declare relevant evidence"
+                    );
+                }
             }
         }
 
