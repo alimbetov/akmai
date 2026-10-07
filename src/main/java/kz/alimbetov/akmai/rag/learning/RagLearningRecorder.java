@@ -12,6 +12,7 @@ import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalExecutionResult;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.plan.AdaptiveRetrievalPlanner;
+import kz.alimbetov.akmai.rag.trace.RagExecutionObservationStore;
 import kz.alimbetov.akmai.rag.trace.RagExecutionTrace;
 import kz.alimbetov.akmai.rag.trace.RagRuntimeAttribution;
 import org.slf4j.Logger;
@@ -29,19 +30,22 @@ public class RagLearningRecorder {
     private final SelfOptimizingRagProperties properties;
     private final AdaptiveRetrievalPlanner adaptiveRetrievalPlanner;
     private final RagRuntimeAttribution runtimeAttribution;
+    private final RagExecutionObservationStore observationStore;
 
     public RagLearningRecorder(
             RagLearningEventRepository repository,
             LearningPrivacyFingerprint fingerprint,
             SelfOptimizingRagProperties properties,
             AdaptiveRetrievalPlanner adaptiveRetrievalPlanner,
-            RagRuntimeAttribution runtimeAttribution
+            RagRuntimeAttribution runtimeAttribution,
+            RagExecutionObservationStore observationStore
     ) {
         this.repository = repository;
         this.fingerprint = fingerprint;
         this.properties = properties;
         this.adaptiveRetrievalPlanner = adaptiveRetrievalPlanner;
         this.runtimeAttribution = runtimeAttribution;
+        this.observationStore = observationStore;
     }
 
     public void record(
@@ -56,15 +60,12 @@ public class RagLearningRecorder {
             RagLearningEvent.GroundingStatus groundingStatus,
             long totalLatencyMs
     ) {
-        if (!properties.learningEventsEnabled()) {
+        if (!properties.learningEventsEnabled()
+                && !properties.executionObservationsEnabled()) {
             return;
         }
         try {
             UUID parsedRequestId = UUID.fromString(requestId);
-            String queryFingerprint = fingerprint.fingerprint(question);
-            if (queryFingerprint.isBlank()) {
-                return;
-            }
             String language = language(queryChunks);
             String queryClass = queryClass(queryChunks);
             RagRuntimeAttribution.Snapshot attribution = runtimeAttribution.snapshot();
@@ -98,6 +99,20 @@ public class RagLearningRecorder {
                     groundingStatus,
                     totalLatencyMs
             );
+            observationStore.record(
+                    trace,
+                    finalContext,
+                    validation,
+                    attribution
+            );
+
+            if (!properties.learningEventsEnabled()) {
+                return;
+            }
+            String queryFingerprint = fingerprint.fingerprint(question);
+            if (queryFingerprint.isBlank()) {
+                return;
+            }
             LinkedHashMap<String, Object> tracePayload = new LinkedHashMap<>(
                     trace.learningProjection()
             );
