@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import kz.alimbetov.akmai.config.SelfOptimizingRagProperties;
+import kz.alimbetov.akmai.rag.policy.CanaryRoutingObservationStore;
 import kz.alimbetov.akmai.rag.policy.RagPolicyCanaryOutcomeRecorder;
 import kz.alimbetov.akmai.rag.policy.RetrievalPolicyShadowEvaluator;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
@@ -139,15 +140,16 @@ public class RagLearningRecorder {
             RagLearningEvent.GroundingStatus groundingStatus,
             long totalLatencyMs
     ) {
-        if (canaryOutcomeRecorder != null) {
-            canaryOutcomeRecorder.record(
-                    requestId,
-                    execution,
-                    answerStatus,
-                    groundingStatus,
-                    totalLatencyMs
-            );
-        }
+        CanaryRoutingObservationStore.Decision rolloutDecision =
+                canaryOutcomeRecorder == null
+                        ? null
+                        : canaryOutcomeRecorder.record(
+                                requestId,
+                                execution,
+                                answerStatus,
+                                groundingStatus,
+                                totalLatencyMs
+                        ).orElse(null);
 
         boolean persistentLearning = properties.learningEventsEnabled();
         boolean executionObservation = properties.executionObservationsEnabled();
@@ -163,6 +165,10 @@ public class RagLearningRecorder {
             String language = language(queryChunks);
             String queryClass = queryClass(queryChunks);
             RagRuntimeAttribution.Snapshot attribution = runtimeAttribution.snapshot();
+            String effectiveRetrievalPolicyVersion = effectiveRetrievalPolicyVersion(
+                    attribution.retrievalPolicyVersion(),
+                    rolloutDecision
+            );
             int retrievedCount = execution == null ? 0 : execution.hits().size();
             int selectedCount = finalContext == null ? 0 : finalContext.size();
             int citedCount = validation == null || validation.citedSources() == null
@@ -173,7 +179,7 @@ public class RagLearningRecorder {
                     requestId,
                     attribution.corpusVersion(),
                     attribution.embeddingProfileId(),
-                    attribution.retrievalPolicyVersion(),
+                    effectiveRetrievalPolicyVersion,
                     attribution.learningPolicyVersion(),
                     attribution.groundingPolicyVersion(),
                     language,
@@ -191,7 +197,11 @@ public class RagLearningRecorder {
                     citedCount,
                     answerStatus,
                     groundingStatus,
-                    totalLatencyMs
+                    totalLatencyMs,
+                    rolloutDecision == null ? "" : rolloutDecision.policyVersion(),
+                    rolloutDecision == null
+                            ? "BASELINE"
+                            : rolloutDecision.cohort().name()
             );
             if (executionObservation && observationStore != null) {
                 observationStore.record(
@@ -223,6 +233,10 @@ public class RagLearningRecorder {
                     trace.learningProjection()
             );
             tracePayload.put("attribution", attribution.asMap());
+            tracePayload.put(
+                    "effectiveRetrievalPolicyVersion",
+                    effectiveRetrievalPolicyVersion
+            );
             String source = sourceFingerprint == null
                     ? ""
                     : sourceFingerprint.current();
@@ -239,7 +253,7 @@ public class RagLearningRecorder {
                     queryClass,
                     attribution.corpusVersion(),
                     attribution.embeddingProfileId(),
-                    attribution.retrievalPolicyVersion(),
+                    effectiveRetrievalPolicyVersion,
                     attribution.learningPolicyVersion(),
                     attribution.groundingPolicyVersion(),
                     answerStatus,
@@ -258,6 +272,18 @@ public class RagLearningRecorder {
                     exception.getClass().getSimpleName()
             );
         }
+    }
+
+    private String effectiveRetrievalPolicyVersion(
+            String approvedVersion,
+            CanaryRoutingObservationStore.Decision rolloutDecision
+    ) {
+        if (rolloutDecision != null
+                && rolloutDecision.cohort()
+                        == CanaryRoutingObservationStore.Cohort.CANARY) {
+            return rolloutDecision.policyVersion();
+        }
+        return approvedVersion;
     }
 
     private String language(List<QueryChunk> queryChunks) {
