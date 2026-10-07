@@ -217,6 +217,40 @@ public class SemanticChunker {
         if (provenance.pageTo() != null) {
             metadata.put("pageTo", provenance.pageTo());
         }
+        if (!provenance.blockRefs().isEmpty()) {
+            metadata.put(
+                    "canonicalBlocks",
+                    provenance.blockRefs().stream()
+                            .map(this::blockMetadata)
+                            .toList()
+            );
+        }
+    }
+
+    private Map<String, Object> blockMetadata(UnitProvenance.BlockRef block) {
+        LinkedHashMap<String, Object> value = new LinkedHashMap<>();
+        value.put("blockId", block.blockId());
+        if (block.pageFrom() != null) {
+            value.put("pageFrom", block.pageFrom());
+        }
+        if (block.pageTo() != null) {
+            value.put("pageTo", block.pageTo());
+        }
+        if (block.sectionPath() != null && !block.sectionPath().isBlank()) {
+            value.put("sectionPath", block.sectionPath());
+        }
+        if (block.boundingBox() != null) {
+            value.put(
+                    "boundingBox",
+                    Map.of(
+                            "x", block.boundingBox().x(),
+                            "y", block.boundingBox().y(),
+                            "width", block.boundingBox().width(),
+                            "height", block.boundingBox().height()
+                    )
+            );
+        }
+        return Map.copyOf(value);
     }
 
     private UnitProvenance provenance(List<SemanticUnit> group) {
