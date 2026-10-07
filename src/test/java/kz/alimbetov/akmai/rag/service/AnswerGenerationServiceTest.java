@@ -7,8 +7,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalProperties;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalTestProperties;
 import org.junit.jupiter.api.Test;
@@ -50,6 +53,56 @@ class AnswerGenerationServiceTest {
                     .isInstanceOf(AnswerGenerationException.class)
                     .hasMessageContaining("timed out");
             assertThat(Duration.ofNanos(System.nanoTime() - started))
+                    .isLessThan(Duration.ofSeconds(1));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void timedOutModelCallIsInterruptedAndNextHealthyCallUsesSameWorker()
+            throws Exception {
+        ChatClient.Builder builder = mock(ChatClient.Builder.class);
+        ChatClient chatClient = mock(ChatClient.class, Answers.RETURNS_DEEP_STUBS);
+        when(builder.build()).thenReturn(chatClient);
+        AtomicInteger calls = new AtomicInteger();
+        CountDownLatch interrupted = new CountDownLatch(1);
+        when(chatClient.prompt()
+                .system(anyString())
+                .user(anyString())
+                .call()
+                .content())
+                .thenAnswer(invocation -> {
+                    if (calls.incrementAndGet() == 1) {
+                        try {
+                            Thread.sleep(5_000);
+                        } catch (InterruptedException exception) {
+                            interrupted.countDown();
+                            Thread.currentThread().interrupt();
+                        }
+                        return "late";
+                    }
+                    return "healthy";
+                });
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            AnswerGenerationService service = new AnswerGenerationService(
+                    builder,
+                    executor,
+                    properties(Duration.ofMillis(50)),
+                    new RagPromptTemplate()
+            );
+
+            assertThatThrownBy(() -> service.generate("slow", "{}"))
+                    .isInstanceOf(AnswerGenerationException.class)
+                    .hasMessageContaining("timed out");
+            assertThat(interrupted.await(1, TimeUnit.SECONDS)).isTrue();
+
+            long healthyStarted = System.nanoTime();
+            assertThat(service.generate("healthy", "{}"))
+                    .isEqualTo("healthy");
+            assertThat(Duration.ofNanos(System.nanoTime() - healthyStarted))
                     .isLessThan(Duration.ofSeconds(1));
         } finally {
             executor.shutdownNow();
