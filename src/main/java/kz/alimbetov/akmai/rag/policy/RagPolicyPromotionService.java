@@ -12,24 +12,42 @@ public class RagPolicyPromotionService {
         this.repository = repository;
     }
 
-    public void makeCanary(RagPolicyType type, String version) {
-        RagPolicyRegistryRepository.PolicyRecord policy = repository
-                .find(type, version)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown policy"));
+    public void makeShadow(RagPolicyType type, String version) {
+        RagPolicyRegistryRepository.PolicyRecord policy = policy(type, version);
+        if (policy.status() != RagPolicyStatus.CANDIDATE) {
+            throw new IllegalStateException("Only CANDIDATE policy can enter SHADOW");
+        }
         requireEvaluationGates(policy);
+        repository.markShadow(type, version);
+    }
+
+    public void makeCanary(RagPolicyType type, String version) {
+        RagPolicyRegistryRepository.PolicyRecord policy = policy(type, version);
+        if (policy.status() != RagPolicyStatus.SHADOW) {
+            throw new IllegalStateException("Only SHADOW policy can enter CANARY");
+        }
+        requireEvaluationGates(policy);
+        requireShadowGate(policy);
         repository.markCanary(type, version);
     }
 
     public void approve(RagPolicyType type, String version) {
-        RagPolicyRegistryRepository.PolicyRecord policy = repository
-                .find(type, version)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown policy"));
+        RagPolicyRegistryRepository.PolicyRecord policy = policy(type, version);
         if (policy.status() != RagPolicyStatus.CANARY) {
             throw new IllegalStateException("Only CANARY policy can be approved");
         }
         requireEvaluationGates(policy);
+        requireShadowGate(policy);
         requireCanaryGate(policy);
         repository.approve(type, version);
+    }
+
+    private RagPolicyRegistryRepository.PolicyRecord policy(
+            RagPolicyType type,
+            String version
+    ) {
+        return repository.find(type, version)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown policy"));
     }
 
     private void requireEvaluationGates(
@@ -43,11 +61,16 @@ public class RagPolicyPromotionService {
         requireTrue(performance, "performancePassed");
     }
 
+    private void requireShadowGate(
+            RagPolicyRegistryRepository.PolicyRecord policy
+    ) {
+        requireTrue(policy.qualityReport(), "shadowPassed");
+    }
+
     private void requireCanaryGate(
             RagPolicyRegistryRepository.PolicyRecord policy
     ) {
-        Map<String, Object> quality = policy.qualityReport();
-        requireTrue(quality, "canaryPassed");
+        requireTrue(policy.qualityReport(), "canaryPassed");
     }
 
     private void requireTrue(Map<String, Object> report, String key) {
