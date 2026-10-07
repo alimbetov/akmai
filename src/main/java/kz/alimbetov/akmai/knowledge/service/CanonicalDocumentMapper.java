@@ -61,6 +61,13 @@ public class CanonicalDocumentMapper {
                 );
             }
 
+            UnitProvenance.BlockRef blockRef = new UnitProvenance.BlockRef(
+                    block.blockId(),
+                    block.pageFrom(),
+                    block.pageTo(),
+                    sectionPath,
+                    boundingBox(block.boundingBox())
+            );
             units.add(new SemanticUnit(
                     block.text(),
                     sectionPath,
@@ -73,7 +80,8 @@ public class CanonicalDocumentMapper {
                             List.of(block.blockId()),
                             block.pageFrom(),
                             block.pageTo(),
-                            sectionPath
+                            sectionPath,
+                            List.of(blockRef)
                     )
             ));
         }
@@ -87,6 +95,20 @@ public class CanonicalDocumentMapper {
                 Map.copyOf(metadata)
         );
         return new PreparedCanonicalDocument(document, List.copyOf(units));
+    }
+
+    private UnitProvenance.BoundingBox boundingBox(
+            CanonicalDocument.BoundingBox source
+    ) {
+        if (source == null) {
+            return null;
+        }
+        return new UnitProvenance.BoundingBox(
+                source.x(),
+                source.y(),
+                source.width(),
+                source.height()
+        );
     }
 
     private String explicitOrDerived(
