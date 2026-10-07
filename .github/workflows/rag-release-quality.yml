@@ -16,9 +16,23 @@ on:
         type: boolean
         required: false
         default: false
-  push:
-    tags:
-      - "v*"
+  workflow_call:
+    inputs:
+      benchmark_root:
+        required: false
+        type: string
+        default: "benchmarks/rag-benchmark-v1/release"
+      baseline_file:
+        required: false
+        type: string
+        default: "benchmarks/rag-benchmark-v1/baselines/approved.json"
+      establish_baseline:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      AKMAI_LIVE_OLLAMA_BASE_URL:
+        required: true
 
 jobs:
   rag-release-quality:
@@ -86,13 +100,13 @@ jobs:
           test
 
       - name: Require approved baseline
-        if: ${{ github.event_name == 'push' || inputs.establish_baseline != true }}
+        if: ${{ inputs.establish_baseline != true }}
         env:
           BASELINE_FILE: ${{ inputs.baseline_file || 'benchmarks/rag-benchmark-v1/baselines/approved.json' }}
         run: test -f "$BASELINE_FILE"
 
       - name: Compare candidate against approved baseline
-        if: ${{ github.event_name == 'push' || inputs.establish_baseline != true }}
+        if: ${{ inputs.establish_baseline != true }}
         env:
           AKMAI_QUALITY_BASELINE_GATE: "true"
           AKMAI_QUALITY_BASELINE_FILE: ${{ inputs.baseline_file || 'benchmarks/rag-benchmark-v1/baselines/approved.json' }}
