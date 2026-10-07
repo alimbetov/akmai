@@ -13,6 +13,7 @@ import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.query.QueryOrigin;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
 import kz.alimbetov.akmai.rag.retrieval.plan.AdaptiveRetrievalPlanner;
+import kz.alimbetov.akmai.rag.retrieval.plan.AdaptiveRetrievalProperties;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlanner;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalStep;
@@ -35,7 +36,7 @@ class CanaryRetrievalRouterTest {
         when(adaptive.classifyPrimary(any()))
                 .thenReturn(AdaptiveRetrievalPlanner.QueryClass.GENERIC);
         CanaryRoutingObservationStore store = new CanaryRoutingObservationStore();
-        CanaryRetrievalRouter router = router(provider, adaptive, store);
+        CanaryRetrievalRouter router = router(provider, adaptive, store, true);
         QueryChunk chunk = chunk();
         RetrievalPlan baseline = new RetrievalPlanner().plan(List.of(chunk));
 
@@ -83,7 +84,7 @@ class CanaryRetrievalRouterTest {
         when(adaptive.classifyPrimary(any()))
                 .thenReturn(AdaptiveRetrievalPlanner.QueryClass.GENERIC);
         CanaryRoutingObservationStore store = new CanaryRoutingObservationStore();
-        CanaryRetrievalRouter router = router(provider, adaptive, store);
+        CanaryRetrievalRouter router = router(provider, adaptive, store, true);
         QueryChunk chunk = chunk();
         RetrievalPlan baseline = new RetrievalPlanner().plan(List.of(chunk));
 
@@ -100,10 +101,32 @@ class CanaryRetrievalRouterTest {
                 .doesNotContain(RetrievalType.CONCEPT);
     }
 
+    @Test
+    void masterDisablePreventsCanaryRoutingAndEvidence() {
+        CanaryRetrievalPolicyProvider provider = mock(CanaryRetrievalPolicyProvider.class);
+        when(provider.canaryVersion()).thenReturn(Optional.of("retrieval-v2"));
+        AdaptiveRetrievalPlanner adaptive = mock(AdaptiveRetrievalPlanner.class);
+        CanaryRoutingObservationStore store = new CanaryRoutingObservationStore();
+        CanaryRetrievalRouter router = router(provider, adaptive, store, false);
+        QueryChunk chunk = chunk();
+        RetrievalPlan baseline = new RetrievalPlanner().plan(List.of(chunk));
+
+        RetrievalPlan result = router.route(
+                requestFor(true),
+                List.of(chunk),
+                baseline,
+                baseline
+        );
+
+        assertThat(result.steps()).isEqualTo(baseline.steps());
+        assertThat(store.consumeCurrent()).isEmpty();
+    }
+
     private CanaryRetrievalRouter router(
             CanaryRetrievalPolicyProvider provider,
             AdaptiveRetrievalPlanner adaptive,
-            CanaryRoutingObservationStore store
+            CanaryRoutingObservationStore store,
+            boolean enabled
     ) {
         return new CanaryRetrievalRouter(
                 provider,
@@ -119,6 +142,7 @@ class CanaryRetrievalRouterTest {
                         0.20,
                         100
                 ),
+                new AdaptiveRetrievalProperties(enabled, false, 0.65, 0.95),
                 adaptive,
                 new ShadowRetrievalPlanBuilder(),
                 store
