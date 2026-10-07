@@ -41,8 +41,7 @@ public class RagPolicyShadowGateService {
                         properties.maxObservationsPerPolicy()
                 );
 
-        boolean passed = summary.observations() >= properties.minSamples()
-                && summary.changedPlans() > 0
+        boolean passed = summary.changedPlans() >= properties.minSamples()
                 && summary.distinctSources() >= properties.minDistinctSources()
                 && summary.documentRetention()
                         >= properties.minDocumentEvidenceRecall()
