@@ -85,6 +85,8 @@ class LiveRagPerformanceHarnessTest {
     @Autowired
     ObjectMapper objectMapper;
 
+    private final AtomicInteger writeSequence = new AtomicInteger();
+
     @BeforeAll
     void ingestCorpusAndWarmUp() {
         int index = 0;
@@ -109,73 +111,99 @@ class LiveRagPerformanceHarnessTest {
     }
 
     @Test
-    void producesConcurrentReadAndMixedLoadPerformanceBaseline() throws Exception {
-        ScenarioResult read = runReadScenario(
-                intEnv("AKMAI_LIVE_PERFORMANCE_CONCURRENCY", 4),
-                intEnv("AKMAI_LIVE_PERFORMANCE_REQUESTS", 22)
-        );
-        ScenarioResult mixed = runMixedScenario(
-                Math.max(2, intEnv("AKMAI_LIVE_PERFORMANCE_CONCURRENCY", 4)),
-                Math.max(10, intEnv("AKMAI_LIVE_PERFORMANCE_MIXED_REQUESTS", 20))
+    void producesReadBurstIngestAndMixedPerformanceMatrix() throws Exception {
+        int scale = Math.max(1, intEnv("AKMAI_LIVE_PERFORMANCE_SCALE", 1));
+        List<ScenarioResult> scenarios = List.of(
+                runReadScenario("read-1", 1, 12 * scale),
+                runReadScenario("read-10", 10, 30 * scale),
+                runReadScenario("read-50", 50, 100 * scale),
+                runReadScenario("read-100", 100, 200 * scale),
+                runReadScenario("read-burst", 100, 300 * scale),
+                runIngestScenario(
+                        Math.max(1, intEnv("AKMAI_LIVE_INGEST_CONCURRENCY", 8)),
+                        24 * scale
+                ),
+                runMixedScenario("mixed-light", 10, 60 * scale, 10),
+                runMixedScenario("mixed-heavy", 25, 100 * scale, 3)
         );
 
         Map<String, Object> report = new LinkedHashMap<>();
-        report.put("benchmarkVersion", "rag-performance-v1");
+        report.put("benchmarkVersion", "rag-performance-v1.1");
         report.put("generatedAt", Instant.now().toString());
+        report.put("gitSha", env("GITHUB_SHA", "local"));
+        report.put("corpusTier", env("AKMAI_LIVE_PERFORMANCE_CORPUS_TIER", "SMOKE"));
+        report.put("runtimeProfile", env("AKMAI_RUNTIME_PROFILE", "live-performance"));
         report.put("hardware", hardwareProfile());
-        report.put("scenarios", List.of(read, mixed));
+        report.put("scenarios", scenarios);
         report.put("stages", stageSnapshot());
         report.put("saturation", akmaiMeterSnapshot());
+        report.put(
+                "pendingFaultProfiles",
+                List.of("slow-postgres", "slow-model", "slow-reranker")
+        );
 
-        Path output = Path.of("target", "performance", "performance-baseline.json");
+        Path output = Path.of(
+                "target",
+                "performance",
+                "performance-baseline.json"
+        );
         Files.createDirectories(output.getParent());
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(output.toFile(), report);
 
-        double p95Limit = doubleEnv("AKMAI_LIVE_PERFORMANCE_P95_MS", 15_000.0);
-        assertThat(read.failed()).isZero();
-        assertThat(mixed.failed()).isZero();
-        assertThat(read.p95Millis()).isLessThanOrEqualTo(p95Limit);
+        double p95Limit = doubleEnv(
+                "AKMAI_LIVE_PERFORMANCE_P95_MS",
+                15_000.0
+        );
+        ScenarioResult read10 = scenarios.stream()
+                .filter(value -> value.scenario().equals("read-10"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(scenarios).allMatch(value -> value.failed() == 0);
+        assertThat(read10.p95Millis()).isLessThanOrEqualTo(p95Limit);
     }
 
-    private ScenarioResult runReadScenario(int concurrency, int requestCount)
-            throws Exception {
+    private ScenarioResult runReadScenario(
+            String name,
+            int concurrency,
+            int requestCount
+    ) throws Exception {
         List<RagBenchmarkV1Corpus.Case> corpus = RagBenchmarkV1Corpus.smokeCases();
         List<Callable<Boolean>> tasks = new ArrayList<>();
         for (int index = 0; index < requestCount; index++) {
             var testCase = corpus.get(index % corpus.size());
             tasks.add(() -> {
-                RagResponse response = questionService.ask(testCase.question(), Set.of(1L));
+                RagResponse response = questionService.ask(
+                        testCase.question(),
+                        Set.of(1L)
+                );
                 return !response.sources().isEmpty();
             });
         }
-        return execute("read-concurrent", concurrency, tasks);
+        return execute(name, concurrency, tasks);
     }
 
-    private ScenarioResult runMixedScenario(int concurrency, int operationCount)
-            throws Exception {
-        List<RagBenchmarkV1Corpus.Case> corpus = RagBenchmarkV1Corpus.smokeCases();
-        AtomicInteger writeSequence = new AtomicInteger();
+    private ScenarioResult runIngestScenario(
+            int concurrency,
+            int operationCount
+    ) throws Exception {
         List<Callable<Boolean>> tasks = new ArrayList<>();
         for (int index = 0; index < operationCount; index++) {
-            if (index % 10 == 0) {
-                tasks.add(() -> {
-                    int sequence = writeSequence.incrementAndGet();
-                    ingestion.addText(
-                            new AddKnowledgeRequest(
-                                    "perf-mixed-write-" + sequence,
-                                    "Performance write " + sequence,
-                                    "Technical runbook entry " + sequence
-                                            + ": bounded ingestion must preserve publication isolation and idempotency.",
-                                    "benchmark://performance/mixed/" + sequence,
-                                    "en",
-                                    KnowledgeDomain.TECHNICAL,
-                                    1L,
-                                    Map.of("scenario", "mixed-light")
-                            ),
-                            "perf-mixed-idempotency-" + sequence
-                    );
-                    return true;
-                });
+            tasks.add(this::writePerformanceDocument);
+        }
+        return execute("ingest-only", concurrency, tasks);
+    }
+
+    private ScenarioResult runMixedScenario(
+            String name,
+            int concurrency,
+            int operationCount,
+            int writeEvery
+    ) throws Exception {
+        List<RagBenchmarkV1Corpus.Case> corpus = RagBenchmarkV1Corpus.smokeCases();
+        List<Callable<Boolean>> tasks = new ArrayList<>();
+        for (int index = 0; index < operationCount; index++) {
+            if (index % writeEvery == 0) {
+                tasks.add(this::writePerformanceDocument);
             } else {
                 var testCase = corpus.get(index % corpus.size());
                 tasks.add(() -> {
@@ -187,7 +215,26 @@ class LiveRagPerformanceHarnessTest {
                 });
             }
         }
-        return execute("mixed-light", concurrency, tasks);
+        return execute(name, concurrency, tasks);
+    }
+
+    private boolean writePerformanceDocument() {
+        int sequence = writeSequence.incrementAndGet();
+        ingestion.addText(
+                new AddKnowledgeRequest(
+                        "perf-write-" + sequence,
+                        "Performance write " + sequence,
+                        "Technical runbook entry " + sequence
+                                + ": bounded ingestion must preserve publication isolation, idempotency, lifecycle fencing and deterministic retrieval metadata.",
+                        "benchmark://performance/write/" + sequence,
+                        "en",
+                        KnowledgeDomain.TECHNICAL,
+                        1L,
+                        Map.of("scenario", "performance-matrix")
+                ),
+                "perf-write-idempotency-" + sequence
+        );
+        return true;
     }
 
     private ScenarioResult execute(
@@ -223,7 +270,7 @@ class LiveRagPerformanceHarnessTest {
                 }));
             }
             for (Future<TimedResult> future : futures) {
-                TimedResult result = future.get(60, TimeUnit.SECONDS);
+                TimedResult result = future.get(120, TimeUnit.SECONDS);
                 latenciesMillis.add(result.latencyMillis());
                 if (result.failed()) {
                     failed++;
@@ -318,7 +365,9 @@ class LiveRagPerformanceHarnessTest {
         if (values.isEmpty()) {
             return 0.0;
         }
-        List<Double> sorted = values.stream().sorted(Comparator.naturalOrder()).toList();
+        List<Double> sorted = values.stream()
+                .sorted(Comparator.naturalOrder())
+                .toList();
         int index = (int) Math.ceil(percentile * sorted.size()) - 1;
         return sorted.get(Math.max(0, Math.min(index, sorted.size() - 1)));
     }
@@ -349,6 +398,11 @@ class LiveRagPerformanceHarnessTest {
             throw new IllegalStateException("Missing environment variable " + name);
         }
         return value;
+    }
+
+    private static String env(String name, String fallback) {
+        String value = System.getenv(name);
+        return value == null || value.isBlank() ? fallback : value.trim();
     }
 
     private record TimedResult(
