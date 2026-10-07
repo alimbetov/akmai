@@ -164,7 +164,18 @@ public class RagPolicyRegistryRepository {
     }
 
     public Optional<PolicyRecord> approved(RagPolicyType type) {
-        if (type == null) {
+        return findByStatus(type, RagPolicyStatus.APPROVED);
+    }
+
+    public Optional<PolicyRecord> shadow(RagPolicyType type) {
+        return findByStatus(type, RagPolicyStatus.SHADOW);
+    }
+
+    private Optional<PolicyRecord> findByStatus(
+            RagPolicyType type,
+            RagPolicyStatus status
+    ) {
+        if (type == null || status == null) {
             return Optional.empty();
         }
         return jdbcTemplate.query(
@@ -179,10 +190,11 @@ public class RagPolicyRegistryRepository {
                        decided_at
                 FROM rag_policy_registry
                 WHERE policy_type = ?
-                  AND policy_status = 'APPROVED'
+                  AND policy_status = ?
                 """,
                 (rs, rowNum) -> mapRecord(rs),
-                type.name()
+                type.name(),
+                status.name()
         ).stream().findFirst();
     }
 
