@@ -27,12 +27,37 @@ class CanonicalDocumentFingerprintTest {
     }
 
     @Test
+    void boundingBoxChangeChangesFingerprint() {
+        CanonicalDocument first = document(
+                7,
+                "block-1",
+                new CanonicalDocument.BoundingBox(10, 20, 300, 40)
+        );
+        CanonicalDocument moved = document(
+                7,
+                "block-1",
+                new CanonicalDocument.BoundingBox(11, 20, 300, 40)
+        );
+
+        assertThat(fingerprint.fingerprint(first))
+                .isNotEqualTo(fingerprint.fingerprint(moved));
+    }
+
+    @Test
     void sameCanonicalDocumentProducesStableFingerprint() {
         assertThat(fingerprint.fingerprint(document(7, "block-1")))
                 .isEqualTo(fingerprint.fingerprint(document(7, "block-1"))));
     }
 
     private CanonicalDocument document(int page, String blockId) {
+        return document(page, blockId, null);
+    }
+
+    private CanonicalDocument document(
+            int page,
+            String blockId,
+            CanonicalDocument.BoundingBox boundingBox
+    ) {
         return new CanonicalDocument(
                 "doc-1",
                 "v1",
@@ -49,7 +74,7 @@ class CanonicalDocumentFingerprintTest {
                         page,
                         page,
                         "API > POST /payments",
-                        null
+                        boundingBox
                 )),
                 Map.of("fileId", "file-1")
         );
