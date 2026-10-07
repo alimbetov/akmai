@@ -8,10 +8,13 @@ A dataset root contains:
 - `documents.jsonl`
 - `queries.jsonl`
 
-The branch includes `generate_controlled_corpus.py`, a deterministic versioned
-**CONTROLLED_SYNTHETIC** corpus generator. The default release workflow
-materializes it into `benchmarks/rag-benchmark-v1/release` and then verifies its
-labels against the production `HierarchicalChunker` before any live model run.
+The branch includes a deterministic versioned **CONTROLLED_SYNTHETIC** corpus.
+`generate_controlled_corpus.py` contains the multilingual fixture surfaces and
+chunk-identity primitives; `materialize_controlled_corpus.py` is the canonical
+materializer and deliberately decorrelates language rotation from query classes.
+The default release workflow materializes the corpus into
+`benchmarks/rag-benchmark-v1/release` and verifies its labels against the
+production `HierarchicalChunker` before any live model run.
 
 The controlled corpus is a release-engineering and regression gate. It is **not**
 a claim of real-world legal/medical/technical task accuracy and does not replace
@@ -20,11 +23,11 @@ a separately curated, human-reviewed corpus for external quality claims.
 ## Generate the controlled corpus
 
 ```bash
-python3 benchmarks/rag-benchmark-v1/generate_controlled_corpus.py \
+python3 benchmarks/rag-benchmark-v1/materialize_controlled_corpus.py \
   --out benchmarks/rag-benchmark-v1/release
 ```
 
-The current generator produces:
+The current materializer produces:
 
 - 330 labelled queries;
 - 255 answerable cases / documents;
