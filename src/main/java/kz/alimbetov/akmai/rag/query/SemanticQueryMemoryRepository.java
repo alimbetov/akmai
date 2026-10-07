@@ -46,19 +46,65 @@ public class SemanticQueryMemoryRepository {
                        updated_at
                 FROM rag_query_memory_cluster
                 WHERE embedding_profile_id = ?
-                ORDER BY updated_at DESC, cluster_id
+                ORDER BY updated_at DESC, cluster_id DESC
                 LIMIT ?
                 """,
-                (rs, rowNum) -> new StoredCluster(
-                        rs.getObject("cluster_id", UUID.class),
-                        rs.getString("embedding_profile_id"),
-                        readScope(rs.getString("required_access_levels")),
-                        readCentroid(rs.getString("centroid")),
-                        rs.getInt("observation_count"),
-                        rs.getTimestamp("updated_at").toInstant()
-                ),
+                (rs, rowNum) -> mapCluster(rs),
                 embeddingProfileId,
                 limit
+        );
+    }
+
+    public List<StoredCluster> findClustersUpdatedAfter(
+            String embeddingProfileId,
+            RefreshCursor cursor,
+            int limit
+    ) {
+        if (embeddingProfileId == null
+                || embeddingProfileId.isBlank()
+                || cursor == null
+                || limit <= 0) {
+            return List.of();
+        }
+        return jdbcTemplate.query(
+                """
+                SELECT cluster_id,
+                       embedding_profile_id,
+                       required_access_levels::text,
+                       centroid::text,
+                       observation_count,
+                       updated_at
+                FROM rag_query_memory_cluster
+                WHERE embedding_profile_id = ?
+                  AND (updated_at, cluster_id) > (?, ?)
+                ORDER BY updated_at, cluster_id
+                LIMIT ?
+                """,
+                (rs, rowNum) -> mapCluster(rs),
+                embeddingProfileId,
+                java.sql.Timestamp.from(cursor.updatedAt()),
+                cursor.clusterId(),
+                limit
+        );
+    }
+
+    public int deleteExpired(
+            String embeddingProfileId,
+            Instant cutoff
+    ) {
+        if (embeddingProfileId == null
+                || embeddingProfileId.isBlank()
+                || cutoff == null) {
+            return 0;
+        }
+        return jdbcTemplate.update(
+                """
+                DELETE FROM rag_query_memory_cluster
+                WHERE embedding_profile_id = ?
+                  AND updated_at < ?
+                """,
+                embeddingProfileId,
+                java.sql.Timestamp.from(cutoff)
         );
     }
 
@@ -175,7 +221,7 @@ public class SemanticQueryMemoryRepository {
                         SELECT cluster_id
                         FROM rag_query_memory_cluster
                         WHERE embedding_profile_id = ?
-                        ORDER BY updated_at DESC, cluster_id
+                        ORDER BY updated_at DESC, cluster_id DESC
                         OFFSET ?
                     )
                     """,
@@ -183,6 +229,18 @@ public class SemanticQueryMemoryRepository {
                     Math.max(32, maxClusters)
             );
         });
+    }
+
+    private StoredCluster mapCluster(java.sql.ResultSet rs)
+            throws java.sql.SQLException {
+        return new StoredCluster(
+                rs.getObject("cluster_id", UUID.class),
+                rs.getString("embedding_profile_id"),
+                readScope(rs.getString("required_access_levels")),
+                readCentroid(rs.getString("centroid")),
+                rs.getInt("observation_count"),
+                rs.getTimestamp("updated_at").toInstant()
+        );
     }
 
     private String writeJson(Object value) {
@@ -224,6 +282,19 @@ public class SemanticQueryMemoryRepository {
         }
     }
 
+    public record RefreshCursor(
+            Instant updatedAt,
+            UUID clusterId
+    ) {
+        public RefreshCursor {
+            if (updatedAt == null || clusterId == null) {
+                throw new IllegalArgumentException(
+                        "query memory refresh cursor must be complete"
+                );
+            }
+        }
+    }
+
     public record StoredCluster(
             UUID clusterId,
             String embeddingProfileId,
@@ -237,6 +308,10 @@ public class SemanticQueryMemoryRepository {
                     ? Set.of()
                     : Set.copyOf(requiredAccessLevels);
             centroid = centroid == null ? new float[0] : centroid.clone();
+        }
+
+        public RefreshCursor cursor() {
+            return new RefreshCursor(updatedAt, clusterId);
         }
     }
 
