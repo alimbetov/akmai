@@ -2,9 +2,10 @@ name: Semantic Grounding Calibration
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
+  workflow_call:
+    secrets:
+      AKMAI_LIVE_OLLAMA_BASE_URL:
+        required: true
 
 jobs:
   semantic-grounding-calibration:
@@ -40,6 +41,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: semantic-grounding-calibration-v1
+          name: semantic-grounding-calibration-v1-${{ github.sha }}
           path: target/quality/semantic-grounding-calibration.json
           if-no-files-found: warn
