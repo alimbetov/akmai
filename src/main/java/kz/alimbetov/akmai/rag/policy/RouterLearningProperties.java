@@ -50,7 +50,7 @@ public record RouterLearningProperties(
                 minDistinctQueriesPerClass,
                 optionalLaneMinCitationSupport,
                 optionalLaneMinSelectedSupport,
-                lookback == null ? Duration.ofDays(1) : lookback,
+                compatibilityWindow(lookback),
                 Math.max(1, maxEvents),
                 1,
                 1.0
@@ -84,5 +84,15 @@ public record RouterLearningProperties(
                     "router-learning max-source-share is impossible for configured min-distinct-sources"
             );
         }
+    }
+
+    private static Duration compatibilityWindow(Duration lookback) {
+        if (lookback == null) {
+            return Duration.ofDays(1);
+        }
+        if (lookback.compareTo(Duration.ofDays(30)) > 0) {
+            return Duration.ofDays(30);
+        }
+        return lookback;
     }
 }
