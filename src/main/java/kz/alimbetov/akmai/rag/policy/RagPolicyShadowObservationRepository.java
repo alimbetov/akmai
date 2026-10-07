@@ -84,20 +84,43 @@ public class RagPolicyShadowObservationRepository {
                 )
                 SELECT count(*) AS observations,
                        count(*) FILTER (WHERE plan_changed) AS changed_plans,
-                       count(*) FILTER (WHERE execution_status = 'SUCCESS') AS successes,
-                       count(*) FILTER (WHERE execution_status = 'NO_CHANGE') AS no_changes,
-                       count(*) FILTER (WHERE execution_status = 'DEGRADED') AS degraded,
-                       count(*) FILTER (WHERE execution_status = 'CRITICAL_FAILURE') AS critical_failures,
-                       count(*) FILTER (WHERE execution_status = 'FAILED') AS failures,
-                       count(DISTINCT source_fingerprint) AS distinct_sources,
-                       count(DISTINCT query_class) AS query_classes,
-                       COALESCE(sum(target_chunk_count), 0) AS target_chunks,
-                       COALESCE(sum(found_chunk_count), 0) AS found_chunks,
-                       COALESCE(sum(target_document_count), 0) AS target_documents,
-                       COALESCE(sum(found_document_count), 0) AS found_documents,
-                       COALESCE(avg(latency_ms), 0) AS average_latency_ms,
+                       count(*) FILTER (
+                           WHERE plan_changed AND execution_status = 'SUCCESS'
+                       ) AS successes,
+                       count(*) FILTER (WHERE NOT plan_changed) AS no_changes,
+                       count(*) FILTER (
+                           WHERE plan_changed AND execution_status = 'DEGRADED'
+                       ) AS degraded,
+                       count(*) FILTER (
+                           WHERE plan_changed AND execution_status = 'CRITICAL_FAILURE'
+                       ) AS critical_failures,
+                       count(*) FILTER (
+                           WHERE plan_changed AND execution_status = 'FAILED'
+                       ) AS failures,
+                       count(DISTINCT source_fingerprint) FILTER (
+                           WHERE plan_changed
+                       ) AS distinct_sources,
+                       count(DISTINCT query_class) FILTER (
+                           WHERE plan_changed
+                       ) AS query_classes,
+                       COALESCE(sum(target_chunk_count) FILTER (
+                           WHERE plan_changed
+                       ), 0) AS target_chunks,
+                       COALESCE(sum(found_chunk_count) FILTER (
+                           WHERE plan_changed
+                       ), 0) AS found_chunks,
+                       COALESCE(sum(target_document_count) FILTER (
+                           WHERE plan_changed
+                       ), 0) AS target_documents,
+                       COALESCE(sum(found_document_count) FILTER (
+                           WHERE plan_changed
+                       ), 0) AS found_documents,
+                       COALESCE(avg(latency_ms) FILTER (
+                           WHERE plan_changed
+                       ), 0) AS average_latency_ms,
                        COALESCE(
-                           percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_ms),
+                           percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_ms)
+                               FILTER (WHERE plan_changed),
                            0
                        ) AS p95_latency_ms
                 FROM bounded
@@ -212,9 +235,9 @@ public class RagPolicyShadowObservationRepository {
         );
 
         public double failureRate() {
-            return observations == 0
+            return changedPlans == 0
                     ? 0.0
-                    : (double) (degraded + criticalFailures + failures) / observations;
+                    : (double) (degraded + criticalFailures + failures) / changedPlans;
         }
     }
 }
