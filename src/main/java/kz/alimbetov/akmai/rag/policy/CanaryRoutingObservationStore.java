@@ -1,8 +1,5 @@
 package kz.alimbetov.akmai.rag.policy;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
@@ -10,31 +7,26 @@ import org.springframework.stereotype.Component;
 @Component
 public class CanaryRoutingObservationStore {
 
-    private final Cache<String, Decision> decisions = Caffeine.newBuilder()
-            .maximumSize(20_000)
-            .expireAfterWrite(Duration.ofMinutes(10))
-            .build();
+    private final ThreadLocal<Decision> current = new ThreadLocal<>();
 
-    public void record(String requestId, Decision decision) {
-        if (requestId == null
-                || requestId.isBlank()
-                || decision == null
+    public void recordCurrent(Decision decision) {
+        if (decision == null
                 || decision.policyVersion() == null
                 || decision.policyVersion().isBlank()) {
+            current.remove();
             return;
         }
-        decisions.put(requestId, decision);
+        current.set(decision);
     }
 
-    public Optional<Decision> consume(String requestId) {
-        if (requestId == null || requestId.isBlank()) {
-            return Optional.empty();
-        }
-        Decision decision = decisions.getIfPresent(requestId);
-        if (decision != null) {
-            decisions.invalidate(requestId);
-        }
+    public Optional<Decision> consumeCurrent() {
+        Decision decision = current.get();
+        current.remove();
         return Optional.ofNullable(decision);
+    }
+
+    public void clearCurrent() {
+        current.remove();
     }
 
     public enum Cohort {
