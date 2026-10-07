@@ -1,12 +1,8 @@
 package kz.alimbetov.akmai.rag.policy;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
@@ -21,12 +17,12 @@ import kz.alimbetov.akmai.rag.retrieval.Reranker;
 import kz.alimbetov.akmai.rag.retrieval.ResultFusion;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalExecutionResult;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
-import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
 import kz.alimbetov.akmai.rag.retrieval.SourceRef;
 import kz.alimbetov.akmai.rag.retrieval.plan.AdaptiveRetrievalPlanner;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlan;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlanner;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalStep;
+import kz.alimbetov.akmai.rag.retrieval.plan.ShadowRetrievalPlanBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -37,19 +33,11 @@ public class RetrievalPolicyShadowEvaluator {
 
     private static final Logger LOGGER =
             LoggerFactory.getLogger(RetrievalPolicyShadowEvaluator.class);
-    private static final Set<RetrievalType> ROUTER_CONTROLLED_LANES = Set.copyOf(
-            EnumSet.of(
-                    RetrievalType.IDENTIFIER,
-                    RetrievalType.VECTOR,
-                    RetrievalType.LEXICAL,
-                    RetrievalType.CONCEPT,
-                    RetrievalType.REFERENCE
-            )
-    );
 
     private final ShadowRetrievalPolicyProvider shadowPolicyProvider;
     private final AdaptiveRetrievalPlanner adaptivePlanner;
     private final RetrievalPlanner retrievalPlanner;
+    private final ShadowRetrievalPlanBuilder shadowPlanBuilder;
     private final ParallelRetrievalExecutor retrievalExecutor;
     private final ResultFusion resultFusion;
     private final Reranker reranker;
@@ -62,17 +50,19 @@ public class RetrievalPolicyShadowEvaluator {
             ShadowRetrievalPolicyProvider shadowPolicyProvider,
             AdaptiveRetrievalPlanner adaptivePlanner,
             RetrievalPlanner retrievalPlanner,
+            ShadowRetrievalPlanBuilder shadowPlanBuilder,
             ParallelRetrievalExecutor retrievalExecutor,
             ResultFusion resultFusion,
             Reranker reranker,
             LearningPrivacyFingerprint queryFingerprint,
             LearningSourceFingerprint sourceFingerprint,
             RagPolicyShadowObservationRepository repository,
-            @Qualifier("shadowPolicyExecutor") ExecutorService executor
+            @Qualifier("shadowEvaluationExecutor") ExecutorService executor
     ) {
         this.shadowPolicyProvider = shadowPolicyProvider;
         this.adaptivePlanner = adaptivePlanner;
         this.retrievalPlanner = retrievalPlanner;
+        this.shadowPlanBuilder = shadowPlanBuilder;
         this.retrievalExecutor = retrievalExecutor;
         this.resultFusion = resultFusion;
         this.reranker = reranker;
@@ -156,7 +146,11 @@ public class RetrievalPolicyShadowEvaluator {
             RetrievalPlan productionPlan = retrievalPlanner.plan(queryChunks);
             AdaptiveRetrievalPlanner.ShadowPlanReport report =
                     adaptivePlanner.shadow(queryChunks, productionPlan);
-            RetrievalPlan shadowPlan = shadowPlan(productionPlan, report);
+            RetrievalPlan shadowPlan = shadowPlanBuilder.build(
+                    queryChunks,
+                    report,
+                    productionPlan
+            );
             changed = !samePlan(productionPlan, shadowPlan);
             if (!changed) {
                 save(
@@ -229,61 +223,6 @@ public class RetrievalPolicyShadowEvaluator {
                     exception.getClass().getSimpleName()
             );
         }
-    }
-
-    private RetrievalPlan shadowPlan(
-            RetrievalPlan productionPlan,
-            AdaptiveRetrievalPlanner.ShadowPlanReport report
-    ) {
-        if (productionPlan == null
-                || productionPlan.steps() == null
-                || productionPlan.steps().isEmpty()
-                || report == null
-                || !report.enabled()
-                || report.recommendations().isEmpty()) {
-            return productionPlan;
-        }
-        Map<String, Set<RetrievalType>> desired = new HashMap<>();
-        for (var recommendation : report.recommendations()) {
-            desired.put(
-                    recommendation.queryChunkId(),
-                    recommendation.recommendedLanes()
-            );
-        }
-        List<RetrievalStep> kept = productionPlan.steps().stream()
-                .filter(step -> keepShadowStep(step, desired))
-                .toList();
-        Set<String> keptIds = kept.stream()
-                .map(RetrievalStep::id)
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
-        List<RetrievalStep> normalized = new ArrayList<>(kept.size());
-        for (RetrievalStep step : kept) {
-            normalized.add(new RetrievalStep(
-                    step.id(),
-                    step.queryChunk(),
-                    step.type(),
-                    step.dependsOn() == null
-                            ? List.of()
-                            : step.dependsOn().stream()
-                                    .filter(keptIds::contains)
-                                    .toList()
-            ));
-        }
-        return new RetrievalPlan(List.copyOf(normalized));
-    }
-
-    private boolean keepShadowStep(
-            RetrievalStep step,
-            Map<String, Set<RetrievalType>> desired
-    ) {
-        if (step == null || step.queryChunk() == null || step.type() == null) {
-            return false;
-        }
-        if (!ROUTER_CONTROLLED_LANES.contains(step.type())) {
-            return true;
-        }
-        Set<RetrievalType> requested = desired.get(step.queryChunk().id());
-        return requested == null || requested.contains(step.type());
     }
 
     private boolean samePlan(RetrievalPlan left, RetrievalPlan right) {
