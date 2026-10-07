@@ -30,8 +30,60 @@ public record RagExecutionTrace(
         int citedCount,
         RagLearningEvent.AnswerStatus answerStatus,
         RagLearningEvent.GroundingStatus groundingStatus,
-        long totalLatencyMs
+        long totalLatencyMs,
+        String rolloutPolicyVersion,
+        String rolloutCohort
 ) {
+    /**
+     * Compatibility constructor for traces created before request-level rollout
+     * attribution was introduced.
+     */
+    public RagExecutionTrace(
+            String requestId,
+            String corpusVersion,
+            String embeddingProfileId,
+            String retrievalPolicyVersion,
+            String learningPolicyVersion,
+            String groundingPolicyVersion,
+            String language,
+            String queryClass,
+            boolean retrievalDegraded,
+            boolean retrievalCriticalFailure,
+            Map<String, Integer> laneOutcomes,
+            Map<String, Integer> selectedLaneContributions,
+            Map<String, Integer> citedLaneContributions,
+            int retrievedCount,
+            int selectedCount,
+            int citedCount,
+            RagLearningEvent.AnswerStatus answerStatus,
+            RagLearningEvent.GroundingStatus groundingStatus,
+            long totalLatencyMs
+    ) {
+        this(
+                requestId,
+                corpusVersion,
+                embeddingProfileId,
+                retrievalPolicyVersion,
+                learningPolicyVersion,
+                groundingPolicyVersion,
+                language,
+                queryClass,
+                retrievalDegraded,
+                retrievalCriticalFailure,
+                laneOutcomes,
+                selectedLaneContributions,
+                citedLaneContributions,
+                retrievedCount,
+                selectedCount,
+                citedCount,
+                answerStatus,
+                groundingStatus,
+                totalLatencyMs,
+                "",
+                "BASELINE"
+        );
+    }
+
     public RagExecutionTrace(
             String requestId,
             String corpusVersion,
@@ -70,7 +122,9 @@ public record RagExecutionTrace(
                 citedCount,
                 answerStatus,
                 groundingStatus,
-                totalLatencyMs
+                totalLatencyMs,
+                "",
+                "BASELINE"
         );
     }
 
@@ -86,6 +140,12 @@ public record RagExecutionTrace(
         retrievedCount = Math.max(0, retrievedCount);
         selectedCount = Math.max(0, selectedCount);
         citedCount = Math.max(0, citedCount);
+        rolloutPolicyVersion = rolloutPolicyVersion == null
+                ? ""
+                : rolloutPolicyVersion.trim();
+        rolloutCohort = rolloutCohort == null || rolloutCohort.isBlank()
+                ? "BASELINE"
+                : rolloutCohort.trim();
     }
 
     public static Map<String, Integer> laneOutcomes(
@@ -163,6 +223,8 @@ public record RagExecutionTrace(
         result.put("selectedCount", selectedCount);
         result.put("citedCount", citedCount);
         result.put("totalLatencyMs", totalLatencyMs);
+        result.put("rolloutPolicyVersion", rolloutPolicyVersion);
+        result.put("rolloutCohort", rolloutCohort);
         return Map.copyOf(result);
     }
 }
