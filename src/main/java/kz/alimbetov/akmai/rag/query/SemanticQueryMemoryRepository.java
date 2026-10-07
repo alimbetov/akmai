@@ -196,6 +196,14 @@ public class SemanticQueryMemoryRepository {
                     java.sql.Timestamp.from(observedAt)
             );
             if (observationInserted == 0) {
+                jdbcTemplate.update(
+                        """
+                        UPDATE rag_query_memory_cluster
+                        SET refresh_revision = nextval('rag_query_memory_refresh_revision_seq')
+                        WHERE cluster_id = ?
+                        """,
+                        cluster.clusterId()
+                );
                 return false;
             }
 
