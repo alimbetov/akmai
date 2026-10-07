@@ -11,6 +11,7 @@ import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalExecutionResult;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
+import kz.alimbetov.akmai.rag.retrieval.plan.AdaptiveRetrievalPlanner;
 import kz.alimbetov.akmai.rag.trace.RagExecutionTrace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,19 +28,22 @@ public class RagLearningRecorder {
     private final SelfOptimizingRagProperties properties;
     private final EmbeddingProfileService embeddingProfileService;
     private final ApprovedRetrievalPolicyProvider approvedRetrievalPolicyProvider;
+    private final AdaptiveRetrievalPlanner adaptiveRetrievalPlanner;
 
     public RagLearningRecorder(
             RagLearningEventRepository repository,
             LearningPrivacyFingerprint fingerprint,
             SelfOptimizingRagProperties properties,
             EmbeddingProfileService embeddingProfileService,
-            ApprovedRetrievalPolicyProvider approvedRetrievalPolicyProvider
+            ApprovedRetrievalPolicyProvider approvedRetrievalPolicyProvider,
+            AdaptiveRetrievalPlanner adaptiveRetrievalPlanner
     ) {
         this.repository = repository;
         this.fingerprint = fingerprint;
         this.properties = properties;
         this.embeddingProfileService = embeddingProfileService;
         this.approvedRetrievalPolicyProvider = approvedRetrievalPolicyProvider;
+        this.adaptiveRetrievalPlanner = adaptiveRetrievalPlanner;
     }
 
     public void record(
@@ -157,23 +161,10 @@ public class RagLearningRecorder {
     }
 
     private String queryClass(List<QueryChunk> queryChunks) {
-        if (queryChunks == null || queryChunks.isEmpty()) {
-            return "UNKNOWN";
+        try {
+            return adaptiveRetrievalPlanner.classifyPrimary(queryChunks).name();
+        } catch (RuntimeException exception) {
+            return AdaptiveRetrievalPlanner.QueryClass.ANALYSIS_UNAVAILABLE.name();
         }
-        boolean identifier = queryChunks.stream()
-                .filter(java.util.Objects::nonNull)
-                .anyMatch(chunk -> chunk.identifiers() != null
-                        && !chunk.identifiers().isEmpty());
-        boolean semantic = queryChunks.stream()
-                .filter(java.util.Objects::nonNull)
-                .anyMatch(chunk -> chunk.semanticText() != null
-                        && !chunk.semanticText().isBlank());
-        if (identifier && semantic) {
-            return "IDENTIFIER_SEMANTIC";
-        }
-        if (identifier) {
-            return "IDENTIFIER_ONLY";
-        }
-        return semantic ? "GENERIC" : "UNKNOWN";
     }
 }
