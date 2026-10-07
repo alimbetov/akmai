@@ -218,7 +218,7 @@ public class RagQuestionService {
         recordPerformance(RagPipelineStage.QUERY_ANALYSIS, stageStarted);
 
         stageStarted = System.nanoTime();
-        RetrievalPlan plan = retrievalPlanner.plan(queryChunks);
+        RetrievalPlan plan = retrievalPlanner.plan(queryChunks, requestId);
         if (measuredRetrievalCoordinator != null) {
             measuredRetrievalCoordinator.observePlan(queryChunks, plan);
         }
