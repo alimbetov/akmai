@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.rag.policy;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import kz.alimbetov.akmai.rag.learning.LearningSourceFingerprint;
 import kz.alimbetov.akmai.rag.learning.RagLearningEvent;
@@ -29,7 +30,7 @@ public class RagPolicyCanaryOutcomeRecorder {
         this.sourceFingerprint = sourceFingerprint;
     }
 
-    public void record(
+    public Optional<CanaryRoutingObservationStore.Decision> record(
             String requestId,
             RetrievalExecutionResult execution,
             RagLearningEvent.AnswerStatus answerStatus,
@@ -39,7 +40,7 @@ public class RagPolicyCanaryOutcomeRecorder {
         CanaryRoutingObservationStore.Decision decision =
                 routingStore.consumeCurrent().orElse(null);
         if (decision == null || !decision.candidateWouldChangePlan()) {
-            return;
+            return Optional.empty();
         }
         try {
             UUID parsedRequestId = UUID.fromString(requestId);
@@ -63,5 +64,6 @@ public class RagPolicyCanaryOutcomeRecorder {
                     exception.getClass().getSimpleName()
             );
         }
+        return Optional.of(decision);
     }
 }
