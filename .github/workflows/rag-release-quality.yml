@@ -36,7 +36,8 @@ jobs:
       - name: Formatting
         run: mvn -B spotless:check
 
-      - name: Materialize default controlled corpus
+      - name: Resolve and materialize corpus
+        id: corpus
         env:
           BENCHMARK_ROOT: ${{ inputs.benchmark_root || 'benchmarks/rag-benchmark-v1/release' }}
         shell: bash
@@ -44,20 +45,25 @@ jobs:
           if [[ "$BENCHMARK_ROOT" == "benchmarks/rag-benchmark-v1/release" ]]; then
             python3 benchmarks/rag-benchmark-v1/materialize_controlled_corpus.py \
               --out "$BENCHMARK_ROOT"
+            echo "controlled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "controlled=false" >> "$GITHUB_OUTPUT"
           fi
+          echo "root=$BENCHMARK_ROOT" >> "$GITHUB_OUTPUT"
 
       - name: Require release corpus files
         env:
-          BENCHMARK_ROOT: ${{ inputs.benchmark_root || 'benchmarks/rag-benchmark-v1/release' }}
+          BENCHMARK_ROOT: ${{ steps.corpus.outputs.root }}
         run: |
           test -f "$BENCHMARK_ROOT/manifest.json"
           test -f "$BENCHMARK_ROOT/documents.jsonl"
           test -f "$BENCHMARK_ROOT/queries.jsonl"
 
-      - name: Verify release corpus contract and production chunk identities
+      - name: Verify controlled corpus production chunk identities
+        if: ${{ steps.corpus.outputs.controlled == 'true' }}
         env:
           AKMAI_CONTROLLED_BENCHMARK_CONTRACT: "true"
-          AKMAI_RAG_BENCHMARK_ROOT: ${{ inputs.benchmark_root || 'benchmarks/rag-benchmark-v1/release' }}
+          AKMAI_RAG_BENCHMARK_ROOT: ${{ steps.corpus.outputs.root }}
         run: >
           mvn -B
           -Dtest=ControlledBenchmarkCorpusContractTest
@@ -71,7 +77,7 @@ jobs:
       - name: Run release corpus through production RAG pipeline
         env:
           AKMAI_RELEASE_QUALITY: "true"
-          AKMAI_RAG_BENCHMARK_ROOT: ${{ inputs.benchmark_root || 'benchmarks/rag-benchmark-v1/release' }}
+          AKMAI_RAG_BENCHMARK_ROOT: ${{ steps.corpus.outputs.root }}
           AKMAI_LIVE_OLLAMA_BASE_URL: ${{ secrets.AKMAI_LIVE_OLLAMA_BASE_URL }}
           AKMAI_RUNTIME_PROFILE: "release-quality"
         run: >
