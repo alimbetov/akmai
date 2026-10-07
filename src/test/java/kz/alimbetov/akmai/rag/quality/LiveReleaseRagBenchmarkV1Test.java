@@ -7,17 +7,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
-import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import kz.alimbetov.akmai.knowledge.service.KnowledgeIngestionPort;
 import kz.alimbetov.akmai.rag.api.RagResponse;
-import kz.alimbetov.akmai.rag.policy.ApprovedRetrievalPolicyProvider;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
 import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
 import kz.alimbetov.akmai.rag.retrieval.Reranker;
@@ -25,6 +22,8 @@ import kz.alimbetov.akmai.rag.retrieval.ResultFusion;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
 import kz.alimbetov.akmai.rag.retrieval.plan.RetrievalPlanner;
 import kz.alimbetov.akmai.rag.service.RagQuestionService;
+import kz.alimbetov.akmai.rag.trace.RagExecutionObservationStore;
+import kz.alimbetov.akmai.rag.trace.RagRuntimeAttribution;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -45,7 +44,8 @@ import org.testcontainers.utility.DockerImageName;
         "akmai.reembedding.auto-migrate=false",
         "akmai.adaptive-graph.learning-enabled=false",
         "akmai.adaptive-graph.expansion-enabled=false",
-        "akmai.retrieval.adaptive-planner.enabled=false"
+        "akmai.retrieval.adaptive-planner.enabled=false",
+        "akmai.self-optimizing.execution-observations-enabled=true"
 })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @EnabledIfEnvironmentVariable(named = "AKMAI_RELEASE_QUALITY", matches = "true")
@@ -87,9 +87,9 @@ class LiveReleaseRagBenchmarkV1Test {
     @Autowired
     RagQuestionService questionService;
     @Autowired
-    EmbeddingProfileService embeddingProfileService;
+    RagExecutionObservationStore observationStore;
     @Autowired
-    ApprovedRetrievalPolicyProvider approvedRetrievalPolicyProvider;
+    RagRuntimeAttribution runtimeAttribution;
     @Autowired
     ObjectMapper objectMapper;
 
@@ -145,8 +145,10 @@ class LiveReleaseRagBenchmarkV1Test {
                     query.question(),
                     accessLevels
             );
+            RagExecutionObservationStore.Observation observation =
+                    observationStore.find(response.requestId()).orElse(null);
 
-            results.add(evaluate(query, ranked, response));
+            results.add(evaluate(query, ranked, response, observation));
         }
 
         RagQualitySnapshot snapshot = snapshot(results);
@@ -166,7 +168,8 @@ class LiveReleaseRagBenchmarkV1Test {
     private CaseResult evaluate(
             RagBenchmarkDataset.Query query,
             List<RetrievalHit> ranked,
-            RagResponse response
+            RagResponse response,
+            RagExecutionObservationStore.Observation observation
     ) {
         Set<String> relevant = Set.copyOf(query.relevantChunkIds());
         List<String> rankedChunkIds = ranked.stream()
@@ -190,16 +193,21 @@ class LiveReleaseRagBenchmarkV1Test {
                 ? ndcgAt10(rankedChunkIds, relevant)
                 : 0.0;
 
-        List<String> citedChunks = response.sources().stream()
-                .map(RagResponse.Source::chunkId)
+        List<String> selectedChunks = observation == null
+                ? List.of()
+                : observation.selectedChunkIds();
+        long relevantSelected = selectedChunks.stream()
+                .filter(relevant::contains)
                 .distinct()
-                .toList();
-        long relevantCited = citedChunks.stream().filter(relevant::contains).count();
+                .count();
         double contextRecall = query.answerable() && !relevant.isEmpty()
-                ? (double) relevantCited / relevant.size()
+                ? (double) relevantSelected / relevant.size()
                 : 0.0;
-        double contextPrecision = query.answerable() && !citedChunks.isEmpty()
-                ? (double) relevantCited / citedChunks.size()
+        double contextPrecision = query.answerable() && !selectedChunks.isEmpty()
+                ? (double) relevantSelected / selectedChunks.size()
+                : 0.0;
+        double evidenceDensity = query.answerable()
+                ? evidenceDensity(relevant, observation)
                 : 0.0;
 
         boolean abstained = response.sources().isEmpty();
@@ -222,22 +230,39 @@ class LiveReleaseRagBenchmarkV1Test {
                 ndcg10,
                 contextRecall,
                 contextPrecision,
-                contextPrecision
+                evidenceDensity
         );
+    }
+
+    private double evidenceDensity(
+            Set<String> relevant,
+            RagExecutionObservationStore.Observation observation
+    ) {
+        if (observation == null || observation.selectedTokenEstimates().isEmpty()) {
+            return 0.0;
+        }
+        long totalTokens = observation.selectedTokenEstimates().values().stream()
+                .mapToLong(Integer::longValue)
+                .sum();
+        long relevantTokens = observation.selectedTokenEstimates().entrySet().stream()
+                .filter(entry -> relevant.contains(entry.getKey()))
+                .mapToLong(entry -> entry.getValue())
+                .sum();
+        return totalTokens <= 0 ? 0.0 : (double) relevantTokens / totalTokens;
     }
 
     private RagQualitySnapshot snapshot(List<CaseResult> results) {
         RagQualityMetrics overall = aggregate(results);
+        RagRuntimeAttribution.Snapshot attribution = runtimeAttribution.snapshot();
         return new RagQualitySnapshot(
                 dataset.benchmarkVersion(),
                 dataset.corpusVersion(),
-                env("GITHUB_SHA", "local"),
-                embeddingProfileService.activeProfile().profileId(),
-                approvedRetrievalPolicyProvider.approvedVersion()
-                        .orElse("baseline"),
-                env("AKMAI_LEARNING_POLICY_VERSION", "learning-v1"),
-                env("AKMAI_GROUNDING_POLICY_VERSION", "grounding-v1"),
-                env("AKMAI_RUNTIME_PROFILE", "release-live"),
+                attribution.gitSha(),
+                attribution.embeddingProfileId(),
+                attribution.retrievalPolicyVersion(),
+                attribution.learningPolicyVersion(),
+                attribution.groundingPolicyVersion(),
+                attribution.runtimeProfile(),
                 results.size(),
                 true,
                 overall,
@@ -360,11 +385,6 @@ class LiveReleaseRagBenchmarkV1Test {
             throw new IllegalStateException("Missing environment variable " + name);
         }
         return value;
-    }
-
-    private static String env(String name, String fallback) {
-        String value = System.getenv(name);
-        return value == null || value.isBlank() ? fallback : value.trim();
     }
 
     private record CaseResult(
