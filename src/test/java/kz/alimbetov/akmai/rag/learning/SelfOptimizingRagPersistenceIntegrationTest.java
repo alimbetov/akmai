@@ -192,66 +192,81 @@ class SelfOptimizingRagPersistenceIntegrationTest {
     }
 
     @Test
-    void policyRequiresMeasuredGatesBeforeApproval() {
+    void policyRequiresOfflineShadowAndCanaryEvidenceBeforeApproval() {
+        String version = "retrieval-candidate-1";
         policyRepository.registerCandidate(
                 RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1",
+                version,
                 Map.of("routes", Map.of("GENERIC", List.of("VECTOR", "LEXICAL")))
         );
 
-        assertThatThrownBy(() -> promotionService.makeCanary(
+        assertThatThrownBy(() -> promotionService.makeShadow(
                 RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1"
+                version
         )).isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("securityPassed");
 
         policyRepository.attachReports(
                 RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1",
-                Map.of(
-                        "securityPassed", true,
-                        "correctnessPassed", true,
-                        "qualityPassed", true,
-                        "canaryPassed", false
-                ),
+                version,
+                quality(false, false),
                 Map.of("performancePassed", true)
         );
-        promotionService.makeCanary(
+        promotionService.makeShadow(RagPolicyType.RETRIEVAL, version);
+        assertThat(policyRepository.find(RagPolicyType.RETRIEVAL, version))
+                .get()
+                .extracting(RagPolicyRegistryRepository.PolicyRecord::status)
+                .isEqualTo(RagPolicyStatus.SHADOW);
+
+        assertThatThrownBy(() -> promotionService.makeCanary(
                 RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1"
+                version
+        )).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("shadowPassed");
+
+        policyRepository.attachReports(
+                RagPolicyType.RETRIEVAL,
+                version,
+                quality(true, false),
+                Map.of("performancePassed", true)
         );
-        assertThat(policyRepository.find(
-                RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1"
-        )).get().extracting(RagPolicyRegistryRepository.PolicyRecord::status)
+        promotionService.makeCanary(RagPolicyType.RETRIEVAL, version);
+        assertThat(policyRepository.find(RagPolicyType.RETRIEVAL, version))
+                .get()
+                .extracting(RagPolicyRegistryRepository.PolicyRecord::status)
                 .isEqualTo(RagPolicyStatus.CANARY);
 
         assertThatThrownBy(() -> promotionService.approve(
                 RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1"
+                version
         )).isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("canaryPassed");
 
         policyRepository.attachReports(
                 RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1",
-                Map.of(
-                        "securityPassed", true,
-                        "correctnessPassed", true,
-                        "qualityPassed", true,
-                        "canaryPassed", true
-                ),
+                version,
+                quality(true, true),
                 Map.of("performancePassed", true)
         );
-        promotionService.approve(
-                RagPolicyType.RETRIEVAL,
-                "retrieval-candidate-1"
-        );
+        promotionService.approve(RagPolicyType.RETRIEVAL, version);
 
         assertThat(policyRepository.approved(RagPolicyType.RETRIEVAL))
                 .get()
                 .extracting(RagPolicyRegistryRepository.PolicyRecord::version)
-                .isEqualTo("retrieval-candidate-1");
+                .isEqualTo(version);
+    }
+
+    private Map<String, Object> quality(
+            boolean shadowPassed,
+            boolean canaryPassed
+    ) {
+        return Map.of(
+                "securityPassed", true,
+                "correctnessPassed", true,
+                "qualityPassed", true,
+                "shadowPassed", shadowPassed,
+                "canaryPassed", canaryPassed
+        );
     }
 
     private void persistCluster(
@@ -285,7 +300,7 @@ class SelfOptimizingRagPersistenceIntegrationTest {
                 "b".repeat(64),
                 scope,
                 "en",
-                "SEMANTIC",
+                "GENERIC",
                 "corpus-v1",
                 "embedding-v1",
                 "retrieval-v1",
