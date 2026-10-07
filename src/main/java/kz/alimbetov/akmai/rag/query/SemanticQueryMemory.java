@@ -317,7 +317,7 @@ public class SemanticQueryMemory {
                             )
                     );
                     if (nextCursor == null
-                            || compare(stored.cursor(), nextCursor) > 0) {
+                            || stored.cursor().revision() > nextCursor.revision()) {
                         nextCursor = stored.cursor();
                     }
                 }
@@ -345,17 +345,6 @@ public class SemanticQueryMemory {
                 );
             }
         }
-    }
-
-    private int compare(
-            SemanticQueryMemoryRepository.RefreshCursor left,
-            SemanticQueryMemoryRepository.RefreshCursor right
-    ) {
-        int byTime = left.updatedAt().compareTo(right.updatedAt());
-        if (byTime != 0) {
-            return byTime;
-        }
-        return left.clusterId().compareTo(right.clusterId());
     }
 
     private void persist(
