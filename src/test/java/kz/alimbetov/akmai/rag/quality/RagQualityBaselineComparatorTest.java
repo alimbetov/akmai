@@ -53,6 +53,24 @@ class RagQualityBaselineComparatorTest {
                 .anyMatch(failure -> failure.metric().equals("falseAnswerRate"));
     }
 
+    @Test
+    void refusesToCompareDifferentCorpora() {
+        RagQualitySnapshot baseline = snapshot(
+                "corpus-v1",
+                metrics(0.95, 0.84, 0.83, 0.005)
+        );
+        RagQualitySnapshot candidate = snapshot(
+                "corpus-v2",
+                metrics(0.96, 0.85, 0.84, 0.004)
+        );
+
+        var result = comparator.compare(baseline, candidate, spec());
+
+        assertThat(result.passed()).isFalse();
+        assertThat(result.failures())
+                .anyMatch(failure -> failure.metric().equals("corpusVersion"));
+    }
+
     private RagQualityGateSpec spec() {
         return new RagQualityGateSpec(
                 Map.of(
@@ -83,9 +101,16 @@ class RagQualityBaselineComparatorTest {
     }
 
     private RagQualitySnapshot snapshot(RagQualityMetrics metrics) {
+        return snapshot("corpus-v1", metrics);
+    }
+
+    private RagQualitySnapshot snapshot(
+            String corpusVersion,
+            RagQualityMetrics metrics
+    ) {
         return new RagQualitySnapshot(
                 "rag-benchmark-v1",
-                "corpus-v1",
+                corpusVersion,
                 "deadbeef",
                 "qwen3-embedding:4b/1024",
                 "retrieval-v1",
