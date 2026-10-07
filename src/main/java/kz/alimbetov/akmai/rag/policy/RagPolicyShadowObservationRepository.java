@@ -57,11 +57,31 @@ public class RagPolicyShadowObservationRepository {
     }
 
     public Summary summarize(String policyVersion, Instant since) {
-        if (policyVersion == null || policyVersion.isBlank() || since == null) {
+        return summarize(policyVersion, since, 5_000);
+    }
+
+    public Summary summarize(
+            String policyVersion,
+            Instant since,
+            int maxObservations
+    ) {
+        if (policyVersion == null
+                || policyVersion.isBlank()
+                || since == null
+                || maxObservations <= 0) {
             return Summary.EMPTY;
         }
         return jdbcTemplate.query(
                 """
+                WITH bounded AS (
+                    SELECT *
+                    FROM rag_policy_shadow_observation
+                    WHERE policy_type = 'RETRIEVAL'
+                      AND policy_version = ?
+                      AND created_at >= ?
+                    ORDER BY created_at DESC, observation_id DESC
+                    LIMIT ?
+                )
                 SELECT count(*) AS observations,
                        count(*) FILTER (WHERE plan_changed) AS changed_plans,
                        count(*) FILTER (WHERE execution_status = 'SUCCESS') AS successes,
@@ -75,11 +95,12 @@ public class RagPolicyShadowObservationRepository {
                        COALESCE(sum(found_chunk_count), 0) AS found_chunks,
                        COALESCE(sum(target_document_count), 0) AS target_documents,
                        COALESCE(sum(found_document_count), 0) AS found_documents,
-                       COALESCE(avg(latency_ms), 0) AS average_latency_ms
-                FROM rag_policy_shadow_observation
-                WHERE policy_type = 'RETRIEVAL'
-                  AND policy_version = ?
-                  AND created_at >= ?
+                       COALESCE(avg(latency_ms), 0) AS average_latency_ms,
+                       COALESCE(
+                           percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_ms),
+                           0
+                       ) AS p95_latency_ms
+                FROM bounded
                 """,
                 rs -> {
                     if (!rs.next()) {
@@ -107,11 +128,13 @@ public class RagPolicyShadowObservationRepository {
                             targetDocuments == 0
                                     ? 1.0
                                     : (double) rs.getLong("found_documents") / targetDocuments,
-                            rs.getDouble("average_latency_ms")
+                            rs.getDouble("average_latency_ms"),
+                            rs.getDouble("p95_latency_ms")
                     );
                 },
                 policyVersion,
-                java.sql.Timestamp.from(since)
+                java.sql.Timestamp.from(since),
+                maxObservations
         );
     }
 
@@ -179,12 +202,13 @@ public class RagPolicyShadowObservationRepository {
             long foundDocuments,
             double chunkRetention,
             double documentRetention,
-            double averageLatencyMs
+            double averageLatencyMs,
+            double p95LatencyMs
     ) {
         private static final Summary EMPTY = new Summary(
                 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0,
-                1.0, 1.0, 0.0
+                1.0, 1.0, 0.0, 0.0
         );
 
         public double failureRate() {
