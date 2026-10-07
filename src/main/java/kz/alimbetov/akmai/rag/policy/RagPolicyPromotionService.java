@@ -10,20 +10,36 @@ public class RagPolicyPromotionService {
     private final RagPolicyRegistryRepository repository;
     private final ApprovedRetrievalPolicyProvider approvedRetrievalPolicyProvider;
     private final ShadowRetrievalPolicyProvider shadowRetrievalPolicyProvider;
+    private final RagPolicyShadowGateService shadowGateService;
 
     public RagPolicyPromotionService(RagPolicyRegistryRepository repository) {
-        this(repository, null, null);
+        this(repository, null, null, null);
+    }
+
+    public RagPolicyPromotionService(
+            RagPolicyRegistryRepository repository,
+            ApprovedRetrievalPolicyProvider approvedRetrievalPolicyProvider,
+            ShadowRetrievalPolicyProvider shadowRetrievalPolicyProvider
+    ) {
+        this(
+                repository,
+                approvedRetrievalPolicyProvider,
+                shadowRetrievalPolicyProvider,
+                null
+        );
     }
 
     @Autowired
     public RagPolicyPromotionService(
             RagPolicyRegistryRepository repository,
             ApprovedRetrievalPolicyProvider approvedRetrievalPolicyProvider,
-            ShadowRetrievalPolicyProvider shadowRetrievalPolicyProvider
+            ShadowRetrievalPolicyProvider shadowRetrievalPolicyProvider,
+            RagPolicyShadowGateService shadowGateService
     ) {
         this.repository = repository;
         this.approvedRetrievalPolicyProvider = approvedRetrievalPolicyProvider;
         this.shadowRetrievalPolicyProvider = shadowRetrievalPolicyProvider;
+        this.shadowGateService = shadowGateService;
     }
 
     public void makeShadow(RagPolicyType type, String version) {
@@ -42,6 +58,10 @@ public class RagPolicyPromotionService {
             throw new IllegalStateException("Only SHADOW policy can enter CANARY");
         }
         requireEvaluationGates(policy);
+        if (type == RagPolicyType.RETRIEVAL && shadowGateService != null) {
+            shadowGateService.evaluateAndAttach(version);
+            policy = policy(type, version);
+        }
         requireShadowGate(policy);
         repository.markCanary(type, version);
         invalidateShadow(type);
