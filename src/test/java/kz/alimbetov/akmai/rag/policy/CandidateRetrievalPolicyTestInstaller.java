@@ -15,18 +15,15 @@ import org.springframework.stereotype.Component;
 public class CandidateRetrievalPolicyTestInstaller {
 
     private final RagPolicyRegistryRepository repository;
-    private final RagPolicyPromotionService promotionService;
     private final ApprovedRetrievalPolicyProvider provider;
     private final ObjectMapper objectMapper;
 
     public CandidateRetrievalPolicyTestInstaller(
             RagPolicyRegistryRepository repository,
-            RagPolicyPromotionService promotionService,
             ApprovedRetrievalPolicyProvider provider,
             ObjectMapper objectMapper
     ) {
         this.repository = repository;
-        this.promotionService = promotionService;
         this.provider = provider;
         this.objectMapper = objectMapper;
     }
@@ -82,7 +79,7 @@ public class CandidateRetrievalPolicyTestInstaller {
                 quality(true, true),
                 performance()
         );
-        promotionService.approve(
+        repository.approve(
                 RagPolicyType.RETRIEVAL,
                 candidate.version()
         );
