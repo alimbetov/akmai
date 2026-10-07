@@ -5,8 +5,26 @@ public record SemanticUnit(
         String sectionPath,
         SemanticUnitType type,
         boolean protectedAtom,
-        StructuralRole structuralRole
+        StructuralRole structuralRole,
+        UnitProvenance provenance
 ) {
+    public SemanticUnit(
+            String text,
+            String sectionPath,
+            SemanticUnitType type,
+            boolean protectedAtom,
+            StructuralRole structuralRole
+    ) {
+        this(
+                text,
+                sectionPath,
+                type,
+                protectedAtom,
+                structuralRole,
+                null
+        );
+    }
+
     public SemanticUnit(
             String text,
             String sectionPath,
@@ -20,7 +38,8 @@ public record SemanticUnit(
                 protectedAtom,
                 type == SemanticUnitType.HEADING
                         ? StructuralRole.HEADING
-                        : StructuralRole.PARAGRAPH
+                        : StructuralRole.PARAGRAPH,
+                null
         );
     }
 }
