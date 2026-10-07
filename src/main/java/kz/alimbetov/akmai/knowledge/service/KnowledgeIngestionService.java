@@ -80,14 +80,15 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
             AddKnowledgeRequest request,
             String idempotencyKey
     ) {
-        IngestionIdempotencyContext idempotency = claim(
+        ClaimOutcome claim = claimOutcome(
                 idempotencyKey,
                 request.documentId(),
                 requestFingerprint.fingerprint(request)
         );
-        if (idempotency == REPLAY_SENTINEL) {
-            return replayResponse;
+        if (claim.response() != null) {
+            return claim.response();
         }
+        IngestionIdempotencyContext idempotency = claim.context();
 
         try {
             heartbeat(idempotency);
