@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           if [[ "$BENCHMARK_ROOT" == "benchmarks/rag-benchmark-v1/release" ]]; then
-            python3 benchmarks/rag-benchmark-v1/generate_controlled_corpus.py \
+            python3 benchmarks/rag-benchmark-v1/materialize_controlled_corpus.py \
               --out "$BENCHMARK_ROOT"
           fi
 
