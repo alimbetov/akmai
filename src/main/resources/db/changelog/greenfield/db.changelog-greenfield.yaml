@@ -39,3 +39,5 @@ databaseChangeLog:
       file: db/changelog/greenfield/019-policy-shadow-lifecycle.sql
   - include:
       file: db/changelog/greenfield/020-policy-stage-fencing.sql
+  - include:
+      file: db/changelog/greenfield/021-policy-rollback-semantics.sql
