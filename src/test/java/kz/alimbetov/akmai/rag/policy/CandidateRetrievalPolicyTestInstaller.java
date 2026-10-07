@@ -7,9 +7,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * Installs a retrieval candidate only inside an isolated benchmark Testcontainers
- * database. This deliberately bypasses real promotion evidence so the candidate
- * can be replayed through the production planner before it is eligible for
- * SHADOW/CANARY/APPROVED in an operational environment.
+ * database. This deliberately uses evaluation-only evidence so the candidate
+ * can be replayed through the production planner without changing an operational
+ * policy registry.
  */
 @Component
 public class CandidateRetrievalPolicyTestInstaller {
@@ -57,36 +57,30 @@ public class CandidateRetrievalPolicyTestInstaller {
         repository.attachReports(
                 RagPolicyType.RETRIEVAL,
                 candidate.version(),
-                Map.of(
-                        "securityPassed", true,
-                        "correctnessPassed", true,
-                        "qualityPassed", true,
-                        "canaryPassed", false,
-                        "evaluationOnly", true
-                ),
-                Map.of(
-                        "performancePassed", true,
-                        "evaluationOnly", true
-                )
+                quality(false, false),
+                performance()
+        );
+        promotionService.makeShadow(
+                RagPolicyType.RETRIEVAL,
+                candidate.version()
+        );
+
+        repository.attachReports(
+                RagPolicyType.RETRIEVAL,
+                candidate.version(),
+                quality(true, false),
+                performance()
         );
         promotionService.makeCanary(
                 RagPolicyType.RETRIEVAL,
                 candidate.version()
         );
+
         repository.attachReports(
                 RagPolicyType.RETRIEVAL,
                 candidate.version(),
-                Map.of(
-                        "securityPassed", true,
-                        "correctnessPassed", true,
-                        "qualityPassed", true,
-                        "canaryPassed", true,
-                        "evaluationOnly", true
-                ),
-                Map.of(
-                        "performancePassed", true,
-                        "evaluationOnly", true
-                )
+                quality(true, true),
+                performance()
         );
         promotionService.approve(
                 RagPolicyType.RETRIEVAL,
@@ -94,6 +88,27 @@ public class CandidateRetrievalPolicyTestInstaller {
         );
         provider.invalidate();
         return candidate.version();
+    }
+
+    private Map<String, Object> quality(
+            boolean shadowPassed,
+            boolean canaryPassed
+    ) {
+        return Map.of(
+                "securityPassed", true,
+                "correctnessPassed", true,
+                "qualityPassed", true,
+                "shadowPassed", shadowPassed,
+                "canaryPassed", canaryPassed,
+                "evaluationOnly", true
+        );
+    }
+
+    private Map<String, Object> performance() {
+        return Map.of(
+                "performancePassed", true,
+                "evaluationOnly", true
+        );
     }
 
     public record CandidateFile(
