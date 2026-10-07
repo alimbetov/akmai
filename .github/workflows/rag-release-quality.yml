@@ -1,0 +1,85 @@
+name: RAG Release Quality
+
+on:
+  workflow_dispatch:
+    inputs:
+      benchmark_root:
+        description: Path to the curated >=300-query release corpus
+        required: false
+        default: "benchmarks/rag-benchmark-v1/release"
+      baseline_file:
+        description: Immutable approved quality baseline JSON
+        required: false
+        default: "benchmarks/rag-benchmark-v1/baselines/approved.json"
+      establish_baseline:
+        description: Generate candidate report without comparing to an approved baseline
+        type: boolean
+        required: false
+        default: false
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  rag-release-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Formatting
+        run: mvn -B spotless:check
+
+      - name: Require release corpus and live Ollama
+        env:
+          BENCHMARK_ROOT: ${{ inputs.benchmark_root || 'benchmarks/rag-benchmark-v1/release' }}
+          AKMAI_LIVE_OLLAMA_BASE_URL: ${{ secrets.AKMAI_LIVE_OLLAMA_BASE_URL }}
+        run: |
+          test -n "$AKMAI_LIVE_OLLAMA_BASE_URL"
+          test -f "$BENCHMARK_ROOT/manifest.json"
+          test -f "$BENCHMARK_ROOT/documents.jsonl"
+          test -f "$BENCHMARK_ROOT/queries.jsonl"
+
+      - name: Run release corpus through production RAG pipeline
+        env:
+          AKMAI_RELEASE_QUALITY: "true"
+          AKMAI_RAG_BENCHMARK_ROOT: ${{ inputs.benchmark_root || 'benchmarks/rag-benchmark-v1/release' }}
+          AKMAI_LIVE_OLLAMA_BASE_URL: ${{ secrets.AKMAI_LIVE_OLLAMA_BASE_URL }}
+          AKMAI_RUNTIME_PROFILE: "release-quality"
+        run: >
+          mvn -B
+          -Dtest=LiveReleaseRagBenchmarkV1Test
+          test
+
+      - name: Require approved baseline
+        if: ${{ github.event_name == 'push' || inputs.establish_baseline != true }}
+        env:
+          BASELINE_FILE: ${{ inputs.baseline_file || 'benchmarks/rag-benchmark-v1/baselines/approved.json' }}
+        run: test -f "$BASELINE_FILE"
+
+      - name: Compare candidate against approved baseline
+        if: ${{ github.event_name == 'push' || inputs.establish_baseline != true }}
+        env:
+          AKMAI_QUALITY_BASELINE_GATE: "true"
+          AKMAI_QUALITY_BASELINE_FILE: ${{ inputs.baseline_file || 'benchmarks/rag-benchmark-v1/baselines/approved.json' }}
+          AKMAI_QUALITY_CANDIDATE_FILE: "target/quality/rag-benchmark-v1-release.json"
+        run: >
+          mvn -B
+          -Dtest=RagQualityBaselineFileGateTest
+          test
+
+      - name: Upload release quality evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-release-quality-${{ github.sha }}
+          path: |
+            target/quality/rag-benchmark-v1-release.json
+            target/quality/quality-gate-comparison.json
+          if-no-files-found: warn
