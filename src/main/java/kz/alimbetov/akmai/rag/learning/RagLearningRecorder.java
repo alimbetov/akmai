@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import kz.alimbetov.akmai.config.SelfOptimizingRagProperties;
+import kz.alimbetov.akmai.rag.policy.RetrievalPolicyShadowEvaluator;
 import kz.alimbetov.akmai.rag.query.QueryChunk;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.RetrievalExecutionResult;
@@ -33,6 +34,7 @@ public class RagLearningRecorder {
     private final RagRuntimeAttribution runtimeAttribution;
     private final RagExecutionObservationStore observationStore;
     private final LearningSourceFingerprint sourceFingerprint;
+    private final RetrievalPolicyShadowEvaluator shadowEvaluator;
 
     public RagLearningRecorder(
             RagLearningEventRepository repository,
@@ -49,6 +51,28 @@ public class RagLearningRecorder {
                 adaptiveRetrievalPlanner,
                 runtimeAttribution,
                 observationStore,
+                null,
+                null
+        );
+    }
+
+    public RagLearningRecorder(
+            RagLearningEventRepository repository,
+            LearningPrivacyFingerprint fingerprint,
+            SelfOptimizingRagProperties properties,
+            AdaptiveRetrievalPlanner adaptiveRetrievalPlanner,
+            RagRuntimeAttribution runtimeAttribution,
+            RagExecutionObservationStore observationStore,
+            LearningSourceFingerprint sourceFingerprint
+    ) {
+        this(
+                repository,
+                fingerprint,
+                properties,
+                adaptiveRetrievalPlanner,
+                runtimeAttribution,
+                observationStore,
+                sourceFingerprint,
                 null
         );
     }
@@ -61,7 +85,8 @@ public class RagLearningRecorder {
             AdaptiveRetrievalPlanner adaptiveRetrievalPlanner,
             RagRuntimeAttribution runtimeAttribution,
             RagExecutionObservationStore observationStore,
-            LearningSourceFingerprint sourceFingerprint
+            LearningSourceFingerprint sourceFingerprint,
+            RetrievalPolicyShadowEvaluator shadowEvaluator
     ) {
         this.repository = repository;
         this.fingerprint = fingerprint;
@@ -70,6 +95,7 @@ public class RagLearningRecorder {
         this.runtimeAttribution = runtimeAttribution;
         this.observationStore = observationStore;
         this.sourceFingerprint = sourceFingerprint;
+        this.shadowEvaluator = shadowEvaluator;
     }
 
     public void record(
@@ -84,8 +110,13 @@ public class RagLearningRecorder {
             RagLearningEvent.GroundingStatus groundingStatus,
             long totalLatencyMs
     ) {
-        if (!properties.learningEventsEnabled()
-                && !properties.executionObservationsEnabled()) {
+        boolean persistentLearning = properties.learningEventsEnabled();
+        boolean executionObservation = properties.executionObservationsEnabled();
+        boolean grounded = answerStatus == RagLearningEvent.AnswerStatus.GROUNDED
+                && groundingStatus == RagLearningEvent.GroundingStatus.SUPPORTED;
+        if (!persistentLearning
+                && !executionObservation
+                && (!grounded || shadowEvaluator == null)) {
             return;
         }
         try {
@@ -123,14 +154,26 @@ public class RagLearningRecorder {
                     groundingStatus,
                     totalLatencyMs
             );
-            observationStore.record(
-                    trace,
-                    finalContext,
-                    validation,
-                    attribution
-            );
+            if (executionObservation && observationStore != null) {
+                observationStore.record(
+                        trace,
+                        finalContext,
+                        validation,
+                        attribution
+                );
+            }
 
-            if (!properties.learningEventsEnabled()) {
+            if (grounded && shadowEvaluator != null) {
+                shadowEvaluator.observeGrounded(
+                        question,
+                        queryChunks,
+                        accessLevels,
+                        finalContext,
+                        validation
+                );
+            }
+
+            if (!persistentLearning) {
                 return;
             }
             String queryFingerprint = fingerprint.fingerprint(question);
