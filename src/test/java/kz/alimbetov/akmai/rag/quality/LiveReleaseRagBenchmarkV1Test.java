@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
 import kz.alimbetov.akmai.knowledge.service.KnowledgeIngestionPort;
 import kz.alimbetov.akmai.rag.api.RagResponse;
+import kz.alimbetov.akmai.rag.policy.CandidateRetrievalPolicyTestInstaller;
 import kz.alimbetov.akmai.rag.query.QueryChunker;
 import kz.alimbetov.akmai.rag.retrieval.ParallelRetrievalExecutor;
 import kz.alimbetov.akmai.rag.retrieval.Reranker;
@@ -44,7 +45,7 @@ import org.testcontainers.utility.DockerImageName;
         "akmai.reembedding.auto-migrate=false",
         "akmai.adaptive-graph.learning-enabled=false",
         "akmai.adaptive-graph.expansion-enabled=false",
-        "akmai.retrieval.adaptive-planner.enabled=false",
+        "akmai.retrieval.adaptive-planner.enabled=true",
         "akmai.self-optimizing.execution-observations-enabled=true"
 })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -91,6 +92,8 @@ class LiveReleaseRagBenchmarkV1Test {
     @Autowired
     RagRuntimeAttribution runtimeAttribution;
     @Autowired
+    CandidateRetrievalPolicyTestInstaller candidatePolicyInstaller;
+    @Autowired
     ObjectMapper objectMapper;
 
     private RagBenchmarkDataset dataset;
@@ -103,6 +106,7 @@ class LiveReleaseRagBenchmarkV1Test {
         assertThat(validation.failures())
                 .as("release benchmark corpus contract")
                 .isEmpty();
+        candidatePolicyInstaller.installIfConfigured();
 
         for (RagBenchmarkDataset.Document document : dataset.documents()) {
             ingestion.addText(
