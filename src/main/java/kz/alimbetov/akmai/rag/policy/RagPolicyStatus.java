@@ -5,6 +5,7 @@ public enum RagPolicyStatus {
     SHADOW,
     CANARY,
     APPROVED,
+    SUPERSEDED,
     REJECTED,
     ROLLED_BACK
 }
