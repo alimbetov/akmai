@@ -127,6 +127,36 @@ class RetentionBacklogIntegrationTest {
         assertThat(repository.countEligibleBacklog(3)).isEqualTo(1);
     }
 
+    @Test
+    void retryExhaustedFailureIsExcludedFromWorkBacklogButCountedSeparately() {
+        seedPublished("retryable", "clock_timestamp() - interval '2 hours'");
+        seedPublished("dead-letter", "clock_timestamp() - interval '2 hours'");
+
+        jdbc.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET retention_status = 'DELETE_FAILED',
+                    lifecycle_status = 'DELETE_FAILED',
+                    attempt_count = 2,
+                    last_error = 'retryable failure'
+                WHERE document_id = 'retryable'
+                """
+        );
+        jdbc.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET retention_status = 'DELETE_FAILED',
+                    lifecycle_status = 'DELETE_FAILED',
+                    attempt_count = 3,
+                    last_error = 'retry limit exhausted'
+                WHERE document_id = 'dead-letter'
+                """
+        );
+
+        assertThat(repository.countEligibleBacklog(3)).isEqualTo(1);
+        assertThat(repository.countRetryExhausted(3)).isEqualTo(1);
+    }
+
     private void seedPublished(String documentId, String expiresExpression) {
         jdbc.update(
                 """
