@@ -28,11 +28,6 @@ public record AdaptiveGraphProperties(
     private static final int STORAGE_HASH_BUCKETS_V1 = 32;
     private static final int QUERY_SUPPORT_BUCKETS = 256;
 
-    /**
-     * Backward-compatible constructor for existing tests and internal call sites.
-     * Dream remains disabled unless it is explicitly configured through the
-     * canonical configuration-properties constructor.
-     */
     public AdaptiveGraphProperties(
             boolean learningEnabled,
             boolean maintenanceEnabled,
@@ -413,9 +408,13 @@ public record AdaptiveGraphProperties(
             if (heartbeatInterval.compareTo(leaseDuration.dividedBy(3)) > 0) {
                 throw new IllegalArgumentException("adaptive-graph dream heartbeatInterval must be <= leaseDuration / 3");
             }
-            positive("dream.maxDbConcurrency", maxDbConcurrency);
-            positive("dream.maxForwardAnnConcurrency", maxForwardAnnConcurrency);
-            positive("dream.maxReverseAnnConcurrency", maxReverseAnnConcurrency);
+            if (maxDbConcurrency != 1
+                    || maxForwardAnnConcurrency != 1
+                    || maxReverseAnnConcurrency != 1) {
+                throw new IllegalArgumentException(
+                        "adaptive-graph Dream v1 requires DB/forward-ANN/reverse-ANN concurrency = 1"
+                );
+            }
             if (reverseCacheMaximumSize < topK) {
                 throw new IllegalArgumentException("adaptive-graph dream reverseCacheMaximumSize must be >= topK");
             }
@@ -456,9 +455,9 @@ public record AdaptiveGraphProperties(
                     Duration.ofSeconds(30),
                     Duration.ofSeconds(90),
                     Duration.ofSeconds(25),
-                    2,
-                    2,
-                    2,
+                    1,
+                    1,
+                    1,
                     10_000,
                     "dream-v1"
             );
