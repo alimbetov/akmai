@@ -1,237 +1,109 @@
-# akmai
+# AkmAI
 
-Local multilingual RAG on Spring Boot + Spring AI + Ollama + PostgreSQL/pgvector.
+AkmAI is a **local-first multilingual evidence RAG engine** built on Spring Boot, Spring AI, Ollama and PostgreSQL/pgvector.
 
-## Goal
+It is designed for enterprise knowledge bases where retrieval correctness, ACL isolation, lifecycle control, citations, reproducibility and local deployment matter more than a minimal `embedding -> vector DB -> LLM` demo.
 
-Akmai is a local-first RAG foundation for multilingual knowledge bases with a focus on:
+## Current status
+
+Self-Optimizing RAG Platform **v1.1 is implemented in `main`**. The normal CI/retrieval-quality/image-build path is green on the current audited main ref, while final release qualification still requires a retained live quality baseline, SMALL/MEDIUM performance evidence and semantic-grounding calibration.
+
+Current readiness decision:
+
+- **READY** for local development, integration and controlled internal/pilot deployments;
+- **CONDITIONAL** for production use after the target deployment passes the integrated v1.1 qualification workflow;
+- **NOT YET externally release-qualified** for broad legal/medical/technical accuracy claims until a human-reviewed real-world benchmark and release evidence are retained.
+
+See [`docs/audit/post-v1.1-readiness-2026-10-08.md`](docs/audit/post-v1.1-readiness-2026-10-08.md) for the current audit and release blockers.
+
+## Goals
+
+AkmAI focuses on:
 
 - 11 target languages: Kazakh, Russian, English, Chinese, German, French, Spanish, Portuguese, Italian, Turkish and Greek;
-- legal documents;
-- medical documents;
-- technical documentation.
+- legal, medical and technical documents;
+- local/private deployments;
+- evidence-first answers with citations and grounding;
+- exact business-identifier retrieval independent from embeddings;
+- controlled self-optimization rather than uncontrolled online learning.
 
 Canonical model baseline:
 
-- embeddings: `qwen3-embedding:4b`, fixed at `1024` dimensions;
+- embeddings: `qwen3-embedding:4b`;
+- embedding dimensions: `1024`;
 - vector distance: cosine;
 - ANN: HNSW;
 - generation: `qwen3:8b`.
 
-The embedding model and vector dimensionality form one canonical AkmAI embedding space. Runtime drift from `qwen3-embedding:4b / 1024` fails fast. Development, integration, stage and production quality paths use the same real embedding profile; unit tests may use deterministic test doubles where semantic quality is not under test.
-
-The chunking pipeline remains independent from a concrete embedding space. A future encoder change is introduced only through a new versioned embedding profile, full generation re-embedding, quality validation and atomic publication. Vectors from different embedding profiles must never be mixed even when their dimensionality is identical.
+Embedding profile drift fails fast. A new encoder is introduced through a new versioned embedding profile, full re-embedding, validation and atomic publication; vectors from different profiles are never mixed.
 
 ## Architecture
 
-AkmAI is not a direct `question -> LLM` wrapper. The system separates four cooperating flows:
+AkmAI separates five cooperating planes:
 
-1. **INGEST** — convert canonical documents into searchable lexical, vector, identifier and reference representations.
-2. **RETRIEVE** — analyze a question and execute several retrieval strategies in parallel.
-3. **GENERATE** — fuse and rerank evidence, build a bounded context and ask the local LLM to answer from that evidence.
-4. **OPERATE** — observe latency, saturation, retention, PostgreSQL/HNSW health and support disaster recovery.
-
-### System overview
-
-```mermaid
-flowchart LR
-    CS["Canonical source<br/>legal / medical / technical documents"]
-
-    subgraph ING["1. INGEST"]
-        IAPI["Knowledge API"]
-        AUTH["Security + AccessLevel"]
-        LANG["Language canonicalization<br/>KK RU EN ZH DE FR ES PT IT TR EL"]
-        NORM["TextNormalizer"]
-        STRUCT["StructuralUnitExtractor"]
-        SEM["DomainSemanticClassifier"]
-        ATOM["AtomicUnitProtector"]
-        CHUNK["SemanticChunker"]
-        ENRICH["Identifiers + references<br/>structure + embedding text"]
-        PAR["ParallelIngestionExecutor<br/>bounded backpressure"]
-        EMB["Embedding batches"]
-        PERSIST["PersistenceCoordinator"]
-
-        IAPI --> AUTH --> LANG --> NORM --> STRUCT --> SEM --> ATOM --> CHUNK
-        CHUNK --> ENRICH --> PAR
-        PAR --> EMB
-        PAR --> PERSIST
-    end
-
-    LIFE[("Lifecycle / generations<br/>PostgreSQL")]
-    PROJ[("Search projections<br/>PostgreSQL")]
-    VEC[("Vector storage<br/>pgvector / HNSW")]
-
-    CS --> IAPI
-    PERSIST --> LIFE
-    PERSIST --> PROJ
-    EMB --> VEC
-
-    subgraph READ["2. RETRIEVE + 3. GENERATE"]
-        Q["User question"]
-        QAPI["RAG API"]
-        QSEC["API key + AccessLevel scope"]
-        QC["QueryChunker<br/>normalize / language / identifiers / decomposition"]
-        PLAN["RetrievalPlanner"]
-        VR["Vector retrieval"]
-        LR["Lexical retrieval"]
-        IR["Identifier retrieval"]
-        RR["Reference retrieval"]
-        FUSION["ResultFusion"]
-        RERANK["Reranker"]
-        EXPAND["Context expansion"]
-        BUDGET["Token budget"]
-        CTX["ContextAssembler"]
-        LLM["Ollama / qwen3:8b"]
-        CITE["Citation validation"]
-        ANSWER["Answer + sources"]
-
-        Q --> QAPI --> QSEC --> QC --> PLAN
-        PLAN --> VR
-        PLAN --> LR
-        PLAN --> IR
-        PLAN --> RR
-        VR --> FUSION
-        LR --> FUSION
-        IR --> FUSION
-        RR --> FUSION
-        FUSION --> RERANK --> EXPAND --> BUDGET --> CTX --> LLM --> CITE --> ANSWER
-    end
-
-    VEC --> VR
-    PROJ --> LR
-    PROJ --> IR
-    PROJ --> RR
-    LIFE --> VR
-    LIFE --> LR
-```
-
-The ingestion pipeline prepares the retrieval representation **before** a question arrives. A request therefore does not re-parse the source document: it searches already published, access-scoped retrieval data.
-
-### How a question becomes an answer
-
-```mermaid
-flowchart TD
-    U["USER"]
-    API["POST /api/rag/ask"]
-    SEC["Authentication<br/>AccessLevel scope"]
-    VAL["Validation<br/>requestId + limits"]
-    QC["QueryChunker"]
-    N["Normalize"]
-    L["Detect language"]
-    ID["Extract identifiers"]
-    D["Decompose multi-intent query"]
-    PLAN["RetrievalPlanner"]
-
-    V["VECTOR<br/>query embedding -> pgvector / HNSW"]
-    X["LEXICAL<br/>FTS / trigram by language"]
-    I["IDENTIFIER<br/>exact business identifier lookup"]
-    R["REFERENCE<br/>document anchors / cross references"]
-
-    F["ResultFusion"]
-    RRK["Reranker"]
-    CE["Context expansion"]
-    TB["ChatTokenBudgetService"]
-    CA["ContextAssembler"]
-    O["Ollama<br/>qwen3:8b"]
-    CV["CitationValidator"]
-    OUT["ANSWER + SOURCES"]
-
-    U --> API --> SEC --> VAL --> QC
-    QC --> N
-    QC --> L
-    QC --> ID
-    QC --> D
-    N --> PLAN
-    L --> PLAN
-    ID --> PLAN
-    D --> PLAN
-
-    PLAN --> V
-    PLAN --> X
-    PLAN --> I
-    PLAN --> R
-
-    V --> F
-    X --> F
-    I --> F
-    R --> F
-
-    F --> RRK --> CE --> TB --> CA --> O --> CV --> OUT --> U
-```
-
-| Stage | Responsibility | Why it exists |
-|---|---|---|
-| **Security / AccessLevel** | Resolves the caller's permitted access scope before retrieval. | Retrieval must never return evidence outside the caller's ACL. |
-| **QueryChunker** | Normalizes the question, detects language, extracts exact identifiers and decomposes multi-intent questions. | Different parts of one question can require different retrieval strategies. |
-| **Vector retrieval** | Embeds the semantic query and searches language/access-scoped HNSW leaves. | Finds semantically similar evidence even when wording differs. |
-| **Lexical retrieval** | Uses PostgreSQL FTS and trigram search inside the requested language partition. | Preserves exact terminology and phrases that embeddings may underweight. |
-| **Identifier retrieval** | Searches contract/document/order/etc. identifiers exactly. | Identifiers should not depend on vector similarity. |
-| **Reference retrieval** | Follows structural references such as article/section relationships. | Legal and technical meaning often depends on referenced clauses. |
-| **ResultFusion** | Combines independent ranked result sets. | Prevents one search channel from becoming the single source of truth. |
-| **Reranker** | Reorders fused candidates against the actual question. | Improves relevance before context is sent to the LLM. |
-| **Context expansion** | Adds bounded neighboring/related chunks. | A matching chunk may need nearby conditions, exceptions or definitions. |
-| **Token budget** | Fits question, evidence and reserved answer tokens into the model context window. | Prevents context overflow and uncontrolled prompt growth. |
-| **Ollama** | Generates the answer from the selected evidence. | The LLM synthesizes evidence; it is not used as the primary search engine. |
-| **Citation validation** | Checks that returned citations refer to known retrieved evidence. | Keeps the final response tied to the retrieval result. |
-
-### Operations plane
-
-The request path is observed independently from the business flow:
+1. **INGEST** — normalize canonical content, preserve domain structure, semantic chunking, identifiers/references, embeddings and publication.
+2. **RETRIEVE** — analyze the question and execute applicable retrieval lanes under ACL/lifecycle fences.
+3. **GENERATE** — fuse, rerank, expand bounded context and generate locally with Ollama.
+4. **VERIFY** — validate citations, deterministic grounding and optional semantic claim/evidence consistency.
+5. **LEARN / OPERATE** — collect bounded evidence, maintain adaptive memory, evaluate policies, observe latency/saturation and manage rollout.
 
 ```mermaid
 flowchart LR
-    APP["AkmAI runtime"]
-    DB[("PostgreSQL / pgvector / HNSW")]
-    MET["Micrometer metrics"]
-    PROM["Prometheus"]
-    GRAF["Grafana"]
-    ALERT["Prometheus alerts"]
-    TRACE["OpenTelemetry traces"]
-    OTEL["OTLP Collector"]
-    BACK["External trace backend"]
-    DIAG["PostgreSQL / HNSW diagnostics"]
-    DR["PITR / canonical rebuild<br/>verification runbook"]
+    DOC[CanonicalDocument / text]
+    ING[Normalize -> structure -> semantic chunking]
+    IDX[Identifiers / references / lexical / vectors]
+    DB[(PostgreSQL / pgvector)]
 
-    APP --> MET --> PROM --> GRAF
-    PROM --> ALERT
-    APP --> TRACE --> OTEL --> BACK
-    DB --> MET
-    DB --> DIAG
-    DB --> DR
+    Q[Question]
+    PLAN[RetrievalPlanner]
+    RET[Vector / lexical / identifier / reference / concept]
+    FUSE[Fusion -> rerank -> context]
+    LLM[Ollama]
+    VERIFY[Citations + grounding]
+    OUT[Answer + sources]
+
+    LEARN[Learning events / Query Memory / adaptive graph]
+    POLICY[Offline -> SHADOW -> CANARY -> APPROVED / ROLLBACK]
+
+    DOC --> ING --> IDX --> DB
+    Q --> PLAN --> RET --> FUSE --> LLM --> VERIFY --> OUT
+    DB --> RET
+    VERIFY --> LEARN --> POLICY
+    POLICY --> PLAN
 ```
 
-The operations layer covers executor saturation, retrieval outcomes, retention/reconciliation state, HOT retrieval storage health, PostgreSQL/HNSW diagnostics, Prometheus/Grafana monitoring, OpenTelemetry export, a production container image and canonical-source disaster-recovery procedures.
-
-The key design principle is:
+The key runtime rule is:
 
 ```text
-question
-  -> analyze
-  -> retrieve through multiple strategies
-  -> enforce ACL/language routing
-  -> fuse
-  -> rerank
-  -> build bounded evidence context
-  -> generate locally with Ollama
-  -> validate citations
-  -> answer
+similarity -> relevance -> authority -> evidence -> grounded answer
 ```
 
-## Semantic chunking rules
+## Retrieval
 
-The first implementation protects meaning before token size.
+The production retrieval path is intentionally multi-lane:
 
-Examples:
+- **VECTOR** — pgvector/HNSW semantic retrieval;
+- **LEXICAL** — PostgreSQL full-text/trigram retrieval;
+- **IDENTIFIER** — exact business identifiers such as contract/document/order/case numbers;
+- **REFERENCE** — document anchors and cross references;
+- **CONCEPT / graph-assisted retrieval** — bounded semantic associations when enabled and approved.
 
-- legal rule + exception stay together when possible;
-- legal obligation/prohibition/right markers are classified;
-- medical indication + dosage can stay together;
-- dosage + contraindication can stay together;
-- section boundaries are treated as preferred chunk boundaries;
-- cross references such as article/section/clause references are extracted;
-- embedding text is enriched with document title, domain, language and section path.
+Results are fused, reranked and context-budgeted before generation. Exact identifiers and authority rules do not depend on vector similarity.
 
-Current token policy:
+Supported business identifier parsers currently include:
+
+- `CONTRACT_NUMBER`
+- `DOCUMENT_NUMBER`
+- `ORDER_NUMBER`
+- `INVOICE_NUMBER`
+- `APPLICATION_NUMBER`
+- `CASE_NUMBER`
+
+## Semantic chunking and provenance
+
+Chunking protects meaning before size. The pipeline preserves legal rules/exceptions, medical dosage/contraindication relationships, section boundaries and cross references.
+
+Default token policy:
 
 ```text
 target      750
@@ -240,9 +112,102 @@ hard max   1800
 minimum    250
 ```
 
-These values are configurable under `akmai.chunking`.
+`CanonicalDocument` ingestion can preserve block provenance through the full chain:
 
-## Local infrastructure
+```text
+answer -> source -> chunk -> canonical block -> page / section / bbox -> original source
+```
+
+The original file remains an external source concern; AkmAI owns semantic normalization, chunking, retrieval projections and evidence.
+
+## Security and lifecycle invariants
+
+AkmAI treats security/lifecycle as retrieval constraints, not post-processing:
+
+- ACL scope is resolved before retrieval and revalidated before final context;
+- only published generations are eligible;
+- TTL expiry is synchronously fenced during retrieval;
+- non-local startup fails closed if API-key security is disabled or local bypass is enabled;
+- non-local deployments require explicit non-default DB credentials;
+- request bodies are byte-bounded even when transfer length is unknown/chunked;
+- embedding migrations use DB-backed lease ownership and fencing tokens.
+
+## Self-optimizing v1.1
+
+AkmAI learns **how to retrieve knowledge**, not what authoritative knowledge is.
+
+```text
+MEASURE
+  -> RETRIEVE
+  -> GENERATE
+  -> VERIFY
+  -> LEARN
+  -> OFFLINE EVALUATE
+  -> SHADOW
+  -> CANARY
+  -> APPROVE / ROLLBACK
+  -> MEASURE AGAIN
+```
+
+Implemented safeguards include:
+
+- persistent Query Memory with PostgreSQL source of truth and bounded Caffeine L1;
+- ACL / embedding-profile / policy namespace isolation;
+- privacy-safe HMAC query/source fingerprints;
+- duplicate suppression and source/query diversity gates;
+- feedback trust classes and anti-poisoning caps;
+- evidence-trained retrieval-policy candidates;
+- SHADOW replay that cannot affect the user answer;
+- bounded CANARY cohort routing with simultaneous CONTROL evidence;
+- automatic fail-closed promotion gates and rollback semantics;
+- request-level policy/cohort attribution for reproducibility.
+
+Detailed engineering contract: [`docs/architecture/rag-self-optimizing-platform-v1.1-technical-spec.md`](docs/architecture/rag-self-optimizing-platform-v1.1-technical-spec.md).
+
+## Release qualification
+
+The integrated release workflow is:
+
+`.github/workflows/rag-v1.1-release-qualification.yml`
+
+A release is qualified only when all three gates succeed for the same SHA/tag:
+
+1. **quality** — production RAG pipeline + immutable baseline comparison;
+2. **performance** — SMALL and MEDIUM application-level profiles;
+3. **semantic grounding** — live RU/KK/EN calibration.
+
+The final workflow emits `rag-v1.1-qualification.json` with `qualified=true` only when all required sub-gates pass.
+
+### Controlled benchmark
+
+The repository contains a deterministic `CONTROLLED_SYNTHETIC` benchmark materializer with:
+
+- 330 labelled queries;
+- 255 answerable cases;
+- 75 unanswerable cases (22.7%);
+- all 11 target languages;
+- LEGAL / MEDICAL / TECHNICAL domains;
+- required query classes and difficulty levels;
+- deterministic child-chunk truth validated against production chunking.
+
+This dataset is a **release-engineering/regression gate**, not a real-world domain-accuracy claim. See [`benchmarks/rag-benchmark-v1/README.md`](benchmarks/rag-benchmark-v1/README.md).
+
+## Operations
+
+The operations plane includes:
+
+- Micrometer / Prometheus metrics;
+- Grafana dashboards and alerts;
+- OpenTelemetry export;
+- bounded executor saturation telemetry;
+- PostgreSQL / HNSW diagnostics;
+- production container image build;
+- lifecycle/retention/reconciliation monitoring;
+- canonical-source rebuild and disaster-recovery procedures.
+
+Resource deadlines are enforced at the retrieval worker/JDBC/model transport boundaries. `strategy-timeout < request-timeout` is a validated configuration invariant, and late dependent work is not started without a full remaining resource budget.
+
+## Local quick start
 
 Start PostgreSQL + pgvector:
 
@@ -257,7 +222,7 @@ ollama pull qwen3-embedding:4b
 ollama pull qwen3:8b
 ```
 
-Run the application:
+Run AkmAI:
 
 ```bash
 mvn spring-boot:run
@@ -270,8 +235,6 @@ POST /api/knowledge/text
 Content-Type: application/json
 ```
 
-Example:
-
 ```json
 {
   "documentId": "law-001",
@@ -280,18 +243,10 @@ Example:
   "source": "agreement.md",
   "language": "ru",
   "domain": "LEGAL",
+  "accessLevel": 1,
   "metadata": {
     "version": "2026-01"
   }
-}
-```
-
-Response:
-
-```json
-{
-  "documentId": "law-001",
-  "chunkCount": 4
 }
 ```
 
@@ -308,136 +263,51 @@ Content-Type: application/json
 }
 ```
 
-The generation prompt requires answers to remain grounded in retrieved context and asks the model not to omit legal/medical conditions, exceptions, contraindications or restrictions.
+The answer is generated from the bounded evidence context and returned with validated source references/provenance.
 
-## Re-embedding strategy
+## Re-embedding
 
-AkmAI keeps a stable vector storage contract while versioning every embedding space. The current canonical profile is:
-
-```text
-provider     = Ollama
-model        = qwen3-embedding:4b
-dimensions   = 1024
-distance     = COSINE_DISTANCE
-index        = HNSW
-```
-
-A future encoder, instruction or embedding-text transformation is never mixed into the current space. The migration flow is:
+AkmAI treats every embedding space as versioned. Migration uses:
 
 ```text
-canonical KnowledgeChunk
-        |
-        v
-new versioned EmbeddingProfile
-        |
-        v
-full re-embedding into a new generation
-        |
-        v
-retrieval quality + storage validation
-        |
-        v
-atomic publication
-        |
-        v
-old embedding generation retirement
+canonical chunks
+  -> new EmbeddingProfile
+  -> full re-embedding generation
+  -> quality/storage validation
+  -> atomic publication
+  -> old-generation retirement
 ```
 
-Canonical documents, chunks and relations remain independent from the vector projection, so a future model upgrade does not require reparsing the original source documents. Equal dimensionality does not make vectors from different embedding profiles compatible.
+Multi-replica migration ownership is DB-visible and fenced by owner lease + fencing token.
+
+## Production release checklist
+
+Before calling a deployment release-qualified:
+
+1. keep `main` CI green;
+2. establish and review `benchmarks/rag-benchmark-v1/baselines/approved.json`;
+3. run the integrated v1.1 release-qualification workflow against live Ollama;
+4. retain quality, SMALL/MEDIUM performance, grounding and final qualification artifacts;
+5. enable branch protection / required checks for `main`;
+6. derive target-hardware SLOs from measured p95/p99, throughput and saturation;
+7. use a separately versioned human-reviewed corpus for external legal/medical/technical quality claims.
+
+## Documentation map
+
+- [Post-v1.1 readiness audit](docs/audit/post-v1.1-readiness-2026-10-08.md)
+- [Self-Optimizing RAG v1.1 technical spec](docs/architecture/rag-self-optimizing-platform-v1.1-technical-spec.md)
+- [Self-Optimizing RAG v1 gap-remediation blueprint](docs/architecture/rag-self-optimizing-platform-v1-gap-remediation.md)
+- [Benchmark contract](benchmarks/rag-benchmark-v1/README.md)
+- [Adaptive graph architecture](docs/architecture/adaptive-chunk-graph.md)
+- [Adaptive-memory statistical evaluation](docs/architecture/adaptive-memory-statistical-evaluation.md)
 
 ## Next milestones
 
-The core ingestion/retrieval architecture is already in place. The current production-readiness work focuses on:
+The next phase is **qualification and evidence**, not new retrieval algorithms:
 
-1. complete the production operations hardening branch;
-2. close alert delivery and centralized logging;
-3. run 100k / 1M / 5M vector capacity benchmarks at 1024 dimensions;
-4. run concurrent ingestion + retrieval + retention tests;
-5. run live Ollama end-to-end capacity tests;
-6. execute and record a canonical-source disaster-recovery rehearsal;
-7. derive production SLOs, saturation thresholds and measured RTO from benchmark evidence.
-
-
-## Business identifier index
-
-Akmai extracts exact business identifiers independently from semantic embeddings.
-
-Runtime-supported identifier types are derived from the registered `IdentifierParser` beans. The current supported set is:
-
-- CONTRACT_NUMBER
-- DOCUMENT_NUMBER
-- ORDER_NUMBER
-- INVOICE_NUMBER
-- APPLICATION_NUMBER
-- CASE_NUMBER
-
-Other `IdentifierType` enum values are reserved for future parsers and are not advertised as runtime capabilities until a parser is registered.
-
-The canonical model is:
-
-```text
-DocumentPage -> SemanticChunk -> IdentifierExtractor
-                              -> DocumentIdentifier
-                              -> PostgreSQL source of truth
-                              -> IdentifierSearchIndex
-```
-
-Each identifier is addressed by `documentId + chunkId + pageNumber`. Values are normalized for exact lookup, while the raw value and surrounding context are retained.
-
-`document_identifier` is range-partitioned by `created_at`. Partition creation is kept out of the ingestion hot path: a scheduler prepares the current and next two monthly partitions, while a DEFAULT partition provides a safety fallback.
-
-The search layer is intentionally abstracted behind `IdentifierSearchIndex`. PostgreSQL is the initial implementation. A future local index such as Lucene can be rebuilt from the canonical PostgreSQL table without changing ingestion or the domain model.
-
-Target mixed-query flow:
-
-```text
-"Какие штрафы в договоре KZ-2026-001847?"
-          |
-          +--> exact identifier lookup -> documentId
-          |
-          +--> semantic query "Какие штрафы?"
-                         |
-                         v
-                 pgvector filtered by documentId
-```
-
-
-## AKMAI parallel pipeline
-
-```text
-             WRITE                       READ
-               |                           |
-               v                           v
-            Document                    Question
-               |                           |
-               v                           v
-        SemanticChunker              QueryChunker
-               |                           |
-               v                           v
-       KnowledgeChunk[]               QueryChunk[]
-               |                           |
-               v                           v
- ParallelIngestionExecutor     ParallelRetrievalExecutor
-               |                           |
-       +-------+-------+           +-------+-------+
-       v       v       v           v       v       v
-      IDs     refs   vectors       IDs    vector lexical
-       |       |       |           |       |       |
-       +-------+-------+           +-------+-------+
-               |                           |
-               v                           v
-     PersistenceCoordinator           ResultFusion
-               |                           |
-               v                           v
-        Search projections             Reranker
-                                           |
-                                           v
-                                    ContextAssembler
-                                           |
-                                           v
-                                          Qwen
-```
-
-The same `IdentifierExtractor` and `IdentifierParser[]` rules are shared by WRITE and READ. Document chunks are enriched concurrently before persistence; questions are decomposed into independent query chunks and applicable retrieval strategies are executed concurrently. Both executors use bounded configurable thread pools rather than unbounded `parallelStream()`.
-
-The production retrieval path combines vector, lexical, identifier and reference strategies, then applies result fusion, reranking, bounded context expansion and token budgeting before local answer generation. These stages remain separated behind dedicated components so storage, ranking and model implementations can evolve without coupling them directly to `RagQuestionService`.
+1. establish the immutable approved quality baseline;
+2. complete and retain one successful integrated v1.1 release qualification;
+3. enable required checks / branch protection for `main`;
+4. build a human-reviewed representative corpus for external quality claims;
+5. qualify latency/throughput/SLOs on target hardware;
+6. reconcile stale historical defect issues with the already-merged remediation.
