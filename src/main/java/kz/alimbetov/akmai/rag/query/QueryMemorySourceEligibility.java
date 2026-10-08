@@ -65,7 +65,7 @@ public class QueryMemorySourceEligibility {
     }
 
     private boolean eligible(SourceRef source, Set<Long> accessLevels) {
-        Integer count = jdbcTemplate.queryForObject(
+        Integer count = jdbcTemplate.query(
                 """
                 SELECT count(*)
                 FROM knowledge_search_projection p
@@ -88,7 +88,9 @@ public class QueryMemorySourceEligibility {
                             3,
                             ps.getConnection().createArrayOf(
                                     "bigint",
-                                    accessLevels.stream().sorted().toArray()
+                                    accessLevels.stream()
+                                            .sorted()
+                                            .toArray(Long[]::new)
                             )
                     );
                 },
