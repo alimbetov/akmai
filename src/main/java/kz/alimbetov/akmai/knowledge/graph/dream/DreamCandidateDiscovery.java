@@ -40,10 +40,12 @@ public class DreamCandidateDiscovery {
     public DiscoveryReport discover(
             List<DreamSourceRepository.DreamSource> sources,
             UUID runId,
+            DreamLeaseManager.Authority authority,
             DreamPolicyResolver.ResolvedDreamPolicy policy,
             DreamBudget budget
     ) {
-        if (sources == null || runId == null || policy == null || budget == null) {
+        if (sources == null || runId == null || authority == null
+                || policy == null || budget == null) {
             throw new IllegalArgumentException("Dream discovery inputs are required");
         }
         Set<DreamPair> observedThisRun = new HashSet<>();
@@ -124,30 +126,31 @@ public class DreamCandidateDiscovery {
                 }
 
                 NormalizedEvidence evidence = normalize(
-                        source.node(),
-                        pair,
-                        verification
+                        source.node(), pair, verification
                 );
-                candidates.observe(new DreamCandidateRepository.Observation(
-                        pair,
-                        policy.graphVersion(),
-                        policy.semanticPolicyVersion(),
-                        policy.fingerprint(),
-                        state,
-                        evidence.firstToSecondSimilarity(),
-                        evidence.secondToFirstSimilarity(),
-                        evidence.firstToSecondRank(),
-                        evidence.secondToFirstRank(),
-                        verification.mutualKnn(),
-                        confidence,
-                        source.embeddingProfileId(),
-                        runId,
-                        "reciprocal-ann-v1",
-                        verification.mutualKnn()
-                                ? DreamCandidateRepository.ObservationOutcome.POSITIVE
-                                : DreamCandidateRepository.ObservationOutcome.NEGATIVE_SEMANTIC,
-                        Instant.now()
-                ));
+                candidates.observe(
+                        authority,
+                        new DreamCandidateRepository.Observation(
+                                pair,
+                                policy.graphVersion(),
+                                policy.semanticPolicyVersion(),
+                                policy.fingerprint(),
+                                state,
+                                evidence.firstToSecondSimilarity(),
+                                evidence.secondToFirstSimilarity(),
+                                evidence.firstToSecondRank(),
+                                evidence.secondToFirstRank(),
+                                verification.mutualKnn(),
+                                confidence,
+                                source.embeddingProfileId(),
+                                runId,
+                                "reciprocal-ann-v1",
+                                verification.mutualKnn()
+                                        ? DreamCandidateRepository.ObservationOutcome.POSITIVE
+                                        : DreamCandidateRepository.ObservationOutcome.NEGATIVE_SEMANTIC,
+                                Instant.now()
+                        )
+                );
                 budget.addDbRows(1);
                 persisted++;
                 if (verification.mutualKnn()) {
