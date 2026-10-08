@@ -1,11 +1,12 @@
 # Quality-stable baseline v1
 
-Status: **CANDIDATE — final same-SHA gates required**
+Status: **CANDIDATE — completion SHA gates required**
 
-Branch: `quality/quality-stable-baseline-v1`  
-PR: #65
+Branch: `quality/quality-stable-completion`  
+Prior baseline PR: #65  
+Final-gate fix PR: #68
 
-This is the stabilization ledger after `feature/adaptive-graph-dream` was merged. The baseline is declared only when one final PR-head SHA passes all required workflows.
+This is the stabilization ledger after `feature/adaptive-graph-dream` was merged. The baseline is declared only when one final completion PR-head SHA passes all required workflows.
 
 ## Scope
 
@@ -47,7 +48,7 @@ Mutation-side lifecycle validation is centralized. Read-side lifecycle SQL remai
 
 Action: extracted `JdbcTimeouts` for positive-duration validation and ceil-to-seconds JDBC semantics. Semantic ANN and Dream transaction timeout conversion reuse the same rule.
 
-A dedicated `graphMutationTransactionTemplate` now bounds online graph reinforcement and ingestion semantic seeding using the existing validated adaptive-graph transaction timeout. The generic Primary template is no longer used by these graph mutation hot paths.
+A dedicated `graphMutationTransactionTemplate` bounds online graph reinforcement and ingestion semantic seeding using the validated adaptive-graph transaction timeout. Dream apply creates a short bounded transaction from the same timeout contract.
 
 ### Dream fencing
 
@@ -74,7 +75,9 @@ The same pair-state consolidation and bidirectional single-statement write were 
 
 Dedicated bounded templates exist for retrieval, publication, graph mutation, cleanup/maintenance, repair and re-embedding. Dream apply creates its own short bounded transaction. ANN work remains outside graph mutation transactions.
 
-The Primary `TransactionTemplate` remains unbounded for several short repository coordination paths. No global timeout was imposed because those domains have different lease/publication/idempotency semantics. This is classified as P2 operability debt rather than a graph correctness blocker; future work should move each remaining generic consumer to a domain-specific timeout as its SLA is defined.
+The Primary `TransactionTemplate` remains unbounded for several short repository coordination paths. No global timeout is imposed because those domains have different lease/publication/idempotency semantics. This remains P2 operability debt and is not a graph correctness blocker; each remaining generic consumer should move to a domain-specific timeout only when its SLA is explicitly defined.
+
+The completion hardening adds a real PostgreSQL failure-injection test that blocks the lifecycle row from a separate connection and verifies the Dream transaction timeout terminates the JDBC wait without leaving graph state behind.
 
 ## Connection-pool audit
 
@@ -105,22 +108,22 @@ Completed:
 
 Existing PostgreSQL graph tests cover ACL isolation, graph-version isolation, evidence idempotency and partition pruning.
 
-Added real PostgreSQL/Testcontainers coverage for Dream semantic prior apply:
+Real PostgreSQL/Testcontainers Dream semantic-prior coverage now includes:
 
 - valid fenced authority writes both directions;
 - learned evidence counters stay zero;
 - stale fencing token rejects the mutation and leaves no half-pair;
-- expired lifecycle rejects mutation before graph state changes.
+- expired lifecycle rejects mutation before graph state changes;
+- reversed-pair concurrent apply stress completes without deadlock and preserves exactly two directional rows;
+- a forced lifecycle-row lock wait is interrupted by the configured transaction timeout and leaves no graph mutation.
 
-Added unit coverage for shared JDBC timeout rounding and invalid durations.
-
-Additional reversed-pair deadlock stress and forced transaction-timeout injection are classified as P2 hardening because canonical lock ordering, atomic pair DML, bounded graph transactions and stale-fence rollback are already directly covered by implementation/integration contracts. They remain worthwhile follow-up stress tests, but are not P0/P1 baseline blockers.
+Shared JDBC timeout rounding and invalid-duration behavior also have direct unit coverage.
 
 ## Performance / benchmark assessment
 
-The existing Retrieval Storage Final Benchmark remains a required release gate. For graph-only changes its heavy retrieval matrices may be classified as not retrieval-sensitive and skipped, so a green workflow is not presented as graph latency evidence.
+The Retrieval Storage Final Benchmark remains a required release gate. For graph-only changes its heavy retrieval matrices may be classified as not retrieval-sensitive and skipped, so a green workflow is not presented as graph latency evidence by itself.
 
-Performance claims in this stabilization are therefore limited to reproducible structural facts:
+Performance claims in this stabilization are intentionally limited to reproducible structural facts:
 
 - Dream apply reduces its JDBC call budget from ~10 to ~6 for a new pair;
 - semantic ingestion seeding applies the same consolidation;
@@ -129,9 +132,20 @@ Performance claims in this stabilization are therefore limited to reproducible s
 
 No unmeasured p50/p95/p99 improvement is claimed.
 
+## Prior final-gate evidence
+
+PR #68 head SHA `3151451f12537566653ba9e5c2d415c2e74c9b66` passed all four required workflows before merge:
+
+- CI — success;
+- Retrieval Quality Gate — success;
+- Retrieval Storage Final Benchmark — success;
+- Production Image Build — success.
+
+Because completion hardening adds new integration tests, the final `QUALITY-STABLE` declaration requires the same four gates on one exact completion PR-head SHA.
+
 ## Exit criteria
 
-The baseline can be declared **QUALITY-STABLE** when one final PR-head SHA has:
+The baseline is declared **QUALITY-STABLE** when one final completion PR-head SHA has:
 
 - CI = success;
 - Retrieval Quality Gate = success;
@@ -140,6 +154,6 @@ The baseline can be declared **QUALITY-STABLE** when one final PR-head SHA has:
 - no known P0/P1 correctness defect in this stabilization scope;
 - bounded graph/Dream transaction boundaries;
 - no known semantic-degree hot-path index gap;
-- the integration/failure cases above green.
+- all integration/failure-injection cases above green.
 
-The exact final SHA and workflow run IDs are recorded in the PR/release decision rather than embedded here, because embedding a commit's own SHA or its post-commit workflow IDs would itself create a new commit and invalidate the same-SHA condition.
+The exact final SHA and workflow run IDs are recorded in the PR/release decision rather than embedded into this file after the final gate run, because a post-gate documentation commit would create a new SHA and invalidate the same-SHA condition.
