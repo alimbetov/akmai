@@ -117,31 +117,24 @@ public class SemanticGraphPriorWriter {
             return ApplyResult.DEGREE_LIMIT;
         }
 
-        upsertDirection(
+        upsertPair(
                 authority,
-                pair.first(),
-                pair.second(),
-                semanticSimilarity,
-                observedAt
-        );
-        upsertDirection(
-                authority,
-                pair.second(),
-                pair.first(),
+                pair,
                 semanticSimilarity,
                 observedAt
         );
         return stats.existingPair() ? ApplyResult.REFRESHED : ApplyResult.APPLIED;
     }
 
-    private void upsertDirection(
+    private void upsertPair(
             DreamLeaseManager.Authority authority,
-            ChunkGraphNode source,
-            ChunkGraphNode target,
+            DreamPair pair,
             double semanticSimilarity,
             Instant observedAt
     ) {
         Timestamp observed = Timestamp.from(observedAt);
+        ChunkGraphNode first = pair.first();
+        ChunkGraphNode second = pair.second();
         int changed = jdbcTemplate.update(
                 """
                 INSERT INTO knowledge_chunk_association (
@@ -169,9 +162,42 @@ public class SemanticGraphPriorWriter {
                     updated_at
                 )
                 SELECT
-                    ?, ?, ?, ?, ?, ?, ?,
-                    'CANDIDATE', 0, ?, ?, ?,
-                    0, 0, 0, 0::bit(256), 0, ?, ?, ?, ?, clock_timestamp()
+                    pair_row.access_level,
+                    pair_row.source_document_id,
+                    pair_row.source_generation,
+                    pair_row.source_chunk_id,
+                    pair_row.target_document_id,
+                    pair_row.target_generation,
+                    pair_row.target_chunk_id,
+                    'CANDIDATE',
+                    0,
+                    pair_row.semantic_similarity,
+                    ?,
+                    ?,
+                    0,
+                    0,
+                    0,
+                    0::bit(256),
+                    0,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    clock_timestamp()
+                FROM (
+                    VALUES
+                        (?, ?, ?, ?, ?, ?, ?, ?),
+                        (?, ?, ?, ?, ?, ?, ?, ?)
+                ) AS pair_row (
+                    access_level,
+                    source_document_id,
+                    source_generation,
+                    source_chunk_id,
+                    target_document_id,
+                    target_generation,
+                    target_chunk_id,
+                    semantic_similarity
+                )
                 WHERE EXISTS (
                     SELECT 1
                     FROM adaptive_graph_dream_lease lease
@@ -209,28 +235,36 @@ public class SemanticGraphPriorWriter {
                     compaction_required = TRUE,
                     updated_at = clock_timestamp()
                 """,
-                source.accessLevel(),
-                source.documentId(),
-                source.generation(),
-                source.chunkId(),
-                target.documentId(),
-                target.generation(),
-                target.chunkId(),
-                semanticSimilarity,
                 observed,
                 observed,
                 authority.graphVersion(),
                 observed,
                 observed,
                 observed,
+                first.accessLevel(),
+                first.documentId(),
+                first.generation(),
+                first.chunkId(),
+                second.documentId(),
+                second.generation(),
+                second.chunkId(),
+                semanticSimilarity,
+                second.accessLevel(),
+                second.documentId(),
+                second.generation(),
+                second.chunkId(),
+                first.documentId(),
+                first.generation(),
+                first.chunkId(),
+                semanticSimilarity,
                 authority.graphVersion(),
                 authority.policyFingerprint(),
                 authority.ownerId(),
                 authority.fencingToken()
         );
-        if (changed != 1) {
+        if (changed != 2) {
             throw new DreamLeaseManager.LostDreamAuthorityException(
-                    "Dream semantic prior write rejected by fencing"
+                    "Dream semantic pair write rejected by fencing"
             );
         }
     }
