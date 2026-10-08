@@ -9,7 +9,10 @@ Audit documents are snapshots tied to a particular repository state. They are no
 Use:
 
 - [`post-v1.1-readiness-2026-10-08.md`](post-v1.1-readiness-2026-10-08.md) for the post-v1.1 readiness snapshot;
-- [`post-retrieval-project-audit-remediation-spec.md`](post-retrieval-project-audit-remediation-spec.md) for the current stabilization/remediation execution plan after retrieval hardening.
+- [`post-retrieval-project-audit-remediation-spec.md`](post-retrieval-project-audit-remediation-spec.md) for the normative post-retrieval stabilization scope, behavior and Definition of Done;
+- [`post-retrieval-project-audit-code-blueprint.md`](post-retrieval-project-audit-code-blueprint.md) for the concrete class/method/SQL/test execution map.
+
+The remediation spec and code blueprint are a pair. If implementation discoveries change an assumption, update both in the same change set.
 
 Always distinguish:
 
@@ -25,7 +28,8 @@ release qualification state
 
 | Document | Status | Use |
 |---|---|---|
-| `post-retrieval-project-audit-remediation-spec.md` | TARGET EXECUTION SPEC | Current post-retrieval stabilization plan: governance, reconciliation HA, process contracts, CI/docs cleanup and release qualification. |
+| `post-retrieval-project-audit-remediation-spec.md` | TARGET EXECUTION SPEC | Normative post-retrieval stabilization scope: governance, reconciliation HA, process contracts, CI/docs cleanup and release qualification. |
+| `post-retrieval-project-audit-code-blueprint.md` | TARGET CODE BLUEPRINT | Concrete implementation map to current Java classes, transaction/SQL boundaries, tests, docs and execution order. |
 | `post-v1.1-readiness-2026-10-08.md` | READINESS SNAPSHOT | Readiness decision tied to its audited SHA; some tracker-state statements were superseded later on 2026-10-08. |
 | `post-v1.1-readiness-remediation-spec.md` | SUPERSEDED EXECUTION SPEC | Earlier work breakdown for issue closure evidence and release qualification; consult only for retained detail not superseded by the post-retrieval specification. |
 | `post-phase-b-defect-ledger.md` | HISTORICAL AUDIT | Defect collection/evidence from the Phase-B audit line. |
@@ -54,7 +58,7 @@ The current execution spec tracks these categories:
 
 1. branch protection / required checks on `main`;
 2. approved immutable benchmark baseline and retained live release qualification;
-3. multi-pod generation reconciliation work claiming;
+3. multi-pod generation reconciliation work partitioning;
 4. stale documentation and service-inventory status reconciliation;
 5. CI trigger consistency for `quality/**` and `docs/**`;
 6. positive/negative/concurrency process contracts for publication, lifecycle/retention, re-embedding, repair/reconciliation, graph/Dream jobs and runtime safety flags;
