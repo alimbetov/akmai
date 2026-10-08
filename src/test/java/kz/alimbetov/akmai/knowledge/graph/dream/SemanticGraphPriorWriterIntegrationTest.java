@@ -141,7 +141,8 @@ class SemanticGraphPriorWriterIntegrationTest {
         jdbc.update(
                 """
                 UPDATE knowledge_document_lifecycle
-                SET expires_at = clock_timestamp() - interval '1 second'
+                SET lifecycle_policy = 'TTL',
+                    expires_at = clock_timestamp() - interval '1 second'
                 WHERE document_id = 'doc-b'
                 """
         );
