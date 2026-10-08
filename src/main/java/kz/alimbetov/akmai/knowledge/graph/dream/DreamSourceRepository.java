@@ -13,7 +13,8 @@ import org.springframework.stereotype.Repository;
 /**
  * Enumerates only currently published, READY, ACTIVE and unexpired vectors.
  * Fast-lane keyset uses lifecycle.updated_at, which publication updates after
- * vector insertion inside the same transaction.
+ * vector insertion inside the same transaction. Rescan uses stable node identity
+ * ordering so old eligible nodes receive eventual bounded re-evaluation.
  */
 @Repository
 public class DreamSourceRepository {
@@ -36,9 +37,7 @@ public class DreamSourceRepository {
             DreamCheckpointRepository.Watermark after,
             int limit
     ) {
-        if (limit <= 0) {
-            throw new IllegalArgumentException("limit must be positive");
-        }
+        requireLimit(limit);
         EmbeddingProfile profile = activeProfile();
         String table = storageManager.qualified(profile);
         String cursor = after == null
@@ -99,6 +98,68 @@ public class DreamSourceRepository {
         );
     }
 
+    public List<DreamSource> findRescanAfter(
+            DreamRescanCursor after,
+            int limit
+    ) {
+        requireLimit(limit);
+        EmbeddingProfile profile = activeProfile();
+        String table = storageManager.qualified(profile);
+        String cursor = after == null
+                ? ""
+                : """
+                  AND ROW(
+                      v.access_level,
+                      v.document_id,
+                      v.generation,
+                      v.chunk_id
+                  ) > ROW(?, ?, ?, ?)
+                  """;
+        String sql = """
+                SELECT v.access_level,
+                       v.document_id,
+                       v.generation,
+                       v.chunk_id,
+                       v.language,
+                       v.embedding::text AS embedding_text,
+                       l.updated_at AS source_updated_at
+                FROM %s v
+                JOIN knowledge_document_lifecycle l
+                  ON l.document_id = v.document_id
+                 AND l.access_level = v.access_level
+                 AND l.published_generation = v.generation
+                WHERE l.lifecycle_status = 'READY'
+                  AND l.retention_status = 'ACTIVE'
+                  AND (
+                      l.expires_at IS NULL
+                      OR l.expires_at > clock_timestamp()
+                  )
+                  %s
+                ORDER BY v.access_level,
+                         v.document_id,
+                         v.generation,
+                         v.chunk_id
+                LIMIT ?
+                """.formatted(table, cursor);
+
+        if (after == null) {
+            return jdbcTemplate.query(
+                    sql,
+                    (rs, rowNum) -> map(rs, profile.profileId()),
+                    limit
+            );
+        }
+        return jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> map(rs, profile.profileId()),
+                after.accessLevel(),
+                after.documentId(),
+                after.generation(),
+                after.chunkId(),
+                limit
+        );
+    }
+
     public Optional<DreamSource> findEligibleSource(ChunkGraphNode node) {
         if (node == null) {
             throw new IllegalArgumentException("node must not be null");
@@ -136,6 +197,12 @@ public class DreamSourceRepository {
                 node.generation(),
                 node.chunkId()
         ).stream().findFirst();
+    }
+
+    private void requireLimit(int limit) {
+        if (limit <= 0) {
+            throw new IllegalArgumentException("limit must be positive");
+        }
     }
 
     private EmbeddingProfile activeProfile() {
@@ -176,7 +243,9 @@ public class DreamSourceRepository {
         for (int index = 0; index < parts.length; index++) {
             result[index] = Float.parseFloat(parts[index]);
             if (!Float.isFinite(result[index])) {
-                throw new IllegalArgumentException("non-finite pgvector component");
+                throw new IllegalArgumentException(
+                        "non-finite pgvector component"
+                );
             }
         }
         return result;
@@ -191,16 +260,24 @@ public class DreamSourceRepository {
     ) {
         public DreamSource {
             if (node == null || updatedAt == null) {
-                throw new IllegalArgumentException("Dream source identity is required");
+                throw new IllegalArgumentException(
+                        "Dream source identity is required"
+                );
             }
             if (language == null || language.isBlank()) {
-                throw new IllegalArgumentException("Dream source language is required");
+                throw new IllegalArgumentException(
+                        "Dream source language is required"
+                );
             }
             if (embedding == null || embedding.length == 0) {
-                throw new IllegalArgumentException("Dream source embedding is required");
+                throw new IllegalArgumentException(
+                        "Dream source embedding is required"
+                );
             }
             if (embeddingProfileId == null || embeddingProfileId.isBlank()) {
-                throw new IllegalArgumentException("embeddingProfileId is required");
+                throw new IllegalArgumentException(
+                        "embeddingProfileId is required"
+                );
             }
             embedding = embedding.clone();
         }
@@ -218,6 +295,10 @@ public class DreamSourceRepository {
                     node.generation(),
                     node.chunkId()
             );
+        }
+
+        public DreamRescanCursor rescanCursor() {
+            return DreamRescanCursor.from(node);
         }
     }
 }
