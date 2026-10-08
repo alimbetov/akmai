@@ -235,6 +235,9 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
     }
 
     private void heartbeat(IngestionIdempotencyContext idempotency) {
+        if (idempotency == null) {
+            return;
+        }
         idempotencyRepository.renew(
                 idempotency,
                 idempotencyProperties.leaseDuration()
@@ -245,6 +248,9 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
             IngestionIdempotencyContext idempotency,
             RuntimeException primary
     ) {
+        if (idempotency == null) {
+            return;
+        }
         try {
             idempotencyRepository.fail(idempotency, primary.getMessage());
         } catch (RuntimeException cleanupFailure) {
