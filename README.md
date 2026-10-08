@@ -2,19 +2,23 @@
 
 AkmAI is a **local-first multilingual evidence RAG engine** built on Spring Boot, Spring AI, Ollama and PostgreSQL/pgvector.
 
-It is designed for enterprise knowledge bases where retrieval correctness, ACL isolation, lifecycle control, citations, reproducibility and local deployment matter more than a minimal `embedding -> vector DB -> LLM` demo.
+It targets enterprise knowledge bases where retrieval correctness, ACL isolation, lifecycle control, citations, reproducibility and local deployment matter more than a minimal `embedding -> vector DB -> LLM` demo.
 
 ## Current status
 
-Self-Optimizing RAG Platform **v1.1 is implemented in `main`**. The normal CI/retrieval-quality/image-build path is green on the current audited main ref, while final release qualification still requires a retained live quality baseline, SMALL/MEDIUM performance evidence and semantic-grounding calibration.
+Self-Optimizing RAG Platform **v1.1 is implemented in `main`**. Core ingestion, hybrid retrieval, grounding, adaptive-memory and release-engineering infrastructure are present. Formal release qualification still depends on retained live quality/performance/grounding evidence, an approved immutable benchmark baseline, target-hardware SLO evidence and repository governance.
 
-Current readiness decision:
+Current decision:
 
 - **READY** for local development, integration and controlled internal/pilot deployments;
-- **CONDITIONAL** for production use after the target deployment passes the integrated v1.1 qualification workflow;
-- **NOT YET externally release-qualified** for broad legal/medical/technical accuracy claims until a human-reviewed real-world benchmark and release evidence are retained.
+- **CONDITIONAL** for a production candidate after deployment-specific qualification;
+- **NOT YET externally release-qualified** for broad legal/medical/technical accuracy claims.
 
-See [`docs/audit/post-v1.1-readiness-2026-10-08.md`](docs/audit/post-v1.1-readiness-2026-10-08.md) for the current audit and release blockers.
+See:
+
+- [`docs/README.md`](docs/README.md) — documentation entry point;
+- [`docs/architecture/current-runtime-architecture.md`](docs/architecture/current-runtime-architecture.md) — authoritative runtime map;
+- [`docs/audit/post-v1.1-readiness-2026-10-08.md`](docs/audit/post-v1.1-readiness-2026-10-08.md) — readiness decision and blockers.
 
 ## Goals
 
@@ -25,72 +29,114 @@ AkmAI focuses on:
 - local/private deployments;
 - evidence-first answers with citations and grounding;
 - exact business-identifier retrieval independent from embeddings;
+- generation-aware lifecycle and provenance;
 - controlled self-optimization rather than uncontrolled online learning.
 
 Canonical model baseline:
 
-- embeddings: `qwen3-embedding:4b`;
-- embedding dimensions: `1024`;
-- vector distance: cosine;
-- ANN: HNSW;
-- generation: `qwen3:8b`.
+```text
+embeddings   qwen3-embedding:4b
+vectors      1024 dimensions
+metric       cosine
+ANN          HNSW
+generation   qwen3:8b
+```
 
-Embedding profile drift fails fast. A new encoder is introduced through a new versioned embedding profile, full re-embedding, validation and atomic publication; vectors from different profiles are never mixed.
+Embedding profile drift fails fast. A new encoder is introduced through a versioned embedding profile, full re-embedding, validation and atomic publication. Vectors from different embedding profiles are never mixed even when dimensionality matches.
 
 ## Architecture
 
 AkmAI separates five cooperating planes:
 
-1. **INGEST** — normalize canonical content, preserve domain structure, semantic chunking, identifiers/references, embeddings and publication.
-2. **RETRIEVE** — analyze the question and execute applicable retrieval lanes under ACL/lifecycle fences.
-3. **GENERATE** — fuse, rerank, expand bounded context and generate locally with Ollama.
-4. **VERIFY** — validate citations, deterministic grounding and optional semantic claim/evidence consistency.
-5. **LEARN / OPERATE** — collect bounded evidence, maintain adaptive memory, evaluate policies, observe latency/saturation and manage rollout.
+1. **INGEST** — normalize canonical content, preserve structure, chunk, enrich, embed and publish.
+2. **RETRIEVE** — analyze a question and execute applicable evidence lanes under ACL/lifecycle fences.
+3. **GENERATE** — fuse, rerank, expand and budget evidence before local generation.
+4. **VERIFY** — validate citations and grounding before accepting the answer.
+5. **LEARN / OPERATE** — collect bounded observations, maintain adaptive memory, evaluate policies and operate the service.
 
 ```mermaid
 flowchart LR
-    DOC[CanonicalDocument / text]
-    ING[Normalize -> structure -> semantic chunking]
-    IDX[Identifiers / references / lexical / vectors]
+    DOC[Canonical content]
+    ING[Normalize / structure / semantic chunking]
+    IDX[Identifiers / references / lexical / vectors / concepts]
     DB[(PostgreSQL / pgvector)]
 
     Q[Question]
     PLAN[RetrievalPlanner]
     RET[Vector / lexical / identifier / reference / concept]
-    FUSE[Fusion -> rerank -> context]
+    FUSE[ResultFusion]
+    RR[Reranker]
+    EXP[Structural + adaptive expansion]
+    B[Context budget + revalidation]
     LLM[Ollama]
     VERIFY[Citations + grounding]
     OUT[Answer + sources]
 
-    LEARN[Learning events / Query Memory / adaptive graph]
+    LEARN[Query Memory / association learning / utility]
     POLICY[Offline -> SHADOW -> CANARY -> APPROVED / ROLLBACK]
 
     DOC --> ING --> IDX --> DB
-    Q --> PLAN --> RET --> FUSE --> LLM --> VERIFY --> OUT
+    Q --> PLAN --> RET --> FUSE --> RR --> EXP --> B --> LLM --> VERIFY --> OUT
     DB --> RET
     VERIFY --> LEARN --> POLICY
     POLICY --> PLAN
 ```
 
-The key runtime rule is:
+The key rule is:
 
 ```text
-similarity -> relevance -> authority -> evidence -> grounded answer
+similarity -> relevance -> authority -> bounded evidence -> grounded answer
 ```
 
-## Retrieval
+## Retrieval lanes
 
-The production retrieval path is intentionally multi-lane:
+The base retrieval path is multi-lane:
 
 - **VECTOR** — pgvector/HNSW semantic retrieval;
 - **LEXICAL** — PostgreSQL full-text/trigram retrieval;
-- **IDENTIFIER** — exact business identifiers such as contract/document/order/case numbers;
-- **REFERENCE** — document anchors and cross references;
-- **CONCEPT / graph-assisted retrieval** — bounded semantic associations when enabled and approved.
+- **IDENTIFIER** — exact business identifiers;
+- **REFERENCE** — explicit document anchors/cross references;
+- **CONCEPT** — semantic concept retrieval when enabled.
 
-Results are fused, reranked and context-budgeted before generation. Exact identifiers and authority rules do not depend on vector similarity.
+Results are fused and reranked before expansion/context selection. Exact identifiers and explicit references preserve distinct authority semantics; they are not treated as ordinary vector matches.
 
-Supported business identifier parsers currently include:
+### Adaptive graph is not a fifth peer RRF lane
+
+The **Adaptive Association Graph** is a post-rerank bounded retrieval-memory layer. It learns generation-aware chunk associations from successful grounded usage, maintains them through `CANDIDATE -> WARM -> HOT` lifecycle bands, and can add one-hop neighbours only when explicitly enabled.
+
+Current graph responsibilities are deliberately split:
+
+```text
+ADAPTIVE_GRAPH_LEARNING_ENABLED
+  -> create/reinforce candidate associations
+
+ADAPTIVE_GRAPH_MAINTENANCE_ENABLED
+  -> score, decay, promote/demote, quota and purge
+
+ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED
+  -> measure what graph expansion would add
+
+ADAPTIVE_GRAPH_EXPANSION_ENABLED
+  -> allow eligible WARM/HOT neighbours into live retrieval context
+```
+
+Repository defaults keep these graph switches **off**. With default configuration the graph does not learn or affect user answers.
+
+Detailed runtime contract: [`docs/architecture/adaptive-graph-runtime.md`](docs/architecture/adaptive-graph-runtime.md).
+
+## Adaptive graph safety boundaries
+
+- learned edges exist inside exactly one `access_level`;
+- node identity is `(access_level, document_id, generation, chunk_id)`;
+- graph-origin hits are excluded from normal association-pair learning, preventing direct self-reinforcement;
+- graph lookup is bounded one-hop adjacency, not arbitrary multi-hop reasoning;
+- neighbours are re-resolved through current published projections before becoming evidence;
+- graph evidence has lower authority than exact identifiers and explicit references;
+- graph candidates still pass context, lifecycle, citation and grounding gates.
+
+## Business identifiers
+
+Runtime-supported identifier parsers include:
 
 - `CONTRACT_NUMBER`
 - `DOCUMENT_NUMBER`
@@ -99,38 +145,68 @@ Supported business identifier parsers currently include:
 - `APPLICATION_NUMBER`
 - `CASE_NUMBER`
 
+Identifier retrieval is independent from semantic similarity.
+
 ## Semantic chunking and provenance
 
-Chunking protects meaning before size. The pipeline preserves legal rules/exceptions, medical dosage/contraindication relationships, section boundaries and cross references.
+Chunking protects meaning before size. The pipeline preserves structural boundaries and domain-sensitive atomic units such as legal rule/exception relationships and medical dosage/contraindication relationships.
 
-Default token policy:
-
-```text
-target      750
-soft max   1200
-hard max   1800
-minimum    250
-```
-
-`CanonicalDocument` ingestion can preserve block provenance through the full chain:
+Current parent chunk defaults from `application.yml`:
 
 ```text
-answer -> source -> chunk -> canonical block -> page / section / bbox -> original source
+target      550 tokens
+soft max    650 tokens
+hard max    900 tokens
+minimum     250 tokens
 ```
 
-The original file remains an external source concern; AkmAI owns semantic normalization, chunking, retrieval projections and evidence.
+Current child chunk defaults:
+
+```text
+minimum     250 tokens
+target      275 tokens
+maximum     300 tokens
+```
+
+The parent-child expansion path is enabled by default and remains bounded.
+
+Provenance can be preserved through the evidence chain:
+
+```text
+answer
+  -> cited source
+  -> retrieval hit / chunk
+  -> canonical block / section / page metadata
+  -> original source reference
+```
 
 ## Security and lifecycle invariants
 
-AkmAI treats security/lifecycle as retrieval constraints, not post-processing:
+AkmAI treats security/lifecycle as retrieval constraints, not final redaction:
 
 - ACL scope is resolved before retrieval and revalidated before final context;
-- only published generations are eligible;
+- only eligible published generations may enter context;
 - TTL expiry is synchronously fenced during retrieval;
-- non-local startup fails closed if API-key security is disabled or local bypass is enabled;
-- non-local deployments require explicit non-default DB credentials;
-- request bodies are byte-bounded even when transfer length is unknown/chunked;
-- embedding migrations use DB-backed lease ownership and fencing tokens.
+- learned graph edges cannot cross ACL boundaries;
+- non-local startup fails closed for unsafe security/local-bypass/default-credential combinations;
+- request bodies are byte-bounded even for unknown/chunked transfer;
+- embedding migrations use database-backed ownership, lease and fencing tokens.
+
+## Generation and verification
+
+The LLM receives only bounded selected evidence.
+
+```text
+final context
+  -> ContextAssembler
+  -> Ollama / qwen3:8b
+  -> CitationValidator
+  -> deterministic grounding
+  -> optional semantic grounding
+  -> accepted answer or insufficient-information fallback
+```
+
+Generated prose is not accepted merely because the model returned text.
 
 ## Self-optimizing v1.1
 
@@ -144,53 +220,61 @@ MEASURE
   -> LEARN
   -> OFFLINE EVALUATE
   -> SHADOW
-  -> CANARY
+  -> CANARY + CONTROL
   -> APPROVE / ROLLBACK
   -> MEASURE AGAIN
 ```
 
 Implemented safeguards include:
 
-- persistent Query Memory with PostgreSQL source of truth and bounded Caffeine L1;
+- persistent Query Memory with PostgreSQL source of truth and bounded L1 cache;
 - ACL / embedding-profile / policy namespace isolation;
-- privacy-safe HMAC query/source fingerprints;
+- privacy-safe query/source fingerprints;
 - duplicate suppression and source/query diversity gates;
 - feedback trust classes and anti-poisoning caps;
 - evidence-trained retrieval-policy candidates;
-- SHADOW replay that cannot affect the user answer;
-- bounded CANARY cohort routing with simultaneous CONTROL evidence;
-- automatic fail-closed promotion gates and rollback semantics;
+- SHADOW replay that cannot change the user answer;
+- bounded CANARY routing with simultaneous CONTROL evidence;
+- fail-closed promotion gates and rollback semantics;
 - request-level policy/cohort attribution for reproducibility.
 
-Detailed engineering contract: [`docs/architecture/rag-self-optimizing-platform-v1.1-technical-spec.md`](docs/architecture/rag-self-optimizing-platform-v1.1-technical-spec.md).
+Engineering contract: [`docs/architecture/rag-self-optimizing-platform-v1.1-technical-spec.md`](docs/architecture/rag-self-optimizing-platform-v1.1-technical-spec.md).
+
+## Runtime feature defaults
+
+Several adaptive/self-optimizing capabilities intentionally default to disabled and must be promoted through evidence. Relevant repository defaults include:
+
+```text
+adaptive graph learning          false
+adaptive graph maintenance       false
+adaptive graph shadow expansion  false
+adaptive graph online expansion  false
+adaptive graph competition       false
+adaptive retrieval planner       false
+self-optimizing learning events  false
+persistent query memory          false
+semantic grounding               false
+execution observations           false
+router learning                  false
+```
+
+Always verify `src/main/resources/application.yml` and runtime app-parameter overrides for the target deployment.
 
 ## Release qualification
 
-The integrated release workflow is:
+Integrated workflow:
 
 `.github/workflows/rag-v1.1-release-qualification.yml`
 
-A release is qualified only when all three gates succeed for the same SHA/tag:
-
-1. **quality** — production RAG pipeline + immutable baseline comparison;
-2. **performance** — SMALL and MEDIUM application-level profiles;
-3. **semantic grounding** — live RU/KK/EN calibration.
-
-The final workflow emits `rag-v1.1-qualification.json` with `qualified=true` only when all required sub-gates pass.
+A release is qualified only when the required quality, performance and semantic-grounding evidence succeeds for the same candidate SHA/tag and final qualification output marks the candidate qualified.
 
 ### Controlled benchmark
 
-The repository contains a deterministic `CONTROLLED_SYNTHETIC` benchmark materializer with:
+The repository contains a deterministic `CONTROLLED_SYNTHETIC` corpus with labelled answerable/unanswerable cases across all target languages and LEGAL / MEDICAL / TECHNICAL domains.
 
-- 330 labelled queries;
-- 255 answerable cases;
-- 75 unanswerable cases (22.7%);
-- all 11 target languages;
-- LEGAL / MEDICAL / TECHNICAL domains;
-- required query classes and difficulty levels;
-- deterministic child-chunk truth validated against production chunking.
+This corpus is a **regression and release-engineering asset**. It is not sufficient by itself for broad real-world domain-accuracy claims.
 
-This dataset is a **release-engineering/regression gate**, not a real-world domain-accuracy claim. See [`benchmarks/rag-benchmark-v1/README.md`](benchmarks/rag-benchmark-v1/README.md).
+See [`benchmarks/rag-benchmark-v1/README.md`](benchmarks/rag-benchmark-v1/README.md).
 
 ## Operations
 
@@ -201,11 +285,14 @@ The operations plane includes:
 - OpenTelemetry export;
 - bounded executor saturation telemetry;
 - PostgreSQL / HNSW diagnostics;
-- production container image build;
-- lifecycle/retention/reconciliation monitoring;
-- canonical-source rebuild and disaster-recovery procedures.
+- lifecycle/retention/reconciliation workers;
+- adaptive graph metrics/maintenance;
+- production container build;
+- canonical-source rebuild / disaster recovery procedures.
 
-Resource deadlines are enforced at the retrieval worker/JDBC/model transport boundaries. `strategy-timeout < request-timeout` is a validated configuration invariant, and late dependent work is not started without a full remaining resource budget.
+Timeouts are enforced at retrieval worker/JDBC/model transport boundaries. `strategy-timeout < request-timeout` is a validated runtime invariant.
+
+Operations index: [`docs/operations/README.md`](docs/operations/README.md).
 
 ## Local quick start
 
@@ -263,11 +350,11 @@ Content-Type: application/json
 }
 ```
 
-The answer is generated from the bounded evidence context and returned with validated source references/provenance.
+The answer is generated only from bounded retrieved evidence and returned with validated source references/provenance.
 
 ## Re-embedding
 
-AkmAI treats every embedding space as versioned. Migration uses:
+Every embedding space is versioned:
 
 ```text
 canonical chunks
@@ -278,36 +365,45 @@ canonical chunks
   -> old-generation retirement
 ```
 
-Multi-replica migration ownership is DB-visible and fenced by owner lease + fencing token.
+Multi-replica migration ownership is database-visible and fenced by owner lease + fencing token.
 
 ## Production release checklist
 
 Before calling a deployment release-qualified:
 
-1. keep `main` CI green;
-2. establish and review `benchmarks/rag-benchmark-v1/baselines/approved.json`;
-3. run the integrated v1.1 release-qualification workflow against live Ollama;
+1. keep the candidate CI green;
+2. establish/review `benchmarks/rag-benchmark-v1/baselines/approved.json`;
+3. run integrated live v1.1 qualification on the exact candidate SHA/tag;
 4. retain quality, SMALL/MEDIUM performance, grounding and final qualification artifacts;
-5. enable branch protection / required checks for `main`;
-6. derive target-hardware SLOs from measured p95/p99, throughput and saturation;
-7. use a separately versioned human-reviewed corpus for external legal/medical/technical quality claims.
+5. protect `main` with required checks/review policy;
+6. derive target-hardware p95/p99, throughput and saturation SLOs;
+7. close/reconcile historical issues #36-#41 with issue-specific current evidence;
+8. maintain a separately versioned human-reviewed corpus before broad external quality claims.
 
 ## Documentation map
 
+Start at [`docs/README.md`](docs/README.md).
+
+Key documents:
+
+- [Current runtime architecture](docs/architecture/current-runtime-architecture.md)
+- [Adaptive graph runtime](docs/architecture/adaptive-graph-runtime.md)
+- [Architecture index](docs/architecture/README.md)
 - [Post-v1.1 readiness audit](docs/audit/post-v1.1-readiness-2026-10-08.md)
+- [Audit index](docs/audit/README.md)
+- [Operations index](docs/operations/README.md)
+- [Quality index](docs/quality/README.md)
 - [Self-Optimizing RAG v1.1 technical spec](docs/architecture/rag-self-optimizing-platform-v1.1-technical-spec.md)
-- [Self-Optimizing RAG v1 gap-remediation blueprint](docs/architecture/rag-self-optimizing-platform-v1-gap-remediation.md)
 - [Benchmark contract](benchmarks/rag-benchmark-v1/README.md)
-- [Adaptive graph architecture](docs/architecture/adaptive-chunk-graph.md)
-- [Adaptive-memory statistical evaluation](docs/architecture/adaptive-memory-statistical-evaluation.md)
 
 ## Next milestones
 
-The next phase is **qualification and evidence**, not new retrieval algorithms:
+The next phase is qualification/evidence and measured adaptive-memory improvement, not uncontrolled feature growth:
 
-1. establish the immutable approved quality baseline;
-2. complete and retain one successful integrated v1.1 release qualification;
-3. enable required checks / branch protection for `main`;
-4. build a human-reviewed representative corpus for external quality claims;
+1. finish issue-specific closure evidence for #36-#41;
+2. establish the immutable approved benchmark baseline;
+3. retain one successful integrated v1.1 release qualification;
+4. enable required checks / branch protection for `main`;
 5. qualify latency/throughput/SLOs on target hardware;
-6. reconcile stale historical defect issues with the already-merged remediation.
+6. build a human-reviewed representative external-validity corpus;
+7. evaluate Adaptive Graph incremental utility (grounding/citation lift, contradiction and context-cost signals) before broader online enablement.
