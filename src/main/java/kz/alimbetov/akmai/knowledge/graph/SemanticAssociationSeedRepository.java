@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.knowledge.graph;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -16,6 +17,7 @@ public class SemanticAssociationSeedRepository {
 
     public SemanticAssociationSeedRepository(
             JdbcTemplate jdbcTemplate,
+            @Qualifier("graphMutationTransactionTemplate")
             TransactionTemplate transactionTemplate
     ) {
         this.jdbcTemplate = jdbcTemplate;
