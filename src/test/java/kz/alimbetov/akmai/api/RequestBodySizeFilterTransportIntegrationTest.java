@@ -41,8 +41,7 @@ import org.springframework.web.bind.annotation.RestController;
                 "management.health.defaults.enabled=false",
                 "spring.autoconfigure.exclude="
                         + "org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration,"
-                        + "org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration,"
-                        + "org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration"
+                        + "org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration"
         }
 )
 class RequestBodySizeFilterTransportIntegrationTest {
@@ -140,8 +139,7 @@ class RequestBodySizeFilterTransportIntegrationTest {
     @EnableAutoConfiguration(exclude = {
             DataSourceAutoConfiguration.class,
             SecurityAutoConfiguration.class,
-            UserDetailsServiceAutoConfiguration.class,
-            org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration.class
+            UserDetailsServiceAutoConfiguration.class
     })
     @EnableConfigurationProperties(ApiProperties.class)
     static class TestApplication {
