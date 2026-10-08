@@ -69,15 +69,11 @@ public class AppParameterService {
     public List<ResolvedAppParameter> list() {
         return Arrays.stream(AppParameterKey.values())
                 .map(this::get)
-                .sorted(Comparator.comparing(
-                        value -> value.key().key()
-                ))
+                .sorted(Comparator.comparing(value -> value.key().key()))
                 .toList();
     }
 
-    public ResolvedAppParameter getAuthoritative(
-            AppParameterKey key
-    ) {
+    public ResolvedAppParameter getAuthoritative(AppParameterKey key) {
         if (key == null) {
             throw new IllegalArgumentException(
                     "app parameter key must not be null"
@@ -99,9 +95,7 @@ public class AppParameterService {
     public List<ResolvedAppParameter> listAuthoritative() {
         return Arrays.stream(AppParameterKey.values())
                 .map(this::getAuthoritative)
-                .sorted(Comparator.comparing(
-                        value -> value.key().key()
-                ))
+                .sorted(Comparator.comparing(value -> value.key().key()))
                 .toList();
     }
 
@@ -122,31 +116,23 @@ public class AppParameterService {
                     "expectedVersion must not be negative"
             );
         }
-        Map<AppParameterKey, Boolean> locked =
-                lockParameterSnapshot();
+        Map<AppParameterKey, Boolean> locked = lockParameterSnapshot();
         validateTransition(key, value, locked);
 
         String actor = normalizeActor(updatedBy);
         AppParameter updated;
         try {
             updated = repository.updateBoolean(
-                            key.key(),
-                            value,
-                            expectedVersion,
-                            actor
+                            key.key(), value, expectedVersion, actor
                     )
-                    .orElseThrow(() ->
-                            new AppParameterConflictException(
-                                    key.key(),
-                                    expectedVersion
-                            )
-                    );
+                    .orElseThrow(() -> new AppParameterConflictException(
+                            key.key(), expectedVersion
+                    ));
         } catch (DataAccessException exception) {
             throw new AppParameterUnavailableException(exception);
         }
 
-        ResolvedAppParameter resolved =
-                ResolvedAppParameter.from(updated);
+        ResolvedAppParameter resolved = ResolvedAppParameter.from(updated);
         publishCacheAfterCommit(key, resolved);
         return resolved;
     }
@@ -167,15 +153,10 @@ public class AppParameterService {
             throw new AppParameterUnavailableException(exception);
         }
 
-        LinkedHashMap<AppParameterKey, Boolean> snapshot =
-                new LinkedHashMap<>();
+        LinkedHashMap<AppParameterKey, Boolean> snapshot = new LinkedHashMap<>();
         for (AppParameter parameter : locked) {
-            AppParameterKey parameterKey =
-                    AppParameterKey.parse(parameter.key());
-            snapshot.put(
-                    parameterKey,
-                    parameter.booleanValue()
-            );
+            AppParameterKey parameterKey = AppParameterKey.parse(parameter.key());
+            snapshot.put(parameterKey, parameter.booleanValue());
         }
         if (snapshot.size() != AppParameterKey.values().length) {
             throw new IllegalStateException(
@@ -192,21 +173,21 @@ public class AppParameterService {
     ) {
         if (!value) {
             if (key == AppParameterKey.ADAPTIVE_GRAPH_MAINTENANCE_ENABLED
-                    && enabled(
-                            current,
-                            AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED
-                    )) {
+                    && enabled(current, AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED)) {
                 throw new IllegalArgumentException(
                         "Cannot disable adaptive graph maintenance while online expansion is enabled"
                 );
             }
             if (key == AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED
-                    && enabled(
-                            current,
-                            AppParameterKey.ADAPTIVE_GRAPH_COMPETITION_ENABLED
-                    )) {
+                    && enabled(current, AppParameterKey.ADAPTIVE_GRAPH_COMPETITION_ENABLED)) {
                 throw new IllegalArgumentException(
                         "Cannot disable adaptive graph expansion while competition is enabled"
+                );
+            }
+            if (key == AppParameterKey.ADAPTIVE_GRAPH_DREAM_ENABLED
+                    && enabled(current, AppParameterKey.ADAPTIVE_GRAPH_DREAM_APPLY_ENABLED)) {
+                throw new IllegalArgumentException(
+                        "Cannot disable Dream while Dream apply is enabled"
                 );
             }
             return;
@@ -214,8 +195,7 @@ public class AppParameterService {
 
         switch (key) {
             case ADAPTIVE_GRAPH_LEARNING_ENABLED -> {
-                String secret = graphProperties.learning()
-                        .fingerprintSecret();
+                String secret = graphProperties.learning().fingerprintSecret();
                 if (secret == null || secret.length() < 32) {
                     throw new IllegalArgumentException(
                             "adaptive graph learning requires a fingerprint secret of at least 32 characters"
@@ -223,27 +203,29 @@ public class AppParameterService {
                 }
             }
             case ADAPTIVE_GRAPH_EXPANSION_ENABLED -> {
-                if (!enabled(
-                        current,
-                        AppParameterKey.ADAPTIVE_GRAPH_MAINTENANCE_ENABLED
-                )) {
+                if (!enabled(current, AppParameterKey.ADAPTIVE_GRAPH_MAINTENANCE_ENABLED)) {
                     throw new IllegalArgumentException(
                             "adaptive graph online expansion requires maintenance to be enabled first"
                     );
                 }
             }
             case ADAPTIVE_GRAPH_COMPETITION_ENABLED -> {
-                if (!enabled(
-                        current,
-                        AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED
-                )) {
+                if (!enabled(current, AppParameterKey.ADAPTIVE_GRAPH_EXPANSION_ENABLED)) {
                     throw new IllegalArgumentException(
                             "adaptive graph competition requires online expansion to be enabled first"
                     );
                 }
             }
+            case ADAPTIVE_GRAPH_DREAM_APPLY_ENABLED -> {
+                if (!enabled(current, AppParameterKey.ADAPTIVE_GRAPH_DREAM_ENABLED)) {
+                    throw new IllegalArgumentException(
+                            "adaptive graph Dream apply requires Dream to be enabled first"
+                    );
+                }
+            }
             case ADAPTIVE_GRAPH_MAINTENANCE_ENABLED,
                     ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED,
+                    ADAPTIVE_GRAPH_DREAM_ENABLED,
                     SEMANTIC_MEMORY_INGESTION_LINKING_ENABLED -> {
                 // no additional dependency
             }
@@ -261,8 +243,7 @@ public class AppParameterService {
             AppParameterKey key,
             ResolvedAppParameter value
     ) {
-        if (!TransactionSynchronizationManager
-                .isSynchronizationActive()) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             remember(key, value);
             return;
         }
@@ -276,18 +257,13 @@ public class AppParameterService {
         );
     }
 
-    private ResolvedAppParameter loadFailSafe(
-            AppParameterKey key
-    ) {
+    private ResolvedAppParameter loadFailSafe(AppParameterKey key) {
         try {
             ResolvedAppParameter resolved = repository.find(key.key())
                     .map(ResolvedAppParameter::from)
                     .orElse(null);
             if (resolved == null) {
-                LOGGER.warn(
-                        "app_parameter_read event=missing key={}",
-                        key.key()
-                );
+                LOGGER.warn("app_parameter_read event=missing key={}", key.key());
                 return lastKnownOrFallback(key);
             }
             lastKnownGood.put(key, resolved);
@@ -295,16 +271,13 @@ public class AppParameterService {
         } catch (DataAccessException exception) {
             LOGGER.warn(
                     "app_parameter_read event=fallback key={} errorType={}",
-                    key.key(),
-                    exception.getClass().getSimpleName()
+                    key.key(), exception.getClass().getSimpleName()
             );
             return lastKnownOrFallback(key);
         }
     }
 
-    private ResolvedAppParameter lastKnownOrFallback(
-            AppParameterKey key
-    ) {
+    private ResolvedAppParameter lastKnownOrFallback(AppParameterKey key) {
         ResolvedAppParameter known = lastKnownGood.get(key);
         return known == null ? fallback(key) : known;
     }
@@ -317,34 +290,25 @@ public class AppParameterService {
         cache.put(key, value);
     }
 
-    private ResolvedAppParameter fallback(
-            AppParameterKey key
-    ) {
+    private ResolvedAppParameter fallback(AppParameterKey key) {
         boolean value = switch (key) {
-            case ADAPTIVE_GRAPH_LEARNING_ENABLED ->
-                    graphProperties.learningEnabled();
-            case ADAPTIVE_GRAPH_MAINTENANCE_ENABLED ->
-                    graphProperties.maintenanceEnabled();
-            case ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED ->
-                    graphProperties.shadowExpansionEnabled();
-            case ADAPTIVE_GRAPH_EXPANSION_ENABLED ->
-                    graphProperties.expansionEnabled();
-            case ADAPTIVE_GRAPH_COMPETITION_ENABLED ->
-                    competitionProperties.enabled();
+            case ADAPTIVE_GRAPH_LEARNING_ENABLED -> graphProperties.learningEnabled();
+            case ADAPTIVE_GRAPH_MAINTENANCE_ENABLED -> graphProperties.maintenanceEnabled();
+            case ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED -> graphProperties.shadowExpansionEnabled();
+            case ADAPTIVE_GRAPH_EXPANSION_ENABLED -> graphProperties.expansionEnabled();
+            case ADAPTIVE_GRAPH_COMPETITION_ENABLED -> competitionProperties.enabled();
+            case ADAPTIVE_GRAPH_DREAM_ENABLED -> graphProperties.dreamEnabled();
+            case ADAPTIVE_GRAPH_DREAM_APPLY_ENABLED -> graphProperties.dream().applyEnabled();
             case SEMANTIC_MEMORY_INGESTION_LINKING_ENABLED -> false;
         };
         return ResolvedAppParameter.fallback(key, value);
     }
 
     private String normalizeActor(String updatedBy) {
-        String actor = updatedBy == null
-                ? "unknown"
-                : updatedBy.trim();
+        String actor = updatedBy == null ? "unknown" : updatedBy.trim();
         if (actor.isBlank()) {
             actor = "unknown";
         }
-        return actor.length() <= 128
-                ? actor
-                : actor.substring(0, 128);
+        return actor.length() <= 128 ? actor : actor.substring(0, 128);
     }
 }
