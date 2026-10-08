@@ -59,31 +59,15 @@ public class SemanticAssociationSeedRepository {
             lockOrder.forEach(this::lockPublishedGeneration);
             lockOrder.forEach(this::lockNode);
 
-            boolean existing = associationExists(
-                    first,
-                    second,
-                    graphVersion
-            );
+            boolean existing = associationExists(first, second, graphVersion);
             if (!existing
                     && (semanticDegree(first, graphVersion) >= maxSemanticDegree
                     || semanticDegree(second, graphVersion) >= maxSemanticDegree)) {
                 return false;
             }
 
-            upsertDirection(
-                    first,
-                    second,
-                    similarity,
-                    graphVersion,
-                    observedAt
-            );
-            upsertDirection(
-                    second,
-                    first,
-                    similarity,
-                    graphVersion,
-                    observedAt
-            );
+            upsertDirection(first, second, similarity, graphVersion, observedAt);
+            upsertDirection(second, first, similarity, graphVersion, observedAt);
             return true;
         });
         return Boolean.TRUE.equals(seeded);
@@ -122,10 +106,7 @@ public class SemanticAssociationSeedRepository {
         return Boolean.TRUE.equals(exists);
     }
 
-    private int semanticDegree(
-            ChunkGraphNode node,
-            int graphVersion
-    ) {
+    private int semanticDegree(ChunkGraphNode node, int graphVersion) {
         Integer degree = jdbcTemplate.queryForObject(
                 """
                 SELECT count(*)
@@ -197,10 +178,7 @@ public class SemanticAssociationSeedRepository {
                     graph_version
                 ) DO UPDATE SET
                     semantic_similarity = greatest(
-                        coalesce(
-                            knowledge_chunk_association.semantic_similarity,
-                            0
-                        ),
+                        coalesce(knowledge_chunk_association.semantic_similarity, 0),
                         EXCLUDED.semantic_similarity
                     ),
                     semantic_seeded_at = coalesce(
@@ -262,6 +240,10 @@ public class SemanticAssociationSeedRepository {
                   AND published_generation = ?
                   AND lifecycle_status = 'READY'
                   AND retention_status = 'ACTIVE'
+                  AND (
+                      expires_at IS NULL
+                      OR expires_at > clock_timestamp()
+                  )
                 FOR SHARE
                 """,
                 (rs, rowNum) -> rs.getInt(1),
@@ -272,7 +254,7 @@ public class SemanticAssociationSeedRepository {
 
         if (published == null) {
             throw new IllegalStateException(
-                    "semantic linking requires ACTIVE/PUBLISHED generation"
+                    "semantic linking requires eligible ACTIVE/PUBLISHED generation"
             );
         }
     }
@@ -280,9 +262,7 @@ public class SemanticAssociationSeedRepository {
     private void lockNode(ChunkGraphNode node) {
         jdbcTemplate.query(
                 """
-                SELECT pg_advisory_xact_lock(
-                    hashtextextended(?, 0)
-                )
+                SELECT pg_advisory_xact_lock(hashtextextended(?, 0))
                 """,
                 rs -> {
                 },
