@@ -3,17 +3,18 @@
 Status: **TARGET**  
 Audit date: **2026-10-08**  
 Source branch: `quality/post-retrieval-project-audit`  
-Audited baseline: `main@f5aa953f0ca6bdf020e77830b14eda9e490f9955`
+Audited baseline: `main@f5aa953f0ca6bdf020e77830b14eda9e490f9955`  
+Code-level execution blueprint: [`post-retrieval-project-audit-code-blueprint.md`](post-retrieval-project-audit-code-blueprint.md)
 
 ## 1. Purpose
 
-This specification defines the stabilization and remediation work required after the retrieval-flow hardening line. The objective is to close confirmed governance, lifecycle, documentation and release-qualification gaps without introducing new product features.
+This specification defines the single stabilization/remediation workstream after the ingestion and retrieval hardening line. It closes confirmed governance, lifecycle, multi-replica, documentation and release-qualification gaps without adding product features.
 
-The work is intentionally limited to correctness, availability, multi-replica safety, operability, release governance, test coverage and documentation accuracy.
+This file is the normative scope/behavior contract. The companion code blueprint is the normative implementation map for current classes, methods, SQL boundaries and tests. When code discoveries change an assumption, both documents must be updated in the same change set.
 
 ## 2. Non-goals
 
-The following are explicitly out of scope:
+Out of scope:
 
 - new retrieval strategies;
 - new graph-learning algorithms;
@@ -21,655 +22,555 @@ The following are explicitly out of scope:
 - new Dream scoring models;
 - ranking-policy expansion;
 - UI/product functionality;
-- replacing PostgreSQL as the distributed authority;
-- changing the already fixed Dream ownership/fencing model without a demonstrated defect.
+- replacing PostgreSQL as distributed authority;
+- reopening fixed Dream decisions without a reproduced defect;
+- creating a second ownership/fencing abstraction where current row locks/leases already provide authority.
 
-## 3. Audit findings and priorities
+## 3. Findings and disposition
 
-| ID | Priority | Area | Finding |
+| ID | Priority | Finding | Required disposition |
 |---|---|---|---|
-| PRA-01 | P1 | Governance | `main` is not protected and has no required status checks. |
-| PRA-02 | P1 | Release process | PR #73 was merged before its exact-head CI completed. |
-| PRA-03 | P1 | Release qualification | The release workflow expects an approved immutable RAG baseline that is absent from the audited repository state. |
-| PRA-04 | P2 | Multi-pod lifecycle | Generation reconciliation can select the same cleanup batch on multiple pods and contend on the same rows. |
-| PRA-05 | P2 | Documentation | Current docs claim issues #36-#41 are open although they are closed/completed. |
-| PRA-06 | P2 | Documentation | `docs/README.md` synchronization SHA is stale. |
-| PRA-07 | P2 | Documentation process | Service contracts remain `DRAFT` after exact-head green verification. |
-| PRA-08 | P2 | CI | Push CI does not include `quality/**` and `docs/**` branches. |
-| PRA-09 | P2 | Process coverage | Lifecycle, re-embedding, graph/Dream jobs, repair/reconciliation and runtime flags still lack the same service-contract/negative-case coverage now present for ingestion/retrieval. |
+| PRA-01 | P1 | `main` is unprotected; no required status checks | enforce PR + required checks + force-push/deletion restrictions |
+| PRA-02 | P1 | PR #73 merged before exact-head CI completed | make pending/failed/cancelled checks block merge |
+| PRA-03 | P1 | release qualification expects missing approved baseline | define reviewed immutable baseline process and establish only from real run |
+| PRA-04 | P2 | reconciliation discovers same candidates on multiple pods | partition candidate acquisition with PostgreSQL `FOR UPDATE SKIP LOCKED`; retain lifecycle locks and two-phase tombstone durability |
+| PRA-05 | P2 | current docs still contain stale #36-#41 tracker state | reconcile current docs; preserve old state only as historical snapshot |
+| PRA-06 | P2 | docs synchronization SHA is stale | update only at final code/docs state before final verification |
+| PRA-07 | P2 | service inventory status lags green evidence | reconcile `DRAFT/VERIFIED` on final verified SHA |
+| PRA-08 | P2 | push CI omits `quality/**` and `docs/**` | add branch families without weakening PR checks |
+| PRA-09 | P2 | publication/lifecycle/reembedding/graph/Dream/jobs/flags lack ingestion/retrieval-level process contracts | add code-mapped contracts and negative/concurrency tests |
 
 ## 4. Global invariants
 
-The remediation MUST preserve all of the following:
+The remediation must preserve:
 
-1. `main` must not accept a change before required checks succeed.
-2. Release qualification must be reproducible for an exact immutable SHA/tag.
-3. Multi-pod background workers must not duplicate expensive work unnecessarily or weaken existing lifecycle fences.
-4. Publication, ACL, TTL and generation authority remain fail-closed.
-5. Optional quality enhancers may degrade, but authority and visibility checks must never degrade open.
-6. PostgreSQL-time lease/fencing remains the source of distributed authority where ownership is required.
-7. Documentation must describe current executable behavior and tracker state, not historical assumptions.
-8. A process contract may be marked `VERIFIED` only when implementation, positive/negative tests and exact-head CI evidence exist.
-9. New fixes discovered while executing this specification must be completed in this branch unless they are unrelated feature work.
+1. `main` cannot accept a normal change before all required checks for the current PR head succeed.
+2. Release qualification is tied to an exact immutable SHA/tag and an approved compatible baseline.
+3. Publication, ACL, TTL and generation authority fail closed.
+4. Optional quality/derived-memory layers may degrade but may not become authority.
+5. PostgreSQL transaction/row-lock/lease/fencing state is the distributed source of truth.
+6. Multi-pod workers must be singleton, claimed/partitioned, or demonstrably duplicate-safe.
+7. Physical cleanup never deletes the currently published generation.
+8. Background cleanup is not the retrieval-time TTL authority.
+9. Runtime safety gates distinguish cached fail-safe reads from authoritative reads.
+10. `VERIFIED` means current implementation + concrete positive/negative tests + green exact-head verification.
+11. No final documentation-only tail commit may invalidate same-SHA verification evidence.
+12. No known P0/P1 correctness defect may remain at branch exit.
 
 ---
 
-# 5. PRA-01 / PRA-02 — default-branch governance and merge gate
+# 5. PRA-01 / PRA-02 — default branch governance
 
-## 5.1 Problem
+## 5.1 Target repository rules
 
-The default branch currently has no enforced required checks. This allowed PR #73 to merge before `mvn clean verify` completed. The later-successful CI result does not remove the governance defect.
+Protect `main` using branch protection or repository ruleset.
 
-## 5.2 Required repository configuration
+Required:
 
-Protect `main` using branch protection or an equivalent repository ruleset.
+- pull request required for normal changes;
+- required checks pending -> merge blocked;
+- required check failed -> merge blocked;
+- required check cancelled -> merge blocked;
+- force-push disabled;
+- branch deletion disabled;
+- update-before-merge policy explicitly defined;
+- administrator/emergency bypass, if retained, documented and not treated as release qualification.
 
-Minimum required controls:
-
-- changes to `main` through pull request;
-- block merge while required checks are pending;
-- block merge when required checks fail;
-- disallow force-push to `main`;
-- disallow branch deletion;
-- require branch to be up to date before merge when practical;
-- do not allow administrator bypass for normal release changes unless an emergency procedure is explicitly documented.
-
-Required normal checks SHOULD include the exact check names produced by the repository workflows for:
+Normal required workflow families:
 
 - CI / verify;
 - Retrieval Quality Gate;
 - Retrieval Storage Final Benchmark;
 - Production Image Build.
 
-The exact configured GitHub check contexts MUST be copied from a current successful PR/check suite rather than guessed.
+Use exact GitHub check contexts observed from successful PR checks. Do not guess names.
 
-## 5.3 Release-tag governance
+## 5.2 Acceptance
 
-The live `RAG v1.1 Release Qualification` workflow is a release/tag promotion gate, not a normal PR gate. Formal version tags MUST only be created from a commit that already satisfies normal `main` gates and has an approved baseline.
-
-## 5.4 Emergency bypass
-
-If owner-level emergency bypass remains possible, document:
-
-- who may invoke it;
-- acceptable reasons;
-- required follow-up PR;
-- required retrospective verification;
-- prohibition on silently treating bypassed commits as quality-stable baselines.
-
-## 5.5 Positive tests / verification
-
-- Open a test PR with all required checks green; merge control allows merge only after completion.
-- Confirm direct non-PR update to `main` is rejected for normal contributor path.
-- Confirm force-push/deletion restrictions.
-
-## 5.6 Negative tests / verification
-
-- Pending required check -> merge blocked.
-- Failed required check -> merge blocked.
-- Cancelled required check -> merge blocked.
-- Stale/out-of-date PR behaves according to configured update policy.
-
-## 5.7 Acceptance criteria
-
-- A PR cannot reproduce the #73 sequence `merge -> verify later`.
-- Repository metadata/rules prove the enforcement.
-- `docs/operations/production-release-gates.md` describes the final configured rules and exact check contexts.
+- the PR #73 sequence `merge -> CI completes later` cannot be repeated;
+- repository metadata proves enforcement;
+- production release-gates documentation records exact configured contexts and bypass policy.
 
 ---
 
-# 6. PRA-03 — approved immutable RAG baseline and release qualification
+# 6. PRA-08 — CI trigger consistency
 
-## 6.1 Problem
-
-`.github/workflows/rag-v1.1-release-qualification.yml` consumes:
-
-`benchmarks/rag-benchmark-v1/baselines/approved.json`
-
-with baseline establishment disabled. The approved baseline is therefore an external precondition of reproducible release qualification.
-
-## 6.2 Required baseline process
-
-Create a controlled baseline-establishment procedure:
-
-1. Select an exact candidate SHA.
-2. Run the benchmark against the canonical controlled corpus using the production pipeline, not mocked retrieval.
-3. Retain raw benchmark result artifacts.
-4. Human-review the result for corpus validity, answerability labels, retrieval metrics and abstention behavior.
-5. Materialize `approved.json` from that reviewed run.
-6. Commit it with provenance fields sufficient to identify the source SHA/run/corpus/schema.
-7. Treat changes to approved baseline as review-required release engineering changes, never as automatic CI output.
-
-## 6.3 Baseline schema requirements
-
-At minimum the baseline artifact SHOULD contain or reference:
-
-- schema version;
-- source git SHA;
-- corpus version/fingerprint;
-- benchmark runner version/contract;
-- Recall/MRR/nDCG or the currently authoritative retrieval metrics;
-- grounding/citation/abstention thresholds used by the release gate;
-- establishment timestamp;
-- reviewer/provenance note suitable for repository history.
-
-Do not add fields that the current parser cannot tolerate without first updating its schema/parser tests.
-
-## 6.4 Positive cases
-
-- Candidate equal/better than approved thresholds -> qualification quality job succeeds.
-- Exact baseline file + supported schema -> deterministic comparison.
-
-## 6.5 Negative cases
-
-- Missing baseline -> release qualification must fail explicitly.
-- Malformed baseline -> fail explicitly, no silent default.
-- Corpus fingerprint mismatch -> fail or require deliberate migration; never silently compare incompatible corpora.
-- Baseline generated from mocked retrieval -> invalid for approval.
-- Baseline produced by a failed/incomplete benchmark -> invalid for approval.
-
-## 6.6 Acceptance criteria
-
-- `approved.json` exists only after a reviewed real run.
-- Release qualification on a candidate SHA produces retained quality/performance/grounding artifacts and final manifest.
-- `qualified=true` is impossible when any constituent job fails.
-
----
-
-# 7. PRA-04 — multi-pod generation reconciliation hardening
-
-## 7.1 Current behavior
-
-`GenerationReconciliationScheduler` runs independently on every application replica. `GenerationReconciliationService.reconcileBatch()` discovers candidates with an ordered `SELECT ... LIMIT ?`, then obtains row locks later while processing individual candidates.
-
-This is correctness-safe only to the extent that later lifecycle/generation locks serialize mutations, but it permits duplicate candidate selection and avoidable multi-pod contention.
-
-## 7.2 Target behavior
-
-Multiple replicas MAY run reconciliation, but a candidate generation SHOULD be actively worked by at most one replica at a time.
-
-Preferred design: DB-backed bounded batch claiming using one of the following, selected after implementation-level review:
-
-### Option A — `FOR UPDATE SKIP LOCKED`
-
-Use a short claim transaction to select eligible generation rows with deterministic ordering and `FOR UPDATE SKIP LOCKED`, then process only claimed rows.
-
-This option is preferred if the complete reconciliation of a generation can safely be represented by a short-lived database claim without holding a long transaction across repair work.
-
-### Option B — persisted claim/lease
-
-Add explicit claim columns/table if repair work must outlive a row-lock transaction:
-
-- owner/worker identity;
-- lease-until using PostgreSQL time;
-- monotonic fencing token if stale owners can mutate after takeover;
-- claim/renew/release semantics.
-
-Do NOT hold database row locks across long external/vector cleanup operations solely to obtain singleton behavior.
-
-## 7.3 Required properties
-
-- bounded work per scheduler tick;
-- no unbounded transaction around the full cleanup operation;
-- deterministic claim order;
-- crash recovery;
-- stale claim recovery if persisted leases are used;
-- publication lifecycle is rechecked before destructive cleanup;
-- no cleanup of the currently published generation;
-- retry remains idempotent;
-- audit events must not claim success before cleanup is actually final.
-
-## 7.4 Positive tests
-
-- one replica claims and cleans an eligible terminal generation;
-- two workers with disjoint eligible rows process in parallel;
-- a completed cleanup becomes `CLEANED` exactly once at lifecycle level;
-- bounded repair requiring a later run remains eligible for retry.
-
-## 7.5 Negative/concurrency tests
-
-- two workers race for the same generation -> only one owns active processing;
-- published generation becomes current after discovery but before destructive work -> cleanup aborts/fails closed;
-- worker crashes after claim -> another worker eventually recovers the work;
-- stale owner after takeover cannot finalize a newer owner's work if fencing is introduced;
-- DB exception during claim -> no partial ownership state;
-- DB exception during finalization -> retry remains safe;
-- duplicate scheduler ticks do not multiply expensive repair work for the same generation.
-
-## 7.6 Observability
-
-Add/confirm metrics for:
-
-- candidates discovered;
-- candidates claimed;
-- claim conflicts/skips;
-- cleaned;
-- deferred;
-- failed;
-- run duration;
-- batches;
-- stale-claim recovery if leases are used.
-
-## 7.7 Acceptance criteria
-
-- multi-replica deterministic test demonstrates no duplicate active repair for one generation;
-- no regression to current publication/lifecycle fencing;
-- no long-lived transaction is introduced around expensive repair calls;
-- process contract is documented under `docs/services/`.
-
----
-
-# 8. PRA-05 / PRA-06 — documentation truthfulness cleanup
-
-## 8.1 Required updates
-
-Update all current documentation that still states issues #36-#41 are open. Their tracker state is now closed/completed.
-
-At minimum inspect and correct:
-
-- `docs/README.md`;
-- `docs/audit/README.md`;
-- `docs/audit/post-v1.1-readiness-2026-10-08.md`;
-- any current readiness/remediation document that uses the old open-state claim.
-
-Historical documents MAY retain the old state only when clearly classified as historical snapshots tied to an older audited SHA.
-
-## 8.2 Synchronization marker
-
-Update `docs/README.md` synchronization SHA only after the branch's final code/docs state is known. Do not set it early and then add later changes without updating it again.
-
-## 8.3 Positive cases
-
-- Current docs reflect current GitHub tracker state.
-- Historical snapshot explicitly states the historical audit SHA/date.
-
-## 8.4 Negative cases
-
-- No current document says an issue is open when GitHub state is closed.
-- No current document presents a superseded remediation plan as current behavior.
-- No duplicated current architecture documents with conflicting rules.
-
-## 8.5 Acceptance criteria
-
-- Documentation search for `#36`, `#37`, `#38`, `#39`, `#40`, `#41` is manually reviewed.
-- Current docs agree with code, migrations, config and actual issue state.
-
----
-
-# 9. PRA-07 — service inventory verification lifecycle
-
-## 9.1 Problem
-
-The inventory defines `VERIFIED` as implementation + concrete tests + green verification, but the status is not consistently promoted after exact-head success.
-
-## 9.2 Required change
-
-Review each existing contract individually:
-
-- `knowledge-ingestion.md`;
-- `retrieval-flow.md`;
-- `retrieval-routing.md`;
-- `retrieval-execution.md`;
-- `retrieval-selection.md`.
-
-Promote to `VERIFIED` only if:
-
-1. the document matches current `main` behavior;
-2. referenced tests exist and cover the declared positive/negative semantics;
-3. the implementation containing those tests passed CI on an exact SHA;
-4. no material unresolved correctness gap invalidates the contract.
-
-If any condition is false, keep `DRAFT` and record the explicit missing item in the contract.
-
-## 9.3 Process hardening
-
-Add a documentation/release checklist item to every future hardening PR:
-
-`[ ] service-inventory status reconciled after final green SHA`
-
-The final status update must itself be included in a SHA that passes required checks; do not create an unverified documentation-only tail commit and call the prior SHA final.
-
----
-
-# 10. PRA-08 — CI branch trigger consistency
-
-## 10.1 Required change
-
-Update `.github/workflows/ci.yml` push branches to include the repository's actual stabilization/documentation naming conventions, at minimum:
+Patch `.github/workflows/ci.yml` push branches to include:
 
 ```yaml
 - "quality/**"
 - "docs/**"
 ```
 
-Keep `pull_request:` coverage unchanged.
+Keep `pull_request:` unchanged.
 
-## 10.2 Positive cases
+Acceptance:
 
-- push to `quality/...` triggers CI;
-- push to `docs/...` triggers CI;
-- PR still triggers CI regardless of branch prefix.
-
-## 10.3 Negative cases
-
-- duplicated simultaneous workflows must not be introduced accidentally by conflicting trigger definitions;
-- branch-prefix addition must not weaken required PR checks.
+- a push to this audit branch triggers normal CI;
+- a `docs/**` push triggers normal CI;
+- PR check remains the canonical merge-required check;
+- no trigger change weakens branch protection.
 
 ---
 
-# 11. PRA-09 — remaining process-contract hardening
+# 7. PRA-03 — approved immutable RAG baseline
 
-The next audit/remediation layer must apply the same `Process -> Business Rules -> Positive -> Negative -> Tests` standard already used for ingestion and retrieval.
+## 7.1 Contract
 
-The order is mandatory unless a P1 defect discovered during execution changes priority.
+`rag-v1.1-release-qualification.yml` consumes:
 
-## 11.1 Publication / activation lifecycle
+`benchmarks/rag-benchmark-v1/baselines/approved.json`
 
-Document and test:
+with baseline establishment disabled. The baseline is therefore reviewed release input, not normal CI output.
 
-- generation publication transaction boundary;
-- previous generation retirement transition;
-- publication ambiguity/retry;
-- publication conflict/concurrency;
-- ACL identity consistency;
-- failure before publication;
-- failure after staged storage but before publication;
-- revalidation of currently published generation;
-- idempotent/recoverable publication semantics.
+## 7.2 Required process
 
-Negative cases MUST include:
+```text
+exact candidate SHA
+  -> canonical production-pipeline benchmark
+  -> retain raw artifacts
+  -> human review corpus/result validity
+  -> materialize approved.json
+  -> commit approved.json with provenance
+  -> compare later candidates against committed baseline
+```
 
-- stale generation attempting publication;
-- two concurrent publication attempts for one document;
-- lifecycle row disappears/changes;
-- DB timeout/deadlock/transaction rollback;
-- partial vector/projection staging;
-- retry after ambiguous commit outcome.
+## 7.3 Required safety
 
-## 11.2 Chunk lifecycle / retention
+Fail explicitly for:
 
-Document and test:
+- missing baseline;
+- malformed/unsupported schema;
+- incompatible corpus identity/fingerprint;
+- incomplete/failed source run;
+- mocked retrieval baseline;
+- any failed quality/performance/grounding constituent job.
 
-- TTL synchronous visibility fence;
-- scheduler vs synchronous eligibility responsibility;
-- retiring/retired/cleaned transitions;
-- retention lease and worker-pool behavior;
-- cleanup retry limits;
-- tombstone creation/verification;
-- expired-but-still-ACTIVE retrieval rejection;
-- scheduler disabled/failure behavior.
+`qualified=true` must require every constituent release job to be successful.
 
-## 11.3 Re-embedding
+## 7.4 Schema rule
 
-Document and test:
+Inspect the existing baseline parser before adding provenance fields. Parser/schema changes require tests in the same commit.
 
-- owner lease;
-- heartbeat;
-- fencing token;
-- stale owner rejection;
-- takeover after lease expiry;
-- staging/cutover transaction boundary;
-- rollback/failure/recovery;
-- multi-replica startup while healthy owner exists;
-- `auto-migrate=false` recovery behavior.
+---
 
-## 11.4 Repair / reconciliation
+# 8. PRA-04 — multi-pod generation reconciliation
 
-In addition to PRA-04, cover:
+## 8.1 Confirmed current behavior
 
-- orphan projection/vector cleanup;
-- bounded batch exhaustion;
-- residual rows remaining after repair;
-- audit correctness;
-- retry after partial physical cleanup;
+`GenerationReconciliationScheduler` runs on each pod. `GenerationReconciliationService.reconcileBatch()` currently discovers an unlocked ordered candidate list and later serializes mutation using lifecycle/generation `FOR UPDATE` locks.
+
+The current implementation does not demonstrate concurrent duplicate destructive repair; actual mutation is serialized and state is rechecked after lock acquisition. The confirmed deficiency is duplicate discovery and avoidable blocking/prepare contention.
+
+PRA-04 is therefore a P2 scalability/operability hardening item, not a known data-corruption defect.
+
+## 8.2 Chosen design
+
+Use PostgreSQL work partitioning with `FOR UPDATE SKIP LOCKED` at candidate acquisition.
+
+Do **not** introduce a new reconciliation lease/fencing table in the first implementation because:
+
+- repair is PostgreSQL-only and bounded;
+- current lifecycle/generation row locks are already mutation authority;
+- a second ownership protocol would duplicate authority without demonstrated need.
+
+## 8.3 Required transaction model
+
+### Terminal `RETIRED` / `FAILED`
+
+Candidate selection must occur inside `cleanupTransactionTemplate` with deterministic order and `FOR UPDATE SKIP LOCKED`. The selected generation is revalidated and repaired under the existing database authority/timeout contract.
+
+### `RETIRING`
+
+Preserve the existing two-phase durability boundary:
+
+```text
+TX-A
+  lock lifecycle + generation
+  create/update retired-generation tombstone PURGING
+COMMIT
+
+TX-B
+  re-lock lifecycle + generation
+  recheck not published
+  bounded physical repair
+  verify residual=0
+  tombstone -> PURGED
+  generation -> RETIRED
+COMMIT
+```
+
+Do not collapse TX-A/TX-B without a dedicated crash-recovery proof.
+
+## 8.4 Fresh/stale PURGING behavior
+
+Use existing tombstone state/timestamps to prevent immediate repeated preparation:
+
+- no PURGING tombstone -> eligible;
+- fresh PURGING tombstone -> skip this tick;
+- stale PURGING tombstone -> recoverable/takeover path.
+
+The stale threshold must derive from configured bounded timeout/grace semantics, not a magic SQL literal.
+
+## 8.5 Destructive safety fence
+
+Before every destructive phase:
+
+```text
+lock lifecycle row
+if lifecycle.published_generation == candidate.generation
+  -> abort cleanup for candidate
+```
+
+Never reuse a publication decision across transaction boundaries.
+
+## 8.6 Acceptance tests
+
+Required PostgreSQL concurrency/failure cases:
+
+- two workers + two candidates -> disjoint progress;
+- two workers + one candidate -> one processes while other skips locked discovery rather than choosing same row;
+- fresh PURGING -> skipped;
+- stale PURGING -> recovered;
+- candidate becomes published before destructive phase -> zero delete;
+- bounded repair leaves residual rows -> no false `CLEANED`;
+- DB timeout/exception -> rollback + retryable state;
+- successful repair -> committed lifecycle/audit final state exactly once.
+
+Detailed class/method/SQL plan is in the code blueprint.
+
+---
+
+# 9. Publication / activation lifecycle
+
+Create `docs/services/publication-lifecycle.md` and map it to `GenerationPublicationService` / `PersistenceCoordinator` / `PublicationOutcomeResolver`.
+
+Required rules:
+
+- publication transaction atomically persists retrieval payload, generation state, lifecycle pointer and idempotency completion;
+- lifecycle row serializes publication for one document;
+- active embedding profile is rechecked under lock;
+- stale older generation cannot replace a newer published generation;
+- previous published generation transitions to `RETIRING` exactly once or publication rolls back;
+- lifecycle update failure rolls back new generation publication;
+- ambiguous transaction outcome is translated only when `PublicationOutcomeResolver` proves COMMITTED/SUPERSEDED;
+- semantic linking occurs after commit as derived-memory enrichment and may fail without undoing publication.
+
+Tests must cover first publish, replacement, concurrent publication, stale/superseded publication, profile change, payload repository failure, lifecycle update failure, idempotency completion failure, ambiguous outcome and post-commit linker failure.
+
+---
+
+# 10. Chunk lifecycle / retention
+
+Create `docs/services/chunk-lifecycle-retention.md`.
+
+Required separation:
+
+```text
+synchronous published lifecycle eligibility
+  = retrieval authority now
+
+retention scheduler/worker
+  = eventual physical retirement/cleanup
+```
+
+Required cases:
+
+- expired-but-ACTIVE rows rejected synchronously;
+- scheduler disabled/failing does not restore expired data eligibility;
+- active retention claim prevents duplicate cleanup;
+- expired claim recovers;
+- worker saturation does not strand claimed work in unbounded queue;
+- cleanup timeout remains retryable;
+- partial cleanup cannot report success;
+- current published generation is protected.
+
+Map contract to `RetentionScheduler`, `RetentionWorkerPool`, `RetentionClaimRepository`, `ChunkRetentionService` and the canonical lifecycle eligibility reader.
+
+---
+
+# 11. Re-embedding ownership / fencing
+
+Create `docs/services/reembedding.md`.
+
+Current authority is `ReembeddingLeaseManager` over persisted:
+
+- `owner_id`;
+- `lease_until` based on PostgreSQL time;
+- monotonic `fencing_token`.
+
+Required semantics:
+
+- new ownership requires initial unowned active migration;
+- expired takeover increments token;
+- renew requires matching owner/token and live lease;
+- expired lease cannot be resurrected by normal renew;
+- stale owner/token cannot progress/complete/fail/release after takeover;
+- heartbeat only renews still-live owned active migrations;
+- startup recovery does not abort healthy other-replica owner;
+- `auto-migrate=false` does not weaken recovery safety;
+- cutover rollback leaves old active profile authoritative.
+
+Required multi-instance integration tests are defined in the blueprint.
+
+---
+
+# 12. Repair / reconciliation
+
+Create `docs/services/generation-reconciliation.md`.
+
+Beyond PRA-04 document/test:
+
+- orphan retrieval payload cleanup;
+- batch limit exhaustion;
+- residual rows after repair;
 - missing embedding profile;
-- tombstone mismatch;
-- cleanup DB timeout.
+- tombstone state mismatch;
+- audit event accuracy;
+- retry after rollback/partial prior committed phase;
+- cleanup/repair transaction timeout.
 
-## 11.5 Adaptive graph mutation
+Audit success/deferred events must represent committed lifecycle state, not optimistic intent.
 
-Document and test:
+---
 
-- canonical pair ordering;
-- graph mutation locking;
-- lifecycle eligibility;
-- online vs semantic mutation policy differences;
-- rollback on half-pair failure;
-- reversed-pair concurrency;
-- timeout while waiting for lock;
-- stale lifecycle state;
-- quota enforcement.
+# 13. Adaptive graph mutation
 
-## 11.6 Dream ownership / candidate lifecycle
+Create `docs/services/adaptive-graph-mutation.md`.
 
-Preserve fixed decisions:
+`GraphMutationLocks` remains the canonical shared mutation primitive for:
 
-- fast lane is an accelerator only;
-- bounded rescan provides eventual coverage;
+- `AdaptiveChunkGraphRepository`;
+- `SemanticAssociationSeedRepository`;
+- `SemanticGraphPriorWriter`.
+
+Required invariants:
+
+- canonical pair ordering before locks;
+- lifecycle eligibility locked before mutation;
+- online/semantic policy differences remain explicit;
+- bilateral mutation atomic;
+- reversed pair concurrency no deadlock;
+- configured JDBC/transaction timeout bounds lock wait;
+- half-pair failure rolls back whole pair;
+- Dream prior apply additionally requires valid fencing authority in guarded DML.
+
+Do not duplicate lifecycle/advisory lock SQL back into individual writers.
+
+---
+
+# 14. Dream ownership / candidate lifecycle
+
+Create `docs/services/dream-cycle.md` and only split candidate lifecycle into a separate contract if it is independently useful.
+
+Fixed decisions:
+
+- fast lane accelerates change discovery but is not completeness guarantee;
+- bounded rescan is eventual coverage guarantee;
 - one serial Dream owner;
 - PostgreSQL-time lease + fencing authority;
-- config + runtime DB double gate;
-- candidate `ACTIVE` means current semantic state;
-- `maxNewEdgesPerChunk` is per-source per-run ACTIVE admission in DREAM-4B;
-- ANN concurrency remains 1 in this stabilization scope.
+- static config + runtime DB flags form double gate;
+- ACTIVE candidate is current semantic state;
+- DREAM-4B `maxNewEdgesPerChunk` is per-source per-run ACTIVE admission limit;
+- bilateral graph degree admission remains separate;
+- concurrency remains 1;
+- JDBC/ANN calls require real resource timeouts.
 
-Document/test:
+Map to:
 
-- acquire/renew/release;
-- lease loss during run;
-- stale fencing token at mutation;
-- runtime flag changes during execution;
-- timeout at JDBC/ANN boundary;
-- bounded rescan cursor corruption/recovery;
-- candidate activation/demotion/forgetting;
-- interrupted run idempotency;
-- source disappearance or lifecycle invalidation.
+- `AdaptiveGraphDreamScheduler`;
+- `AdaptiveGraphDreamCoordinator.runOnce()`;
+- `DreamLeaseManager`;
+- `DreamLeaseHeartbeat`;
+- checkpoint/rescan repositories;
+- candidate discovery/repository;
+- `SemanticGraphPriorWriter`.
 
-## 11.7 Scheduled/background jobs
-
-Build a single inventory of every `@Scheduled` process and classify each as:
-
-- safe on every pod;
-- DB-claimed work distribution;
-- singleton lease/fenced owner;
-- telemetry-only duplicate-safe.
-
-Every mutating scheduled job must have an explicit multi-pod safety statement and test or rationale.
-
-Candidate jobs include at least:
-
-- Dream scheduler;
-- graph maintenance;
-- generation reconciliation;
-- retention scheduler;
-- retention economics sampler;
-- audit partition maintenance;
-- re-embedding heartbeat/recovery-related schedulers.
-
-## 11.8 Runtime feature flags / safety gates
-
-Document/test:
-
-- static config fallback;
-- runtime DB override;
-- fail-safe behavior when app-parameter storage is unavailable;
-- double-gate semantics for dangerous mutation/apply flows;
-- cache TTL/staleness behavior;
-- enable/disable transitions while jobs are running;
-- observability of effective runtime state.
+Required negative tests include lease loss mid-run, checkpoint resume, budget stop, malformed cursor, stale token, candidate deactivation/retention transition, query timeout and transaction timeout.
 
 ---
 
-# 12. Testing strategy
+# 15. Runtime feature flags / safety gates
 
-## 12.1 Unit tests
+Create `docs/services/runtime-safety-flags.md`.
 
-Use for deterministic business rules, validation, state transitions and fail-open/fail-closed policy.
-
-## 12.2 PostgreSQL integration tests
-
-Mandatory for behavior involving:
-
-- `clock_timestamp()`;
-- row/advisory locks;
-- `FOR UPDATE` / `SKIP LOCKED`;
-- transaction timeout;
-- lease/fencing;
-- migrations/indexes;
-- actual TTL eligibility predicate;
-- multi-session concurrency.
-
-Mocks are not sufficient evidence for these invariants.
-
-## 12.3 Failure injection
-
-Required where applicable:
-
-- DB exception;
-- transaction timeout;
-- lock wait;
-- executor rejection;
-- worker interruption;
-- stale fencing token;
-- lease expiry;
-- partial cleanup;
-- ambiguous completion;
-- dependency unavailable;
-- runtime flag transition.
-
-## 12.4 Concurrency tests
-
-Concurrency tests must be deterministic enough to prove ordering/ownership using latches, barriers, DB locks or explicit test fixtures rather than timing-only sleeps where avoidable.
-
----
-
-# 13. Observability requirements
-
-Each remediated process must expose enough telemetry to distinguish:
-
-- success;
-- legitimate no-op/empty work;
-- degraded/retryable failure;
-- critical/unavailable failure;
-- ownership/claim loss;
-- timeout;
-- stale state rejection.
-
-Do not allow metrics/logging exceptions to change business behavior unless observability is itself the contractual operation.
-
-Logs MUST NOT expose API keys, DB passwords, sensitive document payloads or unbounded query/context content.
-
----
-
-# 14. Transaction and timeout requirements
-
-For every changed DB process, document explicitly:
-
-- transaction start/end;
-- what rows are locked;
-- lock ordering;
-- statement/query timeout;
-- transaction timeout;
-- what external work occurs outside the transaction;
-- retry/idempotency behavior after rollback;
-- stale-owner/fencing behavior where applicable.
-
-Long external operations MUST NOT be hidden inside a broad database transaction merely for convenience.
-
----
-
-# 15. Documentation deliverables
-
-Expected new/current service contracts after implementation:
-
-- `docs/services/publication-lifecycle.md`;
-- `docs/services/chunk-lifecycle-retention.md`;
-- `docs/services/reembedding.md`;
-- `docs/services/repair-reconciliation.md`;
-- `docs/services/adaptive-graph-mutation.md`;
-- `docs/services/dream-ownership-candidate-lifecycle.md`;
-- `docs/services/scheduled-jobs.md`;
-- `docs/services/runtime-feature-flags.md`.
-
-Names MAY be adjusted to match actual implementation boundaries, but do not create overlapping duplicate contracts.
-
-Each contract must include:
+`AppParameterService` currently has two important read contracts:
 
 ```text
-Purpose
-Inputs / entry points
-Process
-Business Rules
-Positive Cases
-Negative Cases
-Invariants
-Transaction boundary
-Timeout / cancellation
-Concurrency / fencing
-Retries / idempotency
-Observability
-Operational recovery
-Tests
+get(key)
+  cache -> repository -> lastKnownGood -> static fallback
+
+getAuthoritative(key)
+  repository only -> explicit unavailable on DB failure
 ```
 
----
+For every `AppParameterKey`, document:
 
-# 16. Implementation order
+- static fallback;
+- dependency transitions;
+- consumers;
+- cached/fail-safe vs authoritative read requirement;
+- consequence of DB unavailability/staleness.
 
-Execute in this order:
+Required tests:
 
-1. **Governance evidence/spec** — record exact required check names and configure/prove branch protection/ruleset.
-2. **CI trigger consistency** — add `quality/**` and `docs/**` push coverage.
-3. **Documentation truth cleanup** — issue states, sync SHA, stale current claims.
-4. **Service inventory reconciliation** — promote only genuinely verified contracts.
-5. **Generation reconciliation multi-pod hardening** — implement and test claim semantics.
-6. **Publication lifecycle contract/tests**.
-7. **Chunk lifecycle/retention contract/tests**.
-8. **Re-embedding contract/tests**.
-9. **Repair/reconciliation full contract/tests**.
-10. **Adaptive graph mutation contract/tests**.
-11. **Dream ownership/candidate lifecycle contract/tests**.
-12. **Scheduled-jobs multi-pod classification/tests**.
-13. **Runtime feature flag contract/tests**.
-14. **Approved baseline establishment** using a reviewed real benchmark run.
-15. **Final exact-SHA CI + quality + storage + image verification**.
-16. **Integrated v1.1 live qualification** and retained artifacts for release candidate.
-17. **Final docs sync SHA and inventory statuses** on the same verified final change set.
-
-If a P0/P1 correctness defect is found during steps 5-13, fix it before continuing to qualification work.
+- repository failure with LKG;
+- repository failure without LKG;
+- authoritative failure never falls back;
+- optimistic conflict does not poison cache;
+- rolled-back update does not publish cache value;
+- stale cached `true` cannot authorize a mutation path defined to require authoritative state;
+- concurrent dependency transitions remain atomic.
 
 ---
 
-# 17. Definition of Done
+# 16. Scheduled/background jobs
 
-The branch is complete only when all applicable items are true:
+Create `docs/services/scheduled-jobs.md` and classify every `@Scheduled` component as:
+
+- singleton lease/fencing;
+- claimed/partitioned work;
+- duplicate-safe idempotent work;
+- local telemetry/sampling.
+
+At minimum classify:
+
+- `AdaptiveGraphDreamScheduler`;
+- `RetentionScheduler`;
+- `GenerationReconciliationScheduler`;
+- `ReembeddingLeaseHeartbeatScheduler`;
+- `AdaptiveGraphMaintenanceScheduler`;
+- `AuditPartitionMaintenanceScheduler`;
+- `RetentionEconomicsSampler`.
+
+For every job document trigger, gates, multi-pod authority, transaction boundary, timeout, retry/recovery and metrics.
+
+Any job with neither singleton/claim semantics nor proven idempotent duplicate safety is a new audit finding and must be fixed or explicitly retained as bounded debt.
+
+---
+
+# 17. Documentation truthfulness
+
+## 17.1 #36-#41
+
+Current documentation must reflect actual closed/completed tracker state. Historical snapshots may preserve old state only when explicitly tied to old SHA/date.
+
+## 17.2 `docs/README.md`
+
+Update `Last synchronized against:` only after final code/docs state is known and before final verification.
+
+## 17.3 Service inventory
+
+Review independently:
+
+- `knowledge-ingestion.md`;
+- `retrieval-flow.md`;
+- `retrieval-routing.md`;
+- `retrieval-execution.md`;
+- `retrieval-selection.md`;
+- all new contracts introduced by this branch.
+
+Promotion rule:
 
 ```text
-[ ] main merge governance is enforced and evidenced
-[ ] pending/failed required checks block merge
-[ ] CI triggers cover quality/** and docs/**
-[ ] current docs no longer claim #36-#41 are open
-[ ] docs synchronization marker matches final verified state
-[ ] verified service contracts are accurately marked VERIFIED
-[ ] reconciliation is multi-pod work-claim safe
-[ ] publication lifecycle has positive/negative/concurrency tests
-[ ] retention/lifecycle has positive/negative/concurrency tests
-[ ] re-embedding has lease/fencing/takeover tests
-[ ] repair/reconciliation has failure and retry tests
-[ ] graph mutation contract covers locking/rollback/timeouts
-[ ] Dream contract covers ownership/fencing/rescan/candidate lifecycle
-[ ] every mutating scheduled job has explicit multi-pod safety semantics
-[ ] runtime feature flags have failure/staleness/double-gate tests
-[ ] approved immutable benchmark baseline exists with provenance
-[ ] final branch head passes formatting + clean verify
-[ ] final branch head passes Retrieval Quality Gate
-[ ] final branch head passes Retrieval Storage Final Benchmark
-[ ] final branch head passes Production Image Build
-[ ] release candidate passes integrated live qualification before formal release claim
-[ ] retained artifacts identify exact SHA/ref and qualification result
-[ ] no known P0/P1 correctness defect remains in scope
+CURRENT code match
++ concrete positive/negative tests
++ final exact-head green verification
++ no material unresolved correctness gap
+= VERIFIED
 ```
 
-# 18. Exit rule
+Otherwise remain `DRAFT` with explicit missing evidence/gap.
 
-This branch is stabilization-only. Do not extend it with new adaptive-RAG features after the above DoD is satisfied. New capabilities must start from the resulting verified baseline in a separate feature branch.
+---
+
+# 18. Required implementation order
+
+1. patch CI branch coverage;
+2. reconcile stale current documentation claims;
+3. implement/test PRA-04 reconciliation partitioning;
+4. publication contract + missing tests;
+5. retention contract + missing tests;
+6. re-embedding contract + missing tests;
+7. reconciliation/repair contract completion;
+8. graph mutation contract/test mapping;
+9. Dream cycle/candidate contract/test mapping;
+10. runtime flag contract/tests;
+11. scheduled-job classification and any discovered multi-pod fixes;
+12. baseline parser/process hardening; establish real `approved.json` only after reviewed live run;
+13. reconcile service inventory;
+14. set final docs synchronization SHA;
+15. run final exact-head normal CI/quality/storage/image checks;
+16. configure/verify `main` branch protection with confirmed check contexts;
+17. run integrated release qualification for intended candidate/tag once baseline/external dependencies are available.
+
+A reproduced P1 defect may interrupt this order and must be fixed first in the same branch.
+
+---
+
+# 19. Definition of Done
+
+## Governance / CI
+
+- [ ] `main` protected by PR and exact required checks.
+- [ ] pending/failed/cancelled checks block merge.
+- [ ] force push/deletion policy enforced.
+- [ ] `quality/**` push triggers CI.
+- [ ] `docs/**` push triggers CI.
+
+## Reconciliation
+
+- [ ] candidate acquisition uses PostgreSQL `FOR UPDATE SKIP LOCKED` or a documented equivalent justified by failing tests.
+- [ ] current publication is rechecked before destructive cleanup.
+- [ ] RETIRING tombstone durability remains two-phase.
+- [ ] fresh PURGING work is not immediately reclaimed.
+- [ ] stale PURGING work is recoverable.
+- [ ] residual rows block false completion.
+- [ ] multi-pod integration tests green.
+
+## Publication / lifecycle
+
+- [ ] atomic publication behavior documented and tested.
+- [ ] concurrent/stale/ambiguous publication tested.
+- [ ] TTL eligibility remains synchronous and independent of retention scheduler.
+- [ ] retention claim/retry/saturation/timeout cases documented and tested.
+
+## Re-embedding
+
+- [ ] owner/lease/fencing contract documented.
+- [ ] stale-owner takeover and heartbeat behavior tested.
+- [ ] startup recovery cannot abort healthy owner.
+
+## Graph / Dream
+
+- [ ] shared graph locking remains canonical.
+- [ ] reversed-pair, timeout, rollback and stale-fencing tests mapped/green.
+- [ ] Dream fast/rescan/lease/budget/checkpoint/candidate semantics documented and tested.
+
+## Runtime flags / jobs
+
+- [ ] every app parameter has cached vs authoritative semantics documented.
+- [ ] every scheduled job has multi-pod classification.
+- [ ] uncovered unsafe job semantics are fixed or explicitly recorded as bounded debt.
+
+## Documentation
+
+- [ ] current docs no longer claim closed #36-#41 are open.
+- [ ] final docs synchronization SHA matches final branch state.
+- [ ] inventory statuses match final evidence.
+- [ ] no unverified documentation tail commit after final green SHA.
+
+## Release qualification
+
+- [ ] approved baseline parser/process is deterministic and tested.
+- [ ] formal `approved.json` derives from reviewed real pipeline run.
+- [ ] failed constituent job cannot yield `qualified=true`.
+
+## Exit
+
+- [ ] final exact PR head passes formatting + `mvn -B clean verify`.
+- [ ] final exact PR head passes Retrieval Quality Gate.
+- [ ] final exact PR head passes Retrieval Storage Final Benchmark.
+- [ ] final exact PR head passes Production Image Build.
+- [ ] no known P0/P1 correctness defect remains in this scope.
+- [ ] remaining P2/P3 debt is explicit and does not contradict readiness claims.
