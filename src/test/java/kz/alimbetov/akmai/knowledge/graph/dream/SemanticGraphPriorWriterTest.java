@@ -9,10 +9,11 @@ import java.time.Instant;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import kz.alimbetov.akmai.config.SemanticMemoryProperties;
 import kz.alimbetov.akmai.knowledge.graph.ChunkGraphNode;
+import kz.alimbetov.akmai.knowledge.graph.GraphLifecycleGuard;
 import kz.alimbetov.akmai.knowledge.graph.GraphNodeLockManager;
+import kz.alimbetov.akmai.knowledge.graph.GraphTransactionExecutor;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.PlatformTransactionManager;
 
 class SemanticGraphPriorWriterTest {
 
@@ -23,11 +24,13 @@ class SemanticGraphPriorWriterTest {
 
         SemanticGraphPriorWriter writer = new SemanticGraphPriorWriter(
                 mock(JdbcTemplate.class),
-                mock(PlatformTransactionManager.class),
                 switches,
                 mock(AdaptiveGraphProperties.class),
                 new SemanticMemoryProperties(),
-                mock(GraphNodeLockManager.class)
+                mock(GraphNodeLockManager.class),
+                mock(GraphLifecycleGuard.class),
+                mock(GraphTransactionExecutor.class),
+                mock(DreamAuthorityGuard.class)
         );
 
         assertThat(writer.applyCandidate(null, null, 0.95, Instant.now()))
@@ -43,11 +46,13 @@ class SemanticGraphPriorWriterTest {
 
         SemanticGraphPriorWriter writer = new SemanticGraphPriorWriter(
                 mock(JdbcTemplate.class),
-                mock(PlatformTransactionManager.class),
                 switches,
                 graphProperties,
                 new SemanticMemoryProperties(),
-                mock(GraphNodeLockManager.class)
+                mock(GraphNodeLockManager.class),
+                mock(GraphLifecycleGuard.class),
+                mock(GraphTransactionExecutor.class),
+                mock(DreamAuthorityGuard.class)
         );
         DreamPair pair = DreamPair.of(
                 new ChunkGraphNode(1, "a", 1, "c1"),
