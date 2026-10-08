@@ -55,7 +55,9 @@ class AdaptiveChunkGraphRepositoryTest {
                 jdbc,
                 new TransactionTemplate(
                         new DataSourceTransactionManager(dataSource)
-                )
+                ),
+                new GraphNodeLockManager(jdbc),
+                new GraphLifecycleGuard(jdbc)
         );
     }
 
