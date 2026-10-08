@@ -75,7 +75,8 @@ public class DreamReciprocalNeighborVerifier {
                     target.node().accessLevel(),
                     searchLimit,
                     policy.dream().candidateThreshold(),
-                    policy.sameLanguageOnly()
+                    policy.sameLanguageOnly(),
+                    policy.dream().queryTimeout()
             ).stream()
                     .filter(candidate -> !candidate.node().equals(target.node()))
                     .limit(policy.dream().topK())
