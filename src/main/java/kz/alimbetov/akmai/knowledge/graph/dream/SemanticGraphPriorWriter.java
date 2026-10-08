@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.List;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import kz.alimbetov.akmai.config.SemanticMemoryProperties;
-import kz.alimbetov.akmai.knowledge.graph.ChunkGraphNode;
 import kz.alimbetov.akmai.knowledge.graph.GraphMutationLocks;
 import kz.alimbetov.akmai.knowledge.graph.JdbcTimeouts;
 import org.springframework.jdbc.core.JdbcTemplate;
