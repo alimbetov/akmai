@@ -58,6 +58,18 @@ class SecurityStartupValidatorTest {
     }
 
     @Test
+    void unspecifiedEnvironmentAndProfileFailClosed() {
+        assertThatThrownBy(() -> validator(
+                new SecurityProperties(false, "", true, Set.of(1L)),
+                null,
+                null,
+                false
+        ).run(arguments()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Deployment environment must be explicitly classified");
+    }
+
+    @Test
     void nonLocalEnvironmentForbidsLocalBypass() {
         assertThatThrownBy(() -> validator(
                 new SecurityProperties(

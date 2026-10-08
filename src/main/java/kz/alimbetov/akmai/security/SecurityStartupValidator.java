@@ -29,6 +29,11 @@ public class SecurityStartupValidator implements ApplicationRunner {
         String[] activeProfiles = environment.getActiveProfiles();
         boolean productionProfile = Arrays.asList(activeProfiles).contains("prod");
         String deploymentEnvironment = deploymentEnvironment(activeProfiles);
+        if (deploymentEnvironment == null) {
+            throw new IllegalStateException(
+                    "Deployment environment must be explicitly classified as local/dev/test or non-local"
+            );
+        }
         boolean nonLocalProfile = Arrays.stream(activeProfiles)
                 .map(value -> value.trim().toLowerCase(Locale.ROOT))
                 .anyMatch(value -> !isLocal(value));
@@ -113,9 +118,9 @@ public class SecurityStartupValidator implements ApplicationRunner {
         }
         return Arrays.stream(activeProfiles)
                 .map(value -> value.trim().toLowerCase(Locale.ROOT))
-                .filter(value -> !isLocal(value))
+                .filter(value -> !value.isBlank())
                 .findFirst()
-                .orElse("local");
+                .orElse(null);
     }
 
     private boolean isLocal(String deploymentEnvironment) {

@@ -124,6 +124,23 @@ public class ReembeddingLeaseManager {
         }
     }
 
+    public int renewOwnedActiveLeases() {
+        return jdbcTemplate.update(
+                """
+                UPDATE knowledge_embedding_migration
+                SET lease_until = clock_timestamp()
+                        + (? * interval '1 millisecond'),
+                    updated_at = clock_timestamp()
+                WHERE owner_id = ?
+                  AND migration_status IN
+                """ + ACTIVE_STATUSES + """
+                  AND lease_until > clock_timestamp()
+                """,
+                properties.leaseDuration().toMillis(),
+                ownerId
+        );
+    }
+
     public boolean isOwned(Authority authority) {
         Integer owned = jdbcTemplate.queryForObject(
                 """

@@ -10,8 +10,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Applies the configured retrieval transaction timeout to published read paths
- * without changing ingestion/write transaction semantics.
+ * Applies the configured retrieval transaction timeout and synchronous
+ * lifecycle/TTL eligibility to published read paths without changing
+ * ingestion/write transaction semantics.
  *
  * <p>Parent projections are addressable context records, not primary retrieval
  * candidates. Search-oriented methods therefore expose only searchable
@@ -27,14 +28,17 @@ public class TimedPublishedSearchProjectionReader
 
     private final PostgresSearchProjectionRepository delegate;
     private final TransactionTemplate transactionTemplate;
+    private final PublishedProjectionLifecycleEligibility lifecycleEligibility;
 
     public TimedPublishedSearchProjectionReader(
             PostgresSearchProjectionRepository delegate,
             @Qualifier("retrievalTransactionTemplate")
-            TransactionTemplate transactionTemplate
+            TransactionTemplate transactionTemplate,
+            PublishedProjectionLifecycleEligibility lifecycleEligibility
     ) {
         this.delegate = delegate;
         this.transactionTemplate = transactionTemplate;
+        this.lifecycleEligibility = lifecycleEligibility;
     }
 
     @Override
@@ -43,11 +47,11 @@ public class TimedPublishedSearchProjectionReader
             List<String> chunkIds,
             Set<Long> accessLevels
     ) {
-        return read(() -> delegate.findByDocumentAndChunkIds(
+        return eligible(read(() -> delegate.findByDocumentAndChunkIds(
                 documentId,
                 chunkIds,
                 accessLevels
-        ));
+        )));
     }
 
     @Override
@@ -57,12 +61,12 @@ public class TimedPublishedSearchProjectionReader
             List<String> chunkIds,
             Set<Long> accessLevels
     ) {
-        return read(() -> delegate.findByDocumentGenerationAndChunkIds(
+        return eligible(read(() -> delegate.findByDocumentGenerationAndChunkIds(
                 documentId,
                 generation,
                 chunkIds,
                 accessLevels
-        ));
+        )));
     }
 
     @Override
@@ -70,10 +74,10 @@ public class TimedPublishedSearchProjectionReader
             List<ProjectionKey> keys,
             Set<Long> accessLevels
     ) {
-        return read(() -> delegate.findPublishedByKeys(
+        return eligible(read(() -> delegate.findPublishedByKeys(
                 keys,
                 accessLevels
-        ));
+        )));
     }
 
     @Override
@@ -84,13 +88,13 @@ public class TimedPublishedSearchProjectionReader
             int radius,
             Set<Long> accessLevels
     ) {
-        return searchable(read(() -> delegate.findAdjacent(
+        return searchable(eligible(read(() -> delegate.findAdjacent(
                 documentId,
                 generation,
                 chunkIndex,
                 radius,
                 accessLevels
-        )), Integer.MAX_VALUE);
+        ))), Integer.MAX_VALUE);
     }
 
     @Override
@@ -105,13 +109,13 @@ public class TimedPublishedSearchProjectionReader
             return List.of();
         }
         int oversampled = oversampledLimit(limit);
-        return searchable(read(() -> delegate.searchLexical(
+        return searchable(eligible(read(() -> delegate.searchLexical(
                 query,
                 language,
                 documentIds,
                 accessLevels,
                 oversampled
-        )), limit);
+        ))), limit);
     }
 
     @Override
@@ -125,12 +129,16 @@ public class TimedPublishedSearchProjectionReader
             return List.of();
         }
         int oversampled = oversampledLimit(limit);
-        return searchable(read(() -> delegate.searchSemanticConcepts(
+        return searchable(eligible(read(() -> delegate.searchSemanticConcepts(
                 conceptIds,
                 documentIds,
                 accessLevels,
                 oversampled
-        )), limit);
+        ))), limit);
+    }
+
+    private List<SearchProjection> eligible(List<SearchProjection> values) {
+        return lifecycleEligibility.filter(values);
     }
 
     private List<SearchProjection> searchable(
