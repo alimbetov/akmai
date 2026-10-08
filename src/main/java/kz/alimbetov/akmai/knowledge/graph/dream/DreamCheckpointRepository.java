@@ -2,7 +2,6 @@ package kz.alimbetov.akmai.knowledge.graph.dream;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
