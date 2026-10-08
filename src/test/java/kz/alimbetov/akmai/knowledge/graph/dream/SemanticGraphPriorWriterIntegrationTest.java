@@ -10,6 +10,9 @@ import java.time.Duration;
 import java.time.Instant;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import kz.alimbetov.akmai.config.SemanticMemoryProperties;
+import kz.alimbetov.akmai.knowledge.graph.AdaptiveChunkGraphRepository;
+import kz.alimbetov.akmai.knowledge.graph.AssociationBand;
+import kz.alimbetov.akmai.knowledge.graph.AssociationEvidence;
 import kz.alimbetov.akmai.knowledge.graph.ChunkGraphNode;
 import kz.alimbetov.akmai.knowledge.graph.GraphLifecycleGuard;
 import kz.alimbetov.akmai.knowledge.graph.GraphNodeLockManager;
@@ -22,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -44,6 +48,7 @@ class SemanticGraphPriorWriterIntegrationTest {
 
     static JdbcTemplate jdbc;
     static SemanticGraphPriorWriter writer;
+    static AdaptiveChunkGraphRepository onlineRepository;
 
     @BeforeAll
     static void migrate() throws Exception {
@@ -60,6 +65,8 @@ class SemanticGraphPriorWriterIntegrationTest {
         jdbc = new JdbcTemplate(dataSource);
         DataSourceTransactionManager transactionManager =
                 new DataSourceTransactionManager(dataSource);
+        GraphNodeLockManager lockManager = new GraphNodeLockManager(jdbc);
+        GraphLifecycleGuard lifecycleGuard = new GraphLifecycleGuard(jdbc);
 
         DreamRuntimeSwitches switches = mock(DreamRuntimeSwitches.class);
         when(switches.applyEnabled()).thenReturn(true);
@@ -75,11 +82,17 @@ class SemanticGraphPriorWriterIntegrationTest {
                 switches,
                 graphProperties,
                 new SemanticMemoryProperties(),
-                new GraphNodeLockManager(jdbc),
-                new GraphLifecycleGuard(jdbc),
+                lockManager,
+                lifecycleGuard,
                 new GraphTransactionExecutor(transactionManager),
                 new DreamAuthorityGuard(jdbc),
                 new SemanticPairAdmissionRepository(jdbc)
+        );
+        onlineRepository = new AdaptiveChunkGraphRepository(
+                jdbc,
+                new TransactionTemplate(transactionManager),
+                lockManager,
+                lifecycleGuard
         );
     }
 
@@ -120,6 +133,49 @@ class SemanticGraphPriorWriterIntegrationTest {
                   AND context_count = 0
                   AND citation_count = 0
                   AND distinct_query_support = 0
+                """,
+                Integer.class
+        )).isEqualTo(2);
+    }
+
+    @Test
+    void semanticRefreshPreservesLearnedEvidenceAndBand() {
+        DreamPair pair = pair();
+        onlineRepository.reinforceSymmetric(
+                pair.first(),
+                pair.second(),
+                AssociationBand.HOT,
+                new AssociationEvidence(
+                        0.81,
+                        1,
+                        1,
+                        1,
+                        23,
+                        Instant.parse("2026-10-07T00:00:00Z"),
+                        1
+                )
+        );
+        authorityLease("pod-a", 7, "5 minutes");
+
+        SemanticGraphPriorWriter.ApplyResult result = writer.applyCandidate(
+                authority("pod-a", 7),
+                pair,
+                0.96,
+                Instant.parse("2026-10-08T00:00:00Z")
+        );
+
+        assertThat(result).isEqualTo(SemanticGraphPriorWriter.ApplyResult.REFRESHED);
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_chunk_association
+                WHERE band = 'HOT'
+                  AND weight = 0.81
+                  AND semantic_similarity = 0.96
+                  AND support_count = 1
+                  AND context_count = 1
+                  AND citation_count = 1
+                  AND distinct_query_support = 1
                 """,
                 Integer.class
         )).isEqualTo(2);
