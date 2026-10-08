@@ -77,6 +77,10 @@ public class SemanticNeighborSearchRepository {
                 WHERE v.access_level = ?
                   AND l.lifecycle_status = 'READY'
                   AND l.retention_status = 'ACTIVE'
+                  AND (
+                      l.expires_at IS NULL
+                      OR l.expires_at > clock_timestamp()
+                  )
                   %s
                   AND (v.embedding <=> ?) <= ?
                 ORDER BY v.embedding <=> ?,
