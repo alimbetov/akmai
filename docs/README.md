@@ -6,17 +6,16 @@ Last synchronized against: `main@33ebbe469d994fe60c227972b1d7f730ce6cf0ba` on 20
 
 ## Documentation contract
 
-AkmAI has accumulated architecture proposals, implementation specifications, audit ledgers, runbooks and benchmark contracts. They do not all have the same authority.
+AkmAI documentation must describe the current executable system. The repository must not accumulate stale implementation plans, superseded gap-remediation specifications or duplicate architecture descriptions.
 
 Use this precedence when documents disagree:
 
 1. executable code, database migrations and `src/main/resources/application.yml`;
 2. current-state documents linked from this page;
 3. current audit/readiness documents;
-4. operational and quality contracts;
-5. design specifications and historical remediation documents.
+4. operational and quality contracts.
 
-A design document may describe intent that has already evolved in code. Historical audit documents remain useful evidence but must not be interpreted as the current runtime contract without checking the current-state documentation.
+If a document no longer matches the current runtime, it must be updated in the same change set or removed. Historical implementation plans must not remain in the active documentation tree merely as background material. Preserve historical rationale only when it still has architectural value, and then convert it into an explicit ADR with the decision, context and consequences rather than keeping an obsolete implementation specification.
 
 ## Current-state documentation
 
@@ -35,7 +34,7 @@ A design document may describe intent that has already evolved in code. Historic
 
 ### `architecture/`
 
-Architecture, storage and retrieval design. Start with [`architecture/README.md`](architecture/README.md). The directory includes both current contracts and older design/implementation specifications.
+Current architecture, storage and retrieval contracts. Start with [`architecture/README.md`](architecture/README.md).
 
 Major areas:
 
@@ -47,9 +46,9 @@ Major areas:
 
 ### `audit/`
 
-Audit snapshots, defect ledgers and remediation specifications. Start with [`audit/README.md`](audit/README.md).
+Current audit snapshots, defect ledgers and remediation evidence. Start with [`audit/README.md`](audit/README.md).
 
-The open GitHub issues #36-#41 are historical audit trackers. Their GitHub state is still open, while most runtime remediations are already present in `main`; current closure/evidence status is maintained in the post-v1.1 readiness audit.
+The open GitHub issues #36-#41 are historical audit trackers. Their GitHub state is still open, while most runtime remediations are already present in `main`; current closure/evidence status is maintained in the post-v1.1 readiness audit. Once an audit document is fully superseded and contains no unique evidence needed for traceability, remove it rather than retaining a stale duplicate.
 
 ### `operations/`
 
@@ -120,4 +119,6 @@ When runtime behavior changes, update in the same PR:
 4. release/quality contracts when a gate or metric changes;
 5. the audit/readiness document if the change closes or reclassifies a blocker.
 
-New architecture proposals should explicitly state one of: `CURRENT`, `TARGET`, `EXPERIMENTAL`, `HISTORICAL`.
+Every maintained process/business-logic document must state purpose, normal flow, negative/failure paths, invariants and corresponding tests. Transaction, retry/idempotency, timeout/cancellation and concurrency/locking/fencing semantics must be documented whenever they are part of the process contract.
+
+Do not add a new design or implementation document without assigning it an explicit lifecycle status. Allowed active statuses are `CURRENT`, `TARGET` and `EXPERIMENTAL`. When a `TARGET` or `EXPERIMENTAL` document is implemented or abandoned, update it to the current contract or remove it. Use ADRs only for decisions whose historical rationale remains operationally or architecturally relevant.
