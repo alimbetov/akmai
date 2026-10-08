@@ -24,7 +24,7 @@ A service/process is considered **documented** only when its contract contains:
 | Retrieval | Query / retrieval orchestration | TBD | TODO |
 | Retrieval | Retrieval policy / routing | TBD | TODO |
 | Retrieval | Retrieval quality / abstention | TBD | TODO |
-| Knowledge ingestion | Document ingestion | TBD | TODO |
+| Knowledge ingestion | Document ingestion | [`knowledge-ingestion.md`](knowledge-ingestion.md) | DRAFT |
 | Knowledge ingestion | Chunking / chunk lifecycle | TBD | TODO |
 | Embeddings | Embedding / re-embedding | TBD | TODO |
 | Graph | Adaptive chunk graph mutation | TBD | TODO |
