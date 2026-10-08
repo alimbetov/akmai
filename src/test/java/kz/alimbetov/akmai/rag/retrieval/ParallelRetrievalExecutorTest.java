@@ -355,9 +355,8 @@ class ParallelRetrievalExecutorTest {
         }
     }
 
-
     @Test
-    void overallRequestDeadlineBoundsBackendThatIgnoresInterrupt() {
+    void strategyDeadlineBoundsBackendThatIgnoresInterrupt() {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         CountDownLatch release = new CountDownLatch(1);
         try {
@@ -387,7 +386,7 @@ class ParallelRetrievalExecutorTest {
                     List.of(vector),
                     executor,
                     new RetrievalObserver(new SimpleMeterRegistry()),
-                    properties(Duration.ofMillis(40), Duration.ofSeconds(5))
+                    properties(Duration.ofMillis(200), Duration.ofMillis(40))
             );
             RetrievalPlan plan = new RetrievalPlan(List.of(
                     new RetrievalStep(
@@ -409,7 +408,7 @@ class ParallelRetrievalExecutorTest {
     }
 
     @Test
-    void completedSiblingIsPreservedWhenEarlierStepConsumesRequestDeadline() {
+    void completedSiblingIsPreservedWhenEarlierStrategyTimesOut() {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch release = new CountDownLatch(1);
         try {
@@ -446,8 +445,8 @@ class ParallelRetrievalExecutorTest {
                                     new SimpleMeterRegistry()
                             ),
                             properties(
-                                    Duration.ofMillis(60),
-                                    Duration.ofSeconds(5)
+                                    Duration.ofMillis(500),
+                                    Duration.ofMillis(60)
                             )
                     );
             RetrievalPlan plan = new RetrievalPlan(List.of(
