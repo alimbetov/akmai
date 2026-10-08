@@ -38,7 +38,11 @@ import org.springframework.web.bind.annotation.RestController;
                 "akmai.api.max-title-chars=100",
                 "akmai.api.max-source-chars=100",
                 "management.endpoint.health.validate-group-membership=false",
-                "management.health.defaults.enabled=false"
+                "management.health.defaults.enabled=false",
+                "spring.autoconfigure.exclude="
+                        + "org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration,"
+                        + "org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration,"
+                        + "org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration"
         }
 )
 class RequestBodySizeFilterTransportIntegrationTest {
@@ -136,7 +140,8 @@ class RequestBodySizeFilterTransportIntegrationTest {
     @EnableAutoConfiguration(exclude = {
             DataSourceAutoConfiguration.class,
             SecurityAutoConfiguration.class,
-            UserDetailsServiceAutoConfiguration.class
+            UserDetailsServiceAutoConfiguration.class,
+            org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration.class
     })
     @EnableConfigurationProperties(ApiProperties.class)
     static class TestApplication {
