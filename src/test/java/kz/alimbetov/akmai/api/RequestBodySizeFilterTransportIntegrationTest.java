@@ -36,7 +36,9 @@ import org.springframework.web.bind.annotation.RestController;
                 "akmai.api.max-metadata-entries=10",
                 "akmai.api.max-metadata-depth=4",
                 "akmai.api.max-title-chars=100",
-                "akmai.api.max-source-chars=100"
+                "akmai.api.max-source-chars=100",
+                "management.endpoint.health.validate-group-membership=false",
+                "management.health.defaults.enabled=false"
         }
 )
 class RequestBodySizeFilterTransportIntegrationTest {
