@@ -70,3 +70,84 @@ For PRA-04 implementation mechanics, this decision and `docs/services/generation
 - preserve publication/lifecycle fail-closed behavior;
 - preserve two-phase RETIRING durability;
 - preserve bounded/idempotent repair and crash recovery.
+
+---
+
+## DEC-02 — Publication ambiguous-outcome failure authority
+
+### Existing design
+
+`GenerationPublicationService.publish()` executes the publication transaction and, if `TransactionTemplate.execute(...)` throws, invokes `PublicationOutcomeResolver` to distinguish:
+
+- committed publication with lost/ambiguous acknowledgement;
+- superseded publication;
+- actual rollback / not committed.
+
+This resolver is necessary because a transaction exception alone is not proof that PostgreSQL did not commit.
+
+### Implementation finding
+
+The resolver itself performs database reads. If PostgreSQL is unavailable during the recovery probe, `PublicationOutcomeResolver.resolve(...)` can throw a second exception.
+
+Previously that second exception escaped directly from the `catch` block and could mask the original publication failure. That loses the primary failure boundary and makes incident diagnosis misleading.
+
+### Final implementation
+
+The original publication exception remains primary authority.
+
+```text
+publication transaction throws PRIMARY
+  -> resolve durable outcome
+      -> COMMITTED   => return PUBLISHED
+      -> SUPERSEDED  => return SUPERSEDED
+      -> NOT_COMMITTED => rethrow PRIMARY
+      -> resolver throws SECONDARY
+           => PRIMARY.addSuppressed(SECONDARY)
+           => rethrow PRIMARY
+```
+
+The resolver failure is retained as suppressed diagnostic evidence but cannot replace the publication exception.
+
+### Post-commit side-effect boundary
+
+`IngestionSemanticLinker.linkPublishedGeneration(...)` remains outside the publication transaction.
+
+If semantic linking fails after commit:
+
+- publication remains committed;
+- caller still receives `PUBLISHED` / `ALREADY_PUBLISHED` semantics;
+- failure is logged as `post_publication_failed`;
+- publication must not be rolled back or reported as failed solely because semantic enrichment failed.
+
+### Concurrency authority
+
+Concurrent publication for one document remains serialized by the lifecycle row lock. For staged generations N and N+1, the final visible generation must converge on N+1 regardless of lock acquisition order.
+
+Valid final state:
+
+```text
+published_generation = N+1
+N+1 = PUBLISHED
+N = RETIRING or FAILED/SUPERSEDED
+```
+
+### Rollback authority
+
+Projection/identifier/reference/manifest/vector staging, previous-generation retirement, candidate publication, lifecycle cutover and idempotency completion remain inside one transaction.
+
+A late persistence failure must leave earlier staging writes and authority state rolled back together.
+
+### Tests
+
+- `GenerationPublicationFailureModelTest.resolverFailureDoesNotMaskPrimaryPublicationFailure`
+- `GenerationPublicationFailureModelTest.ambiguousCommitResolvedAsCommittedReturnsPublished`
+- `GenerationPublicationFailureModelTest.ambiguousCommitResolvedAsSupersededReturnsSuperseded`
+- `GenerationPublicationFailureModelTest.unresolvedPublicationRethrowsPrimaryFailure`
+- `GenerationPublicationFailureModelTest.postCommitSemanticLinkFailureDoesNotChangePublishedOutcome`
+- `GenerationPublicationLifecycleIntegrationTest.concurrentPublicationConvergesOnNewestGeneration`
+- `GenerationPublicationLifecycleIntegrationTest.lateVectorFailureRollsBackStagedProjectionAndManifest`
+- `PublicationOutcomeResolverFailureModelTest`
+
+### Documentation authority
+
+For publication failure semantics, this decision and `docs/services/publication-lifecycle.md` are the current source of truth. They refine the TARGET blueprint without changing the original architectural invariant that `GenerationPublicationService` is the atomic publication authority.
