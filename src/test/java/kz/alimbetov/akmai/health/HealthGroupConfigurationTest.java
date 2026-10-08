@@ -2,20 +2,20 @@ package kz.alimbetov.akmai.health;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.core.env.PropertySource;
-import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 class HealthGroupConfigurationTest {
 
     @Test
     void aiDependenciesAffectReadinessButNotLiveness() throws Exception {
-        List<PropertySource<?>> sources = new YamlPropertySourceLoader().load(
-                "application",
-                new ClassPathResource("application.yml")
-        );
+        List<PropertySource<?>> sources = applicationPropertySources();
 
         Object liveness = property(
                 sources,
@@ -42,6 +42,18 @@ class HealthGroupConfigurationTest {
                 .contains("ollama")
                 .contains("embeddingProfile")
                 .contains("pgvector");
+    }
+
+    private List<PropertySource<?>> applicationPropertySources()
+            throws IOException {
+        Resource[] resources = new PathMatchingResourcePatternResolver()
+                .getResources("classpath*:application.yml");
+        YamlPropertySourceLoader loader = new YamlPropertySourceLoader();
+        List<PropertySource<?>> sources = new ArrayList<>();
+        for (int index = 0; index < resources.length; index++) {
+            sources.addAll(loader.load("application-" + index, resources[index]));
+        }
+        return sources;
     }
 
     private Object property(
