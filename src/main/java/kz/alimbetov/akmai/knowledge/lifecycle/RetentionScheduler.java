@@ -17,6 +17,7 @@ public class RetentionScheduler {
             LoggerFactory.getLogger(RetentionScheduler.class);
 
     private final RetentionWorkerPool workerPool;
+    private final RetentionClaimRepository claimRepository;
     private final RetentionProperties properties;
     private final DocumentGenerationRepository generationRepository;
     private final String workerId;
@@ -24,10 +25,12 @@ public class RetentionScheduler {
 
     public RetentionScheduler(
             RetentionWorkerPool workerPool,
+            RetentionClaimRepository claimRepository,
             RetentionProperties properties,
             DocumentGenerationRepository generationRepository
     ) {
         this.workerPool = workerPool;
+        this.claimRepository = claimRepository;
         this.properties = properties;
         this.generationRepository = generationRepository;
         this.workerId = ManagementFactory.getRuntimeMXBean().getName();
@@ -51,7 +54,10 @@ public class RetentionScheduler {
         int initialSubmitted = 0;
         int runBudget = 0;
         int recovered = 0;
+        long backlog = -1L;
+        long retryExhausted = -1L;
         String outcome = "SUCCESS";
+        RuntimeException primaryFailure = null;
 
         try {
             recovered = recoverAbandonedIngestions();
@@ -63,6 +69,7 @@ public class RetentionScheduler {
             initialSubmitted = workerPool.drain(workerId, runBudget);
         } catch (RuntimeException exception) {
             outcome = "FAILED";
+            primaryFailure = exception;
             LOGGER.error(
                     "retention_run event=failed initialSubmitted={} runBudget={} recovered={} errorType={}",
                     initialSubmitted,
@@ -70,23 +77,46 @@ public class RetentionScheduler {
                     recovered,
                     exception.getClass().getSimpleName()
             );
-            throw exception;
-        } finally {
-            long backlog = workerPool.backlogCount();
-            Duration duration = Duration.between(started, Instant.now());
-            if (metrics != null) {
-                metrics.retentionBacklog(backlog);
-                metrics.retentionRun(outcome, duration);
-            }
-            LOGGER.info(
-                    "retention_run event=completed outcome={} initialSubmitted={} runBudget={} recovered={} backlog={} durationMs={}",
-                    outcome,
-                    initialSubmitted,
-                    runBudget,
-                    recovered,
-                    backlog,
-                    duration.toMillis()
+        }
+
+        try {
+            backlog = workerPool.backlogCount();
+            retryExhausted = claimRepository.countRetryExhausted(
+                    properties.retryLimit()
             );
+        } catch (RuntimeException observationFailure) {
+            outcome = "FAILED";
+            if (primaryFailure == null) {
+                primaryFailure = observationFailure;
+            } else {
+                primaryFailure.addSuppressed(observationFailure);
+            }
+            LOGGER.warn(
+                    "retention_run event=post_run_observation_failed errorType={}",
+                    observationFailure.getClass().getSimpleName()
+            );
+        }
+
+        Duration duration = Duration.between(started, Instant.now());
+        if (metrics != null) {
+            if (backlog >= 0) {
+                metrics.retentionBacklog(backlog);
+            }
+            metrics.retentionRun(outcome, duration);
+        }
+        LOGGER.info(
+                "retention_run event=completed outcome={} initialSubmitted={} runBudget={} recovered={} backlog={} retryExhausted={} durationMs={}",
+                outcome,
+                initialSubmitted,
+                runBudget,
+                recovered,
+                backlog,
+                retryExhausted,
+                duration.toMillis()
+        );
+
+        if (primaryFailure != null) {
+            throw primaryFailure;
         }
     }
 
