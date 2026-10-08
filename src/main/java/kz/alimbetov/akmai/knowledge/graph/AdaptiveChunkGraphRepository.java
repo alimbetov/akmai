@@ -4,6 +4,7 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -14,13 +15,16 @@ public class AdaptiveChunkGraphRepository
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
+    private final GraphMutationLocks mutationLocks;
 
     public AdaptiveChunkGraphRepository(
             JdbcTemplate jdbcTemplate,
+            @Qualifier("graphMutationTransactionTemplate")
             TransactionTemplate transactionTemplate
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactionTemplate = transactionTemplate;
+        this.mutationLocks = new GraphMutationLocks(jdbcTemplate);
     }
 
     public void reinforceSymmetric(
@@ -60,8 +64,7 @@ public class AdaptiveChunkGraphRepository
         }
 
         transactionTemplate.executeWithoutResult(status -> {
-            lockOrder.forEach(this::lockPublishedGeneration);
-            lockOrder.forEach(this::lockNode);
+            mutationLocks.lockEligiblePublishedNodes(lockOrder);
             observations.forEach(observation ->
                     upsertPair(
                             observation.left(),
@@ -224,44 +227,6 @@ public class AdaptiveChunkGraphRepository
                     "allowedAccessLevels must contain positive values"
             );
         }
-    }
-
-    private void lockPublishedGeneration(ChunkGraphNode node) {
-        Integer published = jdbcTemplate.query(
-                """
-                SELECT 1
-                FROM knowledge_document_lifecycle
-                WHERE document_id = ?
-                  AND access_level = ?
-                  AND published_generation = ?
-                  AND retention_status = 'ACTIVE'
-                FOR SHARE
-                """,
-                (rs, rowNum) -> rs.getInt(1),
-                node.documentId(),
-                node.accessLevel(),
-                node.generation()
-        ).stream().findFirst().orElse(null);
-
-        if (published == null) {
-            throw new IllegalStateException(
-                    "adaptive graph reinforcement requires "
-                            + "ACTIVE/PUBLISHED generation"
-            );
-        }
-    }
-
-    private void lockNode(ChunkGraphNode node) {
-        jdbcTemplate.query(
-                """
-                SELECT pg_advisory_xact_lock(
-                    hashtextextended(?, 0)
-                )
-                """,
-                rs -> {
-                },
-                "akmai:adaptive-graph:node:" + node.lockKey()
-        );
     }
 
     private void upsertPair(

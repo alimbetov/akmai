@@ -2,10 +2,11 @@ package kz.alimbetov.akmai.knowledge.graph.dream;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.TreeSet;
+import java.util.List;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import kz.alimbetov.akmai.config.SemanticMemoryProperties;
-import kz.alimbetov.akmai.knowledge.graph.ChunkGraphNode;
+import kz.alimbetov.akmai.knowledge.graph.GraphMutationLocks;
+import kz.alimbetov.akmai.knowledge.graph.JdbcTimeouts;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -23,6 +24,7 @@ public class SemanticGraphPriorWriter {
     private final DreamRuntimeSwitches switches;
     private final AdaptiveGraphProperties graphProperties;
     private final SemanticMemoryProperties semanticMemoryProperties;
+    private final GraphMutationLocks mutationLocks;
 
     public SemanticGraphPriorWriter(
             JdbcTemplate jdbcTemplate,
@@ -36,6 +38,7 @@ public class SemanticGraphPriorWriter {
         this.switches = switches;
         this.graphProperties = graphProperties;
         this.semanticMemoryProperties = semanticMemoryProperties;
+        this.mutationLocks = new GraphMutationLocks(jdbcTemplate);
     }
 
     public ApplyResult applyCandidate(
@@ -64,7 +67,9 @@ public class SemanticGraphPriorWriter {
         }
 
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        transaction.setTimeout(transactionTimeoutSeconds());
+        transaction.setTimeout(JdbcTimeouts.toSeconds(
+                graphProperties.dream().transactionTimeout()
+        ));
         ApplyResult result = transaction.execute(status -> applyInTransaction(
                 authority,
                 pair,
@@ -83,103 +88,90 @@ public class SemanticGraphPriorWriter {
         if (!switches.applyEnabled()) {
             return ApplyResult.APPLY_DISABLED;
         }
-        requireAuthority(authority);
 
-        TreeSet<ChunkGraphNode> lockOrder = new TreeSet<>();
-        lockOrder.add(pair.first());
-        lockOrder.add(pair.second());
-        lockOrder.forEach(this::lockPublishedGeneration);
-        lockOrder.forEach(this::lockNode);
-
-        boolean existingPair = associationExistsEitherDirection(
-                pair,
-                authority.graphVersion()
+        mutationLocks.lockEligiblePublishedNodes(
+                List.of(pair.first(), pair.second())
         );
+
+        PairState state = pairState(pair, authority.graphVersion());
         int maxSemanticDegree = semanticMemoryProperties.getMaxEdgesPerChunk();
-        if (!existingPair
-                && (semanticDegree(pair.first(), authority.graphVersion())
-                        >= maxSemanticDegree
-                || semanticDegree(pair.second(), authority.graphVersion())
-                        >= maxSemanticDegree)) {
+        if (!state.existingPair()
+                && (state.firstDegree() >= maxSemanticDegree
+                || state.secondDegree() >= maxSemanticDegree)) {
             return ApplyResult.DEGREE_LIMIT;
         }
 
-        upsertDirection(
+        upsertPair(
                 authority,
-                pair.first(),
-                pair.second(),
+                pair,
                 semanticSimilarity,
                 observedAt
         );
-        upsertDirection(
-                authority,
-                pair.second(),
-                pair.first(),
-                semanticSimilarity,
-                observedAt
-        );
-        return existingPair ? ApplyResult.REFRESHED : ApplyResult.APPLIED;
+        return state.existingPair() ? ApplyResult.REFRESHED : ApplyResult.APPLIED;
     }
 
-    private void requireAuthority(DreamLeaseManager.Authority authority) {
-        Boolean owned = jdbcTemplate.queryForObject(
+    /**
+     * Reads pair existence and both directional semantic degrees in one round trip.
+     * Graph node locks are already held, so these values remain stable until the
+     * transaction commits.
+     */
+    private PairState pairState(DreamPair pair, int graphVersion) {
+        return jdbcTemplate.queryForObject(
                 """
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM adaptive_graph_dream_lease
-                    WHERE graph_version = ?
-                      AND semantic_policy_fingerprint = ?
-                      AND owner_id = ?
-                      AND fencing_token = ?
-                      AND lease_until > clock_timestamp()
-                )
-                """,
-                Boolean.class,
-                authority.graphVersion(),
-                authority.policyFingerprint(),
-                authority.ownerId(),
-                authority.fencingToken()
-        );
-        if (!Boolean.TRUE.equals(owned)) {
-            throw new DreamLeaseManager.LostDreamAuthorityException(
-                    "Dream semantic prior apply rejected by fencing"
-            );
-        }
-    }
-
-    private boolean associationExistsEitherDirection(
-            DreamPair pair,
-            int graphVersion
-    ) {
-        Boolean exists = jdbcTemplate.queryForObject(
-                """
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM knowledge_chunk_association
-                    WHERE access_level = ?
-                      AND graph_version = ?
-                      AND (
-                          (
-                              source_document_id = ?
-                              AND source_generation = ?
-                              AND source_chunk_id = ?
-                              AND target_document_id = ?
-                              AND target_generation = ?
-                              AND target_chunk_id = ?
+                SELECT
+                    EXISTS (
+                        SELECT 1
+                        FROM knowledge_chunk_association
+                        WHERE access_level = ?
+                          AND graph_version = ?
+                          AND (
+                              (
+                                  source_document_id = ?
+                                  AND source_generation = ?
+                                  AND source_chunk_id = ?
+                                  AND target_document_id = ?
+                                  AND target_generation = ?
+                                  AND target_chunk_id = ?
+                              )
+                              OR
+                              (
+                                  source_document_id = ?
+                                  AND source_generation = ?
+                                  AND source_chunk_id = ?
+                                  AND target_document_id = ?
+                                  AND target_generation = ?
+                                  AND target_chunk_id = ?
+                              )
                           )
-                          OR
-                          (
-                              source_document_id = ?
-                              AND source_generation = ?
-                              AND source_chunk_id = ?
-                              AND target_document_id = ?
-                              AND target_generation = ?
-                              AND target_chunk_id = ?
-                          )
-                      )
-                )
+                    ) AS existing_pair,
+                    (
+                        SELECT count(*)
+                        FROM knowledge_chunk_association
+                        WHERE access_level = ?
+                          AND source_document_id = ?
+                          AND source_generation = ?
+                          AND source_chunk_id = ?
+                          AND graph_version = ?
+                          AND semantic_similarity IS NOT NULL
+                          AND band <> 'DECAYED'
+                    ) AS first_degree,
+                    (
+                        SELECT count(*)
+                        FROM knowledge_chunk_association
+                        WHERE access_level = ?
+                          AND source_document_id = ?
+                          AND source_generation = ?
+                          AND source_chunk_id = ?
+                          AND graph_version = ?
+                          AND semantic_similarity IS NOT NULL
+                          AND band <> 'DECAYED'
+                    ) AS second_degree
                 """,
-                Boolean.class,
+                (rs, rowNum) -> new PairState(
+                        rs.getBoolean("existing_pair"),
+                        rs.getInt("first_degree"),
+                        rs.getInt("second_degree")
+                ),
                 pair.first().accessLevel(),
                 graphVersion,
                 pair.first().documentId(),
@@ -193,38 +185,28 @@ public class SemanticGraphPriorWriter {
                 pair.second().chunkId(),
                 pair.first().documentId(),
                 pair.first().generation(),
-                pair.first().chunkId()
-        );
-        return Boolean.TRUE.equals(exists);
-    }
-
-    private int semanticDegree(ChunkGraphNode node, int graphVersion) {
-        Integer degree = jdbcTemplate.queryForObject(
-                """
-                SELECT count(*)
-                FROM knowledge_chunk_association
-                WHERE access_level = ?
-                  AND source_document_id = ?
-                  AND source_generation = ?
-                  AND source_chunk_id = ?
-                  AND graph_version = ?
-                  AND semantic_similarity IS NOT NULL
-                  AND band <> 'DECAYED'
-                """,
-                Integer.class,
-                node.accessLevel(),
-                node.documentId(),
-                node.generation(),
-                node.chunkId(),
+                pair.first().chunkId(),
+                pair.first().accessLevel(),
+                pair.first().documentId(),
+                pair.first().generation(),
+                pair.first().chunkId(),
+                graphVersion,
+                pair.second().accessLevel(),
+                pair.second().documentId(),
+                pair.second().generation(),
+                pair.second().chunkId(),
                 graphVersion
         );
-        return degree == null ? 0 : degree;
     }
 
-    private void upsertDirection(
+    /**
+     * Writes both directions atomically in one statement. The lease predicate is
+     * part of the mutation itself, so fencing is checked at write time rather
+     * than by a racy preliminary probe.
+     */
+    private void upsertPair(
             DreamLeaseManager.Authority authority,
-            ChunkGraphNode source,
-            ChunkGraphNode target,
+            DreamPair pair,
             double semanticSimilarity,
             Instant observedAt
     ) {
@@ -256,9 +238,41 @@ public class SemanticGraphPriorWriter {
                     updated_at
                 )
                 SELECT
-                    ?, ?, ?, ?, ?, ?, ?,
-                    'CANDIDATE', 0, ?, ?, ?,
-                    0, 0, 0, 0::bit(256), 0, ?, ?, ?, ?, clock_timestamp()
+                    candidate.access_level,
+                    candidate.source_document_id,
+                    candidate.source_generation,
+                    candidate.source_chunk_id,
+                    candidate.target_document_id,
+                    candidate.target_generation,
+                    candidate.target_chunk_id,
+                    'CANDIDATE',
+                    0,
+                    ?,
+                    ?,
+                    ?,
+                    0,
+                    0,
+                    0,
+                    0::bit(256),
+                    0,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    clock_timestamp()
+                FROM (
+                    VALUES
+                        (?, ?, ?, ?, ?, ?, ?),
+                        (?, ?, ?, ?, ?, ?, ?)
+                ) AS candidate(
+                    access_level,
+                    source_document_id,
+                    source_generation,
+                    source_chunk_id,
+                    target_document_id,
+                    target_generation,
+                    target_chunk_id
+                )
                 WHERE EXISTS (
                     SELECT 1
                     FROM adaptive_graph_dream_lease lease
@@ -296,13 +310,6 @@ public class SemanticGraphPriorWriter {
                     compaction_required = TRUE,
                     updated_at = clock_timestamp()
                 """,
-                source.accessLevel(),
-                source.documentId(),
-                source.generation(),
-                source.chunkId(),
-                target.documentId(),
-                target.generation(),
-                target.chunkId(),
                 semanticSimilarity,
                 observed,
                 observed,
@@ -310,58 +317,37 @@ public class SemanticGraphPriorWriter {
                 observed,
                 observed,
                 observed,
+                pair.first().accessLevel(),
+                pair.first().documentId(),
+                pair.first().generation(),
+                pair.first().chunkId(),
+                pair.second().documentId(),
+                pair.second().generation(),
+                pair.second().chunkId(),
+                pair.second().accessLevel(),
+                pair.second().documentId(),
+                pair.second().generation(),
+                pair.second().chunkId(),
+                pair.first().documentId(),
+                pair.first().generation(),
+                pair.first().chunkId(),
                 authority.graphVersion(),
                 authority.policyFingerprint(),
                 authority.ownerId(),
                 authority.fencingToken()
         );
-        if (changed != 1) {
+        if (changed != 2) {
             throw new DreamLeaseManager.LostDreamAuthorityException(
-                    "Dream semantic prior write rejected by fencing"
+                    "Dream semantic prior pair write rejected by fencing"
             );
         }
     }
 
-    private void lockPublishedGeneration(ChunkGraphNode node) {
-        Integer published = jdbcTemplate.query(
-                """
-                SELECT 1
-                FROM knowledge_document_lifecycle
-                WHERE document_id = ?
-                  AND access_level = ?
-                  AND published_generation = ?
-                  AND lifecycle_status = 'READY'
-                  AND retention_status = 'ACTIVE'
-                  AND (
-                      expires_at IS NULL
-                      OR expires_at > clock_timestamp()
-                  )
-                FOR SHARE
-                """,
-                (rs, rowNum) -> rs.getInt(1),
-                node.documentId(),
-                node.accessLevel(),
-                node.generation()
-        ).stream().findFirst().orElse(null);
-        if (published == null) {
-            throw new IllegalStateException(
-                    "Dream apply requires eligible ACTIVE/PUBLISHED generation"
-            );
-        }
-    }
-
-    private void lockNode(ChunkGraphNode node) {
-        jdbcTemplate.query(
-                "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))",
-                rs -> {
-                },
-                "akmai:adaptive-graph:node:" + node.lockKey()
-        );
-    }
-
-    private int transactionTimeoutSeconds() {
-        long seconds = graphProperties.dream().transactionTimeout().toSeconds();
-        return (int) Math.max(1, Math.min(Integer.MAX_VALUE, seconds));
+    private record PairState(
+            boolean existingPair,
+            int firstDegree,
+            int secondDegree
+    ) {
     }
 
     public enum ApplyResult {

@@ -123,7 +123,7 @@ public class SemanticNeighborSearchRepository {
         return jdbcTemplate.query(
                 sql,
                 ps -> {
-                    applyQueryTimeout(ps, queryTimeout);
+                    JdbcTimeouts.applyQueryTimeout(ps, queryTimeout);
                     bind(
                             ps,
                             vector,
@@ -145,18 +145,6 @@ public class SemanticNeighborSearchRepository {
                         rs.getDouble("similarity")
                 )
         );
-    }
-
-    private void applyQueryTimeout(
-            PreparedStatement ps,
-            Duration queryTimeout
-    ) throws SQLException {
-        if (queryTimeout == null) {
-            return;
-        }
-        long millis = queryTimeout.toMillis();
-        long seconds = Math.max(1L, (millis + 999L) / 1000L);
-        ps.setQueryTimeout((int) Math.min(Integer.MAX_VALUE, seconds));
     }
 
     private void bind(
