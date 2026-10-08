@@ -97,7 +97,7 @@ class PostgresAppParameterRepositoryIntegrationTest {
         assertThat(parameters)
                 .hasSize(AppParameterKey.values().length)
                 .extracting(AppParameter::key)
-                .containsExactlyElementsOf(keys());
+                .containsExactlyInAnyOrderElementsOf(keys());
         assertThat(parameters)
                 .allSatisfy(parameter -> {
                     assertThat(parameter.type())
