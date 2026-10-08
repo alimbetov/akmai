@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -18,21 +19,10 @@ class RetentionSchedulerObservabilityTest {
     @Test
     void schedulerPublishesBacklogAndRunDurationMetrics(CapturedOutput output) {
         RetentionWorkerPool workers = mock(RetentionWorkerPool.class);
+        RetentionClaimRepository claims = mock(RetentionClaimRepository.class);
         DocumentGenerationRepository generations =
                 mock(DocumentGenerationRepository.class);
-        RetentionProperties properties = new RetentionProperties(
-                true,
-                "0 0 * * * *",
-                "UTC",
-                10,
-                2,
-                3,
-                1,
-                1,
-                Duration.ofMinutes(10),
-                RetentionPolicy.PERMANENT,
-                Duration.ofDays(90)
-        );
+        RetentionProperties properties = properties();
         when(generations.failStaleIngestionBatch(
                 Duration.ofMinutes(10),
                 10
@@ -42,11 +32,13 @@ class RetentionSchedulerObservabilityTest {
                 org.mockito.ArgumentMatchers.eq(20)
         )).thenReturn(0);
         when(workers.backlogCount()).thenReturn(5L);
+        when(claims.countRetryExhausted(3)).thenReturn(2L);
 
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
         AkmaiMetrics metrics = new AkmaiMetrics(registry);
         RetentionScheduler scheduler = new RetentionScheduler(
                 workers,
+                claims,
                 properties,
                 generations
         );
@@ -64,6 +56,57 @@ class RetentionSchedulerObservabilityTest {
                 .contains("retention_run event=completed")
                 .contains("outcome=SUCCESS")
                 .contains("backlog=5")
+                .contains("retryExhausted=2")
                 .doesNotContain("document text");
+    }
+
+    @Test
+    void postRunObservationFailureDoesNotMaskPrimaryDrainFailure() {
+        RetentionWorkerPool workers = mock(RetentionWorkerPool.class);
+        RetentionClaimRepository claims = mock(RetentionClaimRepository.class);
+        DocumentGenerationRepository generations =
+                mock(DocumentGenerationRepository.class);
+        RetentionProperties properties = properties();
+        IllegalStateException primary = new IllegalStateException("drain failed");
+        IllegalArgumentException secondary =
+                new IllegalArgumentException("backlog probe failed");
+
+        when(generations.failStaleIngestionBatch(
+                Duration.ofMinutes(10),
+                10
+        )).thenReturn(0);
+        when(workers.drain(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.eq(20)
+        )).thenThrow(primary);
+        when(workers.backlogCount()).thenThrow(secondary);
+
+        RetentionScheduler scheduler = new RetentionScheduler(
+                workers,
+                claims,
+                properties,
+                generations
+        );
+
+        assertThatThrownBy(scheduler::cleanupExpiredDocuments)
+                .isSameAs(primary)
+                .satisfies(error -> assertThat(error.getSuppressed())
+                        .containsExactly(secondary));
+    }
+
+    private RetentionProperties properties() {
+        return new RetentionProperties(
+                true,
+                "0 0 * * * *",
+                "UTC",
+                10,
+                2,
+                3,
+                1,
+                1,
+                Duration.ofMinutes(10),
+                RetentionPolicy.PERMANENT,
+                Duration.ofDays(90)
+        );
     }
 }
