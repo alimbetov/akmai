@@ -29,11 +29,15 @@ public class SecurityStartupValidator implements ApplicationRunner {
         String[] activeProfiles = environment.getActiveProfiles();
         boolean productionProfile = Arrays.asList(activeProfiles).contains("prod");
         String deploymentEnvironment = deploymentEnvironment(activeProfiles);
+        if (deploymentEnvironment == null) {
+            throw new IllegalStateException(
+                    "Deployment environment must be explicitly classified as local/dev/test or non-local"
+            );
+        }
         boolean nonLocalProfile = Arrays.stream(activeProfiles)
                 .map(value -> value.trim().toLowerCase(Locale.ROOT))
                 .anyMatch(value -> !isLocal(value));
-        boolean local = deploymentEnvironment != null
-                && isLocal(deploymentEnvironment)
+        boolean local = isLocal(deploymentEnvironment)
                 && !productionProfile
                 && !nonLocalProfile;
         boolean hardened = !local;
@@ -42,14 +46,14 @@ public class SecurityStartupValidator implements ApplicationRunner {
             throw new IllegalStateException(
                     productionProfile
                             ? "Production profile requires API-key security"
-                            : "Non-local or unspecified environment requires API-key security"
+                            : "Non-local environment requires API-key security"
             );
         }
         if (hardened && properties.allowUnauthenticatedLocal()) {
             throw new IllegalStateException(
                     productionProfile
                             ? "Production profile forbids unauthenticated local mode"
-                            : "Non-local or unspecified environment forbids unauthenticated local mode"
+                            : "Non-local environment forbids unauthenticated local mode"
             );
         }
         if (properties.enabled()
