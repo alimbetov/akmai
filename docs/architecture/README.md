@@ -1,6 +1,6 @@
 # Architecture documentation
 
-This directory contains both current runtime contracts and historical/target design material. Do not assume every file describes the current executable path.
+This directory contains current architecture contracts and active target/experimental designs. Obsolete implementation plans and superseded gap-remediation specifications are removed instead of being retained beside the runtime contract.
 
 ## Start here
 
@@ -13,25 +13,25 @@ This directory contains both current runtime contracts and historical/target des
 
 | Document | Classification | Purpose |
 |---|---|---|
-| `adaptive-chunk-graph.md` | IMPLEMENTED DESIGN / REFERENCE | Original architecture and invariants for bounded learned chunk associations. Read together with `adaptive-graph-runtime.md` for actual current runtime. |
+| `adaptive-chunk-graph.md` | CURRENT REFERENCE | Core architecture and invariants for bounded learned chunk associations. Read together with `adaptive-graph-runtime.md` for executable runtime behavior. |
 | `adaptive-chunk-graph-calibration.md` | CURRENT CALIBRATION CONTRACT | Measurement-driven graph threshold/limit calibration. |
 | `adaptive-chunk-graph-rollout.md` | CURRENT ROLLOUT CONTRACT | Shadow/canary/online rollout rules and recovery assumptions. |
 | `adaptive-graph-learning-replay.md` | CURRENT EVALUATION CONTRACT | Replay and learning evaluation for adaptive graph behavior. |
 | `adaptive-memory-statistical-evaluation.md` | CURRENT QUALITY CONTRACT | Statistical evaluation and promotion evidence for adaptive memory. |
-| `measured-adaptive-retrieval-v1.md` | IMPLEMENTED DESIGN / REFERENCE | Measured retrieval design and scoring boundaries. |
-| `self-organizing-semantic-memory.md` | IMPLEMENTED / EVOLVING | Semantic memory concepts and persistence behavior. |
+| `measured-adaptive-retrieval-v1.md` | CURRENT REFERENCE | Measured retrieval design and scoring boundaries. |
+| `self-organizing-semantic-memory.md` | CURRENT / EVOLVING | Semantic memory concepts and persistence behavior. |
 
 ## Self-optimizing platform
 
 | Document | Classification | Purpose |
 |---|---|---|
 | `rag-self-optimizing-platform-v1.1-technical-spec.md` | CURRENT | Implemented v1.1 state machine, persistent memory, shadow/canary and rollout contract. |
-| `rag-self-optimizing-platform-v1-gap-remediation.md` | HISTORICAL IMPLEMENTATION SPEC | Gap-remediation blueprint used to reach the current state. Useful for design rationale, not primary runtime truth. |
-| `implementation-gap-closure-spec.md` | HISTORICAL IMPLEMENTATION SPEC | Earlier implementation gap closure plan. |
+
+Superseded implementation-gap and remediation blueprints are not part of the active architecture set. If an old document contains a decision whose rationale must be preserved, capture that decision as an ADR instead of retaining stale implementation instructions.
 
 ## Semantic intelligence
 
-The following documents describe the semantic/concept layer and its evolution:
+The following documents describe the semantic/concept layer and its current evolution:
 
 - `semantic-intelligence-layer.md`
 - `semantic-concept-retrieval-v1.md`
@@ -41,17 +41,27 @@ The following documents describe the semantic/concept layer and its evolution:
 - `semantic-phrase-expansion-v1.md`
 - `rag-assurance-domain-enrichment.md`
 
-These documents should be read as capability/design references; current lane enablement still depends on runtime configuration and the actual registered components.
+Current lane enablement depends on runtime configuration and registered components. Any document in this list that no longer matches those executable paths must be updated or removed during the service/process inventory pass.
 
 ## Storage, lifecycle and retention
 
 - `chunk-lifecycle-retention.md` — generation lifecycle and payload retirement.
 - `retrieval-partitioning-indexing-strategy.md` — PostgreSQL partitioning/indexing strategy.
-- `retrieval-storage-greenfield-blueprint.md` — storage architecture blueprint.
+- `retrieval-storage-greenfield-blueprint.md` — storage architecture blueprint; keep only while it remains aligned with the implemented storage direction.
 - `retrieval-storage-greenfield-ddl.sql` — blueprint DDL reference; Liquibase migrations under `src/main/resources/db/changelog` are executable truth.
 - `retrieval-hot-only-tombstone.md` — hot-only/tombstone lifecycle design.
 - `retrieval-archive-purge-economics.md` — retention/purge economics and operational tradeoffs.
 
+## Lifecycle rule
+
+Architecture documents use one of these active statuses:
+
+- `CURRENT` — describes implemented runtime behavior;
+- `TARGET` — approved future behavior not yet fully implemented;
+- `EXPERIMENTAL` — evaluated behavior with no production authority yet.
+
+A document that becomes obsolete must be updated to the current contract or removed. `HISTORICAL` is not an active architecture-document status. Historical rationale belongs in an ADR only when the decision remains useful for understanding an invariant, compatibility boundary or operational constraint.
+
 ## Authority rule
 
-When an architecture document and runtime code disagree, treat the code + Liquibase migrations + `application.yml` as authoritative and open a documentation correction in the same change set. This directory intentionally retains historical design rationale instead of rewriting history to look as if every decision was always final.
+When an architecture document and runtime code disagree, treat code + Liquibase migrations + `application.yml` as authoritative, then correct the documentation in the same change set. The long-term target is that active documentation and executable behavior do not disagree.
