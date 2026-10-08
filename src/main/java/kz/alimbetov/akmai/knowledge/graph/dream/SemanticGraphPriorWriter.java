@@ -6,11 +6,11 @@ import java.util.List;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import kz.alimbetov.akmai.config.SemanticMemoryProperties;
 import kz.alimbetov.akmai.knowledge.graph.ChunkGraphNode;
+import kz.alimbetov.akmai.knowledge.graph.GraphLifecycleGuard;
 import kz.alimbetov.akmai.knowledge.graph.GraphNodeLockManager;
+import kz.alimbetov.akmai.knowledge.graph.GraphTransactionExecutor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Restricted DREAM-5 mutation boundary. It may materialize a semantic prior
@@ -20,26 +20,32 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class SemanticGraphPriorWriter {
 
     private final JdbcTemplate jdbcTemplate;
-    private final PlatformTransactionManager transactionManager;
     private final DreamRuntimeSwitches switches;
     private final AdaptiveGraphProperties graphProperties;
     private final SemanticMemoryProperties semanticMemoryProperties;
     private final GraphNodeLockManager graphNodeLockManager;
+    private final GraphLifecycleGuard graphLifecycleGuard;
+    private final GraphTransactionExecutor transactionExecutor;
+    private final DreamAuthorityGuard authorityGuard;
 
     public SemanticGraphPriorWriter(
             JdbcTemplate jdbcTemplate,
-            PlatformTransactionManager transactionManager,
             DreamRuntimeSwitches switches,
             AdaptiveGraphProperties graphProperties,
             SemanticMemoryProperties semanticMemoryProperties,
-            GraphNodeLockManager graphNodeLockManager
+            GraphNodeLockManager graphNodeLockManager,
+            GraphLifecycleGuard graphLifecycleGuard,
+            GraphTransactionExecutor transactionExecutor,
+            DreamAuthorityGuard authorityGuard
     ) {
         this.jdbcTemplate = jdbcTemplate;
-        this.transactionManager = transactionManager;
         this.switches = switches;
         this.graphProperties = graphProperties;
         this.semanticMemoryProperties = semanticMemoryProperties;
         this.graphNodeLockManager = graphNodeLockManager;
+        this.graphLifecycleGuard = graphLifecycleGuard;
+        this.transactionExecutor = transactionExecutor;
+        this.authorityGuard = authorityGuard;
     }
 
     public ApplyResult applyCandidate(
@@ -67,14 +73,15 @@ public class SemanticGraphPriorWriter {
             );
         }
 
-        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        transaction.setTimeout(transactionTimeoutSeconds());
-        ApplyResult result = transaction.execute(status -> applyInTransaction(
-                authority,
-                pair,
-                semanticSimilarity,
-                observedAt
-        ));
+        ApplyResult result = transactionExecutor.execute(
+                graphProperties.dream().transactionTimeout(),
+                () -> applyInTransaction(
+                        authority,
+                        pair,
+                        semanticSimilarity,
+                        observedAt
+                )
+        );
         return result == null ? ApplyResult.REJECTED : result;
     }
 
@@ -87,10 +94,10 @@ public class SemanticGraphPriorWriter {
         if (!switches.applyEnabled()) {
             return ApplyResult.APPLY_DISABLED;
         }
-        requireAuthority(authority);
+        authorityGuard.requireOwned(authority);
 
         List<ChunkGraphNode> nodes = List.of(pair.first(), pair.second());
-        nodes.stream().sorted().forEach(this::lockPublishedGeneration);
+        nodes.stream().sorted().forEach(graphLifecycleGuard::lockPublishedReadyActive);
         graphNodeLockManager.lockCanonical(nodes);
 
         PairAdmissionStats stats = loadPairAdmissionStats(
@@ -119,32 +126,6 @@ public class SemanticGraphPriorWriter {
                 observedAt
         );
         return stats.existingPair() ? ApplyResult.REFRESHED : ApplyResult.APPLIED;
-    }
-
-    private void requireAuthority(DreamLeaseManager.Authority authority) {
-        Boolean owned = jdbcTemplate.queryForObject(
-                """
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM adaptive_graph_dream_lease
-                    WHERE graph_version = ?
-                      AND semantic_policy_fingerprint = ?
-                      AND owner_id = ?
-                      AND fencing_token = ?
-                      AND lease_until > clock_timestamp()
-                )
-                """,
-                Boolean.class,
-                authority.graphVersion(),
-                authority.policyFingerprint(),
-                authority.ownerId(),
-                authority.fencingToken()
-        );
-        if (!Boolean.TRUE.equals(owned)) {
-            throw new DreamLeaseManager.LostDreamAuthorityException(
-                    "Dream semantic prior apply rejected by fencing"
-            );
-        }
     }
 
     private PairAdmissionStats loadPairAdmissionStats(
@@ -335,39 +316,6 @@ public class SemanticGraphPriorWriter {
                     "Dream semantic prior write rejected by fencing"
             );
         }
-    }
-
-    private void lockPublishedGeneration(ChunkGraphNode node) {
-        Integer published = jdbcTemplate.query(
-                """
-                SELECT 1
-                FROM knowledge_document_lifecycle
-                WHERE document_id = ?
-                  AND access_level = ?
-                  AND published_generation = ?
-                  AND lifecycle_status = 'READY'
-                  AND retention_status = 'ACTIVE'
-                  AND (
-                      expires_at IS NULL
-                      OR expires_at > clock_timestamp()
-                  )
-                FOR SHARE
-                """,
-                (rs, rowNum) -> rs.getInt(1),
-                node.documentId(),
-                node.accessLevel(),
-                node.generation()
-        ).stream().findFirst().orElse(null);
-        if (published == null) {
-            throw new IllegalStateException(
-                    "Dream apply requires eligible ACTIVE/PUBLISHED generation"
-            );
-        }
-    }
-
-    private int transactionTimeoutSeconds() {
-        long seconds = graphProperties.dream().transactionTimeout().toSeconds();
-        return (int) Math.max(1, Math.min(Integer.MAX_VALUE, seconds));
     }
 
     private record PairAdmissionStats(
