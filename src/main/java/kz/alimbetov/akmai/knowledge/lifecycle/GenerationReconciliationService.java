@@ -6,13 +6,19 @@ import kz.alimbetov.akmai.knowledge.audit.AuditEventRepository;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileRepository;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class GenerationReconciliationService {
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(GenerationReconciliationService.class);
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
@@ -105,22 +111,34 @@ public class GenerationReconciliationService {
         for (GenerationKey candidate : candidates) {
             if ("RETIRING".equals(candidate.status())) {
                 boolean prepared = Boolean.TRUE.equals(
-                        transactionTemplate.execute(status ->
-                                prepareRetiring(candidate)
-                        )
+                        transactionTemplate.execute(status -> {
+                            if (!tryCandidateLock(candidate)) {
+                                logCandidateBusy(candidate, "prepare");
+                                return false;
+                            }
+                            return prepareRetiring(candidate);
+                        })
                 );
                 if (prepared) {
                     transactionTemplate.execute(status -> {
+                        if (!tryCandidateLock(candidate)) {
+                            logCandidateBusy(candidate, "purge");
+                            return null;
+                        }
                         purgeRetiring(candidate);
                         return null;
                     });
-                    continue;
                 }
+                continue;
             }
 
-            Boolean result = transactionTemplate.execute(status ->
-                    reconcileTerminal(candidate)
-            );
+            Boolean result = transactionTemplate.execute(status -> {
+                if (!tryCandidateLock(candidate)) {
+                    logCandidateBusy(candidate, "terminal");
+                    return false;
+                }
+                return reconcileTerminal(candidate);
+            });
             if (Boolean.TRUE.equals(result)) {
                 cleaned++;
             }
@@ -128,6 +146,37 @@ public class GenerationReconciliationService {
 
         purgeExpiredTombstones();
         return cleaned;
+    }
+
+    private boolean tryCandidateLock(GenerationKey key) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+            throw new IllegalStateException(
+                    "Generation reconciliation advisory lock requires an active transaction"
+            );
+        }
+        Boolean acquired = jdbcTemplate.queryForObject(
+                "SELECT pg_try_advisory_xact_lock(?)",
+                Boolean.class,
+                candidateLockKey(key)
+        );
+        return Boolean.TRUE.equals(acquired);
+    }
+
+    private long candidateLockKey(GenerationKey key) {
+        long documentHash = Integer.toUnsignedLong(key.documentId().hashCode());
+        long generationHash = Integer.toUnsignedLong(
+                Long.hashCode(key.generation())
+        );
+        return (documentHash << 32) | generationHash;
+    }
+
+    private void logCandidateBusy(GenerationKey key, String phase) {
+        LOGGER.debug(
+                "generation_reconciliation event=candidate_busy phase={} documentId={} generation={}",
+                phase,
+                key.documentId(),
+                key.generation()
+        );
     }
 
     private boolean prepareRetiring(GenerationKey key) {
@@ -202,15 +251,19 @@ public class GenerationReconciliationService {
                     """
                     UPDATE knowledge_retired_generation
                     SET cleanup_attempts = cleanup_attempts + 1,
+                        purge_started_at = clock_timestamp(),
                         last_error = NULL
                     WHERE document_id = ?
                       AND generation = ?
                       AND access_level = ?
                       AND cleanup_status = 'PURGING'
+                      AND purge_started_at <= clock_timestamp()
+                          - (? * interval '1 millisecond')
                     """,
                     key.documentId(),
                     key.generation(),
-                    key.accessLevel()
+                    key.accessLevel(),
+                    stalePurgeMillis()
             );
             if (retry != 1) {
                 String status = jdbcTemplate.queryForObject(
@@ -226,11 +279,24 @@ public class GenerationReconciliationService {
                         key.generation(),
                         key.accessLevel()
                 );
+                if ("PURGING".equals(status)) {
+                    LOGGER.debug(
+                            "generation_reconciliation event=fresh_purge_claim documentId={} generation={}",
+                            key.documentId(),
+                            key.generation()
+                    );
+                    return false;
+                }
                 throw new IllegalStateException(
                         "Retiring generation has incompatible tombstone state: "
                                 + status
                 );
             }
+            LOGGER.info(
+                    "generation_reconciliation event=stale_purge_reclaimed documentId={} generation={}",
+                    key.documentId(),
+                    key.generation()
+            );
         } else {
             audit.append(
                     "GENERATION_PURGE_STARTED",
@@ -245,6 +311,13 @@ public class GenerationReconciliationService {
         }
 
         return true;
+    }
+
+    private long stalePurgeMillis() {
+        return Math.max(
+                properties.gracePeriod().toMillis(),
+                properties.fixedDelay().toMillis()
+        );
     }
 
     private void purgeRetiring(GenerationKey key) {

@@ -140,12 +140,17 @@ public class GenerationPublicationService {
             );
             return result;
         } catch (RuntimeException exception) {
-            PublicationOutcomeResolver.Outcome outcome =
-                    outcomeResolver.resolve(
-                            documentId,
-                            generation,
-                            idempotency
-                    );
+            PublicationOutcomeResolver.Outcome outcome;
+            try {
+                outcome = outcomeResolver.resolve(
+                        documentId,
+                        generation,
+                        idempotency
+                );
+            } catch (RuntimeException resolverFailure) {
+                exception.addSuppressed(resolverFailure);
+                throw exception;
+            }
             if (outcome == PublicationOutcomeResolver.Outcome.COMMITTED) {
                 linkAfterCommit(
                         PublicationResult.PUBLISHED,

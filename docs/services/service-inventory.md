@@ -36,8 +36,9 @@ A service/process is considered **documented** only when its contract contains:
 | Graph / Dream | Dream candidate lifecycle | TBD | TODO |
 | Graph maintenance | Graph cleanup / maintenance | TBD | TODO |
 | Learning | Query memory / learning events | TBD | TODO |
-| Publication | Publication / activation lifecycle | TBD | TODO |
-| Repair | Repair / reconciliation processes | TBD | TODO |
+| Publication | Publication / activation lifecycle | [`publication-lifecycle.md`](publication-lifecycle.md) | DRAFT |
+| Repair | Generation reconciliation | [`generation-reconciliation.md`](generation-reconciliation.md) | DRAFT |
+| Repair | Physical repair / residual cleanup | [`generation-reconciliation.md`](generation-reconciliation.md) | DRAFT |
 | Operations | Scheduled/background jobs | TBD | TODO |
 | Operations | Runtime feature flags / safety gates | TBD | TODO |
 

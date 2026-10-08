@@ -6,13 +6,14 @@ Audit documents are snapshots tied to a particular repository state. They are no
 
 ## Current readiness and remediation sources
 
-Use:
+Use, in precedence order for the post-retrieval workstream:
 
-- [`post-v1.1-readiness-2026-10-08.md`](post-v1.1-readiness-2026-10-08.md) for the post-v1.1 readiness snapshot;
-- [`post-retrieval-project-audit-remediation-spec.md`](post-retrieval-project-audit-remediation-spec.md) for the normative post-retrieval stabilization scope, behavior and Definition of Done;
-- [`post-retrieval-project-audit-code-blueprint.md`](post-retrieval-project-audit-code-blueprint.md) for the concrete class/method/SQL/test execution map.
+1. [`post-retrieval-project-audit-implementation-decisions.md`](post-retrieval-project-audit-implementation-decisions.md) for implementation discoveries and final low-level mechanism choices already validated against current code;
+2. [`post-retrieval-project-audit-remediation-spec.md`](post-retrieval-project-audit-remediation-spec.md) for normative scope, target behavior, invariants, acceptance criteria and Definition of Done;
+3. [`post-retrieval-project-audit-code-blueprint.md`](post-retrieval-project-audit-code-blueprint.md) for the concrete class/method/SQL/test execution map;
+4. [`post-v1.1-readiness-2026-10-08.md`](post-v1.1-readiness-2026-10-08.md) for the earlier post-v1.1 readiness snapshot.
 
-The remediation spec and code blueprint are a pair. If implementation discoveries change an assumption, update both in the same change set.
+The TARGET remediation spec and code blueprint define intent and implementation plan. When implementation-level discovery proves a lower-level mechanism in those TARGET documents insufficient, the CURRENT implementation-decisions document supersedes that mechanism while preserving the parent invariant and acceptance criteria. The service contract for an implemented process must then describe the executable behavior.
 
 Always distinguish:
 
@@ -28,6 +29,7 @@ release qualification state
 
 | Document | Status | Use |
 |---|---|---|
+| `post-retrieval-project-audit-implementation-decisions.md` | CURRENT IMPLEMENTATION DECISIONS | Resolved implementation choices discovered while executing the post-retrieval audit; supersedes conflicting lower-level TARGET mechanics. |
 | `post-retrieval-project-audit-remediation-spec.md` | TARGET EXECUTION SPEC | Normative post-retrieval stabilization scope: governance, reconciliation HA, process contracts, CI/docs cleanup and release qualification. |
 | `post-retrieval-project-audit-code-blueprint.md` | TARGET CODE BLUEPRINT | Concrete implementation map to current Java classes, transaction/SQL boundaries, tests, docs and execution order. |
 | `post-v1.1-readiness-2026-10-08.md` | READINESS SNAPSHOT | Readiness decision tied to its audited SHA; some tracker-state statements were superseded later on 2026-10-08. |
