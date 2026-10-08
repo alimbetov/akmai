@@ -2,6 +2,10 @@ package kz.alimbetov.akmai.rag.retrieval;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -9,6 +13,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
+import kz.alimbetov.akmai.knowledge.projection.PublishedSearchProjectionReader;
+import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,6 +83,35 @@ class PostgresPublishedLifecycleEligibilityIntegrationTest {
     }
 
     @Test
+    void finalContextRevalidationRejectsDocumentThatExpiresAfterRetrieval() {
+        OffsetDateTime future = OffsetDateTime.now(ZoneOffset.UTC).plusHours(1);
+        insertLifecycle("race-doc", "TTL", future, 1L, 1L);
+        RetrievalHit retrieved = hit(RetrievalType.VECTOR, 1L, "race-doc", 1L);
+
+        PublishedSearchProjectionReader projectionReader =
+                mock(PublishedSearchProjectionReader.class);
+        when(projectionReader.findPublishedByKeys(anyList(), anySet()))
+                .thenReturn(List.of(projection(
+                        "race-doc",
+                        retrieved.chunkId(),
+                        1L,
+                        1L
+                )));
+        PublishedContextRevalidator revalidator = new PublishedContextRevalidator(
+                projectionReader,
+                eligibility
+        );
+
+        jdbc.update(
+                "UPDATE knowledge_document_lifecycle SET expires_at = clock_timestamp() - interval '1 second' WHERE document_id = ?",
+                "race-doc"
+        );
+
+        assertThat(revalidator.revalidate(List.of(retrieved), Set.of(1L)))
+                .isEmpty();
+    }
+
+    @Test
     void nonExpiredRowsRemainEligible() {
         OffsetDateTime future = OffsetDateTime.now(ZoneOffset.UTC).plusHours(1);
         insertLifecycle("future-ttl", "TTL", future, 1L, 1L);
@@ -140,6 +176,31 @@ class PostgresPublishedLifecycleEligibilityIntegrationTest {
                 type.name().toLowerCase() + "-chunk",
                 "evidence",
                 Map.of()
+        );
+    }
+
+    private SearchProjection projection(
+            String documentId,
+            String chunkId,
+            long generation,
+            long accessLevel
+    ) {
+        return new SearchProjection(
+                chunkId,
+                documentId,
+                generation,
+                accessLevel,
+                null,
+                0,
+                "evidence",
+                "evidence",
+                "en",
+                KnowledgeDomain.GENERAL,
+                "section",
+                List.of(),
+                List.of(),
+                Map.of(),
+                2
         );
     }
 }
