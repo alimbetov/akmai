@@ -62,7 +62,7 @@ akmai:
       cron: "${AKMAI_ADAPTIVE_GRAPH_DREAM_CRON:0 0 3 * * *}"
       zone: ${AKMAI_ADAPTIVE_GRAPH_DREAM_ZONE:UTC}
       top-k: ${AKMAI_ADAPTIVE_GRAPH_DREAM_TOP_K:32}
-      candidate-threshold: ${AKMAI_ADAPTIVE_GRAPH_DREAM_CANDIDATE_THRESHOLD:0.88}
+      candidate-threshold: ${AKMAI_ADAPTIVE_GRAPH_DREAM_CANDIDATE_THRESHOLD:0.86}
       activation-threshold: ${AKMAI_ADAPTIVE_GRAPH_DREAM_ACTIVATION_THRESHOLD:0.94}
       retention-threshold: ${AKMAI_ADAPTIVE_GRAPH_DREAM_RETENTION_THRESHOLD:0.90}
       forgetting-threshold: ${AKMAI_ADAPTIVE_GRAPH_DREAM_FORGETTING_THRESHOLD:0.86}
@@ -80,9 +80,9 @@ akmai:
       transaction-timeout: ${AKMAI_ADAPTIVE_GRAPH_DREAM_TRANSACTION_TIMEOUT:30s}
       lease-duration: ${AKMAI_ADAPTIVE_GRAPH_DREAM_LEASE_DURATION:90s}
       heartbeat-interval: ${AKMAI_ADAPTIVE_GRAPH_DREAM_HEARTBEAT_INTERVAL:25s}
-      max-db-concurrency: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_DB_CONCURRENCY:2}
-      max-forward-ann-concurrency: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_FORWARD_ANN_CONCURRENCY:2}
-      max-reverse-ann-concurrency: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_REVERSE_ANN_CONCURRENCY:2}
+      max-db-concurrency: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_DB_CONCURRENCY:1}
+      max-forward-ann-concurrency: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_FORWARD_ANN_CONCURRENCY:1}
+      max-reverse-ann-concurrency: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_REVERSE_ANN_CONCURRENCY:1}
       reverse-cache-maximum-size: ${AKMAI_ADAPTIVE_GRAPH_DREAM_REVERSE_CACHE_SIZE:10000}
       semantic-policy-version: ${AKMAI_ADAPTIVE_GRAPH_DREAM_POLICY_VERSION:dream-v1}
     competition:
