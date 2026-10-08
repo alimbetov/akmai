@@ -13,8 +13,9 @@ import kz.alimbetov.akmai.knowledge.graph.SemanticNeighborSearchRepository.Seman
 import org.springframework.stereotype.Component;
 
 /**
- * DREAM-4B shadow discovery. Persists Dream-owned candidate observations only;
- * it never writes knowledge_chunk_association.
+ * DREAM-4B discovery plus DREAM-5 restricted semantic-prior materialization.
+ * Production graph writes are possible only through SemanticGraphPriorWriter,
+ * which independently enforces the apply gate, lifecycle, degree and fencing.
  */
 @Component
 public class DreamCandidateDiscovery {
@@ -23,6 +24,7 @@ public class DreamCandidateDiscovery {
     private final DreamReciprocalNeighborVerifier reciprocalVerifier;
     private final DreamConfidenceCalculator confidenceCalculator;
     private final DreamCandidateRepository candidates;
+    private final SemanticGraphPriorWriter priorWriter;
     private final DreamMetrics metrics;
     private final Cache<UUID, Set<DreamPair>> observedPairsByRun =
             Caffeine.newBuilder().maximumSize(1024).build();
@@ -32,12 +34,14 @@ public class DreamCandidateDiscovery {
             DreamReciprocalNeighborVerifier reciprocalVerifier,
             DreamConfidenceCalculator confidenceCalculator,
             DreamCandidateRepository candidates,
+            SemanticGraphPriorWriter priorWriter,
             DreamMetrics metrics
     ) {
         this.neighbors = neighbors;
         this.reciprocalVerifier = reciprocalVerifier;
         this.confidenceCalculator = confidenceCalculator;
         this.candidates = candidates;
+        this.priorWriter = priorWriter;
         this.metrics = metrics;
     }
 
@@ -62,6 +66,7 @@ public class DreamCandidateDiscovery {
         int persisted = 0;
         int mutual = 0;
         int activated = 0;
+        int applied = 0;
 
         for (DreamSourceRepository.DreamSource source : sources) {
             budget.acquireSource();
@@ -139,6 +144,7 @@ public class DreamCandidateDiscovery {
                 NormalizedEvidence evidence = normalize(
                         source.node(), pair, verification
                 );
+                Instant observedAt = Instant.now();
                 candidates.observe(
                         authority,
                         new DreamCandidateRepository.Observation(
@@ -159,7 +165,7 @@ public class DreamCandidateDiscovery {
                                 verification.mutualKnn()
                                         ? DreamCandidateRepository.ObservationOutcome.POSITIVE
                                         : DreamCandidateRepository.ObservationOutcome.NEGATIVE_SEMANTIC,
-                                Instant.now()
+                                observedAt
                         )
                 );
                 budget.addDbRows(1);
@@ -168,6 +174,26 @@ public class DreamCandidateDiscovery {
                     mutual++;
                 }
                 metrics.candidate(state.name());
+
+                if (mayActivate) {
+                    double semanticSimilarity = Math.min(
+                            verification.forwardSimilarity(),
+                            verification.reverseSimilarity()
+                    );
+                    SemanticGraphPriorWriter.ApplyResult applyResult =
+                            priorWriter.applyCandidate(
+                                    authority,
+                                    pair,
+                                    semanticSimilarity,
+                                    observedAt
+                            );
+                    metrics.apply(applyResult.name());
+                    if (applyResult == SemanticGraphPriorWriter.ApplyResult.APPLIED
+                            || applyResult == SemanticGraphPriorWriter.ApplyResult.REFRESHED) {
+                        budget.addDbRows(2);
+                        applied++;
+                    }
+                }
             }
         }
 
@@ -176,6 +202,7 @@ public class DreamCandidateDiscovery {
                 persisted,
                 mutual,
                 activated,
+                applied,
                 budget.snapshot()
         );
     }
@@ -220,6 +247,7 @@ public class DreamCandidateDiscovery {
             int persistedCandidates,
             int mutualCandidates,
             int activatedCandidates,
+            int appliedSemanticPriors,
             DreamBudget.Snapshot budget
     ) {
     }
