@@ -49,3 +49,5 @@ databaseChangeLog:
       file: db/changelog/greenfield/024-policy-canary-evidence.sql
   - include:
       file: db/changelog/greenfield/025-query-memory-policy-isolation.sql
+  - include:
+      file: db/changelog/greenfield/026-adaptive-graph-dream.sql
