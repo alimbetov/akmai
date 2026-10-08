@@ -33,7 +33,7 @@ public class GraphTransactionExecutor {
     }
 
     private static int timeoutSeconds(Duration timeout) {
-        long seconds = timeout.toSeconds();
-        return (int) Math.max(1, Math.min(Integer.MAX_VALUE, seconds));
+        long seconds = Math.max(1L, (timeout.toMillis() + 999L) / 1000L);
+        return Math.toIntExact(Math.min(seconds, Integer.MAX_VALUE));
     }
 }
