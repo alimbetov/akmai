@@ -24,6 +24,7 @@ A service/process is considered **documented** only when its contract contains:
 | Retrieval | Query / retrieval orchestration | [`retrieval-flow.md`](retrieval-flow.md) | DRAFT |
 | Retrieval | Retrieval policy / routing | [`retrieval-routing.md`](retrieval-routing.md) | DRAFT |
 | Retrieval | Retrieval execution / degradation semantics | [`retrieval-execution.md`](retrieval-execution.md) | DRAFT |
+| Retrieval | Fusion / rerank / context selection | [`retrieval-selection.md`](retrieval-selection.md) | DRAFT |
 | Retrieval | Retrieval quality / abstention | [`retrieval-flow.md`](retrieval-flow.md) | DRAFT |
 | Knowledge ingestion | Document ingestion | [`knowledge-ingestion.md`](knowledge-ingestion.md) | DRAFT |
 | Knowledge ingestion | Chunking / chunk lifecycle | TBD | TODO |
