@@ -136,8 +136,7 @@ class RequestBodySizeFilterTransportIntegrationTest {
     @SpringBootConfiguration
     @EnableAutoConfiguration(exclude = {
             DataSourceAutoConfiguration.class,
-            UserDetailsServiceAutoConfiguration.class,
-            org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration.class
+            UserDetailsServiceAutoConfiguration.class
     })
     @EnableConfigurationProperties(ApiProperties.class)
     static class TestApplication {
