@@ -24,6 +24,14 @@ public enum AppParameterKey {
             "akmai.adaptive-graph.competition.enabled",
             "Allow eligible HOT graph candidates to compete with base retrieval"
     ),
+    ADAPTIVE_GRAPH_DREAM_ENABLED(
+            "akmai.adaptive-graph.dream-enabled",
+            "Enable bounded Adaptive Graph Dream discovery and verification"
+    ),
+    ADAPTIVE_GRAPH_DREAM_APPLY_ENABLED(
+            "akmai.adaptive-graph.dream.apply-enabled",
+            "Allow Dream to apply or retire semantic priors in the adaptive graph"
+    ),
     SEMANTIC_MEMORY_INGESTION_LINKING_ENABLED(
             "akmai.semantic-memory.ingestion-linking-enabled",
             "Seed bounded semantic graph links after generation publication"

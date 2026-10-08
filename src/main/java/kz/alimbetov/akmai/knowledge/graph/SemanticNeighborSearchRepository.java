@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.knowledge.graph;
 import com.pgvector.PGvector;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
@@ -36,6 +37,31 @@ public class SemanticNeighborSearchRepository {
             double minimumSimilarity,
             boolean sameLanguageOnly
     ) {
+        return search(
+                embedding,
+                language,
+                accessLevel,
+                topK,
+                minimumSimilarity,
+                sameLanguageOnly,
+                null
+        );
+    }
+
+    /**
+     * Executes semantic ANN with an optional hard JDBC statement timeout.
+     * The timeout is attached to the actual PreparedStatement, so a blocked or
+     * slow ANN query is interrupted rather than merely noticed between calls.
+     */
+    public List<SemanticNeighbor> search(
+            float[] embedding,
+            String language,
+            long accessLevel,
+            int topK,
+            double minimumSimilarity,
+            boolean sameLanguageOnly,
+            Duration queryTimeout
+    ) {
         if (accessLevel <= 0) {
             throw new IllegalArgumentException("accessLevel must be positive");
         }
@@ -48,6 +74,10 @@ public class SemanticNeighborSearchRepository {
             throw new IllegalArgumentException(
                     "minimumSimilarity must be in [0, 1]"
             );
+        }
+        if (queryTimeout != null
+                && (queryTimeout.isZero() || queryTimeout.isNegative())) {
+            throw new IllegalArgumentException("queryTimeout must be positive");
         }
 
         profileService.assertConfiguredProfileIsActive();
@@ -77,6 +107,10 @@ public class SemanticNeighborSearchRepository {
                 WHERE v.access_level = ?
                   AND l.lifecycle_status = 'READY'
                   AND l.retention_status = 'ACTIVE'
+                  AND (
+                      l.expires_at IS NULL
+                      OR l.expires_at > clock_timestamp()
+                  )
                   %s
                   AND (v.embedding <=> ?) <= ?
                 ORDER BY v.embedding <=> ?,
@@ -88,15 +122,18 @@ public class SemanticNeighborSearchRepository {
 
         return jdbcTemplate.query(
                 sql,
-                ps -> bind(
-                        ps,
-                        vector,
-                        accessLevel,
-                        routedLanguage,
-                        sameLanguageOnly,
-                        maximumDistance,
-                        topK
-                ),
+                ps -> {
+                    applyQueryTimeout(ps, queryTimeout);
+                    bind(
+                            ps,
+                            vector,
+                            accessLevel,
+                            routedLanguage,
+                            sameLanguageOnly,
+                            maximumDistance,
+                            topK
+                    );
+                },
                 (rs, rowNum) -> new SemanticNeighbor(
                         new ChunkGraphNode(
                                 rs.getLong("access_level"),
@@ -108,6 +145,18 @@ public class SemanticNeighborSearchRepository {
                         rs.getDouble("similarity")
                 )
         );
+    }
+
+    private void applyQueryTimeout(
+            PreparedStatement ps,
+            Duration queryTimeout
+    ) throws SQLException {
+        if (queryTimeout == null) {
+            return;
+        }
+        long millis = queryTimeout.toMillis();
+        long seconds = Math.max(1L, (millis + 999L) / 1000L);
+        ps.setQueryTimeout((int) Math.min(Integer.MAX_VALUE, seconds));
     }
 
     private void bind(

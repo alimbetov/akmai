@@ -55,7 +55,36 @@ akmai:
     maintenance-enabled: ${AKMAI_ADAPTIVE_GRAPH_MAINTENANCE_ENABLED:false}
     shadow-expansion-enabled: ${AKMAI_ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED:false}
     expansion-enabled: ${AKMAI_ADAPTIVE_GRAPH_EXPANSION_ENABLED:false}
+    dream-enabled: ${AKMAI_ADAPTIVE_GRAPH_DREAM_ENABLED:false}
     graph-version: ${AKMAI_ADAPTIVE_GRAPH_VERSION:1}
+    dream:
+      apply-enabled: ${AKMAI_ADAPTIVE_GRAPH_DREAM_APPLY_ENABLED:false}
+      cron: "${AKMAI_ADAPTIVE_GRAPH_DREAM_CRON:0 0 3 * * *}"
+      zone: ${AKMAI_ADAPTIVE_GRAPH_DREAM_ZONE:UTC}
+      top-k: ${AKMAI_ADAPTIVE_GRAPH_DREAM_TOP_K:32}
+      candidate-threshold: ${AKMAI_ADAPTIVE_GRAPH_DREAM_CANDIDATE_THRESHOLD:0.86}
+      activation-threshold: ${AKMAI_ADAPTIVE_GRAPH_DREAM_ACTIVATION_THRESHOLD:0.94}
+      retention-threshold: ${AKMAI_ADAPTIVE_GRAPH_DREAM_RETENTION_THRESHOLD:0.90}
+      forgetting-threshold: ${AKMAI_ADAPTIVE_GRAPH_DREAM_FORGETTING_THRESHOLD:0.86}
+      max-new-edges-per-chunk: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_NEW_EDGES_PER_CHUNK:3}
+      max-sources-per-run: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_SOURCES_PER_RUN:10000}
+      rescan-sources-per-run: ${AKMAI_ADAPTIVE_GRAPH_DREAM_RESCAN_SOURCES_PER_RUN:1000}
+      batch-size: ${AKMAI_ADAPTIVE_GRAPH_DREAM_BATCH_SIZE:200}
+      negative-streak-for-forgetting: ${AKMAI_ADAPTIVE_GRAPH_DREAM_NEGATIVE_STREAK:3}
+      decay-enabled: ${AKMAI_ADAPTIVE_GRAPH_DREAM_DECAY_ENABLED:true}
+      max-ann-queries-per-run: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_ANN_QUERIES:100000}
+      max-reverse-ann-queries-per-run: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_REVERSE_ANN_QUERIES:90000}
+      max-db-rows-touched-per-run: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_DB_ROWS:1000000}
+      max-run-duration: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_RUN_DURATION:2h}
+      query-timeout: ${AKMAI_ADAPTIVE_GRAPH_DREAM_QUERY_TIMEOUT:5s}
+      transaction-timeout: ${AKMAI_ADAPTIVE_GRAPH_DREAM_TRANSACTION_TIMEOUT:30s}
+      lease-duration: ${AKMAI_ADAPTIVE_GRAPH_DREAM_LEASE_DURATION:90s}
+      heartbeat-interval: ${AKMAI_ADAPTIVE_GRAPH_DREAM_HEARTBEAT_INTERVAL:25s}
+      max-db-concurrency: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_DB_CONCURRENCY:1}
+      max-forward-ann-concurrency: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_FORWARD_ANN_CONCURRENCY:1}
+      max-reverse-ann-concurrency: ${AKMAI_ADAPTIVE_GRAPH_DREAM_MAX_REVERSE_ANN_CONCURRENCY:1}
+      reverse-cache-maximum-size: ${AKMAI_ADAPTIVE_GRAPH_DREAM_REVERSE_CACHE_SIZE:10000}
+      semantic-policy-version: ${AKMAI_ADAPTIVE_GRAPH_DREAM_POLICY_VERSION:dream-v1}
     competition:
       enabled: ${AKMAI_ADAPTIVE_GRAPH_COMPETITION_ENABLED:false}
       max-promotions: ${AKMAI_ADAPTIVE_GRAPH_COMPETITION_MAX_PROMOTIONS:2}
