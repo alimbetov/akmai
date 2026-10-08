@@ -72,6 +72,26 @@ class RetrievalTransactionTimeoutIntegrationTest {
                 .isEqualTo(1);
     }
 
+    @Test
+    void repeatedPostgresTimeoutsDoNotPoisonSubsequentConnectionUse() {
+        for (int attempt = 0; attempt < 3; attempt++) {
+            assertTimeoutPreemptively(
+                    Duration.ofSeconds(3),
+                    () -> assertThatThrownBy(() ->
+                            retrievalTransaction.executeWithoutResult(status ->
+                                    jdbc.queryForObject(
+                                            "SELECT pg_sleep(5)",
+                                            Object.class
+                                    )
+                            )
+                    ).isInstanceOf(DataAccessException.class)
+            );
+
+            assertThat(jdbc.queryForObject("SELECT 1", Integer.class))
+                    .isEqualTo(1);
+        }
+    }
+
     private static RetrievalProperties properties(
             Duration requestTimeout,
             Duration strategyTimeout
