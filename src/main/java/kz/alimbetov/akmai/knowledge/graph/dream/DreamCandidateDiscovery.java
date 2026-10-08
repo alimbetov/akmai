@@ -42,13 +42,15 @@ public class DreamCandidateDiscovery {
             UUID runId,
             DreamLeaseManager.Authority authority,
             DreamPolicyResolver.ResolvedDreamPolicy policy,
-            DreamBudget budget
+            DreamBudget budget,
+            String lane
     ) {
         if (sources == null || runId == null || authority == null
-                || policy == null || budget == null) {
+                || policy == null || budget == null
+                || lane == null || lane.isBlank()) {
             throw new IllegalArgumentException("Dream discovery inputs are required");
         }
-        Set<DreamPair> observedThisRun = new HashSet<>();
+        Set<DreamPair> observedThisCall = new HashSet<>();
         int processedSources = 0;
         int persisted = 0;
         int mutual = 0;
@@ -57,7 +59,7 @@ public class DreamCandidateDiscovery {
         for (DreamSourceRepository.DreamSource source : sources) {
             budget.acquireSource();
             budget.acquireForwardAnn();
-            metrics.source("fast");
+            metrics.source(lane);
             metrics.ann("forward");
             processedSources++;
 
@@ -78,7 +80,7 @@ public class DreamCandidateDiscovery {
             for (int index = 0; index < forward.size(); index++) {
                 SemanticNeighbor neighbor = forward.get(index);
                 DreamPair pair = DreamPair.of(source.node(), neighbor.node());
-                if (!observedThisRun.add(pair)) {
+                if (!observedThisCall.add(pair)) {
                     continue;
                 }
 
@@ -86,6 +88,7 @@ public class DreamCandidateDiscovery {
                 DreamBudget.Snapshot before = budget.snapshot();
                 DreamReciprocalNeighborVerifier.Verification verification =
                         reciprocalVerifier.verify(
+                                runId,
                                 source,
                                 neighbor,
                                 forwardRank,
