@@ -1,5 +1,7 @@
 package kz.alimbetov.akmai.knowledge.graph;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
@@ -74,23 +76,26 @@ public class SemanticAssociationSeedRepository {
                 return false;
             }
 
-            upsertDirection(first, second, similarity, graphVersion, observedAt);
-            upsertDirection(second, first, similarity, graphVersion, observedAt);
+            upsertPair(
+                    first,
+                    second,
+                    similarity,
+                    graphVersion,
+                    observedAt
+            );
             return true;
         });
         return Boolean.TRUE.equals(seeded);
     }
 
-    private void upsertDirection(
-            ChunkGraphNode source,
-            ChunkGraphNode target,
+    private void upsertPair(
+            ChunkGraphNode first,
+            ChunkGraphNode second,
             double similarity,
             int graphVersion,
             Instant observedAt
     ) {
-        Timestamp observed = Timestamp.from(observedAt);
-        jdbcTemplate.update(
-                """
+        String sql = """
                 INSERT INTO knowledge_chunk_association (
                     access_level,
                     source_document_id,
@@ -115,6 +120,10 @@ public class SemanticAssociationSeedRepository {
                     last_reinforced_at,
                     updated_at
                 ) VALUES (
+                    ?, ?, ?, ?, ?, ?, ?,
+                    'CANDIDATE', 0, ?, ?, ?,
+                    0, 0, 0, 0::bit(256), 0, ?, ?, ?, ?, clock_timestamp()
+                ), (
                     ?, ?, ?, ?, ?, ?, ?,
                     'CANDIDATE', 0, ?, ?, ?,
                     0, 0, 0, 0::bit(256), 0, ?, ?, ?, ?, clock_timestamp()
@@ -146,22 +155,60 @@ public class SemanticAssociationSeedRepository {
                     ),
                     compaction_required = TRUE,
                     updated_at = clock_timestamp()
-                """,
-                source.accessLevel(),
-                source.documentId(),
-                source.generation(),
-                source.chunkId(),
-                target.documentId(),
-                target.generation(),
-                target.chunkId(),
-                similarity,
-                observed,
-                observed,
-                graphVersion,
-                observed,
-                observed,
-                observed
-        );
+                """;
+
+        int changed = jdbcTemplate.update(sql, ps -> {
+            int index = bindDirection(
+                    ps,
+                    1,
+                    first,
+                    second,
+                    similarity,
+                    graphVersion,
+                    observedAt
+            );
+            bindDirection(
+                    ps,
+                    index,
+                    second,
+                    first,
+                    similarity,
+                    graphVersion,
+                    observedAt
+            );
+        });
+        if (changed != 2) {
+            throw new IllegalStateException(
+                    "semantic pair upsert must affect both directions"
+            );
+        }
+    }
+
+    private int bindDirection(
+            PreparedStatement statement,
+            int index,
+            ChunkGraphNode source,
+            ChunkGraphNode target,
+            double similarity,
+            int graphVersion,
+            Instant observedAt
+    ) throws SQLException {
+        Timestamp observed = Timestamp.from(observedAt);
+        statement.setLong(index++, source.accessLevel());
+        statement.setString(index++, source.documentId());
+        statement.setLong(index++, source.generation());
+        statement.setString(index++, source.chunkId());
+        statement.setString(index++, target.documentId());
+        statement.setLong(index++, target.generation());
+        statement.setString(index++, target.chunkId());
+        statement.setDouble(index++, similarity);
+        statement.setTimestamp(index++, observed);
+        statement.setTimestamp(index++, observed);
+        statement.setInt(index++, graphVersion);
+        statement.setTimestamp(index++, observed);
+        statement.setTimestamp(index++, observed);
+        statement.setTimestamp(index++, observed);
+        return index;
     }
 
     private void requirePair(ChunkGraphNode left, ChunkGraphNode right) {
