@@ -99,12 +99,7 @@ public class DreamCandidateRepository {
                     semantic_policy_fingerprint
                 ) DO UPDATE SET
                     semantic_policy_version = EXCLUDED.semantic_policy_version,
-                    state = CASE
-                        WHEN knowledge_chunk_dream_candidate.state = 'ACTIVE'
-                             OR EXCLUDED.state = 'ACTIVE'
-                        THEN 'ACTIVE'
-                        ELSE EXCLUDED.state
-                    END,
+                    state = EXCLUDED.state,
                     forward_similarity = EXCLUDED.forward_similarity,
                     reverse_similarity = EXCLUDED.reverse_similarity,
                     forward_rank = EXCLUDED.forward_rank,
