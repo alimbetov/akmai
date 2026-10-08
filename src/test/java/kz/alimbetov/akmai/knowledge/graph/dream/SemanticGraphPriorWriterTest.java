@@ -12,6 +12,7 @@ import kz.alimbetov.akmai.knowledge.graph.ChunkGraphNode;
 import kz.alimbetov.akmai.knowledge.graph.GraphLifecycleGuard;
 import kz.alimbetov.akmai.knowledge.graph.GraphNodeLockManager;
 import kz.alimbetov.akmai.knowledge.graph.GraphTransactionExecutor;
+import kz.alimbetov.akmai.knowledge.graph.SemanticPairAdmissionRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -30,7 +31,8 @@ class SemanticGraphPriorWriterTest {
                 mock(GraphNodeLockManager.class),
                 mock(GraphLifecycleGuard.class),
                 mock(GraphTransactionExecutor.class),
-                mock(DreamAuthorityGuard.class)
+                mock(DreamAuthorityGuard.class),
+                mock(SemanticPairAdmissionRepository.class)
         );
 
         assertThat(writer.applyCandidate(null, null, 0.95, Instant.now()))
@@ -52,7 +54,8 @@ class SemanticGraphPriorWriterTest {
                 mock(GraphNodeLockManager.class),
                 mock(GraphLifecycleGuard.class),
                 mock(GraphTransactionExecutor.class),
-                mock(DreamAuthorityGuard.class)
+                mock(DreamAuthorityGuard.class),
+                mock(SemanticPairAdmissionRepository.class)
         );
         DreamPair pair = DreamPair.of(
                 new ChunkGraphNode(1, "a", 1, "c1"),
