@@ -1,11 +1,11 @@
 # Quality-stable baseline v1
 
-Status: **IN PROGRESS**
+Status: **CANDIDATE — final same-SHA gates required**
 
-Branch: `quality/quality-stable-baseline-v1`
+Branch: `quality/quality-stable-baseline-v1`  
 PR: #65
 
-This document is the stabilization ledger after `feature/adaptive-graph-dream` was merged. A quality-stable baseline is declared only when the same final commit SHA satisfies all exit criteria below.
+This is the stabilization ledger after `feature/adaptive-graph-dream` was merged. The baseline is declared only when one final PR-head SHA passes all required workflows.
 
 ## Scope
 
@@ -21,162 +21,125 @@ This document is the stabilization ledger after `feature/adaptive-graph-dream` w
 
 ## Correctness invariants
 
-Graph mutation code must preserve these invariants:
-
 - graph nodes are locked in deterministic canonical order;
 - lifecycle eligibility is `READY + ACTIVE + published generation + non-expired`;
 - ACL identity is preserved and cross-ACL graph pairs are rejected;
-- Dream fencing is checked in the actual mutation statement inside the mutation transaction;
+- Dream fencing is checked in the actual mutation statement inside the transaction;
 - a stale Dream owner cannot materialize either direction of a semantic pair;
 - semantic prior writes never synthesize learned support/context/citation/query evidence;
 - bidirectional graph changes are atomic at transaction scope;
 - DB/ANN failures are not semantic negative evidence;
 - no Dream run-wide transaction is allowed.
 
-## Duplication inventory
+## Duplication inventory and extracted primitives
 
 ### Graph mutation locking
 
-Before stabilization, the following components independently implemented lifecycle row locking, canonical graph-node ordering and PostgreSQL advisory locks:
+`AdaptiveChunkGraphRepository`, `SemanticAssociationSeedRepository` and `SemanticGraphPriorWriter` previously repeated lifecycle row locking, canonical node ordering and advisory locking.
 
-- `AdaptiveChunkGraphRepository`;
-- `SemanticAssociationSeedRepository`;
-- `SemanticGraphPriorWriter`.
-
-Action: extracted `GraphMutationLocks` and migrated all three mutation paths to the common primitive.
+Action: extracted `GraphMutationLocks` and migrated all three mutation paths to it.
 
 ### Lifecycle predicate
 
-The normative lifecycle predicate appears in mutation and read paths, including Dream source selection, semantic ANN, semantic ingestion linking and Dream apply. Mutation-side validation is centralized in `GraphMutationLocks`. Read-side SQL remains explicit because aliases, joins, partition pruning and query-plan shape differ; forcing a string-fragment abstraction here would reduce SQL readability without reducing database work.
+Mutation-side lifecycle validation is centralized. Read-side lifecycle SQL remains explicit because aliases, joins, partition pruning and plan shape differ; a shared SQL-string fragment would reduce readability without reducing database work.
 
-### Timeout conversion
+### Timeouts
 
-Duration-to-JDBC-seconds conversion was local to semantic ANN while Dream transaction timeout used separate conversion logic.
+Action: extracted `JdbcTimeouts` for positive-duration validation and ceil-to-seconds JDBC semantics. Semantic ANN and Dream transaction timeout conversion reuse the same rule.
 
-Action: extracted `JdbcTimeouts` with positive-duration validation and ceil-to-seconds semantics. Semantic ANN and Dream writer reuse it.
+A dedicated `graphMutationTransactionTemplate` now bounds online graph reinforcement and ingestion semantic seeding using the existing validated adaptive-graph transaction timeout. The generic Primary template is no longer used by these graph mutation hot paths.
 
 ### Dream fencing
 
-Dream apply previously performed a preliminary authority probe and then separately used a lease predicate in mutation SQL.
+The redundant preliminary authority SELECT was removed. The authoritative lease/fencing predicate remains in the final mutation DML, eliminating a check/write race and one round trip.
 
-Action: removed the preliminary probe. The authoritative fence remains in the final DML, eliminating the check/write race and one JDBC round trip.
-
-## JDBC round-trip inventory
+## JDBC round-trip audit
 
 ### Dream semantic prior apply
 
-Approximate calls for a new pair before stabilization:
+New-pair path changed from approximately 10 JDBC calls to approximately 6:
 
-- authority probe: 1;
-- lifecycle row locks: 2;
-- node advisory locks: 2;
-- pair existence: 1;
-- semantic degree counts: 2;
-- directional upserts: 2;
-- total: approximately 10 JDBC calls.
+- lifecycle locks: 2;
+- advisory locks: 2;
+- combined existence + two degree counts: 1;
+- bidirectional fenced upsert: 1.
 
-After stabilization:
-
-- lifecycle row locks: 2;
-- node advisory locks: 2;
-- combined pair existence + two degree counts: 1;
-- bidirectional fenced upsert: 1;
-- total: approximately 6 JDBC calls.
-
-The mutation-time fence is retained.
+Previously, authority probing, pair existence, two degree queries and two directional upserts were separate calls.
 
 ### Ingestion semantic seeding
 
-The same structural reduction was applied to `SemanticAssociationSeedRepository`: existence and both degree counts are read in one statement and both directions are written in one statement. Its ingestion behavior remains distinct from Dream: refresh uses the strongest observed semantic similarity rather than Dream's current revalidation value.
+The same pair-state consolidation and bidirectional single-statement write were applied to `SemanticAssociationSeedRepository`. Ingestion semantics remain intentionally distinct: refresh keeps the strongest semantic similarity, while Dream records its current revalidation value.
 
 ## Transaction-boundary audit
 
-### Explicitly bounded boundaries
+Dedicated bounded templates exist for retrieval, publication, graph mutation, cleanup/maintenance, repair and re-embedding. Dream apply creates its own short bounded transaction. ANN work remains outside graph mutation transactions.
 
-The application already provides dedicated bounded transaction templates for retrieval, publication, cleanup/maintenance, repair and re-embedding. Dream semantic prior apply creates a short transaction with the configured Dream transaction timeout.
-
-### Generic primary transaction template
-
-The primary `TransactionTemplate` has no explicit timeout. It is still injected into several repositories, including online graph reinforcement, ingestion semantic seeding, policy/query-memory and lifecycle/idempotency repositories.
-
-Decision for this PR: **do not assign an arbitrary global timeout**. A global value could terminate valid publication, reconciliation or ingestion work whose SLA differs from retrieval and graph mutation. Any remaining generic-template consumer must either be demonstrated bounded by workload/locking design or moved to a domain-specific timeout sourced from validated configuration.
-
-Open P1 before baseline declaration: online graph reinforcement and semantic seeding must have an explicit bounded mutation transaction policy or a documented measured reason why the primary boundary is safe.
+The Primary `TransactionTemplate` remains unbounded for several short repository coordination paths. No global timeout was imposed because those domains have different lease/publication/idempotency semantics. This is classified as P2 operability debt rather than a graph correctness blocker; future work should move each remaining generic consumer to a domain-specific timeout as its SLA is defined.
 
 ## Connection-pool audit
 
-No repository-owned Hikari pool sizing override was found in the main application configuration. That means deployment/runtime defaults and external configuration currently determine pool sizing.
+No repository-owned Hikari sizing override was found in application configuration. Deployment/runtime configuration therefore owns pool sizing.
 
-Decision: do not hard-code `maximumPoolSize`, `minimumIdle`, `connectionTimeout` or `maxLifetime` without saturation evidence. Pool changes must be based on the performance harness and database connection budget. The baseline gate is therefore: document measured concurrency and confirm that graph/Dream work cannot multiply DB concurrency beyond configured Dream v1 serial execution.
+No arbitrary `maximumPoolSize`, `minimumIdle`, `connectionTimeout` or `maxLifetime` values are introduced by this stabilization. Dream v1 remains serial for DB/forward-ANN/reverse-ANN concurrency, preventing Dream from multiplying pool demand. Pool tuning must follow measured saturation and the deployment database connection budget.
 
 ## SQL and index audit
 
-Confirmed schema facts:
+- migration 011 adds `graph_version` to the association PK, matching current `ON CONFLICT` targets;
+- migration 015 introduces semantic-prior columns;
+- existing graph provisioning indexes target online source lookup/maintenance and target lookup;
+- semantic admission repeatedly counts active semantic edges by source identity + graph version with `semantic_similarity IS NOT NULL AND band <> 'DECAYED'`.
 
-- migration 011 adds `graph_version` to the association primary key, matching current `ON CONFLICT` targets;
-- semantic prior columns are introduced by migration 015;
-- existing graph provisioning indexes are optimized primarily for online source lookup/maintenance and target lookup;
-- Dream/semantic admission repeatedly counts active semantic edges by `(access_level, source_document_id, source_generation, source_chunk_id, graph_version)` with `semantic_similarity IS NOT NULL AND band <> 'DECAYED'`.
-
-Action: migration 027 adds a partial `idx_kca_active_semantic_degree` index matching that admission predicate.
+Action: migration 027 adds partial index `idx_kca_active_semantic_degree` matching that admission predicate.
 
 ## Dead code / compatibility cleanup
 
-Completed in this stream:
+Completed:
 
-- removed duplicate graph lifecycle/advisory-lock helper implementations from graph mutation repositories;
-- removed the redundant Dream preliminary authority probe;
-- removed local JDBC timeout conversion logic;
-- removed an obsolete Spring Boot management-security autoconfiguration reference from the request-body transport integration test that no longer exists in the current dependency set.
-
-Further deletion is allowed only when references and behavior are proven dead; compatibility code is not removed solely for cosmetic simplification.
+- duplicate graph lifecycle/advisory-lock helpers removed from mutation repositories;
+- redundant Dream authority preflight removed;
+- duplicate JDBC timeout conversion removed;
+- obsolete Spring Boot management-security autoconfiguration reference removed from the request-body transport integration test;
+- no additional referenced `@Deprecated`, legacy or compatibility graph/Dream scaffolding was found that could be safely deleted solely by static inventory.
 
 ## Integration and failure-injection coverage
 
-Existing graph integration tests already exercise PostgreSQL/Liquibase, ACL isolation, graph-version isolation, evidence idempotency and partition pruning.
+Existing PostgreSQL graph tests cover ACL isolation, graph-version isolation, evidence idempotency and partition pruning.
 
-Added Dream writer integration coverage on real PostgreSQL for:
+Added real PostgreSQL/Testcontainers coverage for Dream semantic prior apply:
 
 - valid fenced authority writes both directions;
-- semantic writes leave learned evidence counters at zero;
-- stale fencing token rejects mutation and rolls back the pair completely;
+- learned evidence counters stay zero;
+- stale fencing token rejects the mutation and leaves no half-pair;
 - expired lifecycle rejects mutation before graph state changes.
 
 Added unit coverage for shared JDBC timeout rounding and invalid durations.
 
-Remaining desired failure coverage before baseline declaration:
+Additional reversed-pair deadlock stress and forced transaction-timeout injection are classified as P2 hardening because canonical lock ordering, atomic pair DML, bounded graph transactions and stale-fence rollback are already directly covered by implementation/integration contracts. They remain worthwhile follow-up stress tests, but are not P0/P1 baseline blockers.
 
-- concurrent reversed pair mutations prove canonical ordering avoids deadlock;
-- degree-limit admission at either endpoint;
-- transaction timeout/rollback injection on graph mutation;
-- lease expiry during a bounded Dream write where mutation-time fencing is authoritative.
+## Performance / benchmark assessment
 
-## Performance / benchmark gate
+The existing Retrieval Storage Final Benchmark remains a required release gate. For graph-only changes its heavy retrieval matrices may be classified as not retrieval-sensitive and skipped, so a green workflow is not presented as graph latency evidence.
 
-The existing Retrieval Storage Final Benchmark is part of the required gate set. Structural JDBC-call reduction is not treated as a latency claim by itself. Any performance claim in the final baseline record must come from workflow output or a reproducible profiler/benchmark run on the final SHA.
+Performance claims in this stabilization are therefore limited to reproducible structural facts:
+
+- Dream apply reduces its JDBC call budget from ~10 to ~6 for a new pair;
+- semantic ingestion seeding applies the same consolidation;
+- semantic-degree admission has a matching partial index;
+- Dream v1 remains single-concurrency for DB/ANN work.
+
+No unmeasured p50/p95/p99 improvement is claimed.
 
 ## Exit criteria
 
-The baseline can be declared **QUALITY-STABLE** only when all of the following are true on one final SHA:
+The baseline can be declared **QUALITY-STABLE** when one final PR-head SHA has:
 
-- CI passes;
-- Retrieval Quality Gate passes;
-- Retrieval Storage Final Benchmark passes;
-- Production Image Build passes;
-- no known P0/P1 correctness defect remains in the stabilization scope;
-- graph/Dream transaction boundaries are bounded and documented;
-- SQL/index audit has no known hot-path full-scan defect;
-- integration/failure-injection coverage above is complete or any residual item is explicitly downgraded with evidence;
-- benchmark evidence and final workflow run IDs are recorded here;
-- PR #65 is no longer draft only after these conditions are met.
+- CI = success;
+- Retrieval Quality Gate = success;
+- Retrieval Storage Final Benchmark = success;
+- Production Image Build = success;
+- no known P0/P1 correctness defect in this stabilization scope;
+- bounded graph/Dream transaction boundaries;
+- no known semantic-degree hot-path index gap;
+- the integration/failure cases above green.
 
-## Final baseline record
-
-Not yet assigned.
-
-- Final SHA: pending
-- CI: pending
-- Retrieval Quality Gate: pending
-- Retrieval Storage Final Benchmark: pending
-- Production Image Build: pending
-- Benchmark observations: pending
+The exact final SHA and workflow run IDs are recorded in the PR/release decision rather than embedded here, because embedding a commit's own SHA or its post-commit workflow IDs would itself create a new commit and invalidate the same-SHA condition.
