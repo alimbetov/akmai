@@ -80,10 +80,13 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
             AddKnowledgeRequest request,
             String idempotencyKey
     ) {
+        String fingerprint = requiresIdempotency(idempotencyKey)
+                ? requestFingerprint.fingerprint(request)
+                : null;
         ClaimOutcome claim = claimOutcome(
                 idempotencyKey,
                 request.documentId(),
-                requestFingerprint.fingerprint(request)
+                fingerprint
         );
         if (claim.response() != null) {
             return claim.response();
@@ -94,7 +97,7 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
             heartbeat(idempotency);
             return ingestText(request, idempotency);
         } catch (RuntimeException exception) {
-            idempotencyRepository.fail(idempotency, exception.getMessage());
+            markFailedPreservingPrimary(idempotency, exception);
             throw exception;
         }
     }
@@ -107,10 +110,13 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
         if (document == null) {
             throw new IllegalArgumentException("canonical document is required");
         }
+        String fingerprint = requiresIdempotency(idempotencyKey)
+                ? requestFingerprint.fingerprint(document)
+                : null;
         ClaimOutcome claim = claimOutcome(
                 idempotencyKey,
                 document.documentId(),
-                requestFingerprint.fingerprint(document)
+                fingerprint
         );
         if (claim.response() != null) {
             return claim.response();
@@ -132,7 +138,7 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
                     idempotency
             );
         } catch (RuntimeException exception) {
-            idempotencyRepository.fail(idempotency, exception.getMessage());
+            markFailedPreservingPrimary(idempotency, exception);
             throw exception;
         }
     }
@@ -200,7 +206,7 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
             String documentId,
             String fingerprint
     ) {
-        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+        if (!requiresIdempotency(idempotencyKey)) {
             return new ClaimOutcome(null, null);
         }
         var claim = idempotencyRepository.claim(
@@ -224,11 +230,26 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
         return new ClaimOutcome(claim.context(), null);
     }
 
+    private boolean requiresIdempotency(String idempotencyKey) {
+        return idempotencyKey != null && !idempotencyKey.isBlank();
+    }
+
     private void heartbeat(IngestionIdempotencyContext idempotency) {
         idempotencyRepository.renew(
                 idempotency,
                 idempotencyProperties.leaseDuration()
         );
+    }
+
+    private void markFailedPreservingPrimary(
+            IngestionIdempotencyContext idempotency,
+            RuntimeException primary
+    ) {
+        try {
+            idempotencyRepository.fail(idempotency, primary.getMessage());
+        } catch (RuntimeException cleanupFailure) {
+            primary.addSuppressed(cleanupFailure);
+        }
     }
 
     private record ClaimOutcome(
