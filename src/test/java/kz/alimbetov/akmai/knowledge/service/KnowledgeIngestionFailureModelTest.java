@@ -1,5 +1,6 @@
 package kz.alimbetov.akmai.knowledge.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -46,9 +47,8 @@ class KnowledgeIngestionFailureModelTest {
         assertThatThrownBy(() -> fixture.service.addText(request, "key"))
                 .isInstanceOfSatisfying(
                         IdempotencyConflictException.class,
-                        exception -> org.assertj.core.api.Assertions.assertThat(
-                                exception.code()
-                        ).isEqualTo("IDEMPOTENCY_KEY_REUSE")
+                        exception -> assertThat(exception.code())
+                                .isEqualTo("IDEMPOTENCY_KEY_REUSE")
                 );
 
         verifyNoInteractions(fixture.chunker, fixture.executor, fixture.persistence);
@@ -138,6 +138,39 @@ class KnowledgeIngestionFailureModelTest {
                 .hasMessage("publication failed");
 
         verify(fixture.idempotency).fail(context, "publication failed");
+    }
+
+    @Test
+    void cleanupFailureDoesNotMaskPrimaryPersistenceFailure() {
+        Fixture fixture = fixture();
+        AddKnowledgeRequest request = request("doc-cleanup-failure");
+        IngestionIdempotencyContext context = context("key", "fp");
+        when(fixture.fingerprint.fingerprint(request)).thenReturn("fp");
+        when(fixture.idempotency.claim(
+                "key",
+                "doc-cleanup-failure",
+                "fp",
+                LEASE
+        )).thenReturn(IngestionIdempotencyRepository.ClaimResult.claimed(context));
+        when(fixture.chunker.chunk(any())).thenReturn(List.of(chunk("doc-cleanup-failure")));
+        when(fixture.chunker.searchableChunkCount(anyList())).thenReturn(1L);
+        when(fixture.executor.execute(anyList())).thenReturn(List.of());
+        doThrow(new IllegalStateException("publication failed"))
+                .when(fixture.persistence)
+                .persist(anyList(), eq(context), any(), eq(1L));
+        doThrow(new IllegalStateException("idempotency status unavailable"))
+                .when(fixture.idempotency)
+                .fail(context, "publication failed");
+
+        assertThatThrownBy(() -> fixture.service.addText(request, "key"))
+                .satisfies(exception -> {
+                    assertThat(exception)
+                            .isInstanceOf(IllegalStateException.class)
+                            .hasMessage("publication failed");
+                    assertThat(exception.getSuppressed())
+                            .extracting(Throwable::getMessage)
+                            .containsExactly("idempotency status unavailable");
+                });
     }
 
     @Test
