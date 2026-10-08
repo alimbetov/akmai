@@ -12,8 +12,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Single-owner DREAM-1..4B coordinator. Work is intentionally sequential in v1
- * until target-hardware measurements justify bounded parallelism.
+ * Single-owner DREAM-1..5 coordinator. Work is intentionally sequential in v1.
+ * DREAM-5 graph mutation remains independently protected by the apply gate and
+ * SemanticGraphPriorWriter fencing/lifecycle checks.
  */
 @Component
 public class AdaptiveGraphDreamCoordinator {
@@ -60,10 +61,6 @@ public class AdaptiveGraphDreamCoordinator {
     public RunResult runOnce() {
         if (!switches.enabled()) {
             return RunResult.DISABLED;
-        }
-        if (switches.applyEnabled()) {
-            LOGGER.warn("dream_run event=apply_not_implemented");
-            return RunResult.APPLY_MODE_UNSUPPORTED;
         }
         if (!localRunActive.compareAndSet(false, true)) {
             return RunResult.LOCAL_OVERLAP_SKIPPED;
@@ -188,6 +185,9 @@ public class AdaptiveGraphDreamCoordinator {
             metrics.run("failed", Duration.between(started, Instant.now()));
             return RunResult.FAILED;
         } finally {
+            if (runId != null) {
+                discovery.clearRun(runId);
+            }
             if (heartbeatSession != null) {
                 heartbeatSession.close();
             }
@@ -403,7 +403,6 @@ public class AdaptiveGraphDreamCoordinator {
 
     public enum RunResult {
         DISABLED,
-        APPLY_MODE_UNSUPPORTED,
         STANDBY,
         LOCAL_OVERLAP_SKIPPED,
         SUCCEEDED,
