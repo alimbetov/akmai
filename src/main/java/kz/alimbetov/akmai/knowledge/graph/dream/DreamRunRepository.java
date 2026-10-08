@@ -79,8 +79,7 @@ public class DreamRunRepository {
                     forward_ann_queries = ?,
                     reverse_ann_queries = ?,
                     db_rows_touched = ?,
-                    stop_reason = ?,
-                    completed_at = clock_timestamp()
+                    stop_reason = ?
                 WHERE run.run_id = ?
                   AND run.owner_id = ?
                   AND run.fencing_token = ?
