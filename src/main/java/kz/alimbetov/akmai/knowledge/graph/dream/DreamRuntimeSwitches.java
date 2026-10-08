@@ -21,7 +21,7 @@ public class DreamRuntimeSwitches {
     }
 
     /**
-     * DREAM v1 is enabled only when both the immutable application configuration
+     * Dream is enabled only when both the immutable application configuration
      * and the runtime database switch allow execution. The static flag is the
      * outer safety gate; the runtime flag is an operational kill switch.
      */
@@ -33,9 +33,8 @@ public class DreamRuntimeSwitches {
     }
 
     /**
-     * Apply mode remains doubly gated as well. DREAM-1..4B does not implement
-     * graph apply, but keeping the gate explicit prevents a runtime flag from
-     * overriding a statically disabled policy in later milestones.
+     * DREAM-5 apply is independently doubly gated. Runtime enablement can never
+     * override a statically disabled apply policy.
      */
     public boolean applyEnabled() {
         if (!enabled() || !properties.dream().applyEnabled()) {
