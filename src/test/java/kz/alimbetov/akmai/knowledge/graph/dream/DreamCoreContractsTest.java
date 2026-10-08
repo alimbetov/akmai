@@ -86,7 +86,7 @@ class DreamCoreContractsTest {
                 "COSINE_DISTANCE",
                 true,
                 topK,
-                0.88,
+                0.86,
                 0.94,
                 0.90,
                 0.86,
