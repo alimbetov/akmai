@@ -9,6 +9,9 @@ import java.time.Instant;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import kz.alimbetov.akmai.config.SemanticMemoryProperties;
 import kz.alimbetov.akmai.knowledge.graph.ChunkGraphNode;
+import kz.alimbetov.akmai.knowledge.graph.GraphLifecycleGuard;
+import kz.alimbetov.akmai.knowledge.graph.GraphNodeLockManager;
+import kz.alimbetov.akmai.knowledge.graph.SemanticGraphStateRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -20,12 +23,9 @@ class SemanticGraphPriorWriterTest {
         DreamRuntimeSwitches switches = mock(DreamRuntimeSwitches.class);
         when(switches.applyEnabled()).thenReturn(false);
 
-        SemanticGraphPriorWriter writer = new SemanticGraphPriorWriter(
-                mock(JdbcTemplate.class),
-                mock(PlatformTransactionManager.class),
+        SemanticGraphPriorWriter writer = writer(
                 switches,
-                mock(AdaptiveGraphProperties.class),
-                new SemanticMemoryProperties()
+                mock(AdaptiveGraphProperties.class)
         );
 
         assertThat(writer.applyCandidate(null, null, 0.95, Instant.now()))
@@ -39,13 +39,7 @@ class SemanticGraphPriorWriterTest {
         AdaptiveGraphProperties graphProperties = mock(AdaptiveGraphProperties.class);
         when(graphProperties.graphVersion()).thenReturn(2);
 
-        SemanticGraphPriorWriter writer = new SemanticGraphPriorWriter(
-                mock(JdbcTemplate.class),
-                mock(PlatformTransactionManager.class),
-                switches,
-                graphProperties,
-                new SemanticMemoryProperties()
-        );
+        SemanticGraphPriorWriter writer = writer(switches, graphProperties);
         DreamPair pair = DreamPair.of(
                 new ChunkGraphNode(1, "a", 1, "c1"),
                 new ChunkGraphNode(1, "b", 1, "c2")
@@ -64,5 +58,22 @@ class SemanticGraphPriorWriterTest {
                 Instant.now()
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("graph version");
+    }
+
+    private SemanticGraphPriorWriter writer(
+            DreamRuntimeSwitches switches,
+            AdaptiveGraphProperties graphProperties
+    ) {
+        return new SemanticGraphPriorWriter(
+                mock(JdbcTemplate.class),
+                mock(PlatformTransactionManager.class),
+                switches,
+                graphProperties,
+                new SemanticMemoryProperties(),
+                mock(GraphNodeLockManager.class),
+                mock(GraphLifecycleGuard.class),
+                mock(SemanticGraphStateRepository.class),
+                mock(DreamAuthorityGuard.class)
+        );
     }
 }
