@@ -15,12 +15,13 @@ import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
-import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
 import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,11 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
                 "akmai.api.max-title-chars=100",
                 "akmai.api.max-source-chars=100",
                 "management.endpoint.health.validate-group-membership=false",
-                "management.health.defaults.enabled=false",
-                "spring.autoconfigure.exclude="
-                        + "org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration,"
-                        + "org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration,"
-                        + "org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration"
+                "management.health.defaults.enabled=false"
         }
 )
 class RequestBodySizeFilterTransportIntegrationTest {
@@ -139,7 +136,6 @@ class RequestBodySizeFilterTransportIntegrationTest {
     @SpringBootConfiguration
     @EnableAutoConfiguration(exclude = {
             DataSourceAutoConfiguration.class,
-            SecurityAutoConfiguration.class,
             UserDetailsServiceAutoConfiguration.class,
             org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration.class
     })
@@ -154,6 +150,14 @@ class RequestBodySizeFilterTransportIntegrationTest {
         @Bean
         EchoController echoController() {
             return new EchoController();
+        }
+
+        @Bean
+        SecurityFilterChain testSecurityFilterChain(HttpSecurity http)
+                throws Exception {
+            http.csrf(csrf -> csrf.disable());
+            http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+            return http.build();
         }
     }
 
