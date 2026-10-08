@@ -4,6 +4,7 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -18,6 +19,7 @@ public class AdaptiveChunkGraphRepository
 
     public AdaptiveChunkGraphRepository(
             JdbcTemplate jdbcTemplate,
+            @Qualifier("graphMutationTransactionTemplate")
             TransactionTemplate transactionTemplate
     ) {
         this.jdbcTemplate = jdbcTemplate;
