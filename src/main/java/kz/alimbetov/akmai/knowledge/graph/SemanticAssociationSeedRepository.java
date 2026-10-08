@@ -14,17 +14,20 @@ public class SemanticAssociationSeedRepository {
     private final TransactionTemplate transactionTemplate;
     private final GraphNodeLockManager graphNodeLockManager;
     private final GraphLifecycleGuard graphLifecycleGuard;
+    private final SemanticPairAdmissionRepository pairAdmissionRepository;
 
     public SemanticAssociationSeedRepository(
             JdbcTemplate jdbcTemplate,
             TransactionTemplate transactionTemplate,
             GraphNodeLockManager graphNodeLockManager,
-            GraphLifecycleGuard graphLifecycleGuard
+            GraphLifecycleGuard graphLifecycleGuard,
+            SemanticPairAdmissionRepository pairAdmissionRepository
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactionTemplate = transactionTemplate;
         this.graphNodeLockManager = graphNodeLockManager;
         this.graphLifecycleGuard = graphLifecycleGuard;
+        this.pairAdmissionRepository = pairAdmissionRepository;
     }
 
     public boolean seedSymmetric(
@@ -63,10 +66,11 @@ public class SemanticAssociationSeedRepository {
             nodes.forEach(graphLifecycleGuard::lockPublishedReadyActive);
             graphNodeLockManager.lockCanonical(nodes);
 
-            boolean existing = associationExists(first, second, graphVersion);
-            if (!existing
-                    && (semanticDegree(first, graphVersion) >= maxSemanticDegree
-                    || semanticDegree(second, graphVersion) >= maxSemanticDegree)) {
+            SemanticPairAdmissionRepository.PairAdmissionStats stats =
+                    pairAdmissionRepository.load(first, second, graphVersion);
+            if (!stats.existingPair()
+                    && (stats.firstDegree() >= maxSemanticDegree
+                    || stats.secondDegree() >= maxSemanticDegree)) {
                 return false;
             }
 
@@ -75,62 +79,6 @@ public class SemanticAssociationSeedRepository {
             return true;
         });
         return Boolean.TRUE.equals(seeded);
-    }
-
-    private boolean associationExists(
-            ChunkGraphNode source,
-            ChunkGraphNode target,
-            int graphVersion
-    ) {
-        Boolean exists = jdbcTemplate.queryForObject(
-                """
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM knowledge_chunk_association
-                    WHERE access_level = ?
-                      AND source_document_id = ?
-                      AND source_generation = ?
-                      AND source_chunk_id = ?
-                      AND target_document_id = ?
-                      AND target_generation = ?
-                      AND target_chunk_id = ?
-                      AND graph_version = ?
-                )
-                """,
-                Boolean.class,
-                source.accessLevel(),
-                source.documentId(),
-                source.generation(),
-                source.chunkId(),
-                target.documentId(),
-                target.generation(),
-                target.chunkId(),
-                graphVersion
-        );
-        return Boolean.TRUE.equals(exists);
-    }
-
-    private int semanticDegree(ChunkGraphNode node, int graphVersion) {
-        Integer degree = jdbcTemplate.queryForObject(
-                """
-                SELECT count(*)
-                FROM knowledge_chunk_association
-                WHERE access_level = ?
-                  AND source_document_id = ?
-                  AND source_generation = ?
-                  AND source_chunk_id = ?
-                  AND graph_version = ?
-                  AND semantic_similarity IS NOT NULL
-                  AND band <> 'DECAYED'
-                """,
-                Integer.class,
-                node.accessLevel(),
-                node.documentId(),
-                node.generation(),
-                node.chunkId(),
-                graphVersion
-        );
-        return degree == null ? 0 : degree;
     }
 
     private void upsertDirection(
