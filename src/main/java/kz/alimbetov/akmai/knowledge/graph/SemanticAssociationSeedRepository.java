@@ -13,15 +13,18 @@ public class SemanticAssociationSeedRepository {
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
     private final GraphNodeLockManager graphNodeLockManager;
+    private final GraphLifecycleGuard graphLifecycleGuard;
 
     public SemanticAssociationSeedRepository(
             JdbcTemplate jdbcTemplate,
             TransactionTemplate transactionTemplate,
-            GraphNodeLockManager graphNodeLockManager
+            GraphNodeLockManager graphNodeLockManager,
+            GraphLifecycleGuard graphLifecycleGuard
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactionTemplate = transactionTemplate;
         this.graphNodeLockManager = graphNodeLockManager;
+        this.graphLifecycleGuard = graphLifecycleGuard;
     }
 
     public boolean seedSymmetric(
@@ -57,7 +60,7 @@ public class SemanticAssociationSeedRepository {
         List<ChunkGraphNode> nodes = List.of(first, second);
 
         Boolean seeded = transactionTemplate.execute(status -> {
-            nodes.forEach(this::lockPublishedGeneration);
+            nodes.forEach(graphLifecycleGuard::lockPublishedReadyActive);
             graphNodeLockManager.lockCanonical(nodes);
 
             boolean existing = associationExists(first, second, graphVersion);
@@ -227,35 +230,6 @@ public class SemanticAssociationSeedRepository {
         if (left.accessLevel() != right.accessLevel()) {
             throw new IllegalArgumentException(
                     "cross-ACL semantic association is forbidden"
-            );
-        }
-    }
-
-    private void lockPublishedGeneration(ChunkGraphNode node) {
-        Integer published = jdbcTemplate.query(
-                """
-                SELECT 1
-                FROM knowledge_document_lifecycle
-                WHERE document_id = ?
-                  AND access_level = ?
-                  AND published_generation = ?
-                  AND lifecycle_status = 'READY'
-                  AND retention_status = 'ACTIVE'
-                  AND (
-                      expires_at IS NULL
-                      OR expires_at > clock_timestamp()
-                  )
-                FOR SHARE
-                """,
-                (rs, rowNum) -> rs.getInt(1),
-                node.documentId(),
-                node.accessLevel(),
-                node.generation()
-        ).stream().findFirst().orElse(null);
-
-        if (published == null) {
-            throw new IllegalStateException(
-                    "semantic linking requires eligible ACTIVE/PUBLISHED generation"
             );
         }
     }
