@@ -1,10 +1,12 @@
 package kz.alimbetov.akmai.knowledge.graph.dream;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import kz.alimbetov.akmai.knowledge.graph.ChunkGraphNode;
 import kz.alimbetov.akmai.knowledge.graph.SemanticNeighborSearchRepository;
 import kz.alimbetov.akmai.knowledge.graph.SemanticNeighborSearchRepository.SemanticNeighbor;
@@ -22,6 +24,8 @@ public class DreamCandidateDiscovery {
     private final DreamConfidenceCalculator confidenceCalculator;
     private final DreamCandidateRepository candidates;
     private final DreamMetrics metrics;
+    private final Cache<UUID, Set<DreamPair>> observedPairsByRun =
+            Caffeine.newBuilder().maximumSize(1024).build();
 
     public DreamCandidateDiscovery(
             SemanticNeighborSearchRepository neighbors,
@@ -50,7 +54,10 @@ public class DreamCandidateDiscovery {
                 || lane == null || lane.isBlank()) {
             throw new IllegalArgumentException("Dream discovery inputs are required");
         }
-        Set<DreamPair> observedThisCall = new HashSet<>();
+        Set<DreamPair> observedThisRun = observedPairsByRun.get(
+                runId,
+                ignored -> ConcurrentHashMap.newKeySet()
+        );
         int processedSources = 0;
         int persisted = 0;
         int mutual = 0;
@@ -70,7 +77,8 @@ public class DreamCandidateDiscovery {
                     source.node().accessLevel(),
                     searchLimit,
                     policy.dream().candidateThreshold(),
-                    policy.sameLanguageOnly()
+                    policy.sameLanguageOnly(),
+                    policy.dream().queryTimeout()
             ).stream()
                     .filter(candidate -> !candidate.node().equals(source.node()))
                     .limit(policy.dream().topK())
@@ -80,7 +88,7 @@ public class DreamCandidateDiscovery {
             for (int index = 0; index < forward.size(); index++) {
                 SemanticNeighbor neighbor = forward.get(index);
                 DreamPair pair = DreamPair.of(source.node(), neighbor.node());
-                if (!observedThisCall.add(pair)) {
+                if (!observedThisRun.add(pair)) {
                     continue;
                 }
 
@@ -170,6 +178,12 @@ public class DreamCandidateDiscovery {
                 activated,
                 budget.snapshot()
         );
+    }
+
+    void clearRun(UUID runId) {
+        if (runId != null) {
+            observedPairsByRun.invalidate(runId);
+        }
     }
 
     private NormalizedEvidence normalize(
