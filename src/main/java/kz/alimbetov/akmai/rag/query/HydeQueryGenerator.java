@@ -21,17 +21,20 @@ public class HydeQueryGenerator {
     private final ExecutorService executor;
     private final AdvancedRetrievalProperties properties;
     private final SemanticQueryMemory queryMemory;
+    private final QueryMemorySourceEligibility memorySourceEligibility;
 
     public HydeQueryGenerator(
             ChatClient.Builder builder,
             @Qualifier("queryIntelligenceExecutor") ExecutorService executor,
             AdvancedRetrievalProperties properties,
-            SemanticQueryMemory queryMemory
+            SemanticQueryMemory queryMemory,
+            QueryMemorySourceEligibility memorySourceEligibility
     ) {
         this.chatClient = builder.build();
         this.executor = executor;
         this.properties = properties;
         this.queryMemory = queryMemory;
+        this.memorySourceEligibility = memorySourceEligibility;
     }
 
     public String generate(
@@ -45,7 +48,10 @@ public class HydeQueryGenerator {
         }
 
         List<SemanticQueryMemory.MemoryMatch> memories =
-                queryMemory.find(question, accessLevels);
+                memorySourceEligibility.filter(
+                        queryMemory.find(question, accessLevels),
+                        accessLevels
+                );
         Future<String> future;
         try {
             future = executor.submit(() -> callModel(question, memories));
