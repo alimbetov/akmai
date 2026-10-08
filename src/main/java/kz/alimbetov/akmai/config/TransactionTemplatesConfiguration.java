@@ -41,6 +41,14 @@ public class TransactionTemplatesConfiguration {
         return bounded(manager, vectorProperties.dbTransactionTimeout());
     }
 
+    @Bean(name = "graphMutationTransactionTemplate")
+    public TransactionTemplate graphMutationTransactionTemplate(
+            PlatformTransactionManager manager,
+            AdaptiveGraphProperties graphProperties
+    ) {
+        return bounded(manager, graphProperties.dream().transactionTimeout());
+    }
+
     @Bean(name = "cleanupTransactionTemplate")
     public TransactionTemplate cleanupTransactionTemplate(
             PlatformTransactionManager manager,
