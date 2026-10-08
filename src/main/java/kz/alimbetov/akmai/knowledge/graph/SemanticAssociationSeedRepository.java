@@ -2,7 +2,7 @@ package kz.alimbetov.akmai.knowledge.graph;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.TreeSet;
+import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -12,13 +12,22 @@ public class SemanticAssociationSeedRepository {
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
+    private final GraphLifecycleGuard lifecycleGuard;
+    private final GraphNodeLockManager graphNodeLockManager;
+    private final SemanticGraphStateRepository graphStateRepository;
 
     public SemanticAssociationSeedRepository(
             JdbcTemplate jdbcTemplate,
-            TransactionTemplate transactionTemplate
+            TransactionTemplate transactionTemplate,
+            GraphLifecycleGuard lifecycleGuard,
+            GraphNodeLockManager graphNodeLockManager,
+            SemanticGraphStateRepository graphStateRepository
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactionTemplate = transactionTemplate;
+        this.lifecycleGuard = lifecycleGuard;
+        this.graphNodeLockManager = graphNodeLockManager;
+        this.graphStateRepository = graphStateRepository;
     }
 
     public boolean seedSymmetric(
@@ -29,109 +38,52 @@ public class SemanticAssociationSeedRepository {
             int maxSemanticDegree,
             Instant observedAt
     ) {
-        requirePair(left, right);
+        GraphPairCanonicalizer.CanonicalPair pair =
+                GraphPairCanonicalizer.canonicalize(left, right);
         if (!Double.isFinite(similarity)
                 || similarity < 0
                 || similarity > 1) {
-            throw new IllegalArgumentException(
-                    "similarity must be in [0, 1]"
-            );
+            throw new IllegalArgumentException("similarity must be in [0, 1]");
         }
         if (graphVersion <= 0) {
             throw new IllegalArgumentException("graphVersion must be positive");
         }
         if (maxSemanticDegree < 1) {
-            throw new IllegalArgumentException(
-                    "maxSemanticDegree must be positive"
-            );
+            throw new IllegalArgumentException("maxSemanticDegree must be positive");
         }
         if (observedAt == null) {
             throw new IllegalArgumentException("observedAt must not be null");
         }
 
-        ChunkGraphNode first = left.compareTo(right) <= 0 ? left : right;
-        ChunkGraphNode second = first == left ? right : left;
-        TreeSet<ChunkGraphNode> lockOrder = new TreeSet<>();
-        lockOrder.add(first);
-        lockOrder.add(second);
-
+        List<ChunkGraphNode> nodes = List.of(pair.first(), pair.second());
         Boolean seeded = transactionTemplate.execute(status -> {
-            lockOrder.forEach(this::lockPublishedGeneration);
-            lockOrder.forEach(this::lockNode);
+            lifecycleGuard.lockSemanticEligibleCanonical(nodes);
+            graphNodeLockManager.lockCanonical(nodes);
 
-            boolean existing = associationExists(first, second, graphVersion);
-            if (!existing
-                    && (semanticDegree(first, graphVersion) >= maxSemanticDegree
-                    || semanticDegree(second, graphVersion) >= maxSemanticDegree)) {
+            SemanticGraphStateRepository.PairState state = graphStateRepository.inspect(
+                    pair.first(),
+                    pair.second(),
+                    graphVersion
+            );
+            if (!state.degreeAvailable(maxSemanticDegree)) {
                 return false;
             }
 
-            upsertDirection(first, second, similarity, graphVersion, observedAt);
-            upsertDirection(second, first, similarity, graphVersion, observedAt);
+            upsertSymmetric(
+                    pair.first(),
+                    pair.second(),
+                    similarity,
+                    graphVersion,
+                    observedAt
+            );
             return true;
         });
         return Boolean.TRUE.equals(seeded);
     }
 
-    private boolean associationExists(
-            ChunkGraphNode source,
-            ChunkGraphNode target,
-            int graphVersion
-    ) {
-        Boolean exists = jdbcTemplate.queryForObject(
-                """
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM knowledge_chunk_association
-                    WHERE access_level = ?
-                      AND source_document_id = ?
-                      AND source_generation = ?
-                      AND source_chunk_id = ?
-                      AND target_document_id = ?
-                      AND target_generation = ?
-                      AND target_chunk_id = ?
-                      AND graph_version = ?
-                )
-                """,
-                Boolean.class,
-                source.accessLevel(),
-                source.documentId(),
-                source.generation(),
-                source.chunkId(),
-                target.documentId(),
-                target.generation(),
-                target.chunkId(),
-                graphVersion
-        );
-        return Boolean.TRUE.equals(exists);
-    }
-
-    private int semanticDegree(ChunkGraphNode node, int graphVersion) {
-        Integer degree = jdbcTemplate.queryForObject(
-                """
-                SELECT count(*)
-                FROM knowledge_chunk_association
-                WHERE access_level = ?
-                  AND source_document_id = ?
-                  AND source_generation = ?
-                  AND source_chunk_id = ?
-                  AND graph_version = ?
-                  AND semantic_similarity IS NOT NULL
-                  AND band <> 'DECAYED'
-                """,
-                Integer.class,
-                node.accessLevel(),
-                node.documentId(),
-                node.generation(),
-                node.chunkId(),
-                graphVersion
-        );
-        return degree == null ? 0 : degree;
-    }
-
-    private void upsertDirection(
-            ChunkGraphNode source,
-            ChunkGraphNode target,
+    private void upsertSymmetric(
+            ChunkGraphNode first,
+            ChunkGraphNode second,
             double similarity,
             int graphVersion,
             Instant observedAt
@@ -166,6 +118,10 @@ public class SemanticAssociationSeedRepository {
                     ?, ?, ?, ?, ?, ?, ?,
                     'CANDIDATE', 0, ?, ?, ?,
                     0, 0, 0, 0::bit(256), 0, ?, ?, ?, ?, clock_timestamp()
+                ), (
+                    ?, ?, ?, ?, ?, ?, ?,
+                    'CANDIDATE', 0, ?, ?, ?,
+                    0, 0, 0, 0::bit(256), 0, ?, ?, ?, ?, clock_timestamp()
                 )
                 ON CONFLICT (
                     access_level,
@@ -195,13 +151,27 @@ public class SemanticAssociationSeedRepository {
                     compaction_required = TRUE,
                     updated_at = clock_timestamp()
                 """,
-                source.accessLevel(),
-                source.documentId(),
-                source.generation(),
-                source.chunkId(),
-                target.documentId(),
-                target.generation(),
-                target.chunkId(),
+                first.accessLevel(),
+                first.documentId(),
+                first.generation(),
+                first.chunkId(),
+                second.documentId(),
+                second.generation(),
+                second.chunkId(),
+                similarity,
+                observed,
+                observed,
+                graphVersion,
+                observed,
+                observed,
+                observed,
+                second.accessLevel(),
+                second.documentId(),
+                second.generation(),
+                second.chunkId(),
+                first.documentId(),
+                first.generation(),
+                first.chunkId(),
                 similarity,
                 observed,
                 observed,
@@ -209,64 +179,6 @@ public class SemanticAssociationSeedRepository {
                 observed,
                 observed,
                 observed
-        );
-    }
-
-    private void requirePair(ChunkGraphNode left, ChunkGraphNode right) {
-        if (left == null || right == null) {
-            throw new IllegalArgumentException(
-                    "semantic association nodes must not be null"
-            );
-        }
-        if (left.equals(right)) {
-            throw new IllegalArgumentException(
-                    "self semantic association is not allowed"
-            );
-        }
-        if (left.accessLevel() != right.accessLevel()) {
-            throw new IllegalArgumentException(
-                    "cross-ACL semantic association is forbidden"
-            );
-        }
-    }
-
-    private void lockPublishedGeneration(ChunkGraphNode node) {
-        Integer published = jdbcTemplate.query(
-                """
-                SELECT 1
-                FROM knowledge_document_lifecycle
-                WHERE document_id = ?
-                  AND access_level = ?
-                  AND published_generation = ?
-                  AND lifecycle_status = 'READY'
-                  AND retention_status = 'ACTIVE'
-                  AND (
-                      expires_at IS NULL
-                      OR expires_at > clock_timestamp()
-                  )
-                FOR SHARE
-                """,
-                (rs, rowNum) -> rs.getInt(1),
-                node.documentId(),
-                node.accessLevel(),
-                node.generation()
-        ).stream().findFirst().orElse(null);
-
-        if (published == null) {
-            throw new IllegalStateException(
-                    "semantic linking requires eligible ACTIVE/PUBLISHED generation"
-            );
-        }
-    }
-
-    private void lockNode(ChunkGraphNode node) {
-        jdbcTemplate.query(
-                """
-                SELECT pg_advisory_xact_lock(hashtextextended(?, 0))
-                """,
-                rs -> {
-                },
-                "akmai:adaptive-graph:node:" + node.lockKey()
         );
     }
 }
