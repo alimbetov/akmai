@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import kz.alimbetov.akmai.knowledge.graph.ChunkGraphNode;
 import kz.alimbetov.akmai.knowledge.graph.SemanticNeighborSearchRepository;
@@ -31,15 +32,18 @@ public class DreamReciprocalNeighborVerifier {
     }
 
     public Verification verify(
+            UUID runId,
             DreamSourceRepository.DreamSource source,
             SemanticNeighbor forwardNeighbor,
             int forwardRank,
             DreamPolicyResolver.ResolvedDreamPolicy policy,
             DreamBudget budget
     ) {
-        if (source == null || forwardNeighbor == null || policy == null
-                || budget == null || forwardRank <= 0) {
-            throw new IllegalArgumentException("invalid reciprocal verification input");
+        if (runId == null || source == null || forwardNeighbor == null
+                || policy == null || budget == null || forwardRank <= 0) {
+            throw new IllegalArgumentException(
+                    "invalid reciprocal verification input"
+            );
         }
         ChunkGraphNode targetNode = forwardNeighbor.node();
         Optional<DreamSourceRepository.DreamSource> currentTarget =
@@ -54,7 +58,11 @@ public class DreamReciprocalNeighborVerifier {
             );
         }
 
-        CacheKey cacheKey = new CacheKey(targetNode, policy.fingerprint());
+        CacheKey cacheKey = new CacheKey(
+                runId,
+                targetNode,
+                policy.fingerprint()
+        );
         List<SemanticNeighbor> reverse = reverseCache.getIfPresent(cacheKey);
         boolean cacheHit = reverse != null;
         if (!cacheHit) {
@@ -104,7 +112,11 @@ public class DreamReciprocalNeighborVerifier {
         reverseCache.invalidateAll();
     }
 
-    private record CacheKey(ChunkGraphNode node, String policyFingerprint) {
+    private record CacheKey(
+            UUID runId,
+            ChunkGraphNode node,
+            String policyFingerprint
+    ) {
     }
 
     public record Verification(
