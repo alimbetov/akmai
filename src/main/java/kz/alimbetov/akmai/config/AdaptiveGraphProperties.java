@@ -438,7 +438,7 @@ public record AdaptiveGraphProperties(
                     "0 0 3 * * *",
                     "UTC",
                     32,
-                    0.88,
+                    0.86,
                     0.94,
                     0.90,
                     0.86,
