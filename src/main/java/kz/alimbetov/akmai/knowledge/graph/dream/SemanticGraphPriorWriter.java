@@ -93,16 +93,14 @@ public class SemanticGraphPriorWriter {
         nodes.stream().sorted().forEach(this::lockPublishedGeneration);
         graphNodeLockManager.lockCanonical(nodes);
 
-        boolean existingPair = associationExistsEitherDirection(
+        PairAdmissionStats stats = loadPairAdmissionStats(
                 pair,
                 authority.graphVersion()
         );
         int maxSemanticDegree = semanticMemoryProperties.getMaxEdgesPerChunk();
-        if (!existingPair
-                && (semanticDegree(pair.first(), authority.graphVersion())
-                        >= maxSemanticDegree
-                || semanticDegree(pair.second(), authority.graphVersion())
-                        >= maxSemanticDegree)) {
+        if (!stats.existingPair()
+                && (stats.firstDegree() >= maxSemanticDegree
+                || stats.secondDegree() >= maxSemanticDegree)) {
             return ApplyResult.DEGREE_LIMIT;
         }
 
@@ -120,7 +118,7 @@ public class SemanticGraphPriorWriter {
                 semanticSimilarity,
                 observedAt
         );
-        return existingPair ? ApplyResult.REFRESHED : ApplyResult.APPLIED;
+        return stats.existingPair() ? ApplyResult.REFRESHED : ApplyResult.APPLIED;
     }
 
     private void requireAuthority(DreamLeaseManager.Authority authority) {
@@ -149,78 +147,93 @@ public class SemanticGraphPriorWriter {
         }
     }
 
-    private boolean associationExistsEitherDirection(
+    private PairAdmissionStats loadPairAdmissionStats(
             DreamPair pair,
             int graphVersion
     ) {
-        Boolean exists = jdbcTemplate.queryForObject(
+        ChunkGraphNode first = pair.first();
+        ChunkGraphNode second = pair.second();
+        return jdbcTemplate.queryForObject(
                 """
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM knowledge_chunk_association
-                    WHERE access_level = ?
-                      AND graph_version = ?
-                      AND (
-                          (
-                              source_document_id = ?
-                              AND source_generation = ?
-                              AND source_chunk_id = ?
-                              AND target_document_id = ?
-                              AND target_generation = ?
-                              AND target_chunk_id = ?
+                SELECT
+                    EXISTS (
+                        SELECT 1
+                        FROM knowledge_chunk_association
+                        WHERE access_level = ?
+                          AND graph_version = ?
+                          AND (
+                              (
+                                  source_document_id = ?
+                                  AND source_generation = ?
+                                  AND source_chunk_id = ?
+                                  AND target_document_id = ?
+                                  AND target_generation = ?
+                                  AND target_chunk_id = ?
+                              )
+                              OR
+                              (
+                                  source_document_id = ?
+                                  AND source_generation = ?
+                                  AND source_chunk_id = ?
+                                  AND target_document_id = ?
+                                  AND target_generation = ?
+                                  AND target_chunk_id = ?
+                              )
                           )
-                          OR
-                          (
-                              source_document_id = ?
-                              AND source_generation = ?
-                              AND source_chunk_id = ?
-                              AND target_document_id = ?
-                              AND target_generation = ?
-                              AND target_chunk_id = ?
-                          )
-                      )
-                )
+                    ) AS existing_pair,
+                    (
+                        SELECT count(*)
+                        FROM knowledge_chunk_association
+                        WHERE access_level = ?
+                          AND source_document_id = ?
+                          AND source_generation = ?
+                          AND source_chunk_id = ?
+                          AND graph_version = ?
+                          AND semantic_similarity IS NOT NULL
+                          AND band <> 'DECAYED'
+                    ) AS first_degree,
+                    (
+                        SELECT count(*)
+                        FROM knowledge_chunk_association
+                        WHERE access_level = ?
+                          AND source_document_id = ?
+                          AND source_generation = ?
+                          AND source_chunk_id = ?
+                          AND graph_version = ?
+                          AND semantic_similarity IS NOT NULL
+                          AND band <> 'DECAYED'
+                    ) AS second_degree
                 """,
-                Boolean.class,
-                pair.first().accessLevel(),
+                (rs, rowNum) -> new PairAdmissionStats(
+                        rs.getBoolean("existing_pair"),
+                        rs.getInt("first_degree"),
+                        rs.getInt("second_degree")
+                ),
+                first.accessLevel(),
                 graphVersion,
-                pair.first().documentId(),
-                pair.first().generation(),
-                pair.first().chunkId(),
-                pair.second().documentId(),
-                pair.second().generation(),
-                pair.second().chunkId(),
-                pair.second().documentId(),
-                pair.second().generation(),
-                pair.second().chunkId(),
-                pair.first().documentId(),
-                pair.first().generation(),
-                pair.first().chunkId()
-        );
-        return Boolean.TRUE.equals(exists);
-    }
-
-    private int semanticDegree(ChunkGraphNode node, int graphVersion) {
-        Integer degree = jdbcTemplate.queryForObject(
-                """
-                SELECT count(*)
-                FROM knowledge_chunk_association
-                WHERE access_level = ?
-                  AND source_document_id = ?
-                  AND source_generation = ?
-                  AND source_chunk_id = ?
-                  AND graph_version = ?
-                  AND semantic_similarity IS NOT NULL
-                  AND band <> 'DECAYED'
-                """,
-                Integer.class,
-                node.accessLevel(),
-                node.documentId(),
-                node.generation(),
-                node.chunkId(),
+                first.documentId(),
+                first.generation(),
+                first.chunkId(),
+                second.documentId(),
+                second.generation(),
+                second.chunkId(),
+                second.documentId(),
+                second.generation(),
+                second.chunkId(),
+                first.documentId(),
+                first.generation(),
+                first.chunkId(),
+                first.accessLevel(),
+                first.documentId(),
+                first.generation(),
+                first.chunkId(),
+                graphVersion,
+                second.accessLevel(),
+                second.documentId(),
+                second.generation(),
+                second.chunkId(),
                 graphVersion
         );
-        return degree == null ? 0 : degree;
     }
 
     private void upsertDirection(
@@ -355,6 +368,13 @@ public class SemanticGraphPriorWriter {
     private int transactionTimeoutSeconds() {
         long seconds = graphProperties.dream().transactionTimeout().toSeconds();
         return (int) Math.max(1, Math.min(Integer.MAX_VALUE, seconds));
+    }
+
+    private record PairAdmissionStats(
+            boolean existingPair,
+            int firstDegree,
+            int secondDegree
+    ) {
     }
 
     public enum ApplyResult {
