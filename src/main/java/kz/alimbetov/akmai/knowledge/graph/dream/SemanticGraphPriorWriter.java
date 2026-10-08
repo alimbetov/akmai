@@ -2,10 +2,11 @@ package kz.alimbetov.akmai.knowledge.graph.dream;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.TreeSet;
+import java.util.List;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import kz.alimbetov.akmai.config.SemanticMemoryProperties;
 import kz.alimbetov.akmai.knowledge.graph.ChunkGraphNode;
+import kz.alimbetov.akmai.knowledge.graph.GraphNodeLockManager;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -23,19 +24,22 @@ public class SemanticGraphPriorWriter {
     private final DreamRuntimeSwitches switches;
     private final AdaptiveGraphProperties graphProperties;
     private final SemanticMemoryProperties semanticMemoryProperties;
+    private final GraphNodeLockManager graphNodeLockManager;
 
     public SemanticGraphPriorWriter(
             JdbcTemplate jdbcTemplate,
             PlatformTransactionManager transactionManager,
             DreamRuntimeSwitches switches,
             AdaptiveGraphProperties graphProperties,
-            SemanticMemoryProperties semanticMemoryProperties
+            SemanticMemoryProperties semanticMemoryProperties,
+            GraphNodeLockManager graphNodeLockManager
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactionManager = transactionManager;
         this.switches = switches;
         this.graphProperties = graphProperties;
         this.semanticMemoryProperties = semanticMemoryProperties;
+        this.graphNodeLockManager = graphNodeLockManager;
     }
 
     public ApplyResult applyCandidate(
@@ -85,11 +89,9 @@ public class SemanticGraphPriorWriter {
         }
         requireAuthority(authority);
 
-        TreeSet<ChunkGraphNode> lockOrder = new TreeSet<>();
-        lockOrder.add(pair.first());
-        lockOrder.add(pair.second());
-        lockOrder.forEach(this::lockPublishedGeneration);
-        lockOrder.forEach(this::lockNode);
+        List<ChunkGraphNode> nodes = List.of(pair.first(), pair.second());
+        nodes.stream().sorted().forEach(this::lockPublishedGeneration);
+        graphNodeLockManager.lockCanonical(nodes);
 
         boolean existingPair = associationExistsEitherDirection(
                 pair,
@@ -348,15 +350,6 @@ public class SemanticGraphPriorWriter {
                     "Dream apply requires eligible ACTIVE/PUBLISHED generation"
             );
         }
-    }
-
-    private void lockNode(ChunkGraphNode node) {
-        jdbcTemplate.query(
-                "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))",
-                rs -> {
-                },
-                "akmai:adaptive-graph:node:" + node.lockKey()
-        );
     }
 
     private int transactionTimeoutSeconds() {
