@@ -2,7 +2,7 @@ package kz.alimbetov.akmai.knowledge.graph;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.TreeSet;
+import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -12,13 +12,16 @@ public class SemanticAssociationSeedRepository {
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
+    private final GraphNodeLockManager graphNodeLockManager;
 
     public SemanticAssociationSeedRepository(
             JdbcTemplate jdbcTemplate,
-            TransactionTemplate transactionTemplate
+            TransactionTemplate transactionTemplate,
+            GraphNodeLockManager graphNodeLockManager
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactionTemplate = transactionTemplate;
+        this.graphNodeLockManager = graphNodeLockManager;
     }
 
     public boolean seedSymmetric(
@@ -51,13 +54,11 @@ public class SemanticAssociationSeedRepository {
 
         ChunkGraphNode first = left.compareTo(right) <= 0 ? left : right;
         ChunkGraphNode second = first == left ? right : left;
-        TreeSet<ChunkGraphNode> lockOrder = new TreeSet<>();
-        lockOrder.add(first);
-        lockOrder.add(second);
+        List<ChunkGraphNode> nodes = List.of(first, second);
 
         Boolean seeded = transactionTemplate.execute(status -> {
-            lockOrder.forEach(this::lockPublishedGeneration);
-            lockOrder.forEach(this::lockNode);
+            nodes.forEach(this::lockPublishedGeneration);
+            graphNodeLockManager.lockCanonical(nodes);
 
             boolean existing = associationExists(first, second, graphVersion);
             if (!existing
@@ -257,16 +258,5 @@ public class SemanticAssociationSeedRepository {
                     "semantic linking requires eligible ACTIVE/PUBLISHED generation"
             );
         }
-    }
-
-    private void lockNode(ChunkGraphNode node) {
-        jdbcTemplate.query(
-                """
-                SELECT pg_advisory_xact_lock(hashtextextended(?, 0))
-                """,
-                rs -> {
-                },
-                "akmai:adaptive-graph:node:" + node.lockKey()
-        );
     }
 }
