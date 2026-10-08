@@ -6,7 +6,11 @@ import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/** Persists canonical Dream observations without double-counting replayed runs. */
+/**
+ * Persists canonical Dream observations without double-counting replayed runs.
+ * Even Dream-internal evidence is fenced: a stale owner cannot inflate semantic
+ * streaks after another pod has taken over the policy epoch.
+ */
 @Repository
 public class DreamCandidateRepository {
 
@@ -16,13 +20,28 @@ public class DreamCandidateRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public void observe(Observation observation) {
+    public void observe(
+            DreamLeaseManager.Authority authority,
+            Observation observation
+    ) {
+        if (authority == null) {
+            throw new IllegalArgumentException("Dream authority is required");
+        }
         requireObservation(observation);
+        if (authority.graphVersion() != observation.graphVersion()
+                || !authority.policyFingerprint().equals(
+                        observation.semanticPolicyFingerprint()
+                )) {
+            throw new IllegalArgumentException(
+                    "Dream observation policy does not match lease authority"
+            );
+        }
+
         DreamPair pair = observation.pair();
         boolean positive = observation.outcome() == ObservationOutcome.POSITIVE;
         Timestamp observedAt = Timestamp.from(observation.observedAt());
 
-        jdbcTemplate.update(
+        int changed = jdbcTemplate.update(
                 """
                 INSERT INTO knowledge_chunk_dream_candidate (
                     access_level,
@@ -52,10 +71,19 @@ public class DreamCandidateRepository {
                     last_seen_at,
                     last_verified_at,
                     updated_at
-                ) VALUES (
+                )
+                SELECT
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                     ?, ?, ?, clock_timestamp()
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM adaptive_graph_dream_lease lease
+                    WHERE lease.graph_version = ?
+                      AND lease.semantic_policy_fingerprint = ?
+                      AND lease.owner_id = ?
+                      AND lease.fencing_token = ?
+                      AND lease.lease_until > clock_timestamp()
                 )
                 ON CONFLICT (
                     access_level,
@@ -130,8 +158,17 @@ public class DreamCandidateRepository {
                 observation.discoveryReason(),
                 observedAt,
                 observedAt,
-                observedAt
+                observedAt,
+                authority.graphVersion(),
+                authority.policyFingerprint(),
+                authority.ownerId(),
+                authority.fencingToken()
         );
+        if (changed != 1) {
+            throw new DreamLeaseManager.LostDreamAuthorityException(
+                    "Dream candidate observation rejected by fencing"
+            );
+        }
     }
 
     private void requireObservation(Observation value) {
@@ -147,11 +184,15 @@ public class DreamCandidateRepository {
                 value.semanticPolicyFingerprint()
         );
         if (!fingerprint.matches("[0-9a-f]{64}")) {
-            throw new IllegalArgumentException("semanticPolicyFingerprint must be SHA-256 hex");
+            throw new IllegalArgumentException(
+                    "semanticPolicyFingerprint must be SHA-256 hex"
+            );
         }
         requireText("embeddingProfileId", value.embeddingProfileId());
         if (value.state() == null || value.outcome() == null) {
-            throw new IllegalArgumentException("Dream observation state/outcome is required");
+            throw new IllegalArgumentException(
+                    "Dream observation state/outcome is required"
+            );
         }
         bounded("forwardSimilarity", value.forwardSimilarity());
         bounded("reverseSimilarity", value.reverseSimilarity());
@@ -162,7 +203,8 @@ public class DreamCandidateRepository {
         if (value.observedAt() == null) {
             throw new IllegalArgumentException("observedAt is required");
         }
-        if (value.mutualKnn() != (value.outcome() == ObservationOutcome.POSITIVE)) {
+        if (value.mutualKnn()
+                != (value.outcome() == ObservationOutcome.POSITIVE)) {
             throw new IllegalArgumentException("mutualKnn and outcome disagree");
         }
     }
