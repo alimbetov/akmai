@@ -52,6 +52,13 @@ public class DreamMetrics {
         ).increment();
     }
 
+    public void apply(String result) {
+        registry.counter(
+                "akmai.adaptive.graph.dream.apply",
+                "result", tag(result)
+        ).increment();
+    }
+
     public void budgetStop(DreamBudget.StopReason reason) {
         registry.counter(
                 "akmai.adaptive.graph.dream.budget.stops",
