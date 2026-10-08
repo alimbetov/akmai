@@ -243,14 +243,36 @@ public class PersistenceCoordinator {
                         indexedChunkCount
                 );
             }
+            recordFailurePreservingPrimary(
+                    documentId,
+                    generation,
+                    idempotency,
+                    exception
+            );
+            throw exception;
+        }
+    }
+
+    private void recordFailurePreservingPrimary(
+            String documentId,
+            long generation,
+            IngestionIdempotencyContext idempotency,
+            RuntimeException primary
+    ) {
+        try {
             generationRepository.fail(
                     documentId,
                     generation,
                     "INGESTION_FAILED",
-                    safeMessage(exception)
+                    safeMessage(primary)
             );
-            idempotencyRepository.fail(idempotency, safeMessage(exception));
-            throw exception;
+        } catch (RuntimeException cleanupFailure) {
+            primary.addSuppressed(cleanupFailure);
+        }
+        try {
+            idempotencyRepository.fail(idempotency, safeMessage(primary));
+        } catch (RuntimeException cleanupFailure) {
+            primary.addSuppressed(cleanupFailure);
         }
     }
 
