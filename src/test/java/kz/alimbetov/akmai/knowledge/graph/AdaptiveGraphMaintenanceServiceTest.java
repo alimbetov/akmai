@@ -68,8 +68,7 @@ class AdaptiveGraphMaintenanceServiceTest {
                 AdaptiveGraphTestProperties.create(
                         new AdaptiveGraphProperties.BandQuotas(1, 1, 1)
                 );
-        AdaptiveChunkGraphRepository repository =
-                new AdaptiveChunkGraphRepository(jdbc, tx);
+        AdaptiveChunkGraphRepository repository = newRepository();
         AdaptiveGraphMaintenanceService maintenance =
                 new AdaptiveGraphMaintenanceService(
                         jdbc,
@@ -119,8 +118,7 @@ class AdaptiveGraphMaintenanceServiceTest {
                 AdaptiveGraphTestProperties.create(
                         new AdaptiveGraphProperties.BandQuotas(8, 8, 16)
                 );
-        AdaptiveChunkGraphRepository repository =
-                new AdaptiveChunkGraphRepository(jdbc, tx);
+        AdaptiveChunkGraphRepository repository = newRepository();
         AdaptiveGraphMaintenanceService maintenance =
                 new AdaptiveGraphMaintenanceService(
                         jdbc,
@@ -169,6 +167,15 @@ class AdaptiveGraphMaintenanceServiceTest {
                 "SELECT count(*) FROM knowledge_chunk_association",
                 Integer.class
         )).isZero();
+    }
+
+    private AdaptiveChunkGraphRepository newRepository() {
+        return new AdaptiveChunkGraphRepository(
+                jdbc,
+                tx,
+                new GraphNodeLockManager(jdbc),
+                new GraphLifecycleGuard(jdbc)
+        );
     }
 
     private void reinforce(
