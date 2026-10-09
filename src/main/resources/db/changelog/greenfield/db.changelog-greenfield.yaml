@@ -55,3 +55,5 @@ databaseChangeLog:
       file: db/changelog/greenfield/027-adaptive-graph-quality-indexes.sql
   - include:
       file: db/changelog/greenfield/028-audit-partition-maintenance-ownership.sql
+  - include:
+      file: db/changelog/greenfield/029-async-ingestion-worker.sql
