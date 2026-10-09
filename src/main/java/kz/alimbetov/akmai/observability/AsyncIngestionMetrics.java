@@ -46,13 +46,17 @@ public class AsyncIngestionMetrics {
 
     public void queueWait(Duration duration) {
         Timer.builder("akmai.async.ingestion.queue.wait")
+                .description("Time from durable acceptance to worker claim")
+                .publishPercentileHistogram()
                 .register(registry)
                 .record(nonNegative(duration));
     }
 
     public void processing(String outcome, Duration duration) {
         Timer.builder("akmai.async.ingestion.processing.duration")
+                .description("Async document worker processing duration")
                 .tag("outcome", boundedTag(outcome))
+                .publishPercentileHistogram()
                 .register(registry)
                 .record(nonNegative(duration));
     }
