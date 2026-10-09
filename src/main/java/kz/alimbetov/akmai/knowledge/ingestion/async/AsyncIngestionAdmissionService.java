@@ -96,9 +96,16 @@ public class AsyncIngestionAdmissionService {
     }
 
     public AsyncIngestionStatusResponse status(UUID ingestionId) {
-        AsyncIngestionJob job = repository.find(ingestionId).orElseThrow(() ->
+        return statusResponse(requireJob(ingestionId));
+    }
+
+    public long accessLevel(UUID ingestionId) {
+        return requireJob(ingestionId).accessLevel();
+    }
+
+    private AsyncIngestionJob requireJob(UUID ingestionId) {
+        return repository.find(ingestionId).orElseThrow(() ->
                 new AsyncIngestionNotFoundException(ingestionId));
-        return statusResponse(job);
     }
 
     private void validate(AsyncIngestionRequest request) {
