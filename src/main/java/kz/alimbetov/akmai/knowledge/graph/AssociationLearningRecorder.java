@@ -215,7 +215,7 @@ public class AssociationLearningRecorder {
     ) {
         return appParameterService == null
                 ? fallback
-                : appParameterService.isEnabled(key);
+                : appParameterService.isEnabledAuthoritative(key);
     }
 
     private List<IndexedHit> eligibleHits(
