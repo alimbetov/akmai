@@ -14,8 +14,10 @@ A service/process is considered **documented** only when its contract contains:
 ## Status legend
 
 - `TODO` — contract not yet created.
-- `DRAFT` — contract exists but rules/cases/tests are incomplete or not yet verified by CI.
-- `VERIFIED` — contract is mapped to current implementation and concrete tests with green verification.
+- `DRAFT` — contract exists and is mapped to implementation, but rules/cases/tests are incomplete or the exact documentation/code head has not yet passed the required verification gates.
+- `VERIFIED` — contract is mapped to current implementation and concrete positive/negative tests with green exact-head verification.
+
+`IMPLEMENTED` inside an individual contract describes code state only. It is not equivalent to inventory status `VERIFIED`.
 
 ## Inventory
 
@@ -34,16 +36,16 @@ A service/process is considered **documented** only when its contract contains:
 | Graph / Dream | Semantic graph prior application | [`adaptive-graph-mutation.md`](adaptive-graph-mutation.md) | DRAFT |
 | Graph / Dream | Dream ownership / lease / fencing | [`dream-cycle.md`](dream-cycle.md) | DRAFT |
 | Graph / Dream | Dream candidate lifecycle | [`dream-cycle.md`](dream-cycle.md) | DRAFT |
-| Graph maintenance | Graph cleanup / maintenance | TBD | TODO |
+| Graph maintenance | Graph cleanup / maintenance | [`scheduled-jobs.md`](scheduled-jobs.md), [`adaptive-graph-mutation.md`](adaptive-graph-mutation.md) | DRAFT |
 | Learning | Query memory / learning events | TBD | TODO |
 | Publication | Publication / activation lifecycle | [`publication-lifecycle.md`](publication-lifecycle.md) | DRAFT |
 | Repair | Generation reconciliation | [`generation-reconciliation.md`](generation-reconciliation.md) | DRAFT |
 | Repair | Physical repair / residual cleanup | [`generation-reconciliation.md`](generation-reconciliation.md) | DRAFT |
-| Operations | Scheduled/background jobs | TBD | TODO |
-| Operations | Runtime feature flags / safety gates | TBD | TODO |
+| Operations | Scheduled/background jobs | [`scheduled-jobs.md`](scheduled-jobs.md) | DRAFT |
+| Operations | Runtime feature flags / safety gates | [`runtime-safety-flags.md`](runtime-safety-flags.md) | DRAFT |
 
 ## Inventory maintenance rule
 
-When a new service or independently meaningful business process is introduced, it must be added here in the same PR. A PR must not mark an item `VERIFIED` unless every referenced rule and case is backed by current implementation and concrete tests with green verification.
+When a new service or independently meaningful business process is introduced, it must be added here in the same PR. A PR must not mark an item `VERIFIED` unless every referenced rule and case is backed by current implementation and concrete tests with green verification on the exact same head SHA.
 
-The table above is intentionally the starting inventory, not a claim of completeness. During the codebase pass, split or merge rows to match actual service/process boundaries discovered in implementation.
+The inventory is a current-state index, not a historical backlog. Historical audit documents may retain older statuses when they are explicitly classified as snapshots, but this file must reflect the current repository state.
