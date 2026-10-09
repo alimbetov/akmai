@@ -57,3 +57,5 @@ databaseChangeLog:
       file: db/changelog/greenfield/028-audit-partition-maintenance-ownership.sql
   - include:
       file: db/changelog/greenfield/029-async-ingestion-worker.sql
+  - include:
+      file: db/changelog/greenfield/030-async-ingestion-source-version-identity.sql
