@@ -9,6 +9,8 @@ import kz.alimbetov.akmai.knowledge.idempotency.IdempotencyConflictException;
 import kz.alimbetov.akmai.knowledge.ingestion.PublicationOutcomeUnknownException;
 import org.springframework.dao.TransientDataAccessException;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.ResourceAccessException;
 
 @Component
 public class AsyncIngestionFailureClassifier {
@@ -54,8 +56,27 @@ public class AsyncIngestionFailureClassifier {
                     "VALIDATION_ERROR"
             );
         }
+
+        HttpStatusCodeException http = findCause(
+                exception,
+                HttpStatusCodeException.class
+        );
+        if (http != null
+                && (http.getStatusCode().value() == 429
+                    || http.getStatusCode().is5xxServerError())) {
+            return new Failure(
+                    Classification.RETRYABLE,
+                    true,
+                    null,
+                    http.getStatusCode().value() == 429
+                            ? "DEPENDENCY_RATE_LIMITED"
+                            : "DEPENDENCY_SERVER_ERROR"
+            );
+        }
+
         if (exception instanceof RejectedExecutionException
                 || hasCause(exception, TransientDataAccessException.class)
+                || hasCause(exception, ResourceAccessException.class)
                 || hasCause(exception, SocketTimeoutException.class)
                 || hasCause(exception, ConnectException.class)
                 || hasCause(exception, IOException.class)) {
@@ -75,15 +96,19 @@ public class AsyncIngestionFailureClassifier {
     }
 
     private boolean hasCause(Throwable throwable, Class<?> type) {
+        return findCause(throwable, type) != null;
+    }
+
+    private <T> T findCause(Throwable throwable, Class<T> type) {
         Throwable current = throwable;
         int depth = 0;
         while (current != null && depth++ < 16) {
             if (type.isInstance(current)) {
-                return true;
+                return type.cast(current);
             }
             current = current.getCause();
         }
-        return false;
+        return null;
     }
 
     public enum Classification {

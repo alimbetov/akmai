@@ -12,10 +12,16 @@ import kz.alimbetov.akmai.observability.AsyncIngestionMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(
+        prefix = "akmai.ingestion.async-worker",
+        name = "enabled",
+        havingValue = "true"
+)
 public class AsyncIngestionScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(
@@ -49,10 +55,6 @@ public class AsyncIngestionScheduler {
             fixedDelayString = "${akmai.ingestion.async-worker.poll-interval:1s}"
     )
     public void poll() {
-        if (!properties.enabled()) {
-            return;
-        }
-
         try {
             metrics.queueDepth(repository.countBacklog());
         } catch (RuntimeException exception) {

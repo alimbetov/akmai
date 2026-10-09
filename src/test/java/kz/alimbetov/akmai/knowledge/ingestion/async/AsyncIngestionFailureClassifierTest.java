@@ -2,9 +2,14 @@ package kz.alimbetov.akmai.knowledge.ingestion.async;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
 import kz.alimbetov.akmai.knowledge.idempotency.IdempotencyConflictException;
 import kz.alimbetov.akmai.knowledge.ingestion.PublicationOutcomeUnknownException;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 
 class AsyncIngestionFailureClassifierTest {
 
@@ -74,5 +79,39 @@ class AsyncIngestionFailureClassifierTest {
         assertThat(result.classification())
                 .isEqualTo(AsyncIngestionFailureClassifier.Classification.NON_RETRYABLE);
         assertThat(result.retryable()).isFalse();
+    }
+
+    @Test
+    void dependencyRateLimitIsRetryable() {
+        RuntimeException error = HttpClientErrorException.create(
+                HttpStatus.TOO_MANY_REQUESTS,
+                "rate limited",
+                HttpHeaders.EMPTY,
+                new byte[0],
+                StandardCharsets.UTF_8
+        );
+
+        var result = classifier.classify(error);
+
+        assertThat(result.classification())
+                .isEqualTo(AsyncIngestionFailureClassifier.Classification.RETRYABLE);
+        assertThat(result.code()).isEqualTo("DEPENDENCY_RATE_LIMITED");
+    }
+
+    @Test
+    void dependencyServerFailureIsRetryable() {
+        RuntimeException error = HttpServerErrorException.create(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "temporarily unavailable",
+                HttpHeaders.EMPTY,
+                new byte[0],
+                StandardCharsets.UTF_8
+        );
+
+        var result = classifier.classify(error);
+
+        assertThat(result.classification())
+                .isEqualTo(AsyncIngestionFailureClassifier.Classification.RETRYABLE);
+        assertThat(result.code()).isEqualTo("DEPENDENCY_SERVER_ERROR");
     }
 }

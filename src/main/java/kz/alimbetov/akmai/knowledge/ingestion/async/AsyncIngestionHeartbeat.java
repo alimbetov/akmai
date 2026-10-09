@@ -9,9 +9,15 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import kz.alimbetov.akmai.config.AsyncIngestionProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(
+        prefix = "akmai.ingestion.async-worker",
+        name = "enabled",
+        havingValue = "true"
+)
 public class AsyncIngestionHeartbeat {
 
     private final AsyncIngestionJobRepository repository;
