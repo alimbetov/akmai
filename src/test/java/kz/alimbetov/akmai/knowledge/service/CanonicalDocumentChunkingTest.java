@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 
 class CanonicalDocumentChunkingTest {
 
+    private static final String CONTENT_HASH = "sha256:" + "a".repeat(64);
     private final TokenEstimator estimator = new TokenEstimator();
     private final SemanticChunker chunker = new SemanticChunker(
             new TextNormalizer(),
@@ -145,7 +146,7 @@ class CanonicalDocumentChunkingTest {
                         "3",
                         "architecture.pdf",
                         "application/pdf",
-                        "sha256:source-content",
+                        CONTENT_HASH,
                         new CanonicalKnowledgeDocument.StorageReference(
                                 "rustfs",
                                 "knowledge-raw",
@@ -204,8 +205,7 @@ class CanonicalDocumentChunkingTest {
         assertThat(hit.sourceProvenance().fileId()).isEqualTo("file-123");
         assertThat(hit.sourceProvenance().sourceVersion()).isEqualTo("3");
         assertThat(hit.sourceProvenance().fileName()).isEqualTo("architecture.pdf");
-        assertThat(hit.sourceProvenance().contentHash())
-                .isEqualTo("sha256:source-content");
+        assertThat(hit.sourceProvenance().contentHash()).isEqualTo(CONTENT_HASH);
         assertThat(hit.sourceProvenance().blockIds())
                 .containsExactly("b-heading", "b-body");
         assertThat(hit.sourceProvenance().pageFrom()).isEqualTo(37);
