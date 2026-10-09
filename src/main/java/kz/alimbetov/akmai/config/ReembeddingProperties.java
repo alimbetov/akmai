@@ -26,7 +26,7 @@ public record ReembeddingProperties(
                 drainTimeout,
                 pollInterval,
                 leaseDuration,
-                Duration.ofSeconds(15)
+                defaultHeartbeat(leaseDuration)
         );
     }
 
@@ -62,5 +62,20 @@ public record ReembeddingProperties(
                     "reembedding heartbeat-interval must be positive and below half the lease-duration"
             );
         }
+    }
+
+    private static Duration defaultHeartbeat(Duration leaseDuration) {
+        if (leaseDuration == null
+                || leaseDuration.isZero()
+                || leaseDuration.isNegative()) {
+            return Duration.ofSeconds(15);
+        }
+        Duration quarterLease = leaseDuration.dividedBy(4);
+        if (quarterLease.isZero()) {
+            return Duration.ofNanos(1);
+        }
+        return quarterLease.compareTo(Duration.ofSeconds(15)) < 0
+                ? quarterLease
+                : Duration.ofSeconds(15);
     }
 }
