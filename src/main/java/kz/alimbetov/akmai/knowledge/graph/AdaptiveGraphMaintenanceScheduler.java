@@ -50,7 +50,7 @@ public class AdaptiveGraphMaintenanceScheduler {
     ) {
         return appParameterService == null
                 ? fallback
-                : appParameterService.isEnabled(key);
+                : appParameterService.isEnabledAuthoritative(key);
     }
 
     @Scheduled(
