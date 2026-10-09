@@ -359,8 +359,14 @@ public class AsyncIngestionJobRepository {
     }
 
     private AsyncIngestionJob map(ResultSet rs, int rowNum) throws SQLException {
-        long generation = rs.getLong("generation");
-        Integer chunkCount = (Integer) rs.getObject("chunk_count");
+        Number generationValue = (Number) rs.getObject("generation");
+        Number chunkCountValue = (Number) rs.getObject("chunk_count");
+        Long generation = generationValue == null
+                ? null
+                : generationValue.longValue();
+        Integer chunkCount = chunkCountValue == null
+                ? null
+                : chunkCountValue.intValue();
         return new AsyncIngestionJob(
                 rs.getObject("ingestion_id", UUID.class),
                 rs.getInt("schema_version"),
@@ -385,7 +391,7 @@ public class AsyncIngestionJobRepository {
                 rs.getString("lease_owner"),
                 instant(rs, "lease_until"),
                 rs.getLong("lease_version"),
-                rs.wasNull() ? null : generation,
+                generation,
                 chunkCount,
                 rs.getString("embedding_profile_id"),
                 rs.getString("last_error_class"),
