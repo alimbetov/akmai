@@ -5,7 +5,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
+import kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage;
 
 /**
  * Versioned transport contract produced by FileService and consumed by AkmAI.
@@ -26,6 +28,10 @@ public record CanonicalKnowledgeDocument(
         Map<String, Object> metadata
 ) {
     public static final int CURRENT_SCHEMA_VERSION = 1;
+    private static final Pattern SHA256 = Pattern.compile(
+            "^sha256:[0-9a-f]{64}$",
+            Pattern.CASE_INSENSITIVE
+    );
 
     public CanonicalKnowledgeDocument {
         if (schemaVersion != CURRENT_SCHEMA_VERSION) {
@@ -36,7 +42,7 @@ public record CanonicalKnowledgeDocument(
         documentId = requireText("documentId", documentId);
         version = requireText("version", version);
         title = requireText("title", title);
-        language = requireText("language", language);
+        language = KnowledgeLanguage.parse(requireText("language", language)).code();
         if (domain == null) {
             throw new IllegalArgumentException("domain is required");
         }
@@ -90,7 +96,14 @@ public record CanonicalKnowledgeDocument(
             sourceVersion = requireText("source.sourceVersion", sourceVersion);
             fileName = requireText("source.fileName", fileName);
             mediaType = requireText("source.mediaType", mediaType);
-            contentHash = requireText("source.contentHash", contentHash);
+            contentHash = requireText("source.contentHash", contentHash).toLowerCase(
+                    Locale.ROOT
+            );
+            if (!SHA256.matcher(contentHash).matches()) {
+                throw new IllegalArgumentException(
+                        "source.contentHash must be sha256:<64 hex characters>"
+                );
+            }
         }
     }
 
@@ -108,6 +121,11 @@ public record CanonicalKnowledgeDocument(
             provider = requireText("storage.provider", provider);
             bucket = requireText("storage.bucket", bucket);
             objectKey = requireText("storage.objectKey", objectKey);
+            if (looksLikeUrl(objectKey)) {
+                throw new IllegalArgumentException(
+                        "storage.objectKey must be a stable object key, not a URL"
+                );
+            }
             versionId = normalizeOptional(versionId);
         }
     }
@@ -266,6 +284,12 @@ public record CanonicalKnowledgeDocument(
                 || normalized.contains("x-amz-security-token=")
                 || normalized.contains("x-goog-signature=")
                 || normalized.contains("x-goog-credential=");
+    }
+
+    private static boolean looksLikeUrl(String value) {
+        String normalized = value.toLowerCase(Locale.ROOT);
+        return normalized.startsWith("http://")
+                || normalized.startsWith("https://");
     }
 
     private static String requireText(String name, String value) {
