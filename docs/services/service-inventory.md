@@ -29,9 +29,9 @@ A service/process is considered **documented** only when its contract contains:
 | Knowledge ingestion | Document ingestion | [`knowledge-ingestion.md`](knowledge-ingestion.md) | DRAFT |
 | Knowledge ingestion | Chunk lifecycle / TTL retention | [`chunk-lifecycle-retention.md`](chunk-lifecycle-retention.md) | DRAFT |
 | Embeddings | Re-embedding HA / lifecycle | [`reembedding-ha-lifecycle.md`](reembedding-ha-lifecycle.md) | DRAFT |
-| Graph | Adaptive chunk graph mutation | TBD | TODO |
-| Graph | Semantic association seeding | TBD | TODO |
-| Graph / Dream | Semantic graph prior application | TBD | TODO |
+| Graph | Adaptive chunk graph mutation | [`adaptive-graph-mutation.md`](adaptive-graph-mutation.md) | DRAFT |
+| Graph | Semantic association seeding | [`adaptive-graph-mutation.md`](adaptive-graph-mutation.md) | DRAFT |
+| Graph / Dream | Semantic graph prior application | [`adaptive-graph-mutation.md`](adaptive-graph-mutation.md) | DRAFT |
 | Graph / Dream | Dream ownership / lease / fencing | TBD | TODO |
 | Graph / Dream | Dream candidate lifecycle | TBD | TODO |
 | Graph maintenance | Graph cleanup / maintenance | TBD | TODO |
