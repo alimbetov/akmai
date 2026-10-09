@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
 import kz.alimbetov.akmai.knowledge.api.CanonicalDocument;
+import kz.alimbetov.akmai.knowledge.api.CanonicalKnowledgeDocument;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage;
 import org.springframework.stereotype.Component;
 
@@ -21,9 +22,11 @@ import org.springframework.stereotype.Component;
 public class CanonicalRequestFingerprint {
 
     private final ObjectMapper objectMapper;
+    private final CanonicalKnowledgeHasher canonicalKnowledgeHasher;
 
     public CanonicalRequestFingerprint(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
+        this.canonicalKnowledgeHasher = new CanonicalKnowledgeHasher(objectMapper);
     }
 
     public String fingerprint(AddKnowledgeRequest request) {
@@ -62,6 +65,26 @@ public class CanonicalRequestFingerprint {
                         .toList()
         );
         return digest(canonical);
+    }
+
+    public String fingerprint(CanonicalKnowledgeDocument document) {
+        TreeMap<String, Object> request = new TreeMap<>();
+        request.put("canonicalHash", canonicalKnowledgeHasher.hash(document));
+        request.put("processing", Map.of(
+                "parser", text(document.processing().parser()),
+                "parserVersion", text(document.processing().parserVersion()),
+                "parsedAt", document.processing().parsedAt().toString()
+        ));
+        if (document.source().storage() != null) {
+            var storage = document.source().storage();
+            LinkedHashMap<String, Object> storageValue = new LinkedHashMap<>();
+            storageValue.put("provider", text(storage.provider()));
+            storageValue.put("bucket", text(storage.bucket()));
+            storageValue.put("objectKey", text(storage.objectKey()));
+            storageValue.put("versionId", text(storage.versionId()));
+            request.put("storage", storageValue);
+        }
+        return digest(request);
     }
 
     private Map<String, Object> canonicalBlock(CanonicalDocument.Block block) {
