@@ -214,13 +214,22 @@ public class DocumentGenerationRepository {
         List<GenerationKey> failed = jdbcTemplate.query(
                 """
                 WITH candidates AS (
-                    SELECT document_id, generation
-                    FROM knowledge_document_generation
-                    WHERE generation_kind = 'INGESTION'
-                      AND generation_status = 'STAGING'
-                      AND started_at < clock_timestamp() - (? * interval '1 millisecond')
-                    ORDER BY started_at, document_id, generation
-                    FOR UPDATE SKIP LOCKED
+                    SELECT g.document_id, g.generation
+                    FROM knowledge_document_generation g
+                    WHERE g.generation_kind = 'INGESTION'
+                      AND g.generation_status = 'STAGING'
+                      AND g.started_at < clock_timestamp()
+                          - (? * interval '1 millisecond')
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM knowledge_ingestion_request r
+                          WHERE r.document_id = g.document_id
+                            AND r.generation = g.generation
+                            AND r.request_status = 'IN_PROGRESS'
+                            AND r.lease_until > clock_timestamp()
+                      )
+                    ORDER BY g.started_at, g.document_id, g.generation
+                    FOR UPDATE OF g SKIP LOCKED
                     LIMIT ?
                 )
                 UPDATE knowledge_document_generation g

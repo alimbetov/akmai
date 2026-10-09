@@ -8,6 +8,8 @@ This directory contains current architecture contracts and active target/experim
 - [`adaptive-graph-runtime.md`](adaptive-graph-runtime.md) — **CURRENT** Adaptive Association Graph behavior and feature boundaries.
 - [`rag-self-optimizing-platform-v1.1-technical-spec.md`](rag-self-optimizing-platform-v1.1-technical-spec.md) — **CURRENT / IMPLEMENTED** self-optimizing v1.1 engineering contract.
 - [`fileservice-knowledge-contract-v1.md`](fileservice-knowledge-contract-v1.md) — **CURRENT** FileService → AkmAI canonical knowledge boundary implemented in the existing ingestion/generation pipeline.
+- [`async-ingestion-worker-v1.md`](async-ingestion-worker-v1.md) — **TARGET / IMPLEMENTATION AUTHORITY** async admission + PostgreSQL durable job queue + worker orchestration aligned to the existing idempotency, generation and publication primitives. Includes the P0 stale-generation recovery prerequisite and default document concurrency of three per instance.
+- [`async-ingestion-worker-v1-code-blueprint.md`](async-ingestion-worker-v1-code-blueprint.md) — **TARGET IMPLEMENTATION ANNEX** code/package/SQL/config/test blueprint subordinate to the async-ingestion architecture authority.
 - [`runtime-app-parameters.md`](runtime-app-parameters.md) — runtime-mutable parameter architecture; actual defaults remain authoritative in `src/main/resources/application.yml`.
 
 For concrete HTTP/service request-response examples and RAG question/answer contracts, see [`../services/external-api-contracts.md`](../services/external-api-contracts.md).
@@ -17,6 +19,8 @@ For concrete HTTP/service request-response examples and RAG question/answer cont
 | Document | Classification | Purpose |
 |---|---|---|
 | [`fileservice-knowledge-contract-v1.md`](fileservice-knowledge-contract-v1.md) | CURRENT | Synchronous-first FileService → AkmAI canonical service boundary using the existing ingestion/generation pipeline, stable source identity, generation-aware result/replay and typed retrieval provenance. The canonical v1 service path is implemented; a dedicated public canonical REST endpoint is not currently exposed. |
+| [`async-ingestion-worker-v1.md`](async-ingestion-worker-v1.md) | TARGET / IMPLEMENTATION AUTHORITY | Evolves the FileService boundary to `202 Accepted` + `knowledge_ingestion_job` + bounded worker execution while preserving `KnowledgeIngestionService` as the sole RAG ingestion engine. Defines separate job vs ingestion leases, stable internal idempotency key/replay recovery, P0 active-claim-aware stale-generation recovery, retry/ambiguity semantics and benchmark requirements. |
+| [`async-ingestion-worker-v1-code-blueprint.md`](async-ingestion-worker-v1-code-blueprint.md) | TARGET IMPLEMENTATION ANNEX | Maps the approved async target onto the current codebase: package/class placement, `/api/knowledge/ingestions` endpoints, admission `accessLevel` authorization, `029-*` Liquibase migration, repository method/SQL shapes, `KnowledgeIngestionPort` reuse, monitored bounded executor, heartbeat, exception mapping and exact unit/integration test plan. |
 
 ## Adaptive retrieval and memory
 

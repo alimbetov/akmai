@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import java.util.concurrent.RejectedExecutionException;
 import kz.alimbetov.akmai.knowledge.idempotency.IdempotencyConflictException;
+import kz.alimbetov.akmai.knowledge.ingestion.async.AsyncIngestionNotFoundException;
 import kz.alimbetov.akmai.security.AccessLevelForbiddenException;
 import kz.alimbetov.akmai.runtimeconfig.AppParameterConflictException;
 import kz.alimbetov.akmai.runtimeconfig.AppParameterUnavailableException;
@@ -46,6 +47,20 @@ public class GlobalApiExceptionHandler {
         return response(
                 HttpStatus.FORBIDDEN,
                 "ACCESS_LEVEL_FORBIDDEN",
+                exception.getMessage(),
+                request,
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(AsyncIngestionNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> asyncIngestionNotFound(
+            AsyncIngestionNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.NOT_FOUND,
+                "ASYNC_INGESTION_NOT_FOUND",
                 exception.getMessage(),
                 request,
                 Map.of()
