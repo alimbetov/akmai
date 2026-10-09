@@ -109,43 +109,107 @@ public class GenerationReconciliationService {
 
         int cleaned = 0;
         for (GenerationKey candidate : candidates) {
-            if ("RETIRING".equals(candidate.status())) {
-                boolean prepared = Boolean.TRUE.equals(
-                        transactionTemplate.execute(status -> {
-                            if (!tryCandidateLock(candidate)) {
-                                logCandidateBusy(candidate, "prepare");
-                                return false;
-                            }
-                            return prepareRetiring(candidate);
-                        })
-                );
-                if (prepared) {
-                    transactionTemplate.execute(status -> {
-                        if (!tryCandidateLock(candidate)) {
-                            logCandidateBusy(candidate, "purge");
-                            return null;
-                        }
-                        purgeRetiring(candidate);
-                        return null;
-                    });
-                }
-                continue;
-            }
-
-            Boolean result = transactionTemplate.execute(status -> {
-                if (!tryCandidateLock(candidate)) {
-                    logCandidateBusy(candidate, "terminal");
-                    return false;
-                }
-                return reconcileTerminal(candidate);
-            });
-            if (Boolean.TRUE.equals(result)) {
-                cleaned++;
+            try {
+                cleaned += reconcileCandidate(candidate);
+            } catch (CandidateStateException exception) {
+                recordCandidateFailure(candidate, exception);
             }
         }
 
         purgeExpiredTombstones();
         return cleaned;
+    }
+
+    private int reconcileCandidate(GenerationKey candidate) {
+        if ("RETIRING".equals(candidate.status())) {
+            boolean prepared = Boolean.TRUE.equals(
+                    transactionTemplate.execute(status -> {
+                        if (!tryCandidateLock(candidate)) {
+                            logCandidateBusy(candidate, "prepare");
+                            return false;
+                        }
+                        return prepareRetiring(candidate);
+                    })
+            );
+            if (prepared) {
+                transactionTemplate.execute(status -> {
+                    if (!tryCandidateLock(candidate)) {
+                        logCandidateBusy(candidate, "purge");
+                        return null;
+                    }
+                    purgeRetiring(candidate);
+                    return null;
+                });
+            }
+            return 0;
+        }
+
+        Boolean result = transactionTemplate.execute(status -> {
+            if (!tryCandidateLock(candidate)) {
+                logCandidateBusy(candidate, "terminal");
+                return false;
+            }
+            return reconcileTerminal(candidate);
+        });
+        return Boolean.TRUE.equals(result) ? 1 : 0;
+    }
+
+    private void recordCandidateFailure(
+            GenerationKey candidate,
+            CandidateStateException exception
+    ) {
+        String error = candidateError(exception);
+        LOGGER.warn(
+                "generation_reconciliation event=candidate_state_failed documentId={} generation={} status={} error={}",
+                candidate.documentId(),
+                candidate.generation(),
+                candidate.status(),
+                error
+        );
+        try {
+            transactionTemplate.executeWithoutResult(status -> {
+                jdbcTemplate.update(
+                        """
+                        UPDATE knowledge_document_generation
+                        SET last_error = ?
+                        WHERE document_id = ?
+                          AND generation = ?
+                          AND cleanup_required
+                        """,
+                        error,
+                        candidate.documentId(),
+                        candidate.generation()
+                );
+                audit.append(
+                        "GENERATION_RECONCILIATION_FAILED",
+                        identity(candidate),
+                        null,
+                        "generation-reconciler",
+                        Map.of(
+                                "generationStatus", candidate.status(),
+                                "errorType",
+                                exception.getClass().getSimpleName(),
+                                "error", error
+                        )
+                );
+            });
+        } catch (RuntimeException bookkeepingFailure) {
+            LOGGER.error(
+                    "generation_reconciliation event=candidate_failure_bookkeeping_failed documentId={} generation={} errorType={}",
+                    candidate.documentId(),
+                    candidate.generation(),
+                    bookkeepingFailure.getClass().getSimpleName(),
+                    bookkeepingFailure
+            );
+        }
+    }
+
+    private String candidateError(RuntimeException exception) {
+        String message = exception.getMessage();
+        String value = message == null || message.isBlank()
+                ? exception.getClass().getSimpleName()
+                : message.replaceAll("[\\r\\n\\t]+", " ").trim();
+        return value.length() <= 1000 ? value : value.substring(0, 1000);
     }
 
     private boolean tryCandidateLock(GenerationKey key) {
@@ -194,7 +258,7 @@ public class GenerationReconciliationService {
             return false;
         }
         if (!row.cleanupRequired()) {
-            throw new IllegalStateException(
+            throw new CandidateStateException(
                     "Retiring generation is not marked for cleanup"
             );
         }
@@ -287,7 +351,7 @@ public class GenerationReconciliationService {
                     );
                     return false;
                 }
-                throw new IllegalStateException(
+                throw new CandidateStateException(
                         "Retiring generation has incompatible tombstone state: "
                                 + status
                 );
@@ -405,7 +469,7 @@ public class GenerationReconciliationService {
                 key.accessLevel()
         );
         if (purged != 1) {
-            throw new IllegalStateException(
+            throw new CandidateStateException(
                     "Retiring generation tombstone cannot be finalized"
             );
         }
@@ -428,7 +492,7 @@ public class GenerationReconciliationService {
                 key.generation()
         );
         if (retired != 1) {
-            throw new IllegalStateException(
+            throw new CandidateStateException(
                     "Retiring generation state changed during purge"
             );
         }
@@ -509,6 +573,26 @@ public class GenerationReconciliationService {
             verifyTombstone(key);
         }
 
+        int cleaned = jdbcTemplate.update(
+                """
+                UPDATE knowledge_document_generation
+                SET generation_status = 'CLEANED',
+                    cleaned_at = clock_timestamp(),
+                    cleanup_required = false,
+                    last_error = NULL
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND generation_status IN ('RETIRED', 'FAILED')
+                """,
+                key.documentId(),
+                key.generation()
+        );
+        if (cleaned != 1) {
+            throw new CandidateStateException(
+                    "Terminal generation state changed before CLEANED transition"
+            );
+        }
+
         audit.append(
                 before.total() == 0
                         ? "GENERATION_VERIFIED"
@@ -523,21 +607,7 @@ public class GenerationReconciliationService {
                         "generationStatus", row.status()
                 )
         );
-
-        return jdbcTemplate.update(
-                """
-                UPDATE knowledge_document_generation
-                SET generation_status = 'CLEANED',
-                    cleaned_at = clock_timestamp(),
-                    cleanup_required = false,
-                    last_error = NULL
-                WHERE document_id = ?
-                  AND generation = ?
-                  AND generation_status IN ('RETIRED', 'FAILED')
-                """,
-                key.documentId(),
-                key.generation()
-        ) == 1;
+        return true;
     }
 
     private void verifyTombstone(GenerationKey key) {
@@ -576,7 +646,7 @@ public class GenerationReconciliationService {
                 key.accessLevel()
         );
         if (alreadyVerified == null || alreadyVerified != 1) {
-            throw new IllegalStateException(
+            throw new CandidateStateException(
                     "Retired generation tombstone is missing"
             );
         }
@@ -636,7 +706,7 @@ public class GenerationReconciliationService {
             GenerationKey key
     ) {
         if (profileId == null || profileId.isBlank()) {
-            throw new IllegalStateException(
+            throw new CandidateStateException(
                     "Generation has no embedding profile: "
                             + key.documentId()
                             + "/"
@@ -644,7 +714,7 @@ public class GenerationReconciliationService {
             );
         }
         return profiles.findById(profileId)
-                .orElseThrow(() -> new IllegalStateException(
+                .orElseThrow(() -> new CandidateStateException(
                         "Missing embedding profile " + profileId
                 ));
     }
@@ -805,6 +875,14 @@ public class GenerationReconciliationService {
                     + referenceEdges
                     + associations
                     + manifests;
+        }
+    }
+
+    private static final class CandidateStateException
+            extends IllegalStateException {
+
+        CandidateStateException(String message) {
+            super(message);
         }
     }
 }
