@@ -57,8 +57,6 @@ public class CanonicalKnowledgeHasher {
         value.put("type", source.type().name());
         value.put("fileId", text(source.fileId()));
         value.put("sourceVersion", text(source.sourceVersion()));
-        value.put("fileName", text(source.fileName()));
-        value.put("mediaType", text(source.mediaType()));
         value.put("contentHash", text(source.contentHash()));
         return value;
     }
