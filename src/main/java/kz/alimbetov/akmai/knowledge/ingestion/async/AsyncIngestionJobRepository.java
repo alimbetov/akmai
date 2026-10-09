@@ -31,6 +31,13 @@ public class AsyncIngestionJobRepository {
             throw new IllegalArgumentException("async ingestion candidate is required");
         }
         return transactionTemplate.execute(status -> {
+            Optional<AsyncIngestionJob> existingEvent = findByEventId(
+                    candidate.eventId()
+            );
+            if (existingEvent.isPresent()) {
+                return requireMatchingEvent(candidate, existingEvent.get());
+            }
+
             int inserted = jdbcTemplate.update(
                     """
                     INSERT INTO knowledge_ingestion_job (
@@ -74,25 +81,36 @@ public class AsyncIngestionJobRepository {
                     candidate.artifactId()
             );
             if (inserted == 1) {
+                registerEventAlias(
+                        candidate.eventId(),
+                        candidate.ingestionId(),
+                        candidate.jobFingerprint()
+                );
                 return findRequired(candidate.ingestionId());
             }
 
-            Optional<AsyncIngestionJob> byEvent = findByEventId(candidate.eventId());
-            if (byEvent.isPresent()) {
-                AsyncIngestionJob existing = byEvent.get();
-                if (!existing.jobFingerprint().equals(candidate.jobFingerprint())) {
-                    throw new IdempotencyConflictException(
-                            "ASYNC_INGESTION_EVENT_REUSE",
-                            "eventId was already used for a different ingestion command"
-                    );
-                }
-                return existing;
+            existingEvent = findByEventId(candidate.eventId());
+            if (existingEvent.isPresent()) {
+                return requireMatchingEvent(candidate, existingEvent.get());
             }
 
-            return findByFingerprint(candidate.jobFingerprint()).orElseThrow(() ->
-                    new IllegalStateException(
-                            "Async ingestion admission conflict has no durable owner"
-                    ));
+            AsyncIngestionJob existing = findByFingerprint(
+                    candidate.jobFingerprint()
+            ).orElseThrow(() -> new IllegalStateException(
+                    "Async ingestion admission conflict has no durable owner"
+            ));
+            registerEventAlias(
+                    candidate.eventId(),
+                    existing.ingestionId(),
+                    candidate.jobFingerprint()
+            );
+            return requireMatchingEvent(
+                    candidate,
+                    findByEventId(candidate.eventId()).orElseThrow(() ->
+                            new IllegalStateException(
+                                    "Async ingestion event alias disappeared"
+                            ))
+            );
         });
     }
 
@@ -112,11 +130,16 @@ public class AsyncIngestionJobRepository {
     }
 
     public Optional<AsyncIngestionJob> findByEventId(String eventId) {
+        if (eventId == null || eventId.isBlank()) {
+            return Optional.empty();
+        }
         return jdbcTemplate.query(
                 """
-                SELECT *
-                FROM knowledge_ingestion_job
-                WHERE event_id = ?
+                SELECT j.*
+                FROM knowledge_ingestion_job_event e
+                JOIN knowledge_ingestion_job j
+                  ON j.ingestion_id = e.ingestion_id
+                WHERE e.event_id = ?
                 """,
                 this::map,
                 eventId
@@ -353,6 +376,69 @@ public class AsyncIngestionJobRepository {
         return count == null ? 0L : count;
     }
 
+    private void registerEventAlias(
+            String eventId,
+            UUID ingestionId,
+            String fingerprint
+    ) {
+        jdbcTemplate.update(
+                """
+                INSERT INTO knowledge_ingestion_job_event (
+                    event_id, ingestion_id, job_fingerprint, created_at
+                ) VALUES (?, ?, ?, clock_timestamp())
+                ON CONFLICT (event_id) DO NOTHING
+                """,
+                eventId,
+                ingestionId,
+                fingerprint
+        );
+        EventAlias alias = jdbcTemplate.query(
+                """
+                SELECT event_id, ingestion_id, job_fingerprint
+                FROM knowledge_ingestion_job_event
+                WHERE event_id = ?
+                """,
+                (rs, rowNum) -> new EventAlias(
+                        rs.getString("event_id"),
+                        rs.getObject("ingestion_id", UUID.class),
+                        rs.getString("job_fingerprint")
+                ),
+                eventId
+        ).stream().findFirst().orElseThrow(() ->
+                new IllegalStateException("Async ingestion event alias disappeared"));
+        if (!fingerprint.equals(alias.jobFingerprint())) {
+            throw new IdempotencyConflictException(
+                    "ASYNC_INGESTION_EVENT_REUSE",
+                    "eventId was already used for a different ingestion command"
+            );
+        }
+        if (!ingestionId.equals(alias.ingestionId())) {
+            AsyncIngestionJob aliased = find(alias.ingestionId()).orElseThrow(() ->
+                    new IllegalStateException(
+                            "Async ingestion event alias references missing job"
+                    ));
+            if (!fingerprint.equals(aliased.jobFingerprint())) {
+                throw new IdempotencyConflictException(
+                        "ASYNC_INGESTION_EVENT_REUSE",
+                        "eventId was already used for a different ingestion command"
+                );
+            }
+        }
+    }
+
+    private AsyncIngestionJob requireMatchingEvent(
+            AsyncIngestionJob candidate,
+            AsyncIngestionJob existing
+    ) {
+        if (!existing.jobFingerprint().equals(candidate.jobFingerprint())) {
+            throw new IdempotencyConflictException(
+                    "ASYNC_INGESTION_EVENT_REUSE",
+                    "eventId was already used for a different ingestion command"
+            );
+        }
+        return existing;
+    }
+
     private AsyncIngestionJob findRequired(UUID ingestionId) {
         return find(ingestionId).orElseThrow(() ->
                 new IllegalStateException("Async ingestion job disappeared after insert"));
@@ -438,5 +524,12 @@ public class AsyncIngestionJobRepository {
         }
         String clean = value.replaceAll("[\\r\\n\\t]+", " ").trim();
         return clean.length() <= 1000 ? clean : clean.substring(0, 1000);
+    }
+
+    private record EventAlias(
+            String eventId,
+            UUID ingestionId,
+            String jobFingerprint
+    ) {
     }
 }
