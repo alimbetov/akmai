@@ -23,8 +23,19 @@ For stateful/concurrent processes, document additionally:
 - idempotency/retry behavior;
 - partial-write prevention and rollback expectations.
 
+## Integration/API contracts
+
+Use [`external-api-contracts.md`](external-api-contracts.md) as the current integration entry point for:
+
+- published knowledge-ingestion HTTP contracts;
+- the FileService `CanonicalKnowledgeDocument -> KnowledgeIngestionResult` service boundary;
+- exact distinction between service-level contracts and published REST endpoints;
+- `POST /api/rag/ask` question/answer examples;
+- `RagResponse` sources and canonical-block provenance;
+- feedback and common API error envelopes.
+
 ## Inventory
 
-The inventory will be maintained in `service-inventory.md` and expanded service-by-service from the current codebase.
+The inventory is maintained in `service-inventory.md` and expanded service-by-service from the current codebase.
 
 Use `service-template.md` as the required structure for each service contract.
