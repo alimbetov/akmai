@@ -27,8 +27,7 @@ public record AsyncIngestionStatusResponse(
 
     public record Error(
             String classification,
-            String code,
-            String message
+            String code
     ) {
     }
 }
