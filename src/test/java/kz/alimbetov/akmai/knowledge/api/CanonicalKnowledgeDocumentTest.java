@@ -10,18 +10,39 @@ import org.junit.jupiter.api.Test;
 
 class CanonicalKnowledgeDocumentTest {
 
+    private static final String CONTENT_HASH = "sha256:" + "a".repeat(64);
+
     @Test
     void rejectsUnsupportedSchemaVersion() {
-        assertThatThrownBy(() -> document(2, "1", "1", blocks(), Map.of()))
+        assertThatThrownBy(() -> document(2, "1", "1", CONTENT_HASH, blocks(), Map.of()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("schemaVersion");
     }
 
     @Test
     void rejectsSourceVersionDifferentFromDocumentVersion() {
-        assertThatThrownBy(() -> document(1, "2", "1", blocks(), Map.of()))
+        assertThatThrownBy(() -> document(1, "2", "1", CONTENT_HASH, blocks(), Map.of()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("source.sourceVersion");
+    }
+
+    @Test
+    void rejectsMalformedContentHash() {
+        assertThatThrownBy(() -> document(1, "1", "1", "sha256:not-a-digest", blocks(), Map.of()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("64 hex");
+    }
+
+    @Test
+    void rejectsUrlAsStorageObjectKey() {
+        assertThatThrownBy(() -> new CanonicalKnowledgeDocument.StorageReference(
+                "rustfs",
+                "knowledge",
+                "https://storage.local/object?signature=secret",
+                null
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("not a URL");
     }
 
     @Test
@@ -31,7 +52,7 @@ class CanonicalKnowledgeDocumentTest {
                 block("b-1", "Second")
         );
 
-        assertThatThrownBy(() -> document(1, "1", "1", duplicate, Map.of()))
+        assertThatThrownBy(() -> document(1, "1", "1", CONTENT_HASH, duplicate, Map.of()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("duplicate canonical blockId");
     }
@@ -58,6 +79,7 @@ class CanonicalKnowledgeDocumentTest {
                 1,
                 "1",
                 "1",
+                CONTENT_HASH,
                 blocks(),
                 Map.of("authorization", "Bearer secret-token")
         ))
@@ -71,6 +93,7 @@ class CanonicalKnowledgeDocumentTest {
                 1,
                 "1",
                 "1",
+                CONTENT_HASH,
                 blocks(),
                 Map.of(
                         "sourceInfo",
@@ -88,6 +111,7 @@ class CanonicalKnowledgeDocumentTest {
             int schemaVersion,
             String version,
             String sourceVersion,
+            String contentHash,
             List<CanonicalKnowledgeDocument.Block> blocks,
             Map<String, Object> metadata
     ) {
@@ -105,7 +129,7 @@ class CanonicalKnowledgeDocumentTest {
                         sourceVersion,
                         "document.pdf",
                         "application/pdf",
-                        "sha256:source",
+                        contentHash,
                         new CanonicalKnowledgeDocument.StorageReference(
                                 "rustfs",
                                 "knowledge",
