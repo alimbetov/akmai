@@ -71,10 +71,9 @@ class AsyncIngestionControllerTest {
     }
 
     @Test
-    void statusChecksAccessLevelBeforeReturningJob() throws Exception {
+    void statusUsesSingleReadForAccessCheckAndResponse() throws Exception {
         UUID ingestionId = UUID.randomUUID();
-        when(admissionService.accessLevel(ingestionId)).thenReturn(7L);
-        when(admissionService.status(ingestionId)).thenReturn(
+        AsyncIngestionStatusResponse response =
                 new AsyncIngestionStatusResponse(
                         1,
                         ingestionId,
@@ -87,16 +86,17 @@ class AsyncIngestionControllerTest {
                         Instant.parse("2026-10-09T00:00:00Z"),
                         Instant.parse("2026-10-09T00:00:01Z"),
                         null
-                )
+                );
+        when(admissionService.statusView(ingestionId)).thenReturn(
+                new AsyncIngestionAdmissionService.StatusView(7L, response)
         );
 
         mockMvc.perform(get("/api/knowledge/ingestions/{id}", ingestionId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PROCESSING"));
 
-        verify(admissionService).accessLevel(ingestionId);
+        verify(admissionService).statusView(ingestionId);
         verify(authorizer).requireWriteAccess(7L);
-        verify(admissionService).status(ingestionId);
     }
 
     private CanonicalKnowledgeDocument document() {
