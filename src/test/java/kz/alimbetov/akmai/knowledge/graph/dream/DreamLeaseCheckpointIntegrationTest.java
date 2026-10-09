@@ -6,7 +6,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
-import java.util.Optional;
 import java.util.UUID;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import liquibase.integration.spring.SpringLiquibase;
@@ -221,9 +220,9 @@ class DreamLeaseCheckpointIntegrationTest {
                 null,
                 UUID.randomUUID()
         );
-        assertThat(checkpoint.find(1, POLICY_FINGERPRINT))
-                .map(DreamCheckpointRepository.Checkpoint::rescanCursor)
-                .isEqualTo(Optional.ofNullable(null));
+        assertThat(checkpoint.find(1, POLICY_FINGERPRINT)
+                .orElseThrow()
+                .rescanCursor()).isNull();
     }
 
     private DreamLeaseManager manager(String ownerId) {
