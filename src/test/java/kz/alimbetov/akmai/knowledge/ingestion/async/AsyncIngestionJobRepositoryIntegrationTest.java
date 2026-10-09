@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.UUID;
 import kz.alimbetov.akmai.knowledge.idempotency.IdempotencyConflictException;
 import liquibase.integration.spring.SpringLiquibase;
@@ -178,7 +177,7 @@ class AsyncIngestionJobRepositoryIntegrationTest {
 
         assertThat(repository.markRetry(
                 claim,
-                Instant.now().plusSeconds(60),
+                Duration.ofSeconds(60),
                 false,
                 "RETRYABLE",
                 "INGESTION_IN_PROGRESS",
