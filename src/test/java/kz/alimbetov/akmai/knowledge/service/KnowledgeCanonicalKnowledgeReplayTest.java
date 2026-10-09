@@ -31,11 +31,10 @@ class KnowledgeCanonicalKnowledgeReplayTest {
         Fixture fixture = fixture();
         CanonicalKnowledgeDocument document = document();
         when(fixture.fingerprint.canonicalHash(document)).thenReturn("canonical-hash");
-        when(fixture.fingerprint.fingerprint(document)).thenReturn("request-fingerprint");
         when(fixture.idempotency.claim(
                 "key",
                 "doc-1",
-                "request-fingerprint",
+                "canonical-hash",
                 Duration.ofMinutes(5)
         )).thenReturn(IngestionIdempotencyRepository.ClaimResult.replay(
                 new KnowledgeIngestionResponse("doc-1", 3),
@@ -68,11 +67,10 @@ class KnowledgeCanonicalKnowledgeReplayTest {
         Fixture fixture = fixture();
         CanonicalKnowledgeDocument document = document();
         when(fixture.fingerprint.canonicalHash(document)).thenReturn("canonical-hash");
-        when(fixture.fingerprint.fingerprint(document)).thenReturn("request-fingerprint");
         when(fixture.idempotency.claim(
                 "key",
                 "doc-1",
-                "request-fingerprint",
+                "canonical-hash",
                 Duration.ofMinutes(5)
         )).thenReturn(IngestionIdempotencyRepository.ClaimResult.replay(
                 new KnowledgeIngestionResponse("doc-1", 3)
