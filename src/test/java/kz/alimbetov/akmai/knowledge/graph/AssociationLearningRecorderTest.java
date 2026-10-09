@@ -50,14 +50,14 @@ class AssociationLearningRecorderTest {
     }
 
     @Test
-    void runtimeParameterCanEnableLearningWithoutRestart() {
+    void authoritativeRuntimeParameterCanEnableLearningWithoutRestart() {
         AdaptiveChunkGraphRepository repository =
                 mock(AdaptiveChunkGraphRepository.class);
         AdaptiveGraphProperties properties =
                 properties(false, SECRET);
         AppParameterService appParameters =
                 mock(AppParameterService.class);
-        when(appParameters.isEnabled(
+        when(appParameters.isEnabledAuthoritative(
                 AppParameterKey.ADAPTIVE_GRAPH_LEARNING_ENABLED
         )).thenReturn(true);
 
