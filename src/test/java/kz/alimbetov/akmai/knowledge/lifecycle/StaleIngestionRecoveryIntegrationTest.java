@@ -266,6 +266,117 @@ class StaleIngestionRecoveryIntegrationTest {
     }
 
     @Test
+    void activeClaimForDifferentGenerationDoesNotProtectStaleCandidate() {
+        long staleGeneration = generations.allocate(
+                "doc-multi",
+                RetentionPolicy.PERMANENT,
+                null,
+                profile.profileId(),
+                "fp-old",
+                1L
+        );
+        long activeGeneration = generations.allocate(
+                "doc-multi",
+                RetentionPolicy.PERMANENT,
+                null,
+                profile.profileId(),
+                "fp-new",
+                1L
+        );
+        jdbc.update(
+                """
+                UPDATE knowledge_document_generation
+                SET started_at = clock_timestamp() - interval '2 hours'
+                WHERE document_id = 'doc-multi'
+                  AND generation = ?
+                """,
+                staleGeneration
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_ingestion_request (
+                    idempotency_key, document_id, request_fingerprint,
+                    request_status, generation, claim_id, lease_until,
+                    created_at, updated_at
+                ) VALUES (
+                    'active-new-key', 'doc-multi', 'fp-new',
+                    'IN_PROGRESS', ?, ?,
+                    clock_timestamp() + interval '15 minutes',
+                    clock_timestamp(), clock_timestamp()
+                )
+                """,
+                activeGeneration,
+                UUID.randomUUID()
+        );
+
+        int recovered = generations.failStaleIngestionBatch(
+                Duration.ofMinutes(30),
+                10
+        );
+
+        assertThat(recovered).isEqualTo(1);
+        assertThat(status("doc-multi", staleGeneration)).isEqualTo("FAILED");
+        assertThat(status("doc-multi", activeGeneration)).isEqualTo("STAGING");
+    }
+
+    @Test
+    void terminalIdempotencyRowsDoNotProtectStaleGenerations() {
+        long succeededGeneration = generations.allocate(
+                "doc-succeeded-request",
+                RetentionPolicy.PERMANENT,
+                null,
+                profile.profileId(),
+                "fp-succeeded",
+                1L
+        );
+        long failedGeneration = generations.allocate(
+                "doc-failed-request",
+                RetentionPolicy.PERMANENT,
+                null,
+                profile.profileId(),
+                "fp-failed",
+                1L
+        );
+        jdbc.update(
+                """
+                UPDATE knowledge_document_generation
+                SET started_at = clock_timestamp() - interval '2 hours'
+                WHERE document_id IN ('doc-succeeded-request', 'doc-failed-request')
+                """
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_ingestion_request (
+                    idempotency_key, document_id, request_fingerprint,
+                    request_status, generation, claim_id, lease_until,
+                    created_at, updated_at
+                ) VALUES
+                    ('succeeded-key', 'doc-succeeded-request', 'fp-succeeded',
+                     'SUCCEEDED', ?, ?, clock_timestamp() + interval '15 minutes',
+                     clock_timestamp(), clock_timestamp()),
+                    ('failed-key', 'doc-failed-request', 'fp-failed',
+                     'FAILED', ?, ?, clock_timestamp() + interval '15 minutes',
+                     clock_timestamp(), clock_timestamp())
+                """,
+                succeededGeneration,
+                UUID.randomUUID(),
+                failedGeneration,
+                UUID.randomUUID()
+        );
+
+        int recovered = generations.failStaleIngestionBatch(
+                Duration.ofMinutes(30),
+                10
+        );
+
+        assertThat(recovered).isEqualTo(2);
+        assertThat(status("doc-succeeded-request", succeededGeneration))
+                .isEqualTo("FAILED");
+        assertThat(status("doc-failed-request", failedGeneration))
+                .isEqualTo("FAILED");
+    }
+
+    @Test
     void lockedOldestStaleGenerationDoesNotStarveLaterCandidate()
             throws Exception {
         long lockedGeneration = generations.allocate(
