@@ -95,12 +95,9 @@ public class AsyncIngestionAdmissionService {
         return acceptedResponse(accepted);
     }
 
-    public AsyncIngestionStatusResponse status(UUID ingestionId) {
-        return statusResponse(requireJob(ingestionId));
-    }
-
-    public long accessLevel(UUID ingestionId) {
-        return requireJob(ingestionId).accessLevel();
+    public StatusView statusView(UUID ingestionId) {
+        AsyncIngestionJob job = requireJob(ingestionId);
+        return new StatusView(job.accessLevel(), statusResponse(job));
     }
 
     private AsyncIngestionJob requireJob(UUID ingestionId) {
@@ -215,5 +212,11 @@ public class AsyncIngestionAdmissionService {
             return null;
         }
         return value.trim();
+    }
+
+    public record StatusView(
+            long accessLevel,
+            AsyncIngestionStatusResponse response
+    ) {
     }
 }
