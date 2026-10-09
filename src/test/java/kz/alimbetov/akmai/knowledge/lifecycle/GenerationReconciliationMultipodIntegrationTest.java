@@ -7,6 +7,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import kz.alimbetov.akmai.config.ReconciliationProperties;
 import kz.alimbetov.akmai.knowledge.audit.AuditEventRepository;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
@@ -195,6 +202,59 @@ class GenerationReconciliationMultipodIntegrationTest {
     }
 
     @Test
+    void sixReplicaStormEventuallyCleansWholeEligibleCorpus() throws Exception {
+        int documents = 12;
+        for (int index = 0; index < documents; index++) {
+            String documentId = "doc-storm-" + index;
+            insertLifecycle(documentId, 2L);
+            insertGeneration(documentId, 1L, "FAILED");
+        }
+
+        int replicas = 6;
+        ExecutorService executor = Executors.newFixedThreadPool(replicas);
+        CyclicBarrier start = new CyclicBarrier(replicas);
+        List<Future<?>> futures = new ArrayList<>();
+        try {
+            for (int replica = 0; replica < replicas; replica++) {
+                futures.add(executor.submit(() -> {
+                    await(start);
+                    for (int tick = 0; tick < documents; tick++) {
+                        reconciliation.reconcileBatch();
+                    }
+                }));
+            }
+            for (Future<?> future : futures) {
+                future.get(15, TimeUnit.SECONDS);
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+
+        Integer cleaned = jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_document_generation
+                WHERE document_id LIKE 'doc-storm-%'
+                  AND generation = 1
+                  AND generation_status = 'CLEANED'
+                """,
+                Integer.class
+        );
+        assertThat(cleaned).isEqualTo(documents);
+
+        Integer auditRows = jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_audit_event
+                WHERE event_type = 'GENERATION_VERIFIED'
+                  AND entity_id LIKE 'doc-storm-%'
+                """,
+                Integer.class
+        );
+        assertThat(auditRows).isEqualTo(documents);
+    }
+
+    @Test
     void freshPurgingTombstoneIsNotStolenButStaleClaimIsRecovered() {
         insertLifecycle("doc-purge", 2L);
         insertGeneration("doc-purge", 1L, "RETIRING");
@@ -239,6 +299,14 @@ class GenerationReconciliationMultipodIntegrationTest {
         assertThat(reconciliation.reconcileBatch()).isZero();
         assertThat(status("doc-purge", 1L)).isEqualTo("RETIRED");
         assertThat(tombstoneStatus("doc-purge", 1L)).isEqualTo("PURGED");
+    }
+
+    private void await(CyclicBarrier barrier) {
+        try {
+            barrier.await(5, TimeUnit.SECONDS);
+        } catch (Exception exception) {
+            throw new IllegalStateException(exception);
+        }
     }
 
     private void insertLifecycle(String documentId, long publishedGeneration) {
