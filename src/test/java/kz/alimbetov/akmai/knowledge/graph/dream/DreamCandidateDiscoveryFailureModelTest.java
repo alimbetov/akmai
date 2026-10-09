@@ -158,7 +158,7 @@ class DreamCandidateDiscoveryFailureModelTest {
     }
 
     @Test
-    void activePairMissingFromCurrentForwardTopKBecomesStale() {
+    void activePairMissingFromCurrentForwardTopKRetiresAtomically() {
         when(neighbors.search(
                 any(float[].class),
                 any(),
@@ -173,13 +173,16 @@ class DreamCandidateDiscoveryFailureModelTest {
                 POLICY_FINGERPRINT,
                 source.node()
         )).thenReturn(List.of(pair));
-        when(candidates.markStaleIfActive(
+        when(priorWriter.retireCandidate(
                 eq(authority),
                 eq(pair),
                 any(),
                 eq("not-in-forward-topk"),
+                any(),
                 any()
-        )).thenReturn(true);
+        )).thenReturn(
+                SemanticGraphPriorWriter.RetirementResult.CANDIDATE_AND_PRIOR
+        );
 
         DreamCandidateDiscovery.DiscoveryReport report = discovery.discover(
                 List.of(source),
@@ -191,11 +194,15 @@ class DreamCandidateDiscoveryFailureModelTest {
         );
 
         assertThat(report.persistedCandidates()).isEqualTo(1);
-        assertThat(report.budget().dbRowsTouched()).isEqualTo(1);
-        verify(candidates, never()).observe(any(), any());
-        verify(priorWriter, never()).applyCandidate(
-                any(), any(), anyDouble(), any()
+        verify(priorWriter).retireCandidate(
+                eq(authority),
+                eq(pair),
+                any(),
+                eq("not-in-forward-topk"),
+                any(),
+                any()
         );
+        verify(candidates, never()).observe(any(), any());
     }
 
     @Test
@@ -225,13 +232,16 @@ class DreamCandidateDiscoveryFailureModelTest {
                 33,
                 false
         ));
-        when(candidates.markStaleIfActive(
+        when(priorWriter.retireCandidate(
                 eq(authority),
                 eq(pair),
                 any(),
                 eq("lifecycle-ineligible"),
+                any(),
                 any()
-        )).thenReturn(true);
+        )).thenReturn(
+                SemanticGraphPriorWriter.RetirementResult.CANDIDATE_AND_PRIOR
+        );
 
         DreamCandidateDiscovery.DiscoveryReport report = discovery.discover(
                 List.of(source),
@@ -244,13 +254,18 @@ class DreamCandidateDiscoveryFailureModelTest {
 
         assertThat(report.persistedCandidates()).isEqualTo(1);
         verify(candidates, never()).observe(any(), any());
-        verify(priorWriter, never()).applyCandidate(
-                any(), any(), anyDouble(), any()
+        verify(priorWriter).retireCandidate(
+                eq(authority),
+                eq(pair),
+                any(),
+                eq("lifecycle-ineligible"),
+                any(),
+                any()
         );
     }
 
     @Test
-    void dbRowBudgetIsCheckedBeforeStaleCandidateMutation() {
+    void retirementBudgetIsCheckedInsideRestrictedWriterBeforeMutation() {
         when(neighbors.search(
                 any(float[].class),
                 any(),
@@ -265,9 +280,20 @@ class DreamCandidateDiscoveryFailureModelTest {
                 POLICY_FINGERPRINT,
                 source.node()
         )).thenReturn(List.of(pair));
+        when(priorWriter.retireCandidate(
+                eq(authority),
+                eq(pair),
+                any(),
+                eq("not-in-forward-topk"),
+                any(),
+                any()
+        )).thenAnswer(invocation -> {
+            DreamBudget actualBudget = invocation.getArgument(5);
+            actualBudget.addDbRows(3);
+            return SemanticGraphPriorWriter.RetirementResult.CANDIDATE_AND_PRIOR;
+        });
 
-        DreamBudget budget = budget(1);
-        budget.addDbRows(1);
+        DreamBudget budget = budget(2);
 
         assertThatThrownBy(() -> discovery.discover(
                 List.of(source),
@@ -280,10 +306,6 @@ class DreamCandidateDiscoveryFailureModelTest {
                 .satisfies(error -> assertThat(
                         ((DreamBudget.BudgetExhaustedException) error).reason()
                 ).isEqualTo(DreamBudget.StopReason.MAX_DB_ROWS));
-
-        verify(candidates, never()).markStaleIfActive(
-                any(), any(), any(), any(), any()
-        );
     }
 
     private DreamBudget budget(long dbRows) {
