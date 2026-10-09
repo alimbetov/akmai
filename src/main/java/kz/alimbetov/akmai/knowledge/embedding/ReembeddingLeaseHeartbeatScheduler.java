@@ -18,7 +18,7 @@ public class ReembeddingLeaseHeartbeatScheduler {
     }
 
     @Scheduled(
-            fixedDelayString = "${AKMAI_REEMBEDDING_HEARTBEAT_INTERVAL:15s}"
+            fixedDelayString = "${akmai.reembedding.heartbeat-interval:15s}"
     )
     public void heartbeat() {
         leases.renewOwnedActiveLeases();

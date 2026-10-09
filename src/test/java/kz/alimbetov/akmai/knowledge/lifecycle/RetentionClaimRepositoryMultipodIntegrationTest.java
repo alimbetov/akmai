@@ -2,7 +2,11 @@ package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.sql.Connection;
+import java.time.Duration;
+import java.util.List;
 import liquibase.integration.spring.SpringLiquibase;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,7 +20,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 @Testcontainers
-class RetentionBacklogIntegrationTest {
+class RetentionClaimRepositoryMultipodIntegrationTest {
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
@@ -28,12 +32,15 @@ class RetentionBacklogIntegrationTest {
                     .withUsername("akmai")
                     .withPassword("akmai");
 
+    static PGSimpleDataSource dataSource;
     static JdbcTemplate jdbc;
     static RetentionClaimRepository repository;
 
+    Connection blockingConnection;
+
     @BeforeAll
     static void migrate() throws Exception {
-        PGSimpleDataSource dataSource = new PGSimpleDataSource();
+        dataSource = new PGSimpleDataSource();
         dataSource.setURL(POSTGRES.getJdbcUrl());
         dataSource.setUser(POSTGRES.getUsername());
         dataSource.setPassword(POSTGRES.getPassword());
@@ -58,103 +65,125 @@ class RetentionBacklogIntegrationTest {
     void clean() {
         jdbc.update("DELETE FROM knowledge_document_generation");
         jdbc.update("DELETE FROM knowledge_document_lifecycle");
+        jdbc.update(
+                """
+                UPDATE knowledge_embedding_runtime
+                SET migration_status = 'IDLE'
+                WHERE singleton_id = 1
+                """
+        );
+    }
+
+    @AfterEach
+    void releaseBlockingConnection() throws Exception {
+        if (blockingConnection != null) {
+            blockingConnection.rollback();
+            blockingConnection.close();
+            blockingConnection = null;
+        }
     }
 
     @Test
-    void backlogReflectsEligibleLifecycleRowsAndExcludesStagingDocuments() {
-        seedPublished("expired", "clock_timestamp() - interval '1 hour'");
-        seedPublished("future", "clock_timestamp() + interval '1 hour'");
-        seedPublished("staging", "clock_timestamp() - interval '2 hours'");
-        jdbc.update(
+    void lockedCandidateIsSkippedAndAnotherExpiredDocumentIsClaimed()
+            throws Exception {
+        seedPublished("doc-a", "clock_timestamp() - interval '2 hours'");
+        seedPublished("doc-b", "clock_timestamp() - interval '1 hour'");
+
+        blockingConnection = dataSource.getConnection();
+        blockingConnection.setAutoCommit(false);
+        try (var statement = blockingConnection.prepareStatement(
                 """
-                INSERT INTO knowledge_document_generation (
-                    document_id, generation, generation_status,
-                    generation_kind, physical_id_version,
-                    cleanup_required, started_at, access_level
-                ) VALUES (
-                    'staging', 2, 'STAGING',
-                    'INGESTION', 2,
-                    false, clock_timestamp(), 1
-                )
+                SELECT document_id
+                FROM knowledge_document_lifecycle
+                WHERE document_id = 'doc-a'
+                FOR UPDATE
                 """
+        )) {
+            statement.executeQuery().close();
+        }
+
+        List<RetentionClaim> claims = repository.claimExpired(
+                1,
+                3,
+                "pod-b",
+                Duration.ofMinutes(10)
         );
 
-        assertThat(repository.countEligibleBacklog(3)).isEqualTo(1);
-
-        jdbc.update(
+        assertThat(claims).hasSize(1);
+        assertThat(claims.getFirst().documentId()).isEqualTo("doc-b");
+        assertThat(jdbc.queryForObject(
                 """
-                UPDATE knowledge_document_lifecycle
-                SET expires_at = clock_timestamp() - interval '1 minute'
-                WHERE document_id = 'future'
-                """
-        );
-
-        assertThat(repository.countEligibleBacklog(3)).isEqualTo(2);
+                SELECT retention_status
+                FROM knowledge_document_lifecycle
+                WHERE document_id = 'doc-b'
+                """,
+                String.class
+        )).isEqualTo("DELETE_PENDING");
     }
 
     @Test
-    void expiredOwnedClaimBecomesBacklogButLiveLeaseDoesNot() {
-        seedPublished("expired-claim", "clock_timestamp() - interval '2 hours'");
-        seedPublished("live-claim", "clock_timestamp() - interval '2 hours'");
-
+    void expiredLeaseCanBeReclaimedByAnotherWorker() {
+        seedPublished("doc-expired", "clock_timestamp() - interval '2 hours'");
         jdbc.update(
                 """
                 UPDATE knowledge_document_lifecycle
-                SET retention_status = 'DELETE_PENDING',
-                    lifecycle_status = 'DELETE_PENDING',
+                SET retention_status = 'DELETING',
+                    lifecycle_status = 'DELETING',
                     claim_generation = 1,
                     claim_id = '11111111-1111-1111-1111-111111111111'::uuid,
                     claimed_by = 'pod-a',
                     claimed_at = clock_timestamp() - interval '20 minutes',
                     lease_until = clock_timestamp() - interval '1 minute'
-                WHERE document_id = 'expired-claim'
-                """
-        );
-        jdbc.update(
-                """
-                UPDATE knowledge_document_lifecycle
-                SET retention_status = 'DELETE_PENDING',
-                    lifecycle_status = 'DELETE_PENDING',
-                    claim_generation = 1,
-                    claim_id = '22222222-2222-2222-2222-222222222222'::uuid,
-                    claimed_by = 'pod-b',
-                    claimed_at = clock_timestamp(),
-                    lease_until = clock_timestamp() + interval '10 minutes'
-                WHERE document_id = 'live-claim'
+                WHERE document_id = 'doc-expired'
                 """
         );
 
-        assertThat(repository.countEligibleBacklog(3)).isEqualTo(1);
+        List<RetentionClaim> claims = repository.claimExpired(
+                1,
+                3,
+                "pod-b",
+                Duration.ofMinutes(10)
+        );
+
+        assertThat(claims).hasSize(1);
+        RetentionClaim claim = claims.getFirst();
+        assertThat(claim.documentId()).isEqualTo("doc-expired");
+        assertThat(claim.workerId()).isEqualTo("pod-b");
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT claimed_by
+                FROM knowledge_document_lifecycle
+                WHERE document_id = 'doc-expired'
+                """,
+                String.class
+        )).isEqualTo("pod-b");
     }
 
     @Test
-    void retryExhaustedFailureIsExcludedFromWorkBacklogButCountedSeparately() {
-        seedPublished("retryable", "clock_timestamp() - interval '2 hours'");
-        seedPublished("dead-letter", "clock_timestamp() - interval '2 hours'");
-
+    void activeEmbeddingMigrationPausesClaiming() {
+        seedPublished("doc-migration", "clock_timestamp() - interval '2 hours'");
         jdbc.update(
                 """
-                UPDATE knowledge_document_lifecycle
-                SET retention_status = 'DELETE_FAILED',
-                    lifecycle_status = 'DELETE_FAILED',
-                    attempt_count = 2,
-                    last_error = 'retryable failure'
-                WHERE document_id = 'retryable'
-                """
-        );
-        jdbc.update(
-                """
-                UPDATE knowledge_document_lifecycle
-                SET retention_status = 'DELETE_FAILED',
-                    lifecycle_status = 'DELETE_FAILED',
-                    attempt_count = 3,
-                    last_error = 'retry limit exhausted'
-                WHERE document_id = 'dead-letter'
+                UPDATE knowledge_embedding_runtime
+                SET migration_status = 'RUNNING'
+                WHERE singleton_id = 1
                 """
         );
 
-        assertThat(repository.countEligibleBacklog(3)).isEqualTo(1);
-        assertThat(repository.countRetryExhausted(3)).isEqualTo(1);
+        assertThat(repository.claimExpired(
+                1,
+                3,
+                "pod-a",
+                Duration.ofMinutes(10)
+        )).isEmpty();
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT retention_status
+                FROM knowledge_document_lifecycle
+                WHERE document_id = 'doc-migration'
+                """,
+                String.class
+        )).isEqualTo("ACTIVE");
     }
 
     private void seedPublished(String documentId, String expiresExpression) {
