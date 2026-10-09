@@ -47,8 +47,22 @@ public class AppParameterService {
                 .build();
     }
 
+    /**
+     * Cached/fail-safe runtime read. This is suitable only for optional paths
+     * where a bounded stale/LKG/static value is an explicitly accepted
+     * availability trade-off.
+     */
     public boolean isEnabled(AppParameterKey key) {
         return get(key).value();
+    }
+
+    /**
+     * Authoritative database read for mutation-capable safety gates. Database
+     * unavailability is surfaced to the caller and never converted into a
+     * last-known-good or static fallback value.
+     */
+    public boolean isEnabledAuthoritative(AppParameterKey key) {
+        return getAuthoritative(key).value();
     }
 
     public ResolvedAppParameter get(AppParameterKey key) {
@@ -125,9 +139,12 @@ public class AppParameterService {
             updated = repository.updateBoolean(
                             key.key(), value, expectedVersion, actor
                     )
-                    .orElseThrow(() -> new AppParameterConflictException(
-                            key.key(), expectedVersion
-                    ));
+                    .orElseThrow(() -> {
+                        invalidateLocalState(key);
+                        return new AppParameterConflictException(
+                                key.key(), expectedVersion
+                        );
+                    });
         } catch (DataAccessException exception) {
             throw new AppParameterUnavailableException(exception);
         }
@@ -266,7 +283,7 @@ public class AppParameterService {
                 LOGGER.warn("app_parameter_read event=missing key={}", key.key());
                 return lastKnownOrFallback(key);
             }
-            lastKnownGood.put(key, resolved);
+            remember(key, resolved);
             return resolved;
         } catch (DataAccessException exception) {
             LOGGER.warn(
@@ -286,8 +303,31 @@ public class AppParameterService {
             AppParameterKey key,
             ResolvedAppParameter value
     ) {
-        lastKnownGood.put(key, value);
-        cache.put(key, value);
+        ResolvedAppParameter effective = lastKnownGood.compute(
+                key,
+                (ignored, current) -> newer(current, value) ? value : current
+        );
+        cache.put(key, effective);
+    }
+
+    private boolean newer(
+            ResolvedAppParameter current,
+            ResolvedAppParameter candidate
+    ) {
+        if (current == null) {
+            return true;
+        }
+        Long currentVersion = current.version();
+        Long candidateVersion = candidate.version();
+        if (candidateVersion == null) {
+            return currentVersion == null;
+        }
+        return currentVersion == null || candidateVersion >= currentVersion;
+    }
+
+    private void invalidateLocalState(AppParameterKey key) {
+        cache.invalidate(key);
+        lastKnownGood.remove(key);
     }
 
     private ResolvedAppParameter fallback(AppParameterKey key) {
