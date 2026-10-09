@@ -156,7 +156,7 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
         }
         String canonicalHash = requestFingerprint.canonicalHash(document);
         String fingerprint = requiresIdempotency(idempotencyKey)
-                ? requestFingerprint.fingerprint(document)
+                ? canonicalHash
                 : null;
         ClaimOutcome claim = claimOutcome(
                 idempotencyKey,
