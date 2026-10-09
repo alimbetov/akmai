@@ -190,12 +190,10 @@ public class AsyncIngestionAdmissionService {
         AsyncIngestionStatusResponse.Error error =
                 job.lastErrorClass() == null
                         && job.lastErrorCode() == null
-                        && job.lastErrorMessage() == null
                         ? null
                         : new AsyncIngestionStatusResponse.Error(
                                 job.lastErrorClass(),
-                                job.lastErrorCode(),
-                                job.lastErrorMessage()
+                                job.lastErrorCode()
                         );
         return new AsyncIngestionStatusResponse(
                 AsyncIngestionStatusResponse.CURRENT_SCHEMA_VERSION,
