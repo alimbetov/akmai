@@ -19,6 +19,7 @@ public class GenerationReconciliationService {
 
     private static final Logger LOGGER =
             LoggerFactory.getLogger(GenerationReconciliationService.class);
+    private static final int CANDIDATE_SCAN_MULTIPLIER = 4;
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
@@ -52,6 +53,7 @@ public class GenerationReconciliationService {
             return 0;
         }
 
+        int batchSize = properties.batchSize();
         var candidates = jdbcTemplate.query(
                 """
                 SELECT g.document_id,
@@ -104,13 +106,21 @@ public class GenerationReconciliationService {
                         rs.getString("generation_status")
                 ),
                 properties.gracePeriod().toMillis(),
-                properties.batchSize()
+                candidateScanLimit(batchSize)
         );
 
         int cleaned = 0;
+        int claimed = 0;
         for (GenerationKey candidate : candidates) {
+            if (claimed >= batchSize) {
+                break;
+            }
             try {
-                cleaned += reconcileCandidate(candidate);
+                CandidateAttempt attempt = reconcileCandidate(candidate);
+                if (attempt.claimed()) {
+                    claimed++;
+                }
+                cleaned += attempt.cleaned();
             } catch (CandidateStateException exception) {
                 recordCandidateFailure(candidate, exception);
             }
@@ -120,18 +130,27 @@ public class GenerationReconciliationService {
         return cleaned;
     }
 
-    private int reconcileCandidate(GenerationKey candidate) {
+    private int candidateScanLimit(int batchSize) {
+        long expanded = (long) batchSize * CANDIDATE_SCAN_MULTIPLIER;
+        return (int) Math.min(Integer.MAX_VALUE, Math.max(batchSize, expanded));
+    }
+
+    private CandidateAttempt reconcileCandidate(GenerationKey candidate) {
         if ("RETIRING".equals(candidate.status())) {
-            boolean prepared = Boolean.TRUE.equals(
-                    transactionTemplate.execute(status -> {
-                        if (!tryCandidateLock(candidate)) {
-                            logCandidateBusy(candidate, "prepare");
-                            return false;
-                        }
-                        return prepareRetiring(candidate);
-                    })
-            );
-            if (prepared) {
+            PrepareAttempt prepare = transactionTemplate.execute(status -> {
+                if (!tryCandidateLock(candidate)) {
+                    logCandidateBusy(candidate, "prepare");
+                    return PrepareAttempt.unclaimed();
+                }
+                return new PrepareAttempt(
+                        true,
+                        prepareRetiring(candidate)
+                );
+            });
+            if (prepare == null || !prepare.claimed()) {
+                return CandidateAttempt.unclaimed();
+            }
+            if (prepare.prepared()) {
                 transactionTemplate.execute(status -> {
                     if (!tryCandidateLock(candidate)) {
                         logCandidateBusy(candidate, "purge");
@@ -141,17 +160,20 @@ public class GenerationReconciliationService {
                     return null;
                 });
             }
-            return 0;
+            return new CandidateAttempt(true, 0);
         }
 
-        Boolean result = transactionTemplate.execute(status -> {
+        CandidateAttempt result = transactionTemplate.execute(status -> {
             if (!tryCandidateLock(candidate)) {
                 logCandidateBusy(candidate, "terminal");
-                return false;
+                return CandidateAttempt.unclaimed();
             }
-            return reconcileTerminal(candidate);
+            return new CandidateAttempt(
+                    true,
+                    reconcileTerminal(candidate) ? 1 : 0
+            );
         });
-        return Boolean.TRUE.equals(result) ? 1 : 0;
+        return result == null ? CandidateAttempt.unclaimed() : result;
     }
 
     private void recordCandidateFailure(
@@ -841,6 +863,18 @@ public class GenerationReconciliationService {
             long accessLevel,
             String status
     ) {
+    }
+
+    private record CandidateAttempt(boolean claimed, int cleaned) {
+        static CandidateAttempt unclaimed() {
+            return new CandidateAttempt(false, 0);
+        }
+    }
+
+    private record PrepareAttempt(boolean claimed, boolean prepared) {
+        static PrepareAttempt unclaimed() {
+            return new PrepareAttempt(false, false);
+        }
     }
 
     private record LifecycleFence(
