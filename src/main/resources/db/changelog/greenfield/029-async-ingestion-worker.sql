@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset akmai:029-async-ingestion-worker
+--changeset akmai-greenfield:029-async-ingestion-worker
 CREATE TABLE knowledge_ingestion_job (
     ingestion_id UUID PRIMARY KEY,
     schema_version INTEGER NOT NULL,
@@ -77,6 +77,14 @@ CREATE TABLE knowledge_ingestion_job (
         CHECK (chunk_count IS NULL OR chunk_count >= 0)
 );
 
+CREATE TABLE knowledge_ingestion_job_event (
+    event_id VARCHAR(200) PRIMARY KEY,
+    ingestion_id UUID NOT NULL REFERENCES knowledge_ingestion_job(ingestion_id)
+        ON DELETE CASCADE,
+    job_fingerprint VARCHAR(64) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+
 CREATE INDEX ix_knowledge_ingestion_job_claim
     ON knowledge_ingestion_job (job_status, next_attempt_at, accepted_at, ingestion_id);
 
@@ -86,3 +94,6 @@ CREATE INDEX ix_knowledge_ingestion_job_document
 CREATE INDEX ix_knowledge_ingestion_job_source_version
     ON knowledge_ingestion_job (file_id, source_version)
     WHERE file_id IS NOT NULL;
+
+CREATE INDEX ix_knowledge_ingestion_job_event_ingestion
+    ON knowledge_ingestion_job_event (ingestion_id);
