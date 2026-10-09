@@ -74,6 +74,7 @@ public class AdaptiveGraphDreamCoordinator {
         AtomicBoolean authorityLost = new AtomicBoolean();
         try {
             DreamPolicyResolver.ResolvedDreamPolicy policy = policies.resolve();
+            requireCoverageConfiguration(policy.dream());
             Optional<DreamLeaseManager.Authority> acquired = leases.tryAcquire(
                     policy.graphVersion(), policy.fingerprint()
             );
@@ -133,6 +134,7 @@ public class AdaptiveGraphDreamCoordinator {
                     rescanReservation
             );
 
+            requireContinue(authorityLost, activeBudget);
             if (!fastComplete) {
                 return finishPartial(
                         started,
@@ -156,6 +158,9 @@ public class AdaptiveGraphDreamCoordinator {
             if (budget != null) {
                 metrics.budgetStop(exhausted.reason());
             }
+            if (authorityLost.get()) {
+                return finishLostOwnership(started, authority, runId, budget);
+            }
             return finishPartial(
                     started,
                     authority,
@@ -164,15 +169,7 @@ public class AdaptiveGraphDreamCoordinator {
                     exhausted.reason().name()
             );
         } catch (DreamLeaseManager.LostDreamAuthorityException lost) {
-            if (runId != null && authority != null && budget != null) {
-                runs.markLostOwnership(runId, authority, budget.snapshot());
-            }
-            metrics.lease("lost");
-            metrics.run(
-                    "lost_ownership",
-                    Duration.between(started, Instant.now())
-            );
-            return RunResult.LOST_OWNERSHIP;
+            return finishLostOwnership(started, authority, runId, budget);
         } catch (RuntimeException failure) {
             LOGGER.error(
                     "dream_run event=failed errorType={}",
@@ -234,6 +231,7 @@ public class AdaptiveGraphDreamCoordinator {
                         budget,
                         "fast"
                 );
+                requireContinue(authorityLost, budget);
                 DreamCheckpointRepository.Watermark next = source.watermark();
                 checkpoints.advanceFastWatermark(
                         authority,
@@ -274,6 +272,7 @@ public class AdaptiveGraphDreamCoordinator {
             );
             List<DreamSourceRepository.DreamSource> batch =
                     sources.findRescanAfter(cursor, queryLimit);
+            requireContinue(authorityLost, budget);
             if (batch.isEmpty()) {
                 if (encodedCursor != null) {
                     rescanCheckpoints.advance(
@@ -295,6 +294,7 @@ public class AdaptiveGraphDreamCoordinator {
                         budget,
                         "rescan"
                 );
+                requireContinue(authorityLost, budget);
                 DreamRescanCursor next = source.rescanCursor();
                 rescanCheckpoints.advance(
                         authority,
@@ -307,6 +307,7 @@ public class AdaptiveGraphDreamCoordinator {
                 processed++;
             }
             if (batch.size() < queryLimit) {
+                requireContinue(authorityLost, budget);
                 rescanCheckpoints.advance(
                         authority,
                         encodedCursor,
@@ -318,19 +319,54 @@ public class AdaptiveGraphDreamCoordinator {
         }
     }
 
+    private void requireCoverageConfiguration(
+            AdaptiveGraphProperties.Dream configuration
+    ) {
+        if (configuration.rescanSourcesPerRun() < 1
+                || configuration.maxSourcesPerRun() < 2) {
+            throw new IllegalStateException(
+                    "Dream eventual coverage requires at least one reserved rescan source per run"
+            );
+        }
+    }
+
     private void requireContinue(
             AtomicBoolean authorityLost,
             DreamBudget budget
     ) {
-        budget.requireTime();
         if (authorityLost.get()) {
             throw new DreamLeaseManager.LostDreamAuthorityException(
                     "Dream authority was lost during run"
             );
         }
+        budget.requireTime();
         if (!switches.enabled()) {
             throw new DreamRuntimeDisabledException();
         }
+    }
+
+    private RunResult finishLostOwnership(
+            Instant started,
+            DreamLeaseManager.Authority authority,
+            UUID runId,
+            DreamBudget budget
+    ) {
+        if (runId != null && authority != null && budget != null) {
+            try {
+                runs.markLostOwnership(runId, authority, budget.snapshot());
+            } catch (RuntimeException finalizationFailure) {
+                LOGGER.warn(
+                        "dream_run event=lost_ownership_finalization_failed errorType={}",
+                        finalizationFailure.getClass().getSimpleName()
+                );
+            }
+        }
+        metrics.lease("lost");
+        metrics.run(
+                "lost_ownership",
+                Duration.between(started, Instant.now())
+        );
+        return RunResult.LOST_OWNERSHIP;
     }
 
     private void finalizeFailure(
@@ -392,12 +428,7 @@ public class AdaptiveGraphDreamCoordinator {
             );
             return RunResult.PARTIAL_BUDGET;
         } catch (DreamLeaseManager.LostDreamAuthorityException lost) {
-            runs.markLostOwnership(runId, authority, budget.snapshot());
-            metrics.run(
-                    "lost_ownership",
-                    Duration.between(started, Instant.now())
-            );
-            return RunResult.LOST_OWNERSHIP;
+            return finishLostOwnership(started, authority, runId, budget);
         }
     }
 

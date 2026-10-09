@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.knowledge.graph.dream;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
 import kz.alimbetov.akmai.config.SemanticMemoryProperties;
 import kz.alimbetov.akmai.knowledge.graph.GraphMutationLocks;
@@ -13,8 +14,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Restricted DREAM-5 mutation boundary. It may materialize a semantic prior
- * only; learned evidence counters remain authoritative to online learning.
+ * Restricted DREAM-5 mutation boundary. It may materialize or retire a semantic
+ * prior only; learned evidence counters remain authoritative to online learning.
  */
 @Component
 public class SemanticGraphPriorWriter {
@@ -25,6 +26,7 @@ public class SemanticGraphPriorWriter {
     private final AdaptiveGraphProperties graphProperties;
     private final SemanticMemoryProperties semanticMemoryProperties;
     private final GraphMutationLocks mutationLocks;
+    private final DreamCandidateRepository candidateRepository;
 
     public SemanticGraphPriorWriter(
             JdbcTemplate jdbcTemplate,
@@ -39,6 +41,7 @@ public class SemanticGraphPriorWriter {
         this.graphProperties = graphProperties;
         this.semanticMemoryProperties = semanticMemoryProperties;
         this.mutationLocks = new GraphMutationLocks(jdbcTemplate);
+        this.candidateRepository = new DreamCandidateRepository(jdbcTemplate);
     }
 
     public ApplyResult applyCandidate(
@@ -60,16 +63,9 @@ public class SemanticGraphPriorWriter {
                     "semanticSimilarity must be in [0, 1]"
             );
         }
-        if (authority.graphVersion() != graphProperties.graphVersion()) {
-            throw new IllegalArgumentException(
-                    "Dream apply graph version does not match configured graph version"
-            );
-        }
+        requireGraphVersion(authority);
 
-        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
-        transaction.setTimeout(JdbcTimeouts.toSeconds(
-                graphProperties.dream().transactionTimeout()
-        ));
+        TransactionTemplate transaction = boundedTransaction();
         ApplyResult result = transaction.execute(status -> applyInTransaction(
                 authority,
                 pair,
@@ -77,6 +73,73 @@ public class SemanticGraphPriorWriter {
                 observedAt
         ));
         return result == null ? ApplyResult.REJECTED : result;
+    }
+
+    /**
+     * Atomically transitions an ACTIVE Dream candidate to STALE and, when the
+     * production apply gate is enabled, retires its graph-side semantic prior.
+     * The graph relation itself and all learned counters are preserved.
+     */
+    public RetirementResult retireCandidate(
+            DreamLeaseManager.Authority authority,
+            DreamPair pair,
+            UUID runId,
+            String reason,
+            Instant observedAt,
+            DreamBudget budget
+    ) {
+        if (authority == null || pair == null || runId == null
+                || reason == null || reason.isBlank()
+                || observedAt == null || budget == null) {
+            throw new IllegalArgumentException(
+                    "Dream retirement identity is required"
+            );
+        }
+        requireGraphVersion(authority);
+
+        boolean retireGraphPrior = switches.applyEnabled();
+        int reservedRows = retireGraphPrior ? 3 : 1;
+        budget.addDbRows(reservedRows);
+        int durableRows = 0;
+        try {
+            TransactionTemplate transaction = boundedTransaction();
+            RetirementResult result = transaction.execute(status -> {
+                if (retireGraphPrior) {
+                    mutationLocks.lockRetirementNodes(
+                            List.of(pair.first(), pair.second())
+                    );
+                }
+
+                boolean candidateChanged = candidateRepository.markStaleIfActive(
+                        authority,
+                        pair,
+                        runId,
+                        reason,
+                        observedAt
+                );
+                if (!candidateChanged) {
+                    return RetirementResult.NO_CHANGE;
+                }
+                if (!retireGraphPrior) {
+                    return RetirementResult.CANDIDATE_ONLY;
+                }
+
+                int graphRows = retirePriorInTransaction(authority, pair);
+                return graphRows == 2
+                        ? RetirementResult.CANDIDATE_AND_PRIOR
+                        : RetirementResult.CANDIDATE_ONLY;
+            });
+            RetirementResult resolved = result == null
+                    ? RetirementResult.NO_CHANGE
+                    : result;
+            durableRows = resolved.durableRows();
+            return resolved;
+        } finally {
+            int unusedRows = reservedRows - durableRows;
+            if (unusedRows > 0) {
+                budget.releaseDbRows(unusedRows);
+            }
+        }
     }
 
     private ApplyResult applyInTransaction(
@@ -108,6 +171,22 @@ public class SemanticGraphPriorWriter {
                 observedAt
         );
         return state.existingPair() ? ApplyResult.REFRESHED : ApplyResult.APPLIED;
+    }
+
+    private TransactionTemplate boundedTransaction() {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        transaction.setTimeout(JdbcTimeouts.toSeconds(
+                graphProperties.dream().transactionTimeout()
+        ));
+        return transaction;
+    }
+
+    private void requireGraphVersion(DreamLeaseManager.Authority authority) {
+        if (authority.graphVersion() != graphProperties.graphVersion()) {
+            throw new IllegalArgumentException(
+                    "Dream apply graph version does not match configured graph version"
+            );
+        }
     }
 
     /**
@@ -343,11 +422,102 @@ public class SemanticGraphPriorWriter {
         }
     }
 
+    /**
+     * Clears only the active semantic prior. Historical semantic timestamps and
+     * all learned counters/bands remain untouched. The live lease predicate is
+     * part of the final DML, and a one-sided pair is treated as corruption so
+     * the surrounding transaction rolls back the candidate state transition.
+     */
+    private int retirePriorInTransaction(
+            DreamLeaseManager.Authority authority,
+            DreamPair pair
+    ) {
+        RetirementWriteResult result = jdbcTemplate.queryForObject(
+                """
+                WITH live_authority AS (
+                    SELECT 1
+                    FROM adaptive_graph_dream_lease lease
+                    WHERE lease.graph_version = ?
+                      AND lease.semantic_policy_fingerprint = ?
+                      AND lease.owner_id = ?
+                      AND lease.fencing_token = ?
+                      AND lease.lease_until > clock_timestamp()
+                ), updated AS (
+                    UPDATE knowledge_chunk_association edge
+                    SET semantic_similarity = NULL,
+                        compaction_required = TRUE,
+                        updated_at = clock_timestamp()
+                    WHERE edge.access_level = ?
+                      AND edge.graph_version = ?
+                      AND edge.semantic_similarity IS NOT NULL
+                      AND (
+                          (
+                              edge.source_document_id = ?
+                              AND edge.source_generation = ?
+                              AND edge.source_chunk_id = ?
+                              AND edge.target_document_id = ?
+                              AND edge.target_generation = ?
+                              AND edge.target_chunk_id = ?
+                          ) OR (
+                              edge.source_document_id = ?
+                              AND edge.source_generation = ?
+                              AND edge.source_chunk_id = ?
+                              AND edge.target_document_id = ?
+                              AND edge.target_generation = ?
+                              AND edge.target_chunk_id = ?
+                          )
+                      )
+                      AND EXISTS (SELECT 1 FROM live_authority)
+                    RETURNING 1
+                )
+                SELECT EXISTS(SELECT 1 FROM live_authority) AS owned,
+                       count(updated.*) AS changed
+                FROM updated
+                """,
+                (rs, rowNum) -> new RetirementWriteResult(
+                        rs.getBoolean("owned"),
+                        rs.getInt("changed")
+                ),
+                authority.graphVersion(),
+                authority.policyFingerprint(),
+                authority.ownerId(),
+                authority.fencingToken(),
+                pair.first().accessLevel(),
+                authority.graphVersion(),
+                pair.first().documentId(),
+                pair.first().generation(),
+                pair.first().chunkId(),
+                pair.second().documentId(),
+                pair.second().generation(),
+                pair.second().chunkId(),
+                pair.second().documentId(),
+                pair.second().generation(),
+                pair.second().chunkId(),
+                pair.first().documentId(),
+                pair.first().generation(),
+                pair.first().chunkId()
+        );
+        if (result == null || !result.owned()) {
+            throw new DreamLeaseManager.LostDreamAuthorityException(
+                    "Dream semantic prior retirement rejected by fencing"
+            );
+        }
+        if (result.changed() != 0 && result.changed() != 2) {
+            throw new IllegalStateException(
+                    "Dream semantic prior symmetric retirement invariant violated"
+            );
+        }
+        return result.changed();
+    }
+
     private record PairState(
             boolean existingPair,
             int firstDegree,
             int secondDegree
     ) {
+    }
+
+    private record RetirementWriteResult(boolean owned, int changed) {
     }
 
     public enum ApplyResult {
@@ -356,5 +526,21 @@ public class SemanticGraphPriorWriter {
         DEGREE_LIMIT,
         APPLY_DISABLED,
         REJECTED
+    }
+
+    public enum RetirementResult {
+        NO_CHANGE(0),
+        CANDIDATE_ONLY(1),
+        CANDIDATE_AND_PRIOR(3);
+
+        private final int durableRows;
+
+        RetirementResult(int durableRows) {
+            this.durableRows = durableRows;
+        }
+
+        int durableRows() {
+            return durableRows;
+        }
     }
 }

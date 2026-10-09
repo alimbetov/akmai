@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.knowledge.graph.dream;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -89,6 +90,40 @@ public class DreamCandidateDiscovery {
                     .limit(policy.dream().topK())
                     .toList();
 
+            Set<DreamPair> activePairs = new HashSet<>(
+                    candidates.findActivePairsForSource(
+                            policy.graphVersion(),
+                            policy.fingerprint(),
+                            source.node()
+                    )
+            );
+            Set<DreamPair> currentForwardPairs = new HashSet<>();
+            for (SemanticNeighbor neighbor : forward) {
+                currentForwardPairs.add(DreamPair.of(
+                        source.node(),
+                        neighbor.node()
+                ));
+            }
+
+            Instant scanObservedAt = Instant.now();
+            for (DreamPair activePair : activePairs) {
+                if (!currentForwardPairs.contains(activePair)) {
+                    if (markStale(
+                            authority,
+                            activePair,
+                            runId,
+                            "not-in-forward-topk",
+                            scanObservedAt,
+                            budget
+                    )) {
+                        persisted++;
+                        metrics.candidate(
+                                DreamCandidateRepository.CandidateState.STALE.name()
+                        );
+                    }
+                }
+            }
+
             int activatedForSource = 0;
             for (int index = 0; index < forward.size(); index++) {
                 SemanticNeighbor neighbor = forward.get(index);
@@ -115,6 +150,19 @@ public class DreamCandidateDiscovery {
                 metrics.cache(verification.cacheHit());
 
                 if (!verification.lifecycleEligible()) {
+                    if (markStale(
+                            authority,
+                            pair,
+                            runId,
+                            "lifecycle-ineligible",
+                            Instant.now(),
+                            budget
+                    )) {
+                        persisted++;
+                        metrics.candidate(
+                                DreamCandidateRepository.CandidateState.STALE.name()
+                        );
+                    }
                     continue;
                 }
                 metrics.mutual(verification.mutualKnn());
@@ -129,13 +177,23 @@ public class DreamCandidateDiscovery {
                 );
                 metrics.confidence(confidence);
 
-                boolean mayActivate = verification.mutualKnn()
+                boolean wasActive = activePairs.contains(pair);
+                boolean retainActive = wasActive
+                        && verification.mutualKnn()
+                        && confidence >= policy.dream().retentionThreshold();
+                boolean mayActivate = !wasActive
+                        && verification.mutualKnn()
                         && confidence >= policy.dream().activationThreshold()
                         && activatedForSource
                         < policy.dream().maxNewEdgesPerChunk();
-                DreamCandidateRepository.CandidateState state = mayActivate
-                        ? DreamCandidateRepository.CandidateState.ACTIVE
-                        : DreamCandidateRepository.CandidateState.CANDIDATE;
+                DreamCandidateRepository.CandidateState state;
+                if (retainActive || mayActivate) {
+                    state = DreamCandidateRepository.CandidateState.ACTIVE;
+                } else if (wasActive) {
+                    state = DreamCandidateRepository.CandidateState.STALE;
+                } else {
+                    state = DreamCandidateRepository.CandidateState.CANDIDATE;
+                }
                 if (mayActivate) {
                     activatedForSource++;
                     activated++;
@@ -145,7 +203,7 @@ public class DreamCandidateDiscovery {
                         source.node(), pair, verification
                 );
                 Instant observedAt = Instant.now();
-                candidates.observe(
+                reserveCandidateObservation(
                         authority,
                         new DreamCandidateRepository.Observation(
                                 pair,
@@ -166,31 +224,31 @@ public class DreamCandidateDiscovery {
                                         ? DreamCandidateRepository.ObservationOutcome.POSITIVE
                                         : DreamCandidateRepository.ObservationOutcome.NEGATIVE_SEMANTIC,
                                 observedAt
-                        )
+                        ),
+                        budget
                 );
-                budget.addDbRows(1);
                 persisted++;
                 if (verification.mutualKnn()) {
                     mutual++;
                 }
                 metrics.candidate(state.name());
 
-                if (mayActivate) {
+                if (state == DreamCandidateRepository.CandidateState.ACTIVE) {
                     double semanticSimilarity = Math.min(
                             verification.forwardSimilarity(),
                             verification.reverseSimilarity()
                     );
                     SemanticGraphPriorWriter.ApplyResult applyResult =
-                            priorWriter.applyCandidate(
+                            reservePriorApply(
                                     authority,
                                     pair,
                                     semanticSimilarity,
-                                    observedAt
+                                    observedAt,
+                                    budget
                             );
                     metrics.apply(applyResult.name());
                     if (applyResult == SemanticGraphPriorWriter.ApplyResult.APPLIED
                             || applyResult == SemanticGraphPriorWriter.ApplyResult.REFRESHED) {
-                        budget.addDbRows(2);
                         applied++;
                     }
                 }
@@ -210,6 +268,71 @@ public class DreamCandidateDiscovery {
     void clearRun(UUID runId) {
         if (runId != null) {
             observedPairsByRun.invalidate(runId);
+        }
+    }
+
+    private boolean markStale(
+            DreamLeaseManager.Authority authority,
+            DreamPair pair,
+            UUID runId,
+            String reason,
+            Instant observedAt,
+            DreamBudget budget
+    ) {
+        SemanticGraphPriorWriter.RetirementResult result =
+                priorWriter.retireCandidate(
+                        authority,
+                        pair,
+                        runId,
+                        reason,
+                        observedAt,
+                        budget
+                );
+        return result != SemanticGraphPriorWriter.RetirementResult.NO_CHANGE;
+    }
+
+    private void reserveCandidateObservation(
+            DreamLeaseManager.Authority authority,
+            DreamCandidateRepository.Observation observation,
+            DreamBudget budget
+    ) {
+        budget.addDbRows(1);
+        boolean keepReservation = false;
+        try {
+            candidates.observe(authority, observation);
+            keepReservation = true;
+        } finally {
+            if (!keepReservation) {
+                budget.releaseDbRows(1);
+            }
+        }
+    }
+
+    private SemanticGraphPriorWriter.ApplyResult reservePriorApply(
+            DreamLeaseManager.Authority authority,
+            DreamPair pair,
+            double semanticSimilarity,
+            Instant observedAt,
+            DreamBudget budget
+    ) {
+        budget.addDbRows(2);
+        boolean keepReservation = false;
+        try {
+            SemanticGraphPriorWriter.ApplyResult result =
+                    priorWriter.applyCandidate(
+                            authority,
+                            pair,
+                            semanticSimilarity,
+                            observedAt
+                    );
+            keepReservation =
+                    result == SemanticGraphPriorWriter.ApplyResult.APPLIED
+                    || result == SemanticGraphPriorWriter.ApplyResult.REFRESHED;
+            return result;
+        } finally {
+            if (!keepReservation) {
+                budget.releaseDbRows(2);
+            }
         }
     }
 
