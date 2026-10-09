@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 class CanonicalRequestFingerprintTest {
 
+    private static final String CONTENT_HASH = "sha256:" + "a".repeat(64);
     private final CanonicalRequestFingerprint fingerprint =
             new CanonicalRequestFingerprint(new ObjectMapper());
 
@@ -94,7 +95,7 @@ class CanonicalRequestFingerprintTest {
                         "1",
                         "document.pdf",
                         "application/pdf",
-                        "sha256:source",
+                        CONTENT_HASH,
                         new CanonicalKnowledgeDocument.StorageReference(
                                 "rustfs",
                                 bucket,
