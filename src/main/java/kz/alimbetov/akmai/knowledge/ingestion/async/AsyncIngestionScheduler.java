@@ -1,5 +1,6 @@
 package kz.alimbetov.akmai.knowledge.ingestion.async;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -7,6 +8,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import kz.alimbetov.akmai.config.AsyncIngestionProperties;
+import kz.alimbetov.akmai.observability.AsyncIngestionMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -23,6 +25,7 @@ public class AsyncIngestionScheduler {
     private final AsyncIngestionProperties properties;
     private final AsyncIngestionJobRepository repository;
     private final AsyncIngestionWorker worker;
+    private final AsyncIngestionMetrics metrics;
     private final ExecutorService executor;
     private final Semaphore slots;
     private final String leaseOwner = "async-worker:" + UUID.randomUUID();
@@ -31,11 +34,13 @@ public class AsyncIngestionScheduler {
             AsyncIngestionProperties properties,
             AsyncIngestionJobRepository repository,
             AsyncIngestionWorker worker,
+            AsyncIngestionMetrics metrics,
             @Qualifier("asyncIngestionExecutor") ExecutorService executor
     ) {
         this.properties = properties;
         this.repository = repository;
         this.worker = worker;
+        this.metrics = metrics;
         this.executor = executor;
         this.slots = new Semaphore(properties.maxConcurrentIngestions());
     }
@@ -46,6 +51,12 @@ public class AsyncIngestionScheduler {
     public void poll() {
         if (!properties.enabled()) {
             return;
+        }
+
+        try {
+            metrics.queueDepth(repository.countBacklog());
+        } catch (RuntimeException exception) {
+            log.debug("Async ingestion backlog metric refresh failed", exception);
         }
 
         int requested = Math.min(
@@ -79,6 +90,10 @@ public class AsyncIngestionScheduler {
         }
 
         for (AsyncIngestionClaim claim : claims) {
+            Instant acceptedAt = claim.job().acceptedAt();
+            if (acceptedAt != null) {
+                metrics.queueWait(Duration.between(acceptedAt, Instant.now()));
+            }
             submit(claim);
         }
     }
@@ -108,7 +123,7 @@ public class AsyncIngestionScheduler {
             });
         } catch (RejectedExecutionException exception) {
             slots.release();
-            repository.markRetry(
+            boolean rescheduled = repository.markRetry(
                     claim,
                     Instant.now().plus(properties.pollInterval()),
                     false,
@@ -116,6 +131,11 @@ public class AsyncIngestionScheduler {
                     "ASYNC_EXECUTOR_REJECTED",
                     exception.getMessage()
             );
+            if (rescheduled) {
+                metrics.retry();
+            } else {
+                metrics.leaseLost();
+            }
         }
     }
 }
