@@ -18,7 +18,7 @@ Dream v1 is intentionally sequential. The fast lane accelerates recently changed
 - `DreamRescanCheckpointRepository` — fenced deterministic rescan cursor.
 - `DreamCandidateDiscovery` — forward/reverse ANN verification and current candidate state.
 - `DreamCandidateRepository` — canonical candidate persistence under live fencing authority.
-- `SemanticGraphPriorWriter` — optional restricted semantic-prior application.
+- `SemanticGraphPriorWriter` — restricted semantic-prior apply and atomic candidate/prior retirement boundary.
 
 ## Process
 
@@ -40,7 +40,7 @@ scheduler tick on every pod
        -> forward ANN
        -> reciprocal verification
        -> candidate current-state transition
-       -> optional fenced semantic prior apply
+       -> optional fenced semantic prior apply/retirement
        -> authority-loss stop barrier
        -> fenced fast checkpoint CAS
   -> process bounded rescan lane
@@ -60,7 +60,7 @@ scheduler tick on every pod
 
 A Dream run may perform authoritative state changes only while its `(graph_version, semantic_policy_fingerprint, owner_id, fencing_token)` identifies the current live PostgreSQL lease.
 
-Expired takeover increments the fencing token. An old owner/token cannot renew, advance checkpoints, persist candidate observations, apply priors or finalize success.
+Expired takeover increments the fencing token. An old owner/token cannot renew, advance checkpoints, persist candidate observations, apply/retire priors or finalize success.
 
 ### DREAM-BR-02 — PostgreSQL time is authority
 
@@ -97,7 +97,7 @@ The rescan cursor is durable, policy-scoped and compare-and-set under live fenci
 
 Source and ANN budgets are reserved before calls. DB-row capacity must likewise be reserved before candidate/prior DML. If a guarded operation performs no durable mutation or fails, its DB-row reservation is released.
 
-A `MAX_DB_ROWS` stop therefore occurs before the write that would exceed the configured bound.
+A `MAX_DB_ROWS` stop therefore occurs before the write that would exceed the configured bound. Atomic stale retirement reserves worst-case capacity for one candidate row plus two directional graph rows when the apply gate is enabled; shadow mode reserves only the candidate row.
 
 ### DREAM-BR-08 — ACTIVE means current semantic state
 
@@ -132,9 +132,13 @@ An existing ACTIVE pair becomes `STALE` when current evaluation proves any of th
 
 Candidate retirement is fenced by the live Dream lease. A missing prior candidate row is a safe no-op; loss of authority is not.
 
+When the production apply gate is enabled, `ACTIVE -> STALE` and semantic-prior retirement execute in one bounded transaction. The prior retirement clears `semantic_similarity` on both directions but preserves the graph relation, semantic provenance timestamps, band, weight and every learned evidence counter. A stale fencing token or a one-sided graph pair rolls back the candidate transition as well, preventing durable `STALE` state with a partially retired prior.
+
+Lifecycle invalidation does not block retirement: retirement locks existing lifecycle/generation rows in canonical order when present, then takes the same canonical advisory node locks used by normal graph mutation. It does not require the obsolete generation to remain eligible/PUBLISHED.
+
 ### DREAM-BR-10 — candidate state changes do not synthesize online evidence
 
-Dream candidate updates must not increment:
+Dream candidate updates and semantic retirement must not increment or clear:
 
 - `support_count`;
 - `context_count`;
@@ -142,15 +146,17 @@ Dream candidate updates must not increment:
 - `distinct_query_support`;
 - `query_support_sketch`.
 
-Dream remains semantic-prior authority only.
+Dream remains semantic-prior authority only. Learned evidence and graph bands remain online-learning authority.
 
 ### DREAM-BR-11 — candidate persistence is fenced in final DML
 
 Candidate observations and stale transitions include the live lease predicate in the same SQL statement as the mutation. A separate preliminary ownership check is insufficient.
 
-### DREAM-BR-12 — apply remains independently fenced
+### DREAM-BR-12 — apply and retirement remain independently fenced
 
-Candidate `ACTIVE` does not itself authorize graph mutation. `SemanticGraphPriorWriter` independently requires the apply gate, eligible graph nodes, degree admission and current Dream fencing authority in final DML.
+Candidate `ACTIVE` does not itself authorize graph mutation. `SemanticGraphPriorWriter` independently requires the apply gate, eligible graph nodes, degree admission and current Dream fencing authority in final apply DML.
+
+Retirement uses the same live lease identity in final graph DML. It intentionally does not require current graph eligibility because TTL expiry/publication replacement are themselves valid retirement causes.
 
 ### DREAM-BR-13 — runtime disable is fail-safe
 
@@ -168,7 +174,8 @@ A run may not claim `SUCCEEDED` after the heartbeat stop barrier or after guarde
 - bounded rescan advances the deterministic cursor independently of fast-lane completeness;
 - an existing ACTIVE pair at confidence between retention and activation remains ACTIVE;
 - a new high-confidence mutual pair can become ACTIVE subject to per-source admission;
-- apply-disabled shadow mode persists Dream-internal observations without graph mutation;
+- ACTIVE pair retirement atomically marks the candidate STALE and clears both graph semantic priors while preserving learned evidence;
+- apply-disabled shadow mode retires Dream-internal candidate state without mutating the online graph;
 - budget stop produces a bounded partial outcome while preserving resumable checkpoints.
 
 ## Negative / failure cases
@@ -178,8 +185,9 @@ A run may not claim `SUCCEEDED` after the heartbeat stop barrier or after guarde
 - heartbeat loss before finalization -> no `SUCCEEDED` outcome;
 - zero rescan reservation -> run fails before lease acquisition;
 - malformed rescan cursor -> explicit run failure;
-- ACTIVE pair disappears from forward top-K -> candidate becomes STALE;
-- ACTIVE pair becomes lifecycle-ineligible -> candidate becomes STALE;
+- ACTIVE pair disappears from forward top-K -> candidate and applied prior retire together;
+- ACTIVE pair becomes lifecycle-ineligible -> retirement remains possible despite obsolete lifecycle/generation status;
+- one-sided semantic graph pair during retirement -> whole retirement transaction rolls back;
 - DB-row budget already exhausted -> candidate/prior DML is not invoked;
 - apply gate disabled -> no online graph mutation;
 - ANN/JDBC timeout -> current run fails or stops according to the owning boundary; no stale authority is inferred locally.
@@ -201,15 +209,23 @@ lease row
 
 Checkpoint updates additionally use compare-and-set expected cursor/watermark semantics so stale/replayed work cannot skip ranges.
 
+Semantic retirement is a short bounded transaction:
+
+```text
+reserve DB-row budget
+-> canonical retirement row/advisory locks
+-> fenced candidate ACTIVE -> STALE
+-> fenced bilateral semantic_similarity -> NULL
+-> COMMIT
+```
+
+Failure anywhere before commit rolls back both candidate and graph-side retirement state.
+
 ## Candidate-state recovery
 
 The candidate store is re-evaluated by future fast/rescan observations. `STALE` records remain auditable under their semantic-policy fingerprint and may become current again only through a later valid observation/admission path.
 
 DREAM-4B does not accumulate cross-run verification streaks. Stateful streak accumulation remains deferred to DREAM-6 and must not be approximated by repeatedly incrementing the current observation row.
-
-## Known gap before VERIFIED
-
-Candidate `ACTIVE -> STALE` is now explicit, but graph-side semantic-prior retirement still requires one final decision/implementation pass: either prove existing graph maintenance/lifecycle cleanup is sufficient for every stale-candidate cause, or add a restricted fenced semantic-prior retirement DML that clears semantic fields while preserving learned counters. Do not mark this contract `VERIFIED` until that boundary is closed by tests.
 
 ## Tests
 
@@ -218,15 +234,23 @@ Primary coverage:
 - `DreamCoreContractsTest`;
 - `DreamCandidateDiscoveryFailureModelTest`;
 - `AdaptiveGraphDreamCoordinatorFailureModelTest`;
-- `SemanticGraphPriorWriterIntegrationTest`.
+- `DreamLeaseCheckpointIntegrationTest`;
+- `SemanticGraphPriorWriterIntegrationTest`;
+- `DreamSemanticRetirementIntegrationTest`.
 
-Required remaining integration coverage before `VERIFIED`:
+The integration matrix covers:
 
-- lease token monotonic takeover and stale-owner rejection across two DB clients;
-- heartbeat renewal failure / takeover sequence;
-- checkpoint resume across coordinator restart;
-- malformed persisted rescan cursor run outcome;
+- lease token monotonic takeover and stale-owner rejection across DB clients;
+- checkpoint resume across repository restart and fencing after takeover;
 - graph semantic-prior retirement preserving learned evidence;
+- lifecycle-invalid retirement;
+- stale fencing rollback across candidate + graph retirement;
+- symmetric retirement corruption rollback;
+- shadow candidate-only retirement.
+
+Remaining verification before `VERIFIED`:
+
+- malformed persisted rescan cursor run outcome remains covered at coordinator/contract level and should remain green in exact-head test execution;
 - exact-head CI / quality / storage / image verification.
 
 ## Definition of Done
@@ -240,7 +264,7 @@ Required remaining integration coverage before `VERIFIED`:
 - [x] DB-row budget reserved before Dream writes
 - [x] Candidate state unit failure matrix added
 - [x] Coordinator authority-loss unit failure matrix added
-- [ ] Multi-client lease/checkpoint integration matrix complete
-- [ ] Semantic-prior retirement boundary closed
+- [x] Multi-client lease/checkpoint integration matrix complete
+- [x] Semantic-prior retirement boundary closed with atomic rollback tests
 - [ ] Exact-head required gates green
 - [ ] Inventory promoted from DRAFT only on verified final SHA
