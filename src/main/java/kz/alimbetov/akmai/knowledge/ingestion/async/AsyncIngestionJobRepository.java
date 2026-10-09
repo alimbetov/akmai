@@ -38,6 +38,14 @@ public class AsyncIngestionJobRepository {
                 return requireMatchingEvent(candidate, existingEvent.get());
             }
 
+            Optional<AsyncIngestionJob> existingSource = findBySourceVersion(
+                    candidate.fileId(),
+                    candidate.sourceVersion()
+            );
+            if (existingSource.isPresent()) {
+                return reuseMatchingSource(candidate, existingSource.get());
+            }
+
             int inserted = jdbcTemplate.update(
                     """
                     INSERT INTO knowledge_ingestion_job (
@@ -94,22 +102,35 @@ public class AsyncIngestionJobRepository {
                 return requireMatchingEvent(candidate, existingEvent.get());
             }
 
-            AsyncIngestionJob existing = findByFingerprint(
-                    candidate.jobFingerprint()
-            ).orElseThrow(() -> new IllegalStateException(
-                    "Async ingestion admission conflict has no durable owner"
-            ));
-            registerEventAlias(
-                    candidate.eventId(),
-                    existing.ingestionId(),
+            Optional<AsyncIngestionJob> existingFingerprint = findByFingerprint(
                     candidate.jobFingerprint()
             );
-            return requireMatchingEvent(
-                    candidate,
-                    findByEventId(candidate.eventId()).orElseThrow(() ->
-                            new IllegalStateException(
-                                    "Async ingestion event alias disappeared"
-                            ))
+            if (existingFingerprint.isPresent()) {
+                AsyncIngestionJob existing = existingFingerprint.get();
+                registerEventAlias(
+                        candidate.eventId(),
+                        existing.ingestionId(),
+                        candidate.jobFingerprint()
+                );
+                return requireMatchingEvent(
+                        candidate,
+                        findByEventId(candidate.eventId()).orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Async ingestion event alias disappeared"
+                                ))
+                );
+            }
+
+            existingSource = findBySourceVersion(
+                    candidate.fileId(),
+                    candidate.sourceVersion()
+            );
+            if (existingSource.isPresent()) {
+                return reuseMatchingSource(candidate, existingSource.get());
+            }
+
+            throw new IllegalStateException(
+                    "Async ingestion admission conflict has no durable owner"
             );
         });
     }
@@ -157,6 +178,29 @@ public class AsyncIngestionJobRepository {
                 """,
                 this::map,
                 fingerprint
+        ).stream().findFirst();
+    }
+
+    public Optional<AsyncIngestionJob> findBySourceVersion(
+            String fileId,
+            String sourceVersion
+    ) {
+        if (fileId == null || fileId.isBlank()
+                || sourceVersion == null || sourceVersion.isBlank()) {
+            return Optional.empty();
+        }
+        return jdbcTemplate.query(
+                """
+                SELECT *
+                FROM knowledge_ingestion_job
+                WHERE file_id = ?
+                  AND source_version = ?
+                ORDER BY accepted_at DESC
+                LIMIT 1
+                """,
+                this::map,
+                fileId,
+                sourceVersion
         ).stream().findFirst();
     }
 
@@ -373,6 +417,24 @@ public class AsyncIngestionJobRepository {
                 Long.class
         );
         return count == null ? 0L : count;
+    }
+
+    private AsyncIngestionJob reuseMatchingSource(
+            AsyncIngestionJob candidate,
+            AsyncIngestionJob existing
+    ) {
+        if (!existing.jobFingerprint().equals(candidate.jobFingerprint())) {
+            throw new IdempotencyConflictException(
+                    "ASYNC_SOURCE_VERSION_REUSE",
+                    "fileId/sourceVersion was already used with different immutable content"
+            );
+        }
+        registerEventAlias(
+                candidate.eventId(),
+                existing.ingestionId(),
+                candidate.jobFingerprint()
+        );
+        return existing;
     }
 
     private void registerEventAlias(
