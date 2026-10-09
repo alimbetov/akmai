@@ -8,6 +8,7 @@ This directory contains current architecture contracts and active target/experim
 - [`adaptive-graph-runtime.md`](adaptive-graph-runtime.md) — **CURRENT** Adaptive Association Graph behavior and feature boundaries.
 - [`rag-self-optimizing-platform-v1.1-technical-spec.md`](rag-self-optimizing-platform-v1.1-technical-spec.md) — **CURRENT / IMPLEMENTED** self-optimizing v1.1 engineering contract.
 - [`fileservice-knowledge-contract-v1.md`](fileservice-knowledge-contract-v1.md) — **CURRENT** FileService → AkmAI canonical knowledge boundary implemented in the existing ingestion/generation pipeline.
+- [`async-ingestion-worker-v1.md`](async-ingestion-worker-v1.md) — **TARGET** durable asynchronous ingestion admission/queue/worker architecture with lease/fencing, retries and bounded concurrency.
 - [`runtime-app-parameters.md`](runtime-app-parameters.md) — runtime-mutable parameter architecture; actual defaults remain authoritative in `src/main/resources/application.yml`.
 
 For concrete HTTP/service request-response examples and RAG question/answer contracts, see [`../services/external-api-contracts.md`](../services/external-api-contracts.md).
@@ -17,6 +18,7 @@ For concrete HTTP/service request-response examples and RAG question/answer cont
 | Document | Classification | Purpose |
 |---|---|---|
 | [`fileservice-knowledge-contract-v1.md`](fileservice-knowledge-contract-v1.md) | CURRENT | Synchronous-first FileService → AkmAI canonical service boundary using the existing ingestion/generation pipeline, stable source identity, generation-aware result/replay and typed retrieval provenance. The canonical v1 service path is implemented; a dedicated public canonical REST endpoint is not currently exposed. |
+| [`async-ingestion-worker-v1.md`](async-ingestion-worker-v1.md) | TARGET | Evolves the FileService boundary to `202 Accepted` + PostgreSQL durable ingestion jobs + bounded worker execution. Reuses the existing `KnowledgeIngestionService`; default target concurrency is three simultaneous ingestions per AkmAI instance, not fixed batches of three. |
 
 ## Adaptive retrieval and memory
 
