@@ -1,6 +1,5 @@
 package kz.alimbetov.akmai.config;
 
-import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -12,15 +11,64 @@ public record AsyncIngestionProperties(
         int maxConcurrentIngestions,
         int workerQueueCapacity,
         int claimBatchSize,
-        @NotNull Duration leaseDuration,
-        @NotNull Duration heartbeatInterval,
-        @NotNull Duration pollInterval,
+        Duration leaseDuration,
+        Duration heartbeatInterval,
+        Duration pollInterval,
         int maxAttempts,
-        @NotNull Duration retryBaseDelay,
-        @NotNull Duration retryMaxDelay,
+        Duration retryBaseDelay,
+        Duration retryMaxDelay,
         int payloadMaxInlineBytes
 ) {
+    private static final int DEFAULT_MAX_CONCURRENT = 3;
+    private static final int DEFAULT_WORKER_QUEUE_CAPACITY = 3;
+    private static final int DEFAULT_CLAIM_BATCH_SIZE = 3;
+    private static final Duration DEFAULT_LEASE_DURATION = Duration.ofMinutes(2);
+    private static final Duration DEFAULT_HEARTBEAT_INTERVAL = Duration.ofSeconds(30);
+    private static final Duration DEFAULT_POLL_INTERVAL = Duration.ofSeconds(1);
+    private static final int DEFAULT_MAX_ATTEMPTS = 5;
+    private static final Duration DEFAULT_RETRY_BASE_DELAY = Duration.ofSeconds(5);
+    private static final Duration DEFAULT_RETRY_MAX_DELAY = Duration.ofMinutes(5);
+    private static final int DEFAULT_PAYLOAD_MAX_INLINE_BYTES = 1024 * 1024;
+
     public AsyncIngestionProperties {
+        maxConcurrentIngestions = defaultIfZero(
+                maxConcurrentIngestions,
+                DEFAULT_MAX_CONCURRENT
+        );
+        workerQueueCapacity = defaultIfZero(
+                workerQueueCapacity,
+                DEFAULT_WORKER_QUEUE_CAPACITY
+        );
+        claimBatchSize = defaultIfZero(
+                claimBatchSize,
+                DEFAULT_CLAIM_BATCH_SIZE
+        );
+        leaseDuration = defaultIfNull(
+                leaseDuration,
+                DEFAULT_LEASE_DURATION
+        );
+        heartbeatInterval = defaultIfNull(
+                heartbeatInterval,
+                DEFAULT_HEARTBEAT_INTERVAL
+        );
+        pollInterval = defaultIfNull(
+                pollInterval,
+                DEFAULT_POLL_INTERVAL
+        );
+        maxAttempts = defaultIfZero(maxAttempts, DEFAULT_MAX_ATTEMPTS);
+        retryBaseDelay = defaultIfNull(
+                retryBaseDelay,
+                DEFAULT_RETRY_BASE_DELAY
+        );
+        retryMaxDelay = defaultIfNull(
+                retryMaxDelay,
+                DEFAULT_RETRY_MAX_DELAY
+        );
+        payloadMaxInlineBytes = defaultIfZero(
+                payloadMaxInlineBytes,
+                DEFAULT_PAYLOAD_MAX_INLINE_BYTES
+        );
+
         if (maxConcurrentIngestions < 1 || maxConcurrentIngestions > 64) {
             throw new IllegalArgumentException(
                     "async ingestion max-concurrent-ingestions must be between 1 and 64"
@@ -61,6 +109,14 @@ public record AsyncIngestionProperties(
                     "async ingestion payload-max-inline-bytes must be between 1KiB and 50MiB"
             );
         }
+    }
+
+    private static int defaultIfZero(int value, int defaultValue) {
+        return value == 0 ? defaultValue : value;
+    }
+
+    private static <T> T defaultIfNull(T value, T defaultValue) {
+        return value == null ? defaultValue : value;
     }
 
     private static void requirePositive(String name, Duration value) {
