@@ -85,6 +85,10 @@ class HierarchicalChunkerTest {
                 .toList();
 
         assertThat(hierarchy).hasSize(3);
+        assertThat(hierarchy)
+                .extracting(KnowledgeChunk::chunkIndex)
+                .containsExactly(0, 1, 2)
+                .doesNotHaveDuplicates();
         assertThat(ChunkRole.fromMetadata(hierarchy.getFirst().metadata()))
                 .isEqualTo(ChunkRole.PARENT);
         assertThat(children).hasSize(2);
@@ -96,6 +100,8 @@ class HierarchicalChunkerTest {
                             .isLessThanOrEqualTo(300);
                     assertThat(ChunkRole.fromMetadata(child.metadata()))
                             .isEqualTo(ChunkRole.CHILD);
+                    assertThat(child.metadata().get("chunkIndex"))
+                            .isEqualTo(child.chunkIndex());
                 });
         assertThat(children)
                 .extracting(child -> child.metadata().get(
