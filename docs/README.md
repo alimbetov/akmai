@@ -26,6 +26,7 @@ If a document no longer matches the current runtime, it must be updated in the s
 | Adaptive Association Graph runtime | [`architecture/adaptive-graph-runtime.md`](architecture/adaptive-graph-runtime.md) |
 | Runtime feature switches | [`architecture/runtime-app-parameters.md`](architecture/runtime-app-parameters.md) and `application.yml` |
 | Self-Optimizing RAG v1.1 | [`architecture/rag-self-optimizing-platform-v1.1-technical-spec.md`](architecture/rag-self-optimizing-platform-v1.1-technical-spec.md) |
+| FileService → AkmAI knowledge contract (**TARGET**) | [`architecture/fileservice-knowledge-contract-v1.md`](architecture/fileservice-knowledge-contract-v1.md) |
 | Release readiness | [`audit/post-v1.1-readiness-2026-10-08.md`](audit/post-v1.1-readiness-2026-10-08.md) |
 | Production gates | [`operations/production-release-gates.md`](operations/production-release-gates.md) |
 | Benchmark contract | [`../benchmarks/rag-benchmark-v1/README.md`](../benchmarks/rag-benchmark-v1/README.md) |
@@ -34,11 +35,12 @@ If a document no longer matches the current runtime, it must be updated in the s
 
 ### `architecture/`
 
-Current architecture, storage and retrieval contracts. Start with [`architecture/README.md`](architecture/README.md).
+Current and explicitly marked target architecture, storage and retrieval contracts. Start with [`architecture/README.md`](architecture/README.md).
 
 Major areas:
 
 - current RAG runtime and adaptive graph;
+- FileService → AkmAI canonical knowledge-ingestion target contract;
 - self-optimizing retrieval and query memory;
 - semantic concept retrieval and semantic intelligence;
 - storage partitioning, lifecycle, retention and purge economics;

@@ -78,7 +78,14 @@ public class IngestionIdempotencyRepository {
             }
 
             if ("SUCCEEDED".equals(row.status())) {
-                return ClaimResult.replay(readResponse(row.responseJson()));
+                GenerationInfo generationInfo = generationInfo(row);
+                return ClaimResult.replay(
+                        readResponse(row.responseJson()),
+                        row.generation(),
+                        generationInfo == null
+                                ? null
+                                : generationInfo.embeddingProfileId()
+                );
             }
 
             Instant databaseNow = jdbcTemplate.queryForObject(
@@ -97,34 +104,20 @@ public class IngestionIdempotencyRepository {
             }
 
             if (row.generation() != null) {
-                String generationStatus = jdbcTemplate.query(
-                        """
-                        SELECT generation_status
-                        FROM knowledge_document_generation
-                        WHERE document_id = ?
-                          AND generation = ?
-                        """,
-                        (rs, rowNum) -> rs.getString(1),
-                        row.documentId(),
-                        row.generation()
-                ).stream().findFirst().orElse(null);
+                GenerationInfo generationInfo = generationInfo(row);
+                String generationStatus = generationInfo == null
+                        ? null
+                        : generationInfo.status();
 
                 if ("PUBLISHED".equals(generationStatus)) {
-                    Integer chunkCount = jdbcTemplate.queryForObject(
-                            """
-                            SELECT count(*)
-                            FROM knowledge_search_projection
-                            WHERE document_id = ?
-                              AND generation = ?
-                            """,
-                            Integer.class,
-                            row.documentId(),
-                            row.generation()
+                    int chunkCount = publishedSearchableChunkCount(
+                            row,
+                            generationInfo
                     );
                     KnowledgeIngestionResponse recovered =
                             new KnowledgeIngestionResponse(
                                     row.documentId(),
-                                    chunkCount == null ? 0 : chunkCount
+                                    chunkCount
                             );
                     jdbcTemplate.update(
                             """
@@ -141,7 +134,11 @@ public class IngestionIdempotencyRepository {
                             key,
                             fingerprint
                     );
-                    return ClaimResult.replay(recovered);
+                    return ClaimResult.replay(
+                            recovered,
+                            row.generation(),
+                            generationInfo.embeddingProfileId()
+                    );
                 }
 
                 jdbcTemplate.update(
@@ -350,6 +347,47 @@ public class IngestionIdempotencyRepository {
         );
     }
 
+    private int publishedSearchableChunkCount(
+            RequestRow row,
+            GenerationInfo generationInfo
+    ) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_document_vector_generation
+                WHERE access_level = ?
+                  AND document_id = ?
+                  AND generation = ?
+                """,
+                Integer.class,
+                generationInfo.accessLevel(),
+                row.documentId(),
+                row.generation()
+        );
+        return count == null ? 0 : count;
+    }
+
+    private GenerationInfo generationInfo(RequestRow row) {
+        if (row.generation() == null) {
+            return null;
+        }
+        return jdbcTemplate.query(
+                """
+                SELECT generation_status, embedding_profile_id, access_level
+                FROM knowledge_document_generation
+                WHERE document_id = ?
+                  AND generation = ?
+                """,
+                (rs, rowNum) -> new GenerationInfo(
+                        rs.getString("generation_status"),
+                        rs.getString("embedding_profile_id"),
+                        rs.getLong("access_level")
+                ),
+                row.documentId(),
+                row.generation()
+        ).stream().findFirst().orElse(null);
+    }
+
     private RequestRow selectForUpdate(String key) {
         return jdbcTemplate.query(
                 """
@@ -418,6 +456,13 @@ public class IngestionIdempotencyRepository {
         return value.length() <= 1000 ? value : value.substring(0, 1000);
     }
 
+    private record GenerationInfo(
+            String status,
+            String embeddingProfileId,
+            long accessLevel
+    ) {
+    }
+
     private record RequestRow(
             String documentId,
             String fingerprint,
@@ -433,18 +478,42 @@ public class IngestionIdempotencyRepository {
             Status status,
             IngestionIdempotencyContext context,
             KnowledgeIngestionResponse response,
-            Long retryAfterSeconds
+            Long retryAfterSeconds,
+            Long generation,
+            String embeddingProfileId
     ) {
         public static ClaimResult claimed(
                 IngestionIdempotencyContext context
         ) {
-            return new ClaimResult(Status.CLAIMED, context, null, null);
+            return new ClaimResult(
+                    Status.CLAIMED,
+                    context,
+                    null,
+                    null,
+                    null,
+                    null
+            );
         }
 
         public static ClaimResult replay(
                 KnowledgeIngestionResponse response
         ) {
-            return new ClaimResult(Status.REPLAY, null, response, null);
+            return replay(response, null, null);
+        }
+
+        public static ClaimResult replay(
+                KnowledgeIngestionResponse response,
+                Long generation,
+                String embeddingProfileId
+        ) {
+            return new ClaimResult(
+                    Status.REPLAY,
+                    null,
+                    response,
+                    null,
+                    generation,
+                    embeddingProfileId
+            );
         }
 
         public static ClaimResult inProgress(long retryAfterSeconds) {
@@ -452,7 +521,9 @@ public class IngestionIdempotencyRepository {
                     Status.IN_PROGRESS,
                     null,
                     null,
-                    Math.max(1L, retryAfterSeconds)
+                    Math.max(1L, retryAfterSeconds),
+                    null,
+                    null
             );
         }
 

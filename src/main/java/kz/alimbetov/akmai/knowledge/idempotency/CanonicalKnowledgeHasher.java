@@ -12,75 +12,58 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
-import kz.alimbetov.akmai.knowledge.api.CanonicalDocument;
 import kz.alimbetov.akmai.knowledge.api.CanonicalKnowledgeDocument;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeLanguage;
 import org.springframework.stereotype.Component;
 
+/** Calculates structured-content identity independent from transport timestamps/storage URLs. */
 @Component
-public class CanonicalRequestFingerprint {
+public class CanonicalKnowledgeHasher {
 
     private final ObjectMapper objectMapper;
-    private final CanonicalKnowledgeHasher canonicalKnowledgeHasher;
 
-    public CanonicalRequestFingerprint(ObjectMapper objectMapper) {
+    public CanonicalKnowledgeHasher(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
-        this.canonicalKnowledgeHasher = new CanonicalKnowledgeHasher(objectMapper);
     }
 
-    public String fingerprint(AddKnowledgeRequest request) {
+    public String hash(CanonicalKnowledgeDocument document) {
+        if (document == null) {
+            throw new IllegalArgumentException("canonical document is required");
+        }
         TreeMap<String, Object> canonical = new TreeMap<>();
-        canonical.put("documentId", text(request.documentId()));
-        canonical.put("title", text(request.title()));
-        canonical.put("text", text(request.text()));
-        canonical.put("source", text(request.source()));
-        canonical.put(
-                "language",
-                KnowledgeLanguage.parse(request.language()).code()
-        );
-        canonical.put("domain", request.domain().name());
-        canonical.put("accessLevel", request.accessLevel());
-        canonical.put("metadata", canonicalValue(request.metadata()));
-        return digest(canonical);
-    }
-
-    public String fingerprint(CanonicalDocument document) {
-        TreeMap<String, Object> canonical = new TreeMap<>();
+        canonical.put("schemaVersion", document.schemaVersion());
         canonical.put("documentId", text(document.documentId()));
         canonical.put("version", text(document.version()));
         canonical.put("title", text(document.title()));
-        canonical.put("source", text(document.source()));
         canonical.put(
                 "language",
                 KnowledgeLanguage.parse(document.language()).code()
         );
         canonical.put("domain", document.domain().name());
         canonical.put("accessLevel", document.accessLevel());
+        canonical.put("source", canonicalSource(document.source()));
         canonical.put("metadata", canonicalValue(document.metadata()));
         canonical.put(
                 "blocks",
-                document.blocks().stream()
-                        .map(this::canonicalBlock)
-                        .toList()
+                document.blocks().stream().map(this::canonicalBlock).toList()
         );
         return digest(canonical);
     }
 
-    /**
-     * FileService retries are identified by canonical semantic content. Parser timestamps and
-     * physical object-storage locations are deliberately excluded: neither changes the knowledge
-     * AkmAI is being asked to publish.
-     */
-    public String fingerprint(CanonicalKnowledgeDocument document) {
-        return canonicalKnowledgeHasher.hash(document);
+    private Map<String, Object> canonicalSource(
+            CanonicalKnowledgeDocument.Source source
+    ) {
+        LinkedHashMap<String, Object> value = new LinkedHashMap<>();
+        value.put("type", source.type().name());
+        value.put("fileId", text(source.fileId()));
+        value.put("sourceVersion", text(source.sourceVersion()));
+        value.put("contentHash", text(source.contentHash()));
+        return value;
     }
 
-    public String canonicalHash(CanonicalKnowledgeDocument document) {
-        return canonicalKnowledgeHasher.hash(document);
-    }
-
-    private Map<String, Object> canonicalBlock(CanonicalDocument.Block block) {
+    private Map<String, Object> canonicalBlock(
+            CanonicalKnowledgeDocument.Block block
+    ) {
         LinkedHashMap<String, Object> value = new LinkedHashMap<>();
         value.put("blockId", text(block.blockId()));
         value.put("type", block.type().name());
@@ -88,7 +71,7 @@ public class CanonicalRequestFingerprint {
         value.put("headingLevel", block.headingLevel());
         value.put("pageFrom", block.pageFrom());
         value.put("pageTo", block.pageTo());
-        value.put("sectionPath", text(block.sectionPath()));
+        value.put("sectionPath", canonicalValue(block.sectionPath()));
         if (block.boundingBox() != null) {
             value.put("boundingBox", Map.of(
                     "x", block.boundingBox().x(),
@@ -108,7 +91,7 @@ public class CanonicalRequestFingerprint {
             );
         } catch (JsonProcessingException exception) {
             throw new IllegalArgumentException(
-                    "Request cannot be canonicalized",
+                    "Canonical document cannot be serialized deterministically",
                     exception
             );
         } catch (NoSuchAlgorithmException exception) {

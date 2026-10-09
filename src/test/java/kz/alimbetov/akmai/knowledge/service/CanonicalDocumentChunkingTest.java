@@ -2,9 +2,11 @@ package kz.alimbetov.akmai.knowledge.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import kz.alimbetov.akmai.knowledge.api.CanonicalDocument;
+import kz.alimbetov.akmai.knowledge.api.CanonicalKnowledgeDocument;
 import kz.alimbetov.akmai.knowledge.chunking.AtomicUnitProtector;
 import kz.alimbetov.akmai.knowledge.chunking.ChunkIdentity;
 import kz.alimbetov.akmai.knowledge.chunking.ChunkingProperties;
@@ -16,11 +18,17 @@ import kz.alimbetov.akmai.knowledge.chunking.SemanticChunker;
 import kz.alimbetov.akmai.knowledge.chunking.StructuralUnitExtractor;
 import kz.alimbetov.akmai.knowledge.chunking.TextNormalizer;
 import kz.alimbetov.akmai.knowledge.chunking.TokenEstimator;
+import kz.alimbetov.akmai.knowledge.ingestion.EnrichedKnowledgeChunk;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
+import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
+import kz.alimbetov.akmai.knowledge.projection.SearchProjectionFactory;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
 import org.junit.jupiter.api.Test;
 
 class CanonicalDocumentChunkingTest {
 
+    private static final String CONTENT_HASH = "sha256:" + "a".repeat(64);
     private final TokenEstimator estimator = new TokenEstimator();
     private final SemanticChunker chunker = new SemanticChunker(
             new TextNormalizer(),
@@ -120,5 +128,91 @@ class CanonicalDocumentChunkingTest {
                 "width", 300.0,
                 "height", 40.0
         ));
+    }
+
+    @Test
+    void typedFileSourceProvenanceSurvivesChunkProjectionAndRetrievalHit() {
+        CanonicalKnowledgeDocument source = new CanonicalKnowledgeDocument(
+                1,
+                "doc-file-1",
+                "3",
+                "Architecture",
+                "en",
+                KnowledgeDomain.TECHNICAL,
+                5L,
+                new CanonicalKnowledgeDocument.Source(
+                        CanonicalKnowledgeDocument.SourceType.FILE,
+                        "file-123",
+                        "3",
+                        "architecture.pdf",
+                        "application/pdf",
+                        CONTENT_HASH,
+                        new CanonicalKnowledgeDocument.StorageReference(
+                                "rustfs",
+                                "knowledge-raw",
+                                "files/file-123/v3.pdf",
+                                null
+                        )
+                ),
+                new CanonicalKnowledgeDocument.Processing(
+                        "pdf-parser",
+                        "4.2.0",
+                        Instant.parse("2026-10-09T00:00:00Z")
+                ),
+                List.of(
+                        new CanonicalKnowledgeDocument.Block(
+                                "b-heading",
+                                CanonicalKnowledgeDocument.BlockType.HEADING,
+                                "Persistence",
+                                2,
+                                37,
+                                37,
+                                List.of("Architecture", "Persistence"),
+                                null
+                        ),
+                        new CanonicalKnowledgeDocument.Block(
+                                "b-body",
+                                CanonicalKnowledgeDocument.BlockType.PARAGRAPH,
+                                "PostgreSQL is the durable authority for graph state.",
+                                null,
+                                37,
+                                38,
+                                List.of("Architecture", "Persistence"),
+                                null
+                        )
+                ),
+                Map.of()
+        );
+
+        var prepared = mapper.prepare(source, "canonical-hash-1");
+        var chunks = chunker.chunk(prepared.document(), prepared.semanticUnits());
+        assertThat(chunks).hasSize(1);
+
+        SearchProjection projection = new SearchProjectionFactory().create(
+                new EnrichedKnowledgeChunk(chunks.getFirst(), List.of(), List.of())
+        );
+        RetrievalHit hit = new RetrievalHit(
+                RetrievalType.LEXICAL,
+                5L,
+                projection.documentId(),
+                1L,
+                projection.chunkId(),
+                projection.text(),
+                projection.metadata()
+        );
+
+        assertThat(hit.sourceProvenance()).isNotNull();
+        assertThat(hit.sourceProvenance().fileId()).isEqualTo("file-123");
+        assertThat(hit.sourceProvenance().sourceVersion()).isEqualTo("3");
+        assertThat(hit.sourceProvenance().fileName()).isEqualTo("architecture.pdf");
+        assertThat(hit.sourceProvenance().contentHash()).isEqualTo(CONTENT_HASH);
+        assertThat(hit.sourceProvenance().blockIds())
+                .containsExactly("b-heading", "b-body");
+        assertThat(hit.sourceProvenance().pageFrom()).isEqualTo(37);
+        assertThat(hit.sourceProvenance().pageTo()).isEqualTo(38);
+        assertThat(hit.sourceProvenance().sectionPath())
+                .containsExactly("Architecture", "Persistence");
+        assertThat(hit.metadata())
+                .doesNotContainKeys("storageBucket", "storageObjectKey");
     }
 }

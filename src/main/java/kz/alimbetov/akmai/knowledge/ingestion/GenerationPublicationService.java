@@ -358,7 +358,7 @@ public class GenerationPublicationService {
                   AND generation = ?
                   AND generation_status = 'STAGING'
                 """,
-                projections.size(),
+                manifest.size(),
                 documentId,
                 generation
         );

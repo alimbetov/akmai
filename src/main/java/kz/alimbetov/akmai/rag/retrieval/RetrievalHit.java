@@ -3,6 +3,8 @@ package kz.alimbetov.akmai.rag.retrieval;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import kz.alimbetov.akmai.knowledge.model.SourceProvenance;
+import kz.alimbetov.akmai.knowledge.model.SourceProvenanceMetadata;
 
 public record RetrievalHit(
         RetrievalType type,
@@ -13,11 +15,40 @@ public record RetrievalHit(
         String text,
         Map<String, Object> metadata,
         List<RetrievalEvidence> evidence,
-        double fusedScore
+        double fusedScore,
+        SourceProvenance sourceProvenance
 ) {
     public RetrievalHit {
         metadata = canonicalMetadata(metadata);
         evidence = evidence == null ? List.of() : List.copyOf(evidence);
+        sourceProvenance = sourceProvenance == null
+                ? SourceProvenanceMetadata.fromMetadata(metadata)
+                : sourceProvenance;
+    }
+
+    public RetrievalHit(
+            RetrievalType type,
+            long accessLevel,
+            String documentId,
+            long generation,
+            String chunkId,
+            String text,
+            Map<String, Object> metadata,
+            List<RetrievalEvidence> evidence,
+            double fusedScore
+    ) {
+        this(
+                type,
+                accessLevel,
+                documentId,
+                generation,
+                chunkId,
+                text,
+                metadata,
+                evidence,
+                fusedScore,
+                null
+        );
     }
 
     public RetrievalHit(
@@ -38,7 +69,8 @@ public record RetrievalHit(
                 text,
                 metadata,
                 List.of(),
-                0.0
+                0.0,
+                null
         );
     }
 
@@ -58,7 +90,8 @@ public record RetrievalHit(
                 text,
                 metadata,
                 List.of(),
-                0.0
+                0.0,
+                null
         );
     }
 
@@ -80,7 +113,8 @@ public record RetrievalHit(
                 text,
                 metadata,
                 evidence,
-                fusedScore
+                fusedScore,
+                null
         );
     }
 

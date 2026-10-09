@@ -6,76 +6,85 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
 import kz.alimbetov.akmai.knowledge.api.CanonicalKnowledgeDocument;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import org.junit.jupiter.api.Test;
 
-class CanonicalRequestFingerprintTest {
+class CanonicalKnowledgeHasherTest {
 
     private static final String CONTENT_HASH = "sha256:" + "a".repeat(64);
-    private final CanonicalRequestFingerprint fingerprint =
-            new CanonicalRequestFingerprint(new ObjectMapper());
+    private final CanonicalKnowledgeHasher hasher =
+            new CanonicalKnowledgeHasher(new ObjectMapper());
 
     @Test
-    void accessLevelChangesLogicalRequestIdentity() {
-        AddKnowledgeRequest levelOne = request(1L);
-        AddKnowledgeRequest levelTwo = request(2L);
-
-        assertThat(fingerprint.fingerprint(levelOne))
-                .isNotEqualTo(fingerprint.fingerprint(levelTwo));
-        assertThat(fingerprint.fingerprint(levelOne))
-                .isEqualTo(fingerprint.fingerprint(request(1L)));
-    }
-
-    @Test
-    void canonicalRetryIgnoresParseTimestampAndStorageLocation() {
-        CanonicalKnowledgeDocument first = canonical(
+    void ignoresOperationalStorageAndParseTimestamp() {
+        CanonicalKnowledgeDocument first = document(
+                "document-a.pdf",
+                "application/pdf",
                 "bucket-a",
                 "object-a",
                 Instant.parse("2026-10-09T00:00:00Z"),
                 "Stable content"
         );
-        CanonicalKnowledgeDocument retry = canonical(
+        CanonicalKnowledgeDocument second = document(
+                "document-a.pdf",
+                "application/pdf",
                 "bucket-b",
                 "object-b",
                 Instant.parse("2026-10-09T03:00:00Z"),
                 "Stable content"
         );
 
-        assertThat(fingerprint.fingerprint(first))
-                .isEqualTo(fingerprint.fingerprint(retry));
+        assertThat(hasher.hash(first)).isEqualTo(hasher.hash(second));
     }
 
     @Test
-    void canonicalContentChangeChangesRequestIdentity() {
-        assertThat(fingerprint.fingerprint(canonical(
+    void ignoresSourcePresentationFields() {
+        CanonicalKnowledgeDocument first = document(
+                "contract.pdf",
+                "application/pdf",
                 "bucket",
                 "object",
                 Instant.parse("2026-10-09T00:00:00Z"),
                 "Stable content"
-        ))).isNotEqualTo(fingerprint.fingerprint(canonical(
+        );
+        CanonicalKnowledgeDocument renamed = document(
+                "renamed-contract.bin",
+                "application/octet-stream",
+                "bucket",
+                "object",
+                Instant.parse("2026-10-09T00:00:00Z"),
+                "Stable content"
+        );
+
+        assertThat(hasher.hash(first)).isEqualTo(hasher.hash(renamed));
+    }
+
+    @Test
+    void changesWhenCanonicalContentChanges() {
+        String first = hasher.hash(document(
+                "document.pdf",
+                "application/pdf",
+                "bucket",
+                "object",
+                Instant.parse("2026-10-09T00:00:00Z"),
+                "Stable content"
+        ));
+        String second = hasher.hash(document(
+                "document.pdf",
+                "application/pdf",
                 "bucket",
                 "object",
                 Instant.parse("2026-10-09T00:00:00Z"),
                 "Changed content"
-        )));
+        ));
+
+        assertThat(first).isNotEqualTo(second);
     }
 
-    private AddKnowledgeRequest request(long accessLevel) {
-        return new AddKnowledgeRequest(
-                "doc-1",
-                "Title",
-                "Text",
-                "source",
-                "en",
-                KnowledgeDomain.GENERAL,
-                accessLevel,
-                Map.of("version", "1")
-        );
-    }
-
-    private CanonicalKnowledgeDocument canonical(
+    private CanonicalKnowledgeDocument document(
+            String fileName,
+            String mediaType,
             String bucket,
             String objectKey,
             Instant parsedAt,
@@ -93,8 +102,8 @@ class CanonicalRequestFingerprintTest {
                         CanonicalKnowledgeDocument.SourceType.FILE,
                         "file-1",
                         "1",
-                        "document.pdf",
-                        "application/pdf",
+                        fileName,
+                        mediaType,
                         CONTENT_HASH,
                         new CanonicalKnowledgeDocument.StorageReference(
                                 "rustfs",

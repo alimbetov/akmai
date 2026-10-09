@@ -78,11 +78,20 @@ public class PersistenceCoordinator {
             KnowledgeIngestionResponse response,
             long accessLevel
     ) {
+        persistWithResult(chunks, idempotency, response, accessLevel);
+    }
+
+    public PersistenceResult persistWithResult(
+            List<EnrichedKnowledgeChunk> chunks,
+            IngestionIdempotencyContext idempotency,
+            KnowledgeIngestionResponse response,
+            long accessLevel
+    ) {
         if (accessLevel <= 0) {
             throw new IllegalArgumentException("accessLevel must be positive");
         }
         if (chunks == null || chunks.isEmpty()) {
-            return;
+            return null;
         }
 
         List<SearchProjection> baseProjections = chunks.stream()
@@ -222,6 +231,13 @@ public class PersistenceCoordinator {
                         indexedChunkCount
                 );
             }
+            return new PersistenceResult(
+                    documentId,
+                    generation,
+                    indexedChunkCount,
+                    profile.profileId(),
+                    result
+            );
         } catch (PublicationOutcomeUnknownException exception) {
             if (metrics != null) {
                 metrics.ingestion(
@@ -499,5 +515,14 @@ public class PersistenceCoordinator {
                 + (message == null || message.isBlank() ? "" : ": " + message);
         value = value.replaceAll("[\\r\\n\\t]+", " ").trim();
         return value.length() <= 1000 ? value : value.substring(0, 1000);
+    }
+
+    public record PersistenceResult(
+            String documentId,
+            long generation,
+            int indexedChunkCount,
+            String embeddingProfileId,
+            GenerationPublicationService.PublicationResult publicationResult
+    ) {
     }
 }

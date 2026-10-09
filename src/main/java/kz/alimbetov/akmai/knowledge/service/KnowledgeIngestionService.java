@@ -6,13 +6,16 @@ import java.util.Map;
 import kz.alimbetov.akmai.config.IdempotencyProperties;
 import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
 import kz.alimbetov.akmai.knowledge.api.CanonicalDocument;
+import kz.alimbetov.akmai.knowledge.api.CanonicalKnowledgeDocument;
 import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResponse;
+import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResult;
 import kz.alimbetov.akmai.knowledge.chunking.HierarchicalChunker;
 import kz.alimbetov.akmai.knowledge.idempotency.CanonicalRequestFingerprint;
 import kz.alimbetov.akmai.knowledge.idempotency.IdempotencyConflictException;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyContext;
 import kz.alimbetov.akmai.knowledge.idempotency.IngestionIdempotencyRepository;
 import kz.alimbetov.akmai.knowledge.ingestion.EnrichedKnowledgeChunk;
+import kz.alimbetov.akmai.knowledge.ingestion.GenerationPublicationService;
 import kz.alimbetov.akmai.knowledge.ingestion.ParallelIngestionExecutor;
 import kz.alimbetov.akmai.knowledge.ingestion.PersistenceCoordinator;
 import kz.alimbetov.akmai.knowledge.model.DocumentMetadata;
@@ -143,6 +146,64 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
         }
     }
 
+    @Override
+    public KnowledgeIngestionResult addCanonicalKnowledge(
+            CanonicalKnowledgeDocument document,
+            String idempotencyKey
+    ) {
+        if (document == null) {
+            throw new IllegalArgumentException("canonical document is required");
+        }
+        String canonicalHash = requestFingerprint.canonicalHash(document);
+        String fingerprint = requiresIdempotency(idempotencyKey)
+                ? canonicalHash
+                : null;
+        ClaimOutcome claim = claimOutcome(
+                idempotencyKey,
+                document.documentId(),
+                fingerprint
+        );
+        if (claim.response() != null) {
+            if (claim.generation() == null
+                    || claim.generation() <= 0
+                    || claim.embeddingProfileId() == null
+                    || claim.embeddingProfileId().isBlank()) {
+                throw new IllegalStateException(
+                        "Successful ingestion replay is missing publication identity"
+                );
+            }
+            return result(
+                    document,
+                    canonicalHash,
+                    claim.generation(),
+                    claim.response().chunkCount(),
+                    claim.embeddingProfileId(),
+                    KnowledgeIngestionResult.PublicationStatus.REPLAYED
+            );
+        }
+        IngestionIdempotencyContext idempotency = claim.context();
+
+        try {
+            heartbeat(idempotency);
+            CanonicalDocumentMapper.PreparedCanonicalDocument prepared =
+                    canonicalDocumentMapper.prepare(document, canonicalHash);
+            List<KnowledgeChunk> chunks = hierarchicalChunker.chunk(
+                    prepared.document(),
+                    prepared.semanticUnits()
+            );
+            return persistCanonicalKnowledge(
+                    document,
+                    canonicalHash,
+                    prepared.document(),
+                    chunks,
+                    idempotency
+            );
+        } catch (RuntimeException exception) {
+            markFailedPreservingPrimary(idempotency, exception);
+            throw exception;
+        }
+    }
+
     private KnowledgeIngestionResponse ingestText(
             AddKnowledgeRequest request,
             IngestionIdempotencyContext idempotency
@@ -171,18 +232,53 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
         );
     }
 
+    private KnowledgeIngestionResult persistCanonicalKnowledge(
+            CanonicalKnowledgeDocument source,
+            String canonicalHash,
+            KnowledgeDocument document,
+            List<KnowledgeChunk> chunks,
+            IngestionIdempotencyContext idempotency
+    ) {
+        long searchableChunkCount = requireSearchableChunks(chunks);
+        heartbeat(idempotency);
+        List<EnrichedKnowledgeChunk> enriched =
+                parallelIngestionExecutor.execute(chunks);
+        heartbeat(idempotency);
+
+        KnowledgeIngestionResponse compatibilityResponse =
+                new KnowledgeIngestionResponse(
+                        document.documentId(),
+                        Math.toIntExact(searchableChunkCount)
+                );
+        PersistenceCoordinator.PersistenceResult persisted =
+                persistenceCoordinator.persistWithResult(
+                        enriched,
+                        idempotency,
+                        compatibilityResponse,
+                        source.accessLevel()
+                );
+        if (persisted == null) {
+            throw new IllegalStateException(
+                    "Persistence completed without publication result"
+            );
+        }
+        return result(
+                source,
+                canonicalHash,
+                persisted.generation(),
+                persisted.indexedChunkCount(),
+                persisted.embeddingProfileId(),
+                publicationStatus(persisted.publicationResult())
+        );
+    }
+
     private KnowledgeIngestionResponse persistChunks(
             KnowledgeDocument document,
             List<KnowledgeChunk> chunks,
             long accessLevel,
             IngestionIdempotencyContext idempotency
     ) {
-        long searchableChunkCount = hierarchicalChunker.searchableChunkCount(chunks);
-        if (searchableChunkCount == 0) {
-            throw new IllegalArgumentException(
-                    "Document produced no indexable chunks after normalization"
-            );
-        }
+        long searchableChunkCount = requireSearchableChunks(chunks);
         heartbeat(idempotency);
 
         List<EnrichedKnowledgeChunk> enriched = parallelIngestionExecutor.execute(chunks);
@@ -201,13 +297,68 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
         return response;
     }
 
+    private long requireSearchableChunks(List<KnowledgeChunk> chunks) {
+        long searchableChunkCount = hierarchicalChunker.searchableChunkCount(chunks);
+        if (searchableChunkCount == 0) {
+            throw new IllegalArgumentException(
+                    "Document produced no indexable chunks after normalization"
+            );
+        }
+        return searchableChunkCount;
+    }
+
+    private KnowledgeIngestionResult result(
+            CanonicalKnowledgeDocument document,
+            String canonicalHash,
+            long generation,
+            int chunkCount,
+            String embeddingProfileId,
+            KnowledgeIngestionResult.PublicationStatus status
+    ) {
+        return new KnowledgeIngestionResult(
+                KnowledgeIngestionResult.CURRENT_SCHEMA_VERSION,
+                document.documentId(),
+                new KnowledgeIngestionResult.Source(
+                        document.source().type().name(),
+                        document.source().fileId(),
+                        document.source().sourceVersion(),
+                        document.source().contentHash()
+                ),
+                new KnowledgeIngestionResult.Publication(
+                        status,
+                        generation,
+                        chunkCount
+                ),
+                new KnowledgeIngestionResult.Processing(
+                        document.schemaVersion(),
+                        canonicalHash,
+                        document.processing().parser(),
+                        document.processing().parserVersion(),
+                        embeddingProfileId
+                )
+        );
+    }
+
+    private KnowledgeIngestionResult.PublicationStatus publicationStatus(
+            GenerationPublicationService.PublicationResult result
+    ) {
+        return switch (result) {
+            case PUBLISHED -> KnowledgeIngestionResult.PublicationStatus.PUBLISHED;
+            case ALREADY_PUBLISHED ->
+                    KnowledgeIngestionResult.PublicationStatus.ALREADY_PUBLISHED;
+            case SUPERSEDED -> throw new IllegalStateException(
+                    "Superseded publication cannot produce a success result"
+            );
+        };
+    }
+
     private ClaimOutcome claimOutcome(
             String idempotencyKey,
             String documentId,
             String fingerprint
     ) {
         if (!requiresIdempotency(idempotencyKey)) {
-            return new ClaimOutcome(null, null);
+            return new ClaimOutcome(null, null, null, null);
         }
         var claim = idempotencyRepository.claim(
                 idempotencyKey,
@@ -217,7 +368,12 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
         );
         if (claim.status()
                 == IngestionIdempotencyRepository.ClaimResult.Status.REPLAY) {
-            return new ClaimOutcome(null, claim.response());
+            return new ClaimOutcome(
+                    null,
+                    claim.response(),
+                    claim.generation(),
+                    claim.embeddingProfileId()
+            );
         }
         if (claim.status()
                 == IngestionIdempotencyRepository.ClaimResult.Status.IN_PROGRESS) {
@@ -227,7 +383,7 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
                     claim.retryAfterSeconds()
             );
         }
-        return new ClaimOutcome(claim.context(), null);
+        return new ClaimOutcome(claim.context(), null, null, null);
     }
 
     private boolean requiresIdempotency(String idempotencyKey) {
@@ -260,7 +416,9 @@ public class KnowledgeIngestionService implements KnowledgeIngestionPort {
 
     private record ClaimOutcome(
             IngestionIdempotencyContext context,
-            KnowledgeIngestionResponse response
+            KnowledgeIngestionResponse response,
+            Long generation,
+            String embeddingProfileId
     ) {
     }
 }

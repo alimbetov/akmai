@@ -15,6 +15,7 @@ import java.util.concurrent.Executor;
 import java.util.stream.IntStream;
 import kz.alimbetov.akmai.config.IdempotencyProperties;
 import kz.alimbetov.akmai.knowledge.api.AddKnowledgeRequest;
+import kz.alimbetov.akmai.knowledge.api.CanonicalKnowledgeDocument;
 import kz.alimbetov.akmai.knowledge.chunking.AtomicUnitProtector;
 import kz.alimbetov.akmai.knowledge.chunking.ChunkIdentity;
 import kz.alimbetov.akmai.knowledge.chunking.ChunkingProperties;
@@ -48,6 +49,8 @@ import kz.alimbetov.akmai.knowledge.reference.ReferenceGraphRepository;
 import kz.alimbetov.akmai.knowledge.service.KnowledgeIngestionService;
 import kz.alimbetov.akmai.knowledge.vector.PostgresGenerationVectorRepository;
 import kz.alimbetov.akmai.knowledge.vector.PublishedVectorSearchRepository;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalHit;
+import kz.alimbetov.akmai.rag.retrieval.RetrievalType;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,6 +70,7 @@ class KnowledgeIngestionPostgresSmokeIntegrationTest {
 
     private static final String DOCUMENT_ID = "smoke-pg-large-1";
     private static final String VECTOR_TABLE = "p_smoke_ingestion";
+    private static final String CANONICAL_SOURCE_HASH = "sha256:" + "b".repeat(64);
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
@@ -192,7 +196,7 @@ class KnowledgeIngestionPostgresSmokeIntegrationTest {
                 enrichment,
                 persistence,
                 idempotency,
-                mock(CanonicalRequestFingerprint.class),
+                new CanonicalRequestFingerprint(mapper),
                 new IdempotencyProperties(Duration.ofMinutes(5))
         );
 
@@ -253,6 +257,8 @@ class KnowledgeIngestionPostgresSmokeIntegrationTest {
                 DOCUMENT_ID,
                 generation
         )).isEqualTo(1);
+        assertThat(generationChunkCount(DOCUMENT_ID, generation))
+                .isEqualTo(response.chunkCount());
         assertThat(count(
                 "knowledge_document_vector_generation",
                 "document_id = ? AND generation = ?",
@@ -272,18 +278,7 @@ class KnowledgeIngestionPostgresSmokeIntegrationTest {
                 generation
         )).isGreaterThanOrEqualTo(response.chunkCount());
 
-        String targetEmbeddingText = jdbc.queryForObject(
-                """
-                SELECT content
-                FROM akmai_vector.%s
-                WHERE document_id = ? AND generation = ?
-                ORDER BY chunk_id
-                LIMIT 1
-                """.formatted(VECTOR_TABLE),
-                String.class,
-                DOCUMENT_ID,
-                generation
-        );
+        String targetEmbeddingText = firstVectorContent(DOCUMENT_ID, generation);
         when(embeddingModel.embed("smoke-query"))
                 .thenReturn(fakeVector(targetEmbeddingText));
 
@@ -301,6 +296,114 @@ class KnowledgeIngestionPostgresSmokeIntegrationTest {
             assertThat(match.generation()).isEqualTo(generation);
             assertThat(match.score()).isGreaterThanOrEqualTo(0.99);
         });
+    }
+
+    @Test
+    void canonicalFileServiceDocumentPublishesAndRetainsTypedRetrievalProvenance() {
+        String documentId = "smoke-pg-canonical-1";
+        CanonicalKnowledgeDocument document = canonicalDocument(documentId);
+
+        var result = ingestion.addCanonicalKnowledge(document, null);
+
+        assertThat(result.publication().status().name()).isEqualTo("PUBLISHED");
+        assertThat(result.publication().generation()).isPositive();
+        assertThat(result.publication().chunkCount()).isPositive();
+        assertThat(result.processing().canonicalHash()).isNotBlank();
+        assertThat(result.processing().embeddingProfile()).isEqualTo(profile.profileId());
+
+        long generation = result.publication().generation();
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT published_generation
+                FROM knowledge_document_lifecycle
+                WHERE document_id = ?
+                """,
+                Long.class,
+                documentId
+        )).isEqualTo(generation);
+        assertThat(generationChunkCount(documentId, generation))
+                .isEqualTo(result.publication().chunkCount());
+        assertThat(count(
+                "knowledge_document_vector_generation",
+                "document_id = ? AND generation = ?",
+                documentId,
+                generation
+        )).isEqualTo(result.publication().chunkCount());
+
+        String targetEmbeddingText = firstVectorContent(documentId, generation);
+        when(embeddingModel.embed("canonical-smoke-query"))
+                .thenReturn(fakeVector(targetEmbeddingText));
+
+        var matches = vectorSearch.search(
+                "canonical-smoke-query",
+                List.of(documentId),
+                Set.of(1L),
+                3,
+                0.99
+        );
+        assertThat(matches).isNotEmpty();
+
+        var match = matches.getFirst();
+        RetrievalHit hit = new RetrievalHit(
+                RetrievalType.VECTOR,
+                match.accessLevel(),
+                match.documentId(),
+                match.generation(),
+                match.chunkId(),
+                match.content(),
+                match.metadata()
+        );
+
+        assertThat(hit.documentId()).isEqualTo(documentId);
+        assertThat(hit.generation()).isEqualTo(generation);
+        assertThat(hit.sourceProvenance()).isNotNull();
+        assertThat(hit.sourceProvenance().fileId()).isEqualTo("file-smoke-1");
+        assertThat(hit.sourceProvenance().sourceVersion()).isEqualTo("7");
+        assertThat(hit.sourceProvenance().fileName()).isEqualTo("architecture.pdf");
+        assertThat(hit.sourceProvenance().contentHash())
+                .isEqualTo(CANONICAL_SOURCE_HASH);
+        assertThat(hit.sourceProvenance().blockIds()).isNotEmpty();
+        assertThat(hit.sourceProvenance().pageFrom()).isNotNull().isPositive();
+        assertThat(hit.sourceProvenance().pageTo())
+                .isNotNull()
+                .isGreaterThanOrEqualTo(hit.sourceProvenance().pageFrom());
+        assertThat(hit.metadata())
+                .doesNotContainKeys(
+                        "storageProvider",
+                        "storageBucket",
+                        "storageObjectKey",
+                        "presignedUrl",
+                        "authorization"
+                );
+    }
+
+    private static int generationChunkCount(String documentId, long generation) {
+        Integer count = jdbc.queryForObject(
+                """
+                SELECT chunk_count
+                FROM knowledge_document_generation
+                WHERE document_id = ? AND generation = ?
+                """,
+                Integer.class,
+                documentId,
+                generation
+        );
+        return count == null ? 0 : count;
+    }
+
+    private static String firstVectorContent(String documentId, long generation) {
+        return jdbc.queryForObject(
+                """
+                SELECT content
+                FROM akmai_vector.%s
+                WHERE document_id = ? AND generation = ?
+                ORDER BY chunk_id
+                LIMIT 1
+                """.formatted(VECTOR_TABLE),
+                String.class,
+                documentId,
+                generation
+        );
     }
 
     private static int count(
@@ -383,6 +486,52 @@ class KnowledgeIngestionPostgresSmokeIntegrationTest {
                 Duration.ofMinutes(10),
                 RetentionPolicy.PERMANENT,
                 Duration.ofDays(90)
+        );
+    }
+
+    private CanonicalKnowledgeDocument canonicalDocument(String documentId) {
+        List<CanonicalKnowledgeDocument.Block> blocks = IntStream.rangeClosed(1, 24)
+                .mapToObj(index -> new CanonicalKnowledgeDocument.Block(
+                        "b-" + index,
+                        CanonicalKnowledgeDocument.BlockType.PARAGRAPH,
+                        "Architecture evidence block " + index
+                                + ". PostgreSQL remains the durable authority and publication must preserve source provenance, generation identity and retrieval visibility.",
+                        null,
+                        index,
+                        index,
+                        List.of("Architecture", "Section " + index),
+                        null
+                ))
+                .toList();
+        return new CanonicalKnowledgeDocument(
+                1,
+                documentId,
+                "7",
+                "FileService canonical smoke fixture",
+                "en",
+                KnowledgeDomain.TECHNICAL,
+                1L,
+                new CanonicalKnowledgeDocument.Source(
+                        CanonicalKnowledgeDocument.SourceType.FILE,
+                        "file-smoke-1",
+                        "7",
+                        "architecture.pdf",
+                        "application/pdf",
+                        CANONICAL_SOURCE_HASH,
+                        new CanonicalKnowledgeDocument.StorageReference(
+                                "rustfs",
+                                "knowledge-raw",
+                                "tenant/files/file-smoke-1/v7.pdf",
+                                "storage-v7"
+                        )
+                ),
+                new CanonicalKnowledgeDocument.Processing(
+                        "pdf-parser",
+                        "4.2.0",
+                        Instant.parse("2026-10-09T00:00:00Z")
+                ),
+                blocks,
+                Map.of("testKind", "canonical-postgres-smoke")
         );
     }
 

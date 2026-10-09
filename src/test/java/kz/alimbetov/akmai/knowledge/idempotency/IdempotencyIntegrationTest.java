@@ -67,6 +67,7 @@ class IdempotencyIntegrationTest {
     @BeforeEach
     void clean() {
         jdbc.update("DELETE FROM knowledge_ingestion_request");
+        jdbc.update("DELETE FROM knowledge_document_vector_generation");
         jdbc.update("DELETE FROM knowledge_document_generation");
         jdbc.update("DELETE FROM knowledge_document_lifecycle");
     }
@@ -118,7 +119,12 @@ class IdempotencyIntegrationTest {
     }
 
     @Test
-    void expiredClaimRecoversAlreadyPublishedGenerationInsteadOfAllocatingAgain() {
+    void expiredClaimRecoversPublishedSearchableManifestWithoutAllocatingAgain() {
+        jdbc.queryForObject(
+                "SELECT akmai_admin.ensure_access_level(?)",
+                Object.class,
+                1L
+        );
         var first = repository.claim(
                 "key-1",
                 "doc-1",
@@ -140,8 +146,24 @@ class IdempotencyIntegrationTest {
 
         jdbc.update(
                 """
+                INSERT INTO knowledge_document_vector_generation (
+                    access_level, document_id, generation,
+                    vector_id, chunk_id, embedding_profile_id,
+                    physical_id_version
+                ) VALUES
+                    (1, ?, ?, 'vector-1', 'chunk-1', NULL, 2),
+                    (1, ?, ?, 'vector-2', 'chunk-2', NULL, 2)
+                """,
+                "doc-1",
+                generation,
+                "doc-1",
+                generation
+        );
+        jdbc.update(
+                """
                 UPDATE knowledge_document_generation
                 SET generation_status = 'PUBLISHED',
+                    chunk_count = 99,
                     published_at = clock_timestamp()
                 WHERE document_id = ?
                   AND generation = ?
@@ -181,7 +203,8 @@ class IdempotencyIntegrationTest {
         assertThat(reclaimed.status())
                 .isEqualTo(IngestionIdempotencyRepository.ClaimResult.Status.REPLAY);
         assertThat(reclaimed.response().documentId()).isEqualTo("doc-1");
-        assertThat(reclaimed.response().chunkCount()).isZero();
+        assertThat(reclaimed.response().chunkCount()).isEqualTo(2);
+        assertThat(reclaimed.generation()).isEqualTo(generation);
 
         assertThat(jdbc.queryForObject(
                 """
