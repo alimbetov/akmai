@@ -70,6 +70,7 @@ class KnowledgeIngestionPostgresSmokeIntegrationTest {
 
     private static final String DOCUMENT_ID = "smoke-pg-large-1";
     private static final String VECTOR_TABLE = "p_smoke_ingestion";
+    private static final String CANONICAL_SOURCE_HASH = "sha256:" + "b".repeat(64);
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
@@ -360,7 +361,7 @@ class KnowledgeIngestionPostgresSmokeIntegrationTest {
         assertThat(hit.sourceProvenance().sourceVersion()).isEqualTo("7");
         assertThat(hit.sourceProvenance().fileName()).isEqualTo("architecture.pdf");
         assertThat(hit.sourceProvenance().contentHash())
-                .isEqualTo("sha256:canonical-smoke-source");
+                .isEqualTo(CANONICAL_SOURCE_HASH);
         assertThat(hit.sourceProvenance().blockIds()).isNotEmpty();
         assertThat(hit.sourceProvenance().pageFrom()).isNotNull().isPositive();
         assertThat(hit.sourceProvenance().pageTo())
@@ -516,7 +517,7 @@ class KnowledgeIngestionPostgresSmokeIntegrationTest {
                         "7",
                         "architecture.pdf",
                         "application/pdf",
-                        "sha256:canonical-smoke-source",
+                        CANONICAL_SOURCE_HASH,
                         new CanonicalKnowledgeDocument.StorageReference(
                                 "rustfs",
                                 "knowledge-raw",
