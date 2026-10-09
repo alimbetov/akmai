@@ -73,7 +73,10 @@ class DeterministicEmbeddingPersistenceSmokeTest {
         )).thenAnswer(invocation -> {
             List<SearchProjection> projections = invocation.getArgument(0);
             return projections.stream()
-                    .map(projection -> fakeVector(projection.embeddingText(), profile.dimension()))
+                    .map(projection -> fakeVector(
+                            projection.embeddingText(),
+                            profile.dimensions()
+                    ))
                     .toList();
         });
         when(publication.publish(
@@ -148,9 +151,10 @@ class DeterministicEmbeddingPersistenceSmokeTest {
                 )
                 .doesNotHaveDuplicates();
         assertThat(vectors.getValue()).allSatisfy(row -> {
-            assertThat(row.embedding()).hasSize(profile.dimension());
-            assertThat(row.embedding()).allSatisfy(value ->
-                    assertThat(Float.isFinite(value)).isTrue());
+            assertThat(row.embedding()).hasSize(profile.dimensions());
+            for (float value : row.embedding()) {
+                assertThat(Float.isFinite(value)).isTrue();
+            }
             assertThat(row.metadata())
                     .containsEntry("akmaiGeneration", 42L)
                     .containsEntry("akmaiEmbeddingProfileId", "ep-smoke")
