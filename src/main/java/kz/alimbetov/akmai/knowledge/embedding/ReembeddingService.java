@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import kz.alimbetov.akmai.config.ReembeddingProperties;
 import kz.alimbetov.akmai.knowledge.embedding.ReembeddingLeaseManager.Authority;
 import kz.alimbetov.akmai.knowledge.embedding.ReembeddingLeaseManager.LostAuthorityException;
@@ -99,14 +100,22 @@ public class ReembeddingService {
                     true
             );
         } catch (RuntimeException exception) {
-            boolean aborted = abortIfOwned(
-                    authority,
-                    exception.getClass().getSimpleName()
-                            + ": "
-                            + safe(exception.getMessage())
+            boolean aborted = preservePrimaryFailure(
+                    exception,
+                    () -> abortIfOwned(
+                            authority,
+                            exception.getClass().getSimpleName()
+                                    + ": "
+                                    + safe(exception.getMessage())
+                    ),
+                    false
             );
             if (!aborted && exception instanceof LostAuthorityException) {
-                recoverExpiredMigration();
+                preservePrimaryFailure(
+                        exception,
+                        () -> recoverExpiredMigration(),
+                        0
+                );
             }
             throw exception;
         }
@@ -413,11 +422,18 @@ public class ReembeddingService {
                 }
             });
         } catch (RuntimeException exception) {
-            failCandidateIfOwned(
-                    authority,
-                    snapshot,
-                    candidate,
-                    safe(exception.getMessage())
+            preservePrimaryFailure(
+                    exception,
+                    () -> {
+                        failCandidateIfOwned(
+                                authority,
+                                snapshot,
+                                candidate,
+                                safe(exception.getMessage())
+                        );
+                        return null;
+                    },
+                    null
             );
             throw exception;
         }
@@ -516,8 +532,7 @@ public class ReembeddingService {
                       AND document_status = 'SNAPSHOT'
                     """,
                     candidate,
-                    authority.migrationId(),
-                    snapshot.documentId()
+                    authority.migrationId()
             );
             if (documentUpdated != 1) {
                 throw new IllegalStateException(
@@ -940,6 +955,21 @@ public class ReembeddingService {
             return Boolean.TRUE.equals(aborted);
         } catch (LostAuthorityException ignored) {
             return false;
+        }
+    }
+
+    static <T> T preservePrimaryFailure(
+            RuntimeException primary,
+            Supplier<T> cleanup,
+            T fallback
+    ) {
+        try {
+            return cleanup.get();
+        } catch (RuntimeException secondary) {
+            if (secondary != primary) {
+                primary.addSuppressed(secondary);
+            }
+            return fallback;
         }
     }
 
