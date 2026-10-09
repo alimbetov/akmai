@@ -85,6 +85,7 @@ class StaleIngestionRecoveryIntegrationTest {
 
     @BeforeEach
     void clean() {
+        jdbc.update("DELETE FROM knowledge_ingestion_request");
         jdbc.update("DELETE FROM knowledge_embedding_migration_document");
         jdbc.update("DELETE FROM knowledge_embedding_migration");
         jdbc.update("DELETE FROM knowledge_document_generation");
@@ -172,6 +173,96 @@ class StaleIngestionRecoveryIntegrationTest {
         assertThat(recovered).isEqualTo(1);
         assertThat(status("doc-ingestion", ingestion)).isEqualTo("FAILED");
         assertThat(status("doc-migration", 1L)).isEqualTo("STAGING");
+    }
+
+    @Test
+    void activeIdempotencyClaimProtectsOldStagingGeneration() {
+        long generation = generations.allocate(
+                "doc-active",
+                RetentionPolicy.PERMANENT,
+                null,
+                profile.profileId(),
+                "fp-active",
+                1L
+        );
+        jdbc.update(
+                """
+                UPDATE knowledge_document_generation
+                SET started_at = clock_timestamp() - interval '2 hours'
+                WHERE document_id = 'doc-active'
+                  AND generation = ?
+                """,
+                generation
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_ingestion_request (
+                    idempotency_key, document_id, request_fingerprint,
+                    request_status, generation, claim_id, lease_until,
+                    created_at, updated_at
+                ) VALUES (
+                    'active-key', 'doc-active', 'fp-active',
+                    'IN_PROGRESS', ?, ?,
+                    clock_timestamp() + interval '15 minutes',
+                    clock_timestamp(), clock_timestamp()
+                )
+                """,
+                generation,
+                UUID.randomUUID()
+        );
+
+        int recovered = generations.failStaleIngestionBatch(
+                Duration.ofMinutes(30),
+                10
+        );
+
+        assertThat(recovered).isZero();
+        assertThat(status("doc-active", generation)).isEqualTo("STAGING");
+    }
+
+    @Test
+    void expiredIdempotencyClaimDoesNotProtectOldStagingGeneration() {
+        long generation = generations.allocate(
+                "doc-expired",
+                RetentionPolicy.PERMANENT,
+                null,
+                profile.profileId(),
+                "fp-expired",
+                1L
+        );
+        jdbc.update(
+                """
+                UPDATE knowledge_document_generation
+                SET started_at = clock_timestamp() - interval '2 hours'
+                WHERE document_id = 'doc-expired'
+                  AND generation = ?
+                """,
+                generation
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_ingestion_request (
+                    idempotency_key, document_id, request_fingerprint,
+                    request_status, generation, claim_id, lease_until,
+                    created_at, updated_at
+                ) VALUES (
+                    'expired-key', 'doc-expired', 'fp-expired',
+                    'IN_PROGRESS', ?, ?,
+                    clock_timestamp() - interval '1 minute',
+                    clock_timestamp(), clock_timestamp()
+                )
+                """,
+                generation,
+                UUID.randomUUID()
+        );
+
+        int recovered = generations.failStaleIngestionBatch(
+                Duration.ofMinutes(30),
+                10
+        );
+
+        assertThat(recovered).isEqualTo(1);
+        assertThat(status("doc-expired", generation)).isEqualTo("FAILED");
     }
 
     @Test
