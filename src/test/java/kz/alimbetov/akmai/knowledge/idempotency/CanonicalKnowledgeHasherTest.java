@@ -19,12 +19,16 @@ class CanonicalKnowledgeHasherTest {
     @Test
     void ignoresOperationalStorageAndParseTimestamp() {
         CanonicalKnowledgeDocument first = document(
+                "document-a.pdf",
+                "application/pdf",
                 "bucket-a",
                 "object-a",
                 Instant.parse("2026-10-09T00:00:00Z"),
                 "Stable content"
         );
         CanonicalKnowledgeDocument second = document(
+                "document-a.pdf",
+                "application/pdf",
                 "bucket-b",
                 "object-b",
                 Instant.parse("2026-10-09T03:00:00Z"),
@@ -35,14 +39,40 @@ class CanonicalKnowledgeHasherTest {
     }
 
     @Test
+    void ignoresSourcePresentationFields() {
+        CanonicalKnowledgeDocument first = document(
+                "contract.pdf",
+                "application/pdf",
+                "bucket",
+                "object",
+                Instant.parse("2026-10-09T00:00:00Z"),
+                "Stable content"
+        );
+        CanonicalKnowledgeDocument renamed = document(
+                "renamed-contract.bin",
+                "application/octet-stream",
+                "bucket",
+                "object",
+                Instant.parse("2026-10-09T00:00:00Z"),
+                "Stable content"
+        );
+
+        assertThat(hasher.hash(first)).isEqualTo(hasher.hash(renamed));
+    }
+
+    @Test
     void changesWhenCanonicalContentChanges() {
         String first = hasher.hash(document(
+                "document.pdf",
+                "application/pdf",
                 "bucket",
                 "object",
                 Instant.parse("2026-10-09T00:00:00Z"),
                 "Stable content"
         ));
         String second = hasher.hash(document(
+                "document.pdf",
+                "application/pdf",
                 "bucket",
                 "object",
                 Instant.parse("2026-10-09T00:00:00Z"),
@@ -53,6 +83,8 @@ class CanonicalKnowledgeHasherTest {
     }
 
     private CanonicalKnowledgeDocument document(
+            String fileName,
+            String mediaType,
             String bucket,
             String objectKey,
             Instant parsedAt,
@@ -70,8 +102,8 @@ class CanonicalKnowledgeHasherTest {
                         CanonicalKnowledgeDocument.SourceType.FILE,
                         "file-1",
                         "1",
-                        "document.pdf",
-                        "application/pdf",
+                        fileName,
+                        mediaType,
                         CONTENT_HASH,
                         new CanonicalKnowledgeDocument.StorageReference(
                                 "rustfs",
