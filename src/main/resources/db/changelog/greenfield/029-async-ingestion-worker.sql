@@ -46,6 +46,7 @@ CREATE TABLE knowledge_ingestion_job (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
 
     CONSTRAINT uk_knowledge_ingestion_job_event UNIQUE (event_id),
+    CONSTRAINT uk_knowledge_ingestion_job_fingerprint UNIQUE (job_fingerprint),
     CONSTRAINT uk_knowledge_ingestion_job_internal_idempotency
         UNIQUE (internal_idempotency_key),
     CONSTRAINT ck_knowledge_ingestion_job_schema_version
@@ -85,6 +86,3 @@ CREATE INDEX ix_knowledge_ingestion_job_document
 CREATE INDEX ix_knowledge_ingestion_job_source_version
     ON knowledge_ingestion_job (file_id, source_version)
     WHERE file_id IS NOT NULL;
-
-CREATE INDEX ix_knowledge_ingestion_job_fingerprint
-    ON knowledge_ingestion_job (job_fingerprint, accepted_at DESC);
