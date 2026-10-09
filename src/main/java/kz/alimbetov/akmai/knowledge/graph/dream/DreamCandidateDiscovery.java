@@ -279,23 +279,16 @@ public class DreamCandidateDiscovery {
             Instant observedAt,
             DreamBudget budget
     ) {
-        budget.addDbRows(1);
-        boolean keepReservation = false;
-        try {
-            boolean changed = candidates.markStaleIfActive(
-                    authority,
-                    pair,
-                    runId,
-                    reason,
-                    observedAt
-            );
-            keepReservation = changed;
-            return changed;
-        } finally {
-            if (!keepReservation) {
-                budget.releaseDbRows(1);
-            }
-        }
+        SemanticGraphPriorWriter.RetirementResult result =
+                priorWriter.retireCandidate(
+                        authority,
+                        pair,
+                        runId,
+                        reason,
+                        observedAt,
+                        budget
+                );
+        return result != SemanticGraphPriorWriter.RetirementResult.NO_CHANGE;
     }
 
     private void reserveCandidateObservation(
