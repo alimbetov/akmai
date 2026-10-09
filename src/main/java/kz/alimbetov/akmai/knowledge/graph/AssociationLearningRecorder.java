@@ -211,11 +211,13 @@ public class AssociationLearningRecorder {
 
     private boolean runtimeEnabled(
             AppParameterKey key,
-            boolean fallback
+            boolean staticEnabled
     ) {
+        if (!staticEnabled) {
+            return false;
+        }
         return appParameterService == null
-                ? fallback
-                : appParameterService.isEnabledAuthoritative(key);
+                || appParameterService.isEnabledAuthoritative(key);
     }
 
     private List<IndexedHit> eligibleHits(

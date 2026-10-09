@@ -88,11 +88,13 @@ public class AdaptiveGraphOnlineExpansion {
 
     private boolean runtimeEnabled(
             AppParameterKey key,
-            boolean fallback
+            boolean staticEnabled
     ) {
+        if (!staticEnabled) {
+            return false;
+        }
         return appParameterService == null
-                ? fallback
-                : appParameterService.isEnabled(key);
+                || appParameterService.isEnabled(key);
     }
 
     private List<RetrievalHit> expandInternal(

@@ -37,6 +37,30 @@ public class GraphMutationLocks {
     }
 
     /**
+     * Non-blocking variant used by horizontally replicated maintenance workers.
+     * Lifecycle/generation rows are still locked in canonical order before node
+     * advisory locks. If another graph mutation owns any node advisory lock, the
+     * current transaction reports false and should be rolled back/ended without
+     * touching graph rows; any advisory locks acquired earlier in this attempt
+     * are transaction-scoped and are released with that transaction.
+     */
+    public boolean tryLockEligiblePublishedNodes(
+            Collection<ChunkGraphNode> nodes
+    ) {
+        requireActiveTransaction();
+        TreeSet<ChunkGraphNode> lockOrder = canonicalOrder(nodes);
+
+        lockOrder.forEach(this::lockEligibleLifecycle);
+        lockOrder.forEach(this::lockPublishedGeneration);
+        for (ChunkGraphNode node : lockOrder) {
+            if (!tryLockNode(node)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Locks a pair for semantic-prior retirement. Retirement is allowed after
      * TTL expiry, publication replacement, or another authoritative lifecycle
      * invalidation, so row presence/status is not itself an eligibility gate.
@@ -50,6 +74,21 @@ public class GraphMutationLocks {
         lockOrder.forEach(this::lockLifecycleIfPresent);
         lockOrder.forEach(this::lockGenerationIfPresent);
         lockOrder.forEach(this::lockNode);
+    }
+
+    /** Non-blocking counterpart of {@link #lockRetirementNodes(Collection)}. */
+    public boolean tryLockRetirementNodes(Collection<ChunkGraphNode> nodes) {
+        requireActiveTransaction();
+        TreeSet<ChunkGraphNode> lockOrder = canonicalOrder(nodes);
+
+        lockOrder.forEach(this::lockLifecycleIfPresent);
+        lockOrder.forEach(this::lockGenerationIfPresent);
+        for (ChunkGraphNode node : lockOrder) {
+            if (!tryLockNode(node)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void requireActiveTransaction() {
@@ -173,5 +212,14 @@ public class GraphMutationLocks {
                 },
                 NODE_LOCK_PREFIX + node.lockKey()
         );
+    }
+
+    private boolean tryLockNode(ChunkGraphNode node) {
+        Boolean locked = jdbcTemplate.queryForObject(
+                "SELECT pg_try_advisory_xact_lock(hashtextextended(?, 0))",
+                Boolean.class,
+                NODE_LOCK_PREFIX + node.lockKey()
+        );
+        return Boolean.TRUE.equals(locked);
     }
 }

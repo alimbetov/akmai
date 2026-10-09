@@ -50,7 +50,7 @@ class AssociationLearningRecorderTest {
     }
 
     @Test
-    void authoritativeRuntimeParameterCanEnableLearningWithoutRestart() {
+    void runtimeTrueCannotOverrideStaticLearningDisable() {
         AdaptiveChunkGraphRepository repository =
                 mock(AdaptiveChunkGraphRepository.class);
         AdaptiveGraphProperties properties =
@@ -77,7 +77,43 @@ class AssociationLearningRecorderTest {
                 validation(1, 2)
         );
 
-        verify(repository).reinforceSymmetricBatch(anyList());
+        verify(repository, never()).reinforceSymmetricBatch(anyList());
+        verify(appParameters, never()).isEnabledAuthoritative(
+                AppParameterKey.ADAPTIVE_GRAPH_LEARNING_ENABLED
+        );
+    }
+
+    @Test
+    void authoritativeRuntimeFalseDisablesStaticLearning() {
+        AdaptiveChunkGraphRepository repository =
+                mock(AdaptiveChunkGraphRepository.class);
+        AdaptiveGraphProperties properties = properties(true);
+        AppParameterService appParameters =
+                mock(AppParameterService.class);
+        when(appParameters.isEnabledAuthoritative(
+                AppParameterKey.ADAPTIVE_GRAPH_LEARNING_ENABLED
+        )).thenReturn(false);
+
+        AssociationLearningRecorder recorder =
+                new AssociationLearningRecorder(
+                        properties,
+                        repository,
+                        new PrivacySafeQueryFingerprint(properties),
+                        mock(AkmaiMetrics.class),
+                        appParameters
+                );
+
+        recorder.record(
+                List.of(query()),
+                Set.of(1L),
+                List.of(hit("a", "ca", 0.9), hit("b", "cb", 0.8)),
+                validation(1, 2)
+        );
+
+        verify(repository, never()).reinforceSymmetricBatch(anyList());
+        verify(appParameters).isEnabledAuthoritative(
+                AppParameterKey.ADAPTIVE_GRAPH_LEARNING_ENABLED
+        );
     }
 
     @Test
