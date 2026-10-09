@@ -87,6 +87,10 @@ public class CanonicalRequestFingerprint {
         return digest(request);
     }
 
+    public String canonicalHash(CanonicalKnowledgeDocument document) {
+        return canonicalKnowledgeHasher.hash(document);
+    }
+
     private Map<String, Object> canonicalBlock(CanonicalDocument.Block block) {
         LinkedHashMap<String, Object> value = new LinkedHashMap<>();
         value.put("blockId", text(block.blockId()));
