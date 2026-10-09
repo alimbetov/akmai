@@ -66,6 +66,11 @@ public final class DreamBudget {
         }
     }
 
+    /**
+     * Reserves DB mutation capacity before executing the corresponding DML.
+     * Call {@link #releaseDbRows(long)} when the guarded operation performs no
+     * durable row mutation or fails before completing it.
+     */
     public void addDbRows(long rows) {
         if (rows < 0) {
             throw new IllegalArgumentException("rows must not be negative");
@@ -75,6 +80,19 @@ public final class DreamBudget {
         if (total > maxDbRowsTouched) {
             dbRowsTouched.addAndGet(-rows);
             throw new BudgetExhaustedException(StopReason.MAX_DB_ROWS);
+        }
+    }
+
+    public void releaseDbRows(long rows) {
+        if (rows < 0) {
+            throw new IllegalArgumentException("rows must not be negative");
+        }
+        long remaining = dbRowsTouched.addAndGet(-rows);
+        if (remaining < 0) {
+            dbRowsTouched.addAndGet(rows);
+            throw new IllegalStateException(
+                    "Dream DB row reservation cannot become negative"
+            );
         }
     }
 
