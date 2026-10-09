@@ -159,9 +159,11 @@ public class IngestionSemanticLinker {
     }
 
     private boolean enabled() {
+        if (!properties.isIngestionLinkingEnabled()) {
+            return false;
+        }
         return appParameterService == null
-                ? properties.isIngestionLinkingEnabled()
-                : appParameterService.isEnabledAuthoritative(
+                || appParameterService.isEnabledAuthoritative(
                         AppParameterKey.SEMANTIC_MEMORY_INGESTION_LINKING_ENABLED
                 );
     }
