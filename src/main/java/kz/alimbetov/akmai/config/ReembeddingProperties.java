@@ -12,8 +12,24 @@ public record ReembeddingProperties(
         boolean autoMigrate,
         @NotNull Duration drainTimeout,
         @NotNull Duration pollInterval,
-        @DefaultValue("1m") @NotNull Duration leaseDuration
+        @DefaultValue("1m") @NotNull Duration leaseDuration,
+        @DefaultValue("15s") @NotNull Duration heartbeatInterval
 ) {
+    public ReembeddingProperties(
+            boolean autoMigrate,
+            Duration drainTimeout,
+            Duration pollInterval,
+            Duration leaseDuration
+    ) {
+        this(
+                autoMigrate,
+                drainTimeout,
+                pollInterval,
+                leaseDuration,
+                Duration.ofSeconds(15)
+        );
+    }
+
     public ReembeddingProperties {
         if (drainTimeout == null
                 || drainTimeout.isZero()
@@ -36,6 +52,14 @@ public record ReembeddingProperties(
                 || leaseDuration.compareTo(pollInterval) <= 0) {
             throw new IllegalArgumentException(
                     "reembedding lease-duration must be positive and above poll-interval"
+            );
+        }
+        if (heartbeatInterval == null
+                || heartbeatInterval.isZero()
+                || heartbeatInterval.isNegative()
+                || heartbeatInterval.compareTo(leaseDuration.dividedBy(2)) >= 0) {
+            throw new IllegalArgumentException(
+                    "reembedding heartbeat-interval must be positive and below half the lease-duration"
             );
         }
     }
