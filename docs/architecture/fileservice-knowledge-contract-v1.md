@@ -1,6 +1,6 @@
 # FileService → AkmAI Knowledge Contract v1
 
-**Status:** PROPOSED / implementation specification  
+**Status:** TARGET  
 **Branch:** `feature/fileservice-knowledge-contract-v1`  
 **Scope:** AkmAI ingestion boundary, canonical document contract, ingestion result, provenance, Inbox/Outbox integration contract, contract versioning and migration.  
 **Out of scope:** implementation of FileService itself, RustFS deployment, broker selection, parser engine implementation, UI.
