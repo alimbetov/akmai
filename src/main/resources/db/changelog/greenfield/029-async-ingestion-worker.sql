@@ -91,7 +91,7 @@ CREATE INDEX ix_knowledge_ingestion_job_claim
 CREATE INDEX ix_knowledge_ingestion_job_document
     ON knowledge_ingestion_job (document_id, accepted_at DESC);
 
-CREATE UNIQUE INDEX uq_knowledge_ingestion_job_source_version
+CREATE INDEX ix_knowledge_ingestion_job_source
     ON knowledge_ingestion_job (file_id, source_version)
     WHERE file_id IS NOT NULL;
 
