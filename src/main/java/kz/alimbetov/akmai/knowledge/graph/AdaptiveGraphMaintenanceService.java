@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import kz.alimbetov.akmai.config.AdaptiveGraphProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -20,6 +21,7 @@ public class AdaptiveGraphMaintenanceService {
     private final TransactionTemplate transactionTemplate;
     private final AdaptiveGraphProperties properties;
     private final AdaptiveGraphScoreCalculator calculator;
+    private final GraphMutationLocks graphMutationLocks;
 
     public AdaptiveGraphMaintenanceService(
             JdbcTemplate jdbcTemplate,
@@ -27,62 +29,71 @@ public class AdaptiveGraphMaintenanceService {
             AdaptiveGraphProperties properties,
             AdaptiveGraphScoreCalculator calculator
     ) {
+        this(
+                jdbcTemplate,
+                transactionTemplate,
+                properties,
+                calculator,
+                new GraphMutationLocks(jdbcTemplate)
+        );
+    }
+
+    @Autowired
+    public AdaptiveGraphMaintenanceService(
+            JdbcTemplate jdbcTemplate,
+            TransactionTemplate transactionTemplate,
+            AdaptiveGraphProperties properties,
+            AdaptiveGraphScoreCalculator calculator,
+            GraphMutationLocks graphMutationLocks
+    ) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactionTemplate = transactionTemplate;
         this.properties = properties;
         this.calculator = calculator;
+        this.graphMutationLocks = graphMutationLocks;
     }
 
     public MaintenanceBatch maintainBatch() {
-        MaintenanceBatch result = transactionTemplate.execute(status ->
-                maintainBatchTransactional()
-        );
-        return result == null ? MaintenanceBatch.empty() : result;
-    }
-
-    private MaintenanceBatch maintainBatchTransactional() {
         int batchSize = properties.maintenance().batchSize();
         Instant now = Instant.now();
         Instant scoreCutoff = now.minus(
                 properties.scoring().rescoreInterval()
         );
 
-        List<MaintenanceEdge> due = claimScoreBatch(
-                scoreCutoff,
-                batchSize
+        List<MaintenanceEdge> due = inTransaction(() ->
+                claimScoreBatch(scoreCutoff, batchSize)
         );
         EnumMap<Transition, Integer> transitions =
                 new EnumMap<>(Transition.class);
         TreeSet<ChunkGraphNode> touchedSources = new TreeSet<>();
+        int scored = 0;
 
-        for (MaintenanceEdge edge : due) {
-            AdaptiveGraphScoreCalculator.ScoreDecision decision =
-                    calculator.evaluate(
-                            edge.band(),
-                            edge.distinctQuerySupport(),
-                            edge.contextCount(),
-                            edge.citationCount(),
-                            edge.lastReinforcedAt(),
-                            now
-                    );
-            updatePair(edge, decision, now);
-            touchedSources.add(edge.source());
-            touchedSources.add(edge.target());
-            if (edge.band() != decision.targetBand()) {
-                Transition transition = Transition.of(
-                        edge.band(),
-                        decision.targetBand()
+        for (MaintenanceEdge candidate : due) {
+            ScoreOutcome outcome = transactionTemplate.execute(status ->
+                    scoreCandidate(candidate, scoreCutoff, now)
+            );
+            if (outcome == null) {
+                continue;
+            }
+            scored++;
+            touchedSources.add(outcome.source());
+            touchedSources.add(outcome.target());
+            if (outcome.from() != outcome.to()) {
+                transitions.merge(
+                        Transition.of(outcome.from(), outcome.to()),
+                        1,
+                        Integer::sum
                 );
-                transitions.merge(transition, 1, Integer::sum);
             }
         }
 
         Instant compactionCutoff = Instant.now();
-        touchedSources.addAll(
+        Set<ChunkGraphNode> claimedSources = inTransaction(() ->
                 claimCompactionSources(
                         Math.max(batchSize, batchSize * 4)
                 )
         );
+        touchedSources.addAll(claimedSources);
 
         int evicted = compactSources(
                 touchedSources,
@@ -99,11 +110,53 @@ public class AdaptiveGraphMaintenanceService {
                 || purged >= batchSize;
 
         return new MaintenanceBatch(
-                due.size(),
+                scored,
                 evicted,
                 purged,
                 Map.copyOf(transitions),
                 saturated
+        );
+    }
+
+    private <T> T inTransaction(java.util.function.Supplier<T> work) {
+        return transactionTemplate.execute(status -> work.get());
+    }
+
+    private ScoreOutcome scoreCandidate(
+            MaintenanceEdge candidate,
+            Instant cutoff,
+            Instant now
+    ) {
+        if (!graphMutationLocks.tryLockEligiblePublishedNodes(
+                List.of(candidate.source(), candidate.target())
+        )) {
+            return null;
+        }
+
+        MaintenanceEdge current = lockScoreCandidate(
+                candidate.source(),
+                candidate.target(),
+                cutoff
+        );
+        if (current == null) {
+            return null;
+        }
+
+        AdaptiveGraphScoreCalculator.ScoreDecision decision =
+                calculator.evaluate(
+                        current.band(),
+                        current.distinctQuerySupport(),
+                        current.contextCount(),
+                        current.citationCount(),
+                        current.lastReinforcedAt(),
+                        now
+                );
+        updatePair(current, decision, now);
+        return new ScoreOutcome(
+                current.source(),
+                current.target(),
+                current.band(),
+                decision.targetBand()
         );
     }
 
@@ -158,28 +211,79 @@ public class AdaptiveGraphMaintenanceService {
                     ps.setTimestamp(2, Timestamp.from(cutoff));
                     ps.setInt(3, limit);
                 },
-                (rs, rowNum) -> {
-                    long accessLevel = rs.getLong("access_level");
-                    return new MaintenanceEdge(
-                            new ChunkGraphNode(
-                                    accessLevel,
-                                    rs.getString("source_document_id"),
-                                    rs.getLong("source_generation"),
-                                    rs.getString("source_chunk_id")
-                            ),
-                            new ChunkGraphNode(
-                                    accessLevel,
-                                    rs.getString("target_document_id"),
-                                    rs.getLong("target_generation"),
-                                    rs.getString("target_chunk_id")
-                            ),
-                            AssociationBand.valueOf(rs.getString("band")),
-                            rs.getLong("distinct_query_support"),
-                            rs.getLong("context_count"),
-                            rs.getLong("citation_count"),
-                            rs.getTimestamp("last_reinforced_at").toInstant()
-                    );
-                }
+                (rs, rowNum) -> mapMaintenanceEdge(rs)
+        );
+    }
+
+    private MaintenanceEdge lockScoreCandidate(
+            ChunkGraphNode source,
+            ChunkGraphNode target,
+            Instant cutoff
+    ) {
+        return jdbcTemplate.query(
+                """
+                SELECT access_level,
+                       source_document_id,
+                       source_generation,
+                       source_chunk_id,
+                       target_document_id,
+                       target_generation,
+                       target_chunk_id,
+                       band,
+                       distinct_query_support,
+                       context_count,
+                       citation_count,
+                       last_reinforced_at
+                FROM knowledge_chunk_association
+                WHERE access_level = ?
+                  AND graph_version = ?
+                  AND source_document_id = ?
+                  AND source_generation = ?
+                  AND source_chunk_id = ?
+                  AND target_document_id = ?
+                  AND target_generation = ?
+                  AND target_chunk_id = ?
+                  AND band IN ('CANDIDATE', 'WARM', 'HOT')
+                  AND (
+                      last_scored_at IS NULL
+                      OR last_scored_at <= ?
+                  )
+                FOR UPDATE
+                """,
+                (rs, rowNum) -> mapMaintenanceEdge(rs),
+                source.accessLevel(),
+                properties.graphVersion(),
+                source.documentId(),
+                source.generation(),
+                source.chunkId(),
+                target.documentId(),
+                target.generation(),
+                target.chunkId(),
+                Timestamp.from(cutoff)
+        ).stream().findFirst().orElse(null);
+    }
+
+    private MaintenanceEdge mapMaintenanceEdge(java.sql.ResultSet rs)
+            throws java.sql.SQLException {
+        long accessLevel = rs.getLong("access_level");
+        return new MaintenanceEdge(
+                new ChunkGraphNode(
+                        accessLevel,
+                        rs.getString("source_document_id"),
+                        rs.getLong("source_generation"),
+                        rs.getString("source_chunk_id")
+                ),
+                new ChunkGraphNode(
+                        accessLevel,
+                        rs.getString("target_document_id"),
+                        rs.getLong("target_generation"),
+                        rs.getString("target_chunk_id")
+                ),
+                AssociationBand.valueOf(rs.getString("band")),
+                rs.getLong("distinct_query_support"),
+                rs.getLong("context_count"),
+                rs.getLong("citation_count"),
+                rs.getTimestamp("last_reinforced_at").toInstant()
         );
     }
 
@@ -300,39 +404,71 @@ public class AdaptiveGraphMaintenanceService {
                 break;
             }
             int remaining = maxEvictions - evicted;
-            List<ChunkGraphNode> overflow = overflowTargets(
-                    source,
-                    remaining
+            List<ChunkGraphNode> overflow = inTransaction(() ->
+                    overflowTargets(source, remaining)
             );
             for (ChunkGraphNode target : overflow) {
-                int deleted = deletePair(source, target);
-                if (deleted > 0) {
+                Integer deleted = transactionTemplate.execute(status ->
+                        evictOverflowPair(source, target)
+                );
+                if (deleted != null && deleted > 0) {
                     evicted++;
+                    if (evicted >= maxEvictions) {
+                        break;
+                    }
                 }
             }
 
-            if (!hasOverflow(source)) {
-                jdbcTemplate.update(
-                        """
-                        UPDATE knowledge_chunk_association
-                        SET compaction_required = FALSE
-                        WHERE access_level = ?
-                          AND graph_version = ?
-                          AND source_document_id = ?
-                          AND source_generation = ?
-                          AND source_chunk_id = ?
-                          AND updated_at <= ?
-                        """,
-                        source.accessLevel(),
-                        properties.graphVersion(),
-                        source.documentId(),
-                        source.generation(),
-                        source.chunkId(),
-                        Timestamp.from(cutoff)
-                );
-            }
+            transactionTemplate.executeWithoutResult(status ->
+                    clearCompactionFlagIfComplete(source, cutoff)
+            );
         }
         return evicted;
+    }
+
+    private int evictOverflowPair(
+            ChunkGraphNode source,
+            ChunkGraphNode target
+    ) {
+        if (!graphMutationLocks.tryLockEligiblePublishedNodes(
+                List.of(source, target)
+        )) {
+            return 0;
+        }
+        if (!isOverflowTarget(source, target)) {
+            return 0;
+        }
+        return deletePair(source, target);
+    }
+
+    private void clearCompactionFlagIfComplete(
+            ChunkGraphNode source,
+            Instant cutoff
+    ) {
+        if (!graphMutationLocks.tryLockEligiblePublishedNodes(List.of(source))) {
+            return;
+        }
+        if (hasOverflow(source)) {
+            return;
+        }
+        jdbcTemplate.update(
+                """
+                UPDATE knowledge_chunk_association
+                SET compaction_required = FALSE
+                WHERE access_level = ?
+                  AND graph_version = ?
+                  AND source_document_id = ?
+                  AND source_generation = ?
+                  AND source_chunk_id = ?
+                  AND updated_at <= ?
+                """,
+                source.accessLevel(),
+                properties.graphVersion(),
+                source.documentId(),
+                source.generation(),
+                source.chunkId(),
+                Timestamp.from(cutoff)
+        );
     }
 
     private List<ChunkGraphNode> overflowTargets(
@@ -412,6 +548,65 @@ public class AdaptiveGraphMaintenanceService {
         );
     }
 
+    private boolean isOverflowTarget(
+            ChunkGraphNode source,
+            ChunkGraphNode target
+    ) {
+        AdaptiveGraphProperties.BandQuotas quotas = properties.quotas();
+        Boolean overflow = jdbcTemplate.queryForObject(
+                """
+                WITH ranked AS (
+                    SELECT target_document_id,
+                           target_generation,
+                           target_chunk_id,
+                           band,
+                           row_number() OVER (
+                               PARTITION BY band
+                               ORDER BY weight DESC,
+                                        distinct_query_support DESC,
+                                        citation_count DESC,
+                                        last_reinforced_at DESC,
+                                        target_document_id,
+                                        target_generation,
+                                        target_chunk_id
+                           ) AS position
+                    FROM knowledge_chunk_association
+                    WHERE access_level = ?
+                      AND graph_version = ?
+                      AND source_document_id = ?
+                      AND source_generation = ?
+                      AND source_chunk_id = ?
+                      AND band IN ('CANDIDATE', 'WARM', 'HOT')
+                )
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM ranked
+                    WHERE target_document_id = ?
+                      AND target_generation = ?
+                      AND target_chunk_id = ?
+                      AND (
+                          (band = 'HOT' AND position > ?)
+                          OR (band = 'WARM' AND position > ?)
+                          OR (band = 'CANDIDATE' AND position > ?)
+                      )
+                )
+                """,
+                Boolean.class,
+                source.accessLevel(),
+                properties.graphVersion(),
+                source.documentId(),
+                source.generation(),
+                source.chunkId(),
+                target.documentId(),
+                target.generation(),
+                target.chunkId(),
+                quotas.hot(),
+                quotas.warm(),
+                quotas.candidate()
+        );
+        return Boolean.TRUE.equals(overflow);
+    }
+
     private boolean hasOverflow(ChunkGraphNode source) {
         AdaptiveGraphProperties.BandQuotas quotas = properties.quotas();
         Boolean overflow = jdbcTemplate.queryForObject(
@@ -449,7 +644,26 @@ public class AdaptiveGraphMaintenanceService {
     }
 
     private int purgeDecayed(Instant cutoff, int limit) {
-        List<LogicalPair> expired = jdbcTemplate.query(
+        List<LogicalPair> expired = inTransaction(() ->
+                claimDecayedPairs(cutoff, limit)
+        );
+        int purged = 0;
+        for (LogicalPair pair : expired) {
+            Integer deleted = transactionTemplate.execute(status ->
+                    purgeDecayedPair(pair, cutoff)
+            );
+            if (deleted != null && deleted > 0) {
+                purged++;
+            }
+        }
+        return purged;
+    }
+
+    private List<LogicalPair> claimDecayedPairs(
+            Instant cutoff,
+            int limit
+    ) {
+        return jdbcTemplate.query(
                 """
                 SELECT access_level,
                        source_document_id,
@@ -505,14 +719,71 @@ public class AdaptiveGraphMaintenanceService {
                     );
                 }
         );
+    }
 
-        int purged = 0;
-        for (LogicalPair pair : expired) {
-            if (deletePair(pair.left(), pair.right()) > 0) {
-                purged++;
-            }
+    private int purgeDecayedPair(
+            LogicalPair pair,
+            Instant cutoff
+    ) {
+        if (!graphMutationLocks.tryLockRetirementNodes(
+                List.of(pair.left(), pair.right())
+        )) {
+            return 0;
         }
-        return purged;
+        Integer eligibleRows = jdbcTemplate.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_chunk_association
+                WHERE access_level = ?
+                  AND graph_version = ?
+                  AND band = 'DECAYED'
+                  AND decayed_at <= ?
+                  AND (
+                      (
+                          source_document_id = ?
+                          AND source_generation = ?
+                          AND source_chunk_id = ?
+                          AND target_document_id = ?
+                          AND target_generation = ?
+                          AND target_chunk_id = ?
+                      )
+                      OR
+                      (
+                          source_document_id = ?
+                          AND source_generation = ?
+                          AND source_chunk_id = ?
+                          AND target_document_id = ?
+                          AND target_generation = ?
+                          AND target_chunk_id = ?
+                      )
+                  )
+                """,
+                Integer.class,
+                pair.left().accessLevel(),
+                properties.graphVersion(),
+                Timestamp.from(cutoff),
+                pair.left().documentId(),
+                pair.left().generation(),
+                pair.left().chunkId(),
+                pair.right().documentId(),
+                pair.right().generation(),
+                pair.right().chunkId(),
+                pair.right().documentId(),
+                pair.right().generation(),
+                pair.right().chunkId(),
+                pair.left().documentId(),
+                pair.left().generation(),
+                pair.left().chunkId()
+        );
+        if (eligibleRows == null || eligibleRows == 0) {
+            return 0;
+        }
+        if (eligibleRows != 2) {
+            throw new IllegalStateException(
+                    "Adaptive graph symmetric decayed pair invariant violated"
+            );
+        }
+        return deletePair(pair.left(), pair.right());
     }
 
     private int deletePair(
@@ -575,6 +846,14 @@ public class AdaptiveGraphMaintenanceService {
             long contextCount,
             long citationCount,
             Instant lastReinforcedAt
+    ) {
+    }
+
+    private record ScoreOutcome(
+            ChunkGraphNode source,
+            ChunkGraphNode target,
+            AssociationBand from,
+            AssociationBand to
     ) {
     }
 
