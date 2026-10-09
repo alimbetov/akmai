@@ -13,8 +13,8 @@ This directory contains current architecture contracts and active target/experim
 
 | Document | Classification | Purpose |
 |---|---|---|
-| [`fileservice-knowledge-contract-v1.md`](fileservice-knowledge-contract-v1.md) | TARGET | FileService → AkmAI canonical knowledge boundary, source identity, provenance, Inbox/Outbox and publication contracts. |
-| [`fileservice-knowledge-contract-v1-implementation-checklist.md`](fileservice-knowledge-contract-v1-implementation-checklist.md) | TARGET IMPLEMENTATION CHECKLIST | Exact class/file/schema/test work breakdown for implementing the FileService contract on the existing ingestion/generation pipeline. |
+| [`fileservice-knowledge-contract-v1.md`](fileservice-knowledge-contract-v1.md) | TARGET | Synchronous-first FileService → AkmAI canonical knowledge boundary using the existing ingestion/generation pipeline, stable source identity, generation-aware result/replay and typed retrieval provenance. |
+| [`fileservice-knowledge-contract-v1-implementation-checklist.md`](fileservice-knowledge-contract-v1-implementation-checklist.md) | TARGET IMPLEMENTATION CHECKLIST | Unified class/file/test work breakdown for adapting the existing ingestion pipeline; Inbox/Outbox/event-bus work is explicitly deferred from v1. |
 
 ## Adaptive retrieval and memory
 
