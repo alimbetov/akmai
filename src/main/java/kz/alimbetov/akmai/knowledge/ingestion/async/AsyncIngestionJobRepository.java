@@ -247,22 +247,21 @@ public class AsyncIngestionJobRepository {
 
     public boolean markRetry(
             AsyncIngestionClaim claim,
-            Instant nextAttemptAt,
+            Duration retryDelay,
             boolean consumeFailureBudget,
             String errorClass,
             String errorCode,
             String errorMessage
     ) {
         requireClaim(claim);
-        if (nextAttemptAt == null) {
-            throw new IllegalArgumentException("nextAttemptAt is required");
-        }
+        requirePositive(retryDelay, "retryDelay");
         return jdbcTemplate.update(
                 """
                 UPDATE knowledge_ingestion_job
                 SET job_status = 'RETRY_WAIT',
                     failure_count = failure_count + ?,
-                    next_attempt_at = ?,
+                    next_attempt_at = clock_timestamp()
+                        + (? * interval '1 millisecond'),
                     lease_owner = NULL,
                     lease_until = NULL,
                     last_error_class = ?,
@@ -276,7 +275,7 @@ public class AsyncIngestionJobRepository {
                   AND lease_until > clock_timestamp()
                 """,
                 consumeFailureBudget ? 1 : 0,
-                java.sql.Timestamp.from(nextAttemptAt),
+                retryDelay.toMillis(),
                 errorClass,
                 errorCode,
                 sanitize(errorMessage),
