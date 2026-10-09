@@ -61,6 +61,7 @@ class AsyncIngestionJobRepositoryIntegrationTest {
 
     @BeforeEach
     void clean() {
+        jdbc.update("DELETE FROM knowledge_ingestion_job_event");
         jdbc.update("DELETE FROM knowledge_ingestion_job");
     }
 
@@ -82,10 +83,36 @@ class AsyncIngestionJobRepositoryIntegrationTest {
 
         assertThat(duplicateEvent.ingestionId()).isEqualTo(first.ingestionId());
         assertThat(duplicateFingerprint.ingestionId()).isEqualTo(first.ingestionId());
+        assertThat(repository.findByEventId("event-2").orElseThrow().ingestionId())
+                .isEqualTo(first.ingestionId());
         assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM knowledge_ingestion_job",
                 Integer.class
         )).isEqualTo(1);
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM knowledge_ingestion_job_event",
+                Integer.class
+        )).isEqualTo(2);
+    }
+
+    @Test
+    void secondaryEventAliasCannotLaterBeReusedForDifferentFingerprint() {
+        AsyncIngestionJob first = repository.admit(candidate(
+                "event-1",
+                "fp-1"
+        ));
+        AsyncIngestionJob aliased = repository.admit(candidate(
+                "event-2",
+                "fp-1"
+        ));
+        assertThat(aliased.ingestionId()).isEqualTo(first.ingestionId());
+
+        assertThatThrownBy(() -> repository.admit(candidate(
+                "event-2",
+                "fp-2"
+        )))
+                .isInstanceOf(IdempotencyConflictException.class)
+                .hasMessageContaining("eventId");
     }
 
     @Test
