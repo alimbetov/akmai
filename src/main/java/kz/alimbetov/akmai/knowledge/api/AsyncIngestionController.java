@@ -37,9 +37,9 @@ public class AsyncIngestionController {
     public AsyncIngestionStatusResponse status(
             @PathVariable UUID ingestionId
     ) {
-        accessLevelAuthorizer.requireWriteAccess(
-                admissionService.accessLevel(ingestionId)
-        );
-        return admissionService.status(ingestionId);
+        AsyncIngestionAdmissionService.StatusView view =
+                admissionService.statusView(ingestionId);
+        accessLevelAuthorizer.requireWriteAccess(view.accessLevel());
+        return view.response();
     }
 }
