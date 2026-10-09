@@ -52,6 +52,72 @@ class AppParameterServiceTest {
     }
 
     @Test
+    void authoritativeReadBypassesStaleCachedTrue() {
+        AppParameterRepository repository =
+                mock(AppParameterRepository.class);
+        AppParameterKey key =
+                AppParameterKey.ADAPTIVE_GRAPH_MAINTENANCE_ENABLED;
+        when(repository.find(key.key()))
+                .thenReturn(Optional.of(parameter(key, true, 3L)))
+                .thenReturn(Optional.of(parameter(key, false, 4L)));
+
+        AppParameterService service = service(
+                repository,
+                mock(AdaptiveGraphProperties.class),
+                mock(AdaptiveGraphCompetitionProperties.class)
+        );
+
+        assertThat(service.isEnabled(key)).isTrue();
+        assertThat(service.isEnabledAuthoritative(key)).isFalse();
+        assertThat(service.isEnabled(key)).isFalse();
+    }
+
+    @Test
+    void authoritativeReadNeverFallsBackOnDatabaseFailure() {
+        AppParameterRepository repository =
+                mock(AppParameterRepository.class);
+        AppParameterKey key =
+                AppParameterKey.ADAPTIVE_GRAPH_DREAM_APPLY_ENABLED;
+        when(repository.find(key.key()))
+                .thenReturn(Optional.of(parameter(key, true, 8L)))
+                .thenThrow(new DataAccessResourceFailureException("down"));
+
+        AppParameterService service = service(
+                repository,
+                mock(AdaptiveGraphProperties.class),
+                mock(AdaptiveGraphCompetitionProperties.class)
+        );
+
+        assertThat(service.isEnabled(key)).isTrue();
+        assertThatThrownBy(() -> service.isEnabledAuthoritative(key))
+                .isInstanceOf(AppParameterUnavailableException.class);
+    }
+
+    @Test
+    void olderAuthoritativeCompletionCannotPoisonNewerLocalVersion() {
+        AppParameterRepository repository =
+                mock(AppParameterRepository.class);
+        AppParameterKey key =
+                AppParameterKey.ADAPTIVE_GRAPH_DREAM_ENABLED;
+        when(repository.find(key.key()))
+                .thenReturn(Optional.of(parameter(key, false, 11L)))
+                .thenReturn(Optional.of(parameter(key, true, 10L)));
+
+        AppParameterService service = service(
+                repository,
+                mock(AdaptiveGraphProperties.class),
+                mock(AdaptiveGraphCompetitionProperties.class)
+        );
+
+        assertThat(service.getAuthoritative(key).version()).isEqualTo(11L);
+        ResolvedAppParameter second = service.getAuthoritative(key);
+
+        assertThat(second.version()).isEqualTo(11L);
+        assertThat(second.value()).isFalse();
+        assertThat(service.isEnabled(key)).isFalse();
+    }
+
+    @Test
     void updateRefreshesLocalCacheImmediately() {
         AppParameterRepository repository =
                 mock(AppParameterRepository.class);
@@ -259,6 +325,41 @@ class AppParameterServiceTest {
         ))
                 .isInstanceOf(AppParameterConflictException.class)
                 .hasMessageContaining("expected version 7");
+    }
+
+    @Test
+    void optimisticConflictEvictsStaleLocalTrueBeforeNextRuntimeRead() {
+        AppParameterRepository repository =
+                mock(AppParameterRepository.class);
+        AppParameterKey key =
+                AppParameterKey.ADAPTIVE_GRAPH_SHADOW_EXPANSION_ENABLED;
+        when(repository.find(key.key()))
+                .thenReturn(Optional.of(parameter(key, true, 7L)))
+                .thenReturn(Optional.of(parameter(key, false, 8L)));
+        when(repository.lockAll(anyList()))
+                .thenReturn(allFalseParameters());
+        when(repository.updateBoolean(
+                key.key(),
+                false,
+                7L,
+                "operator"
+        )).thenReturn(Optional.empty());
+
+        AppParameterService service = service(
+                repository,
+                mock(AdaptiveGraphProperties.class),
+                mock(AdaptiveGraphCompetitionProperties.class)
+        );
+
+        assertThat(service.isEnabled(key)).isTrue();
+        assertThatThrownBy(() -> service.updateBoolean(
+                key,
+                false,
+                7L,
+                "operator"
+        )).isInstanceOf(AppParameterConflictException.class);
+
+        assertThat(service.isEnabled(key)).isFalse();
     }
 
     private java.util.List<AppParameter> allFalseParameters() {

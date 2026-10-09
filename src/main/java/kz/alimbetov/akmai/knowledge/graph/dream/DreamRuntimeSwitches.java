@@ -22,25 +22,27 @@ public class DreamRuntimeSwitches {
 
     /**
      * Dream is enabled only when both the immutable application configuration
-     * and the runtime database switch allow execution. The static flag is the
-     * outer safety gate; the runtime flag is an operational kill switch.
+     * and the authoritative runtime database switch allow execution. The
+     * static flag is the outer safety gate; the runtime flag is an operational
+     * kill switch and therefore must not be authorized by stale cache state.
      */
     public boolean enabled() {
         return properties.dreamEnabled()
-                && appParameters.isEnabled(
+                && appParameters.isEnabledAuthoritative(
                         AppParameterKey.ADAPTIVE_GRAPH_DREAM_ENABLED
                 );
     }
 
     /**
      * DREAM-5 apply is independently doubly gated. Runtime enablement can never
-     * override a statically disabled apply policy.
+     * override a statically disabled apply policy, and apply authorization is
+     * always read from authoritative database state.
      */
     public boolean applyEnabled() {
         if (!enabled() || !properties.dream().applyEnabled()) {
             return false;
         }
-        return appParameters.isEnabled(
+        return appParameters.isEnabledAuthoritative(
                 AppParameterKey.ADAPTIVE_GRAPH_DREAM_APPLY_ENABLED
         );
     }
