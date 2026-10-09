@@ -32,8 +32,8 @@ A service/process is considered **documented** only when its contract contains:
 | Graph | Adaptive chunk graph mutation | [`adaptive-graph-mutation.md`](adaptive-graph-mutation.md) | DRAFT |
 | Graph | Semantic association seeding | [`adaptive-graph-mutation.md`](adaptive-graph-mutation.md) | DRAFT |
 | Graph / Dream | Semantic graph prior application | [`adaptive-graph-mutation.md`](adaptive-graph-mutation.md) | DRAFT |
-| Graph / Dream | Dream ownership / lease / fencing | TBD | TODO |
-| Graph / Dream | Dream candidate lifecycle | TBD | TODO |
+| Graph / Dream | Dream ownership / lease / fencing | [`dream-cycle.md`](dream-cycle.md) | DRAFT |
+| Graph / Dream | Dream candidate lifecycle | [`dream-cycle.md`](dream-cycle.md) | DRAFT |
 | Graph maintenance | Graph cleanup / maintenance | TBD | TODO |
 | Learning | Query memory / learning events | TBD | TODO |
 | Publication | Publication / activation lifecycle | [`publication-lifecycle.md`](publication-lifecycle.md) | DRAFT |
