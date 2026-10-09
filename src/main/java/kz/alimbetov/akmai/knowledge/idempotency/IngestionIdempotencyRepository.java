@@ -110,21 +110,14 @@ public class IngestionIdempotencyRepository {
                         : generationInfo.status();
 
                 if ("PUBLISHED".equals(generationStatus)) {
-                    Integer chunkCount = jdbcTemplate.queryForObject(
-                            """
-                            SELECT count(*)
-                            FROM knowledge_search_projection
-                            WHERE document_id = ?
-                              AND generation = ?
-                            """,
-                            Integer.class,
-                            row.documentId(),
-                            row.generation()
+                    int chunkCount = publishedSearchableChunkCount(
+                            row,
+                            generationInfo
                     );
                     KnowledgeIngestionResponse recovered =
                             new KnowledgeIngestionResponse(
                                     row.documentId(),
-                                    chunkCount == null ? 0 : chunkCount
+                                    chunkCount
                             );
                     jdbcTemplate.update(
                             """
@@ -354,20 +347,41 @@ public class IngestionIdempotencyRepository {
         );
     }
 
+    private int publishedSearchableChunkCount(
+            RequestRow row,
+            GenerationInfo generationInfo
+    ) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_document_vector_generation
+                WHERE access_level = ?
+                  AND document_id = ?
+                  AND generation = ?
+                """,
+                Integer.class,
+                generationInfo.accessLevel(),
+                row.documentId(),
+                row.generation()
+        );
+        return count == null ? 0 : count;
+    }
+
     private GenerationInfo generationInfo(RequestRow row) {
         if (row.generation() == null) {
             return null;
         }
         return jdbcTemplate.query(
                 """
-                SELECT generation_status, embedding_profile_id
+                SELECT generation_status, embedding_profile_id, access_level
                 FROM knowledge_document_generation
                 WHERE document_id = ?
                   AND generation = ?
                 """,
                 (rs, rowNum) -> new GenerationInfo(
                         rs.getString("generation_status"),
-                        rs.getString("embedding_profile_id")
+                        rs.getString("embedding_profile_id"),
+                        rs.getLong("access_level")
                 ),
                 row.documentId(),
                 row.generation()
@@ -444,7 +458,8 @@ public class IngestionIdempotencyRepository {
 
     private record GenerationInfo(
             String status,
-            String embeddingProfileId
+            String embeddingProfileId,
+            long accessLevel
     ) {
     }
 
