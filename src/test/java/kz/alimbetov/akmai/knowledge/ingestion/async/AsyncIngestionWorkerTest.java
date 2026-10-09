@@ -19,6 +19,7 @@ import kz.alimbetov.akmai.knowledge.idempotency.CanonicalRequestFingerprint;
 import kz.alimbetov.akmai.knowledge.idempotency.IdempotencyConflictException;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.service.KnowledgeIngestionPort;
+import kz.alimbetov.akmai.observability.AsyncIngestionMetrics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +27,7 @@ class AsyncIngestionWorkerTest {
 
     KnowledgeIngestionPort ingestionPort;
     AsyncIngestionJobRepository repository;
+    AsyncIngestionMetrics metrics;
     ObjectMapper objectMapper;
     CanonicalRequestFingerprint fingerprint;
     AsyncIngestionProperties properties;
@@ -35,6 +37,7 @@ class AsyncIngestionWorkerTest {
     void setUp() {
         ingestionPort = org.mockito.Mockito.mock(KnowledgeIngestionPort.class);
         repository = org.mockito.Mockito.mock(AsyncIngestionJobRepository.class);
+        metrics = org.mockito.Mockito.mock(AsyncIngestionMetrics.class);
         objectMapper = new ObjectMapper().findAndRegisterModules();
         fingerprint = new CanonicalRequestFingerprint(objectMapper);
         properties = new AsyncIngestionProperties(
@@ -61,7 +64,8 @@ class AsyncIngestionWorkerTest {
                 new AsyncIngestionFailureClassifier(),
                 properties,
                 fingerprint,
-                objectMapper
+                objectMapper,
+                metrics
         );
     }
 
@@ -94,6 +98,7 @@ class AsyncIngestionWorkerTest {
         verify(repository, never()).markFailed(
                 any(), any(), any(), any()
         );
+        verify(metrics).ingested();
     }
 
     @Test
@@ -129,6 +134,7 @@ class AsyncIngestionWorkerTest {
         verify(repository, never()).markFailed(
                 any(), any(), any(), any()
         );
+        verify(metrics).retry();
     }
 
     @Test
@@ -192,6 +198,7 @@ class AsyncIngestionWorkerTest {
                 eq("VALIDATION_ERROR"),
                 any()
         );
+        verify(metrics).failed();
     }
 
     private Fixture fixture() throws Exception {
