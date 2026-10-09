@@ -29,6 +29,7 @@ import org.springframework.context.annotation.Configuration;
     CanaryEvaluationProperties.class,
     ApiProperties.class,
     IdempotencyProperties.class,
+    AsyncIngestionProperties.class,
     SecurityProperties.class,
     ReconciliationProperties.class,
     ModelBudgetProperties.class,
