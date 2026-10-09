@@ -46,11 +46,13 @@ public class AdaptiveGraphMaintenanceScheduler {
 
     private boolean runtimeEnabled(
             AppParameterKey key,
-            boolean fallback
+            boolean staticEnabled
     ) {
+        if (!staticEnabled) {
+            return false;
+        }
         return appParameterService == null
-                ? fallback
-                : appParameterService.isEnabledAuthoritative(key);
+                || appParameterService.isEnabledAuthoritative(key);
     }
 
     @Scheduled(
@@ -76,6 +78,13 @@ public class AdaptiveGraphMaintenanceScheduler {
             for (int batch = 0;
                     batch < properties.maintenance().maxBatchesPerRun();
                     batch++) {
+                if (batch > 0 && !runtimeEnabled(
+                        AppParameterKey.ADAPTIVE_GRAPH_MAINTENANCE_ENABLED,
+                        properties.maintenanceEnabled()
+                )) {
+                    break;
+                }
+
                 AdaptiveGraphMaintenanceService.MaintenanceBatch result =
                         service.maintainBatch();
                 batches++;
