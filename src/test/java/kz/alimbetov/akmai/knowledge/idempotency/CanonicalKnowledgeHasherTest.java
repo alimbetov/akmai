@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 class CanonicalKnowledgeHasherTest {
 
+    private static final String CONTENT_HASH = "sha256:" + "a".repeat(64);
     private final CanonicalKnowledgeHasher hasher =
             new CanonicalKnowledgeHasher(new ObjectMapper());
 
@@ -71,7 +72,7 @@ class CanonicalKnowledgeHasherTest {
                         "1",
                         "document.pdf",
                         "application/pdf",
-                        "sha256:source",
+                        CONTENT_HASH,
                         new CanonicalKnowledgeDocument.StorageReference(
                                 "rustfs",
                                 bucket,
