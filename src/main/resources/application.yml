@@ -143,6 +143,18 @@ akmai:
   ingestion:
     parallelism: ${AKMAI_INGESTION_PARALLELISM:8}
     queue-capacity: ${AKMAI_INGESTION_QUEUE_CAPACITY:128}
+    async-worker:
+      enabled: ${AKMAI_ASYNC_INGESTION_ENABLED:false}
+      max-concurrent-ingestions: ${AKMAI_ASYNC_INGESTION_MAX_CONCURRENT:3}
+      worker-queue-capacity: ${AKMAI_ASYNC_INGESTION_WORKER_QUEUE_CAPACITY:3}
+      claim-batch-size: ${AKMAI_ASYNC_INGESTION_CLAIM_BATCH_SIZE:3}
+      lease-duration: ${AKMAI_ASYNC_INGESTION_LEASE_DURATION:120s}
+      heartbeat-interval: ${AKMAI_ASYNC_INGESTION_HEARTBEAT_INTERVAL:30s}
+      poll-interval: ${AKMAI_ASYNC_INGESTION_POLL_INTERVAL:1s}
+      max-attempts: ${AKMAI_ASYNC_INGESTION_MAX_ATTEMPTS:5}
+      retry-base-delay: ${AKMAI_ASYNC_INGESTION_RETRY_BASE_DELAY:5s}
+      retry-max-delay: ${AKMAI_ASYNC_INGESTION_RETRY_MAX_DELAY:5m}
+      payload-max-inline-bytes: ${AKMAI_ASYNC_INGESTION_PAYLOAD_MAX_INLINE_BYTES:1048576}
   retrieval:
     parallelism: ${AKMAI_RETRIEVAL_PARALLELISM:8}
     queue-capacity: ${AKMAI_RETRIEVAL_QUEUE_CAPACITY:64}
