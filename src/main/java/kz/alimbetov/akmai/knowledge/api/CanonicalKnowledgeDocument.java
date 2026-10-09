@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.knowledge.api;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 
@@ -67,7 +68,9 @@ public record CanonicalKnowledgeDocument(
                 );
             }
         }
-        metadata = metadata == null ? Map.of() : Map.copyOf(metadata);
+        metadata = metadata == null ? Map.of() : metadata;
+        validateSafeMetadata(metadata, "metadata");
+        metadata = Map.copyOf(metadata);
     }
 
     public record Source(
@@ -206,6 +209,63 @@ public record CanonicalKnowledgeDocument(
                 .map(String::trim)
                 .filter(value -> !value.isBlank())
                 .toList();
+    }
+
+    private static void validateSafeMetadata(Object value, String path) {
+        if (value == null) {
+            return;
+        }
+        if (value instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                String key = String.valueOf(entry.getKey());
+                if (sensitiveMetadataKey(key)) {
+                    throw new IllegalArgumentException(
+                            path + "." + key + " must not contain credentials or signed URLs"
+                    );
+                }
+                validateSafeMetadata(entry.getValue(), path + "." + key);
+            }
+            return;
+        }
+        if (value instanceof List<?> list) {
+            for (int index = 0; index < list.size(); index++) {
+                validateSafeMetadata(list.get(index), path + "[" + index + "]");
+            }
+            return;
+        }
+        if (value instanceof String text && sensitiveMetadataValue(text)) {
+            throw new IllegalArgumentException(
+                    path + " must not contain credentials or signed URLs"
+            );
+        }
+    }
+
+    private static boolean sensitiveMetadataKey(String key) {
+        String normalized = key == null
+                ? ""
+                : key.replace("-", "")
+                        .replace("_", "")
+                        .toLowerCase(Locale.ROOT);
+        return normalized.contains("presigned")
+                || normalized.contains("signedurl")
+                || normalized.contains("authorization")
+                || normalized.contains("credential")
+                || normalized.contains("password")
+                || normalized.contains("secretkey")
+                || normalized.contains("accesskey")
+                || normalized.contains("sessiontoken");
+    }
+
+    private static boolean sensitiveMetadataValue(String value) {
+        String normalized = value == null
+                ? ""
+                : value.trim().toLowerCase(Locale.ROOT);
+        return normalized.startsWith("bearer ")
+                || normalized.contains("x-amz-signature=")
+                || normalized.contains("x-amz-credential=")
+                || normalized.contains("x-amz-security-token=")
+                || normalized.contains("x-goog-signature=")
+                || normalized.contains("x-goog-credential=");
     }
 
     private static String requireText(String name, String value) {
