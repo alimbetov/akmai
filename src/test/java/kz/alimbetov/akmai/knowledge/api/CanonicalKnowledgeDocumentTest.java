@@ -12,14 +12,14 @@ class CanonicalKnowledgeDocumentTest {
 
     @Test
     void rejectsUnsupportedSchemaVersion() {
-        assertThatThrownBy(() -> document(2, "1", "1", blocks()))
+        assertThatThrownBy(() -> document(2, "1", "1", blocks(), Map.of()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("schemaVersion");
     }
 
     @Test
     void rejectsSourceVersionDifferentFromDocumentVersion() {
-        assertThatThrownBy(() -> document(1, "2", "1", blocks()))
+        assertThatThrownBy(() -> document(1, "2", "1", blocks(), Map.of()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("source.sourceVersion");
     }
@@ -31,7 +31,7 @@ class CanonicalKnowledgeDocumentTest {
                 block("b-1", "Second")
         );
 
-        assertThatThrownBy(() -> document(1, "1", "1", duplicate))
+        assertThatThrownBy(() -> document(1, "1", "1", duplicate, Map.of()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("duplicate canonical blockId");
     }
@@ -52,11 +52,44 @@ class CanonicalKnowledgeDocumentTest {
                 .hasMessageContaining("pageTo");
     }
 
+    @Test
+    void rejectsCredentialBearingMetadataBeforeIngestion() {
+        assertThatThrownBy(() -> document(
+                1,
+                "1",
+                "1",
+                blocks(),
+                Map.of("authorization", "Bearer secret-token")
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("credentials or signed URLs");
+    }
+
+    @Test
+    void rejectsNestedPresignedUrlBeforeIngestion() {
+        assertThatThrownBy(() -> document(
+                1,
+                "1",
+                "1",
+                blocks(),
+                Map.of(
+                        "sourceInfo",
+                        Map.of(
+                                "url",
+                                "https://storage.local/object?X-Amz-Signature=secret"
+                        )
+                )
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("credentials or signed URLs");
+    }
+
     private CanonicalKnowledgeDocument document(
             int schemaVersion,
             String version,
             String sourceVersion,
-            List<CanonicalKnowledgeDocument.Block> blocks
+            List<CanonicalKnowledgeDocument.Block> blocks,
+            Map<String, Object> metadata
     ) {
         return new CanonicalKnowledgeDocument(
                 schemaVersion,
@@ -86,7 +119,7 @@ class CanonicalKnowledgeDocumentTest {
                         Instant.parse("2026-10-09T00:00:00Z")
                 ),
                 blocks,
-                Map.of()
+                metadata
         );
     }
 
