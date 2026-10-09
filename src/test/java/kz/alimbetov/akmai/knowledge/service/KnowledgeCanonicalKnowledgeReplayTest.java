@@ -24,6 +24,8 @@ import org.junit.jupiter.api.Test;
 
 class KnowledgeCanonicalKnowledgeReplayTest {
 
+    private static final String CONTENT_HASH = "sha256:" + "a".repeat(64);
+
     @Test
     void replayReturnsPublishedGenerationWithoutRunningPipelineAgain() {
         Fixture fixture = fixture();
@@ -133,7 +135,7 @@ class KnowledgeCanonicalKnowledgeReplayTest {
                         "1",
                         "document.pdf",
                         "application/pdf",
-                        "sha256:source",
+                        CONTENT_HASH,
                         new CanonicalKnowledgeDocument.StorageReference(
                                 "rustfs",
                                 "knowledge",
