@@ -2,171 +2,194 @@
 
 **Status:** TARGET  
 **Branch:** `feature/fileservice-knowledge-contract-v1`  
-**Scope:** AkmAI ingestion boundary, canonical document contract, ingestion result, provenance, Inbox/Outbox integration contract, contract versioning and migration.  
-**Out of scope:** implementation of FileService itself, RustFS deployment, broker selection, parser engine implementation, UI.
+**Implementation posture:** synchronous-first, existing-pipeline adaptation, no second ingestion pipeline.  
+**Scope:** canonical file-derived knowledge contract, stable source identity, deterministic canonical identity, generation-aware ingestion result/replay, source provenance through retrieval, backward compatibility, regression and PostgreSQL E2E coverage.  
+**Deferred:** mandatory Inbox/Outbox, broker integration, asynchronous publication events, standalone event-processing framework, automatic processing-fingerprint skip policy.  
+**Out of scope:** FileService implementation, RustFS deployment, parser engine internals, UI, broker selection.
 
 ---
 
 ## 1. Goal
 
-Prepare AkmAI for integration with a separate FileService that:
+Prepare AkmAI for a separate FileService that uploads and stores files, parses them asynchronously or in scheduled batches, and submits a deterministic structured document to AkmAI.
 
-1. accepts uploaded files;
-2. stores the immutable original in RustFS or another object storage;
-3. parses files asynchronously, potentially in scheduled/night batches;
-4. produces a deterministic structured representation;
-5. submits that representation to AkmAI;
-6. receives a stable processing result and/or publication event;
-7. keeps source identity and provenance traceable from an AkmAI retrieval hit back to the original file.
+The integration must improve the current AkmAI ingestion model rather than create a parallel subsystem.
 
-The central architectural decision is that FileService does **not** send pre-chunked RAG data. It sends a versioned canonical source representation. AkmAI remains the owner of semantic normalization, RAG chunking, embedding, retrieval indexing, graph construction, generation publication and retrieval policy.
-
----
-
-## 2. Target architecture
+The target runtime is:
 
 ```text
-Client
-  │
-  ▼
 FileService
-  │
-  ├── validate / authorize / hash
-  ├── persist file metadata
-  └── store immutable original
-              │
-              ▼
-            RustFS
-              │
-              ▼
-        async parse job
-              │
-              ▼
-        Parser Worker
-              │
-              ▼
-   CanonicalKnowledgeDocument
-              │
-              ├── optional canonical artifact in object storage
-              │
-              ▼
-         FileService Outbox
-              │
-              ▼
-            Broker
-              │
-              ▼
-         AkmAI Inbox
-              │
-              ▼
-       Admission / Dedup
-              │
-              ▼
-    Canonical preparation
-              │
-              ▼
-   Semantic normalization
-              │
-              ▼
-       Chunk planning
-              │
-              ▼
-         Enrichment
-              │
-              ▼
-         Embedding
-              │
-              ▼
- Structural / semantic graph
-              │
-              ▼
-     Generation publication
-              │
-              ▼
-         AkmAI Outbox
-              │
-              ▼
- KnowledgeDocumentPublished
+    │
+    │ CanonicalKnowledgeDocument
+    │ fileId / sourceVersion / contentHash
+    │ stable storage reference
+    ▼
+KnowledgeIngestionService
+    │
+    ▼
+existing canonical mapping / semantic chunking
+    │
+    ▼
+existing enrichment / embeddings
+    │
+    ▼
+PersistenceCoordinator
+    │
+    ▼
+existing generation + publication transaction
+    │
+    ├── projections
+    ├── vectors
+    ├── lifecycle
+    └── idempotency
+    │
+    ▼
+KnowledgeIngestionResult
+    │
+    ▼
+RetrievalHit + SourceProvenance
 ```
+
+The central rule is:
+
+> FileService supplies canonical source structure. AkmAI remains the owner of RAG chunking, embeddings, generation lifecycle, retrieval representation and retrieval policy.
 
 ---
 
-## 3. Bounded-context ownership
+## 2. Architectural decisions
+
+### 2.1 One ingestion pipeline
+
+AkmAI MUST NOT introduce a FileService-specific persistence pipeline.
+
+Both legacy and file-derived ingestion must converge on the existing orchestration and generation/publication machinery:
+
+```text
+legacy AddKnowledgeRequest ─┐
+                            ├→ KnowledgeIngestionService
+CanonicalKnowledgeDocument ─┘
+                            → chunking
+                            → enrichment
+                            → PersistenceCoordinator
+                            → GenerationPublicationService
+```
+
+Any new contract layer is an adapter around this runtime, not an alternative to it.
+
+### 2.2 FileService does not own RAG chunks
+
+FileService MUST NOT prescribe:
+
+- final chunk size;
+- overlap strategy;
+- chunk identifiers used by AkmAI;
+- embedding model/profile;
+- vector index layout;
+- graph-edge admission;
+- retrieval ranking or reranking.
+
+FileService owns source parsing and source structure only.
+
+### 2.3 URL is not identity
+
+A full RustFS URL, presigned URL or temporary download credential MUST NOT be treated as source identity.
+
+Durable source identity is based on:
+
+- `fileId`;
+- `sourceVersion`;
+- `contentHash`;
+- stable storage coordinates where required.
+
+### 2.4 Reuse existing provenance machinery
+
+AkmAI already has `UnitProvenance` for block IDs, page ranges, block references and bounding boxes.
+
+The FileService contract MUST extend this model rather than introduce a second chunk-level provenance hierarchy.
+
+Source-level identity is separate from chunk-level provenance:
+
+```text
+source identity
+  fileId / sourceVersion / contentHash
+          │
+          ▼
+canonical document
+          │
+          ▼
+UnitProvenance
+  blockIds / pages / block refs
+          │
+          ▼
+KnowledgeChunk
+          │
+          ▼
+RetrievalHit.SourceProvenance
+```
+
+### 2.5 Publication is the source of truth
+
+A successful ingestion result MUST be derived from durable publication evidence.
+
+A result MUST NOT claim `PUBLISHED` merely because chunking, embedding or generation allocation succeeded.
+
+`generation` and final publication status must come from the existing generation/publication flow.
+
+### 2.6 Synchronous-first v1
+
+For v1, the required integration mode is a direct command/API call from FileService to AkmAI.
+
+Inbox, Outbox, broker delivery and `KnowledgeDocumentPublished` are valid future extensions, but they are not required to consider this v1 contract complete.
+
+---
+
+## 3. Responsibility boundaries
 
 ### 3.1 FileService owns
 
-- binary file upload;
-- upload validation;
-- object-storage persistence;
-- stable `fileId` allocation;
-- immutable source-file identity;
-- media type detection;
-- source byte hash;
-- parser selection;
-- parser execution and retries;
+- binary upload;
+- validation of the uploaded object;
+- immutable original storage;
+- stable `fileId`;
+- source versioning;
+- media type;
+- source byte/content hash;
+- parser selection and execution;
+- parser retries;
 - physical page/layout extraction;
-- structural extraction: heading, paragraph, table, list, code, footnote, image text;
-- parser version;
-- storage references;
-- FileService-side lifecycle/status.
+- headings, paragraphs, tables, lists, code, footnotes and OCR/image text;
+- parser name/version;
+- storage coordinates;
+- FileService-side processing status.
 
 ### 3.2 AkmAI owns
 
-- ingestion admission and idempotency;
 - canonical contract validation;
+- idempotency admission;
+- canonical normalization for hashing;
 - semantic normalization;
-- semantic chunk planning;
+- semantic grouping/chunking;
 - chunk identity;
+- identifier/reference extraction;
 - embedding profile selection;
 - embedding generation;
-- lexical retrieval representation;
-- graph representation;
-- generation lifecycle;
+- search projections;
+- graph/reference representation;
+- generation allocation;
 - atomic publication;
 - retrieval/reranking;
-- adaptive graph learning;
-- RAG learning signals;
-- agent-facing retrieval output.
-
-### 3.3 Explicitly forbidden coupling
-
-FileService MUST NOT own or prescribe:
-
-- final RAG chunk size;
-- RAG overlap strategy;
-- embedding model/profile;
-- ANN index structure;
-- graph learning edge admission;
-- retrieval ranking;
-- reranking;
-- query policy.
-
-AkmAI MUST NOT require FileService to expose a permanent public RustFS URL.
+- adaptive graph behavior;
+- retrieval provenance exposure.
 
 ---
 
-## 4. Contract model
+## 4. CanonicalKnowledgeDocument v1
 
-The integration SHALL use four different contracts with different semantics:
+`CanonicalKnowledgeDocument` is the stable boundary between source parsing and AkmAI RAG processing.
 
-1. `CanonicalKnowledgeDocument` — inbound source representation;
-2. `KnowledgeIngestionResult` — synchronous/command result;
-3. `KnowledgeDocumentPublished` — asynchronous durable publication event;
-4. `RetrievalHit` + typed `SourceProvenance` — retrieval/agent output.
+It preserves source meaning and source provenance without encoding AkmAI retrieval decisions.
 
-One DTO MUST NOT be reused for all four purposes.
-
----
-
-## 5. CanonicalKnowledgeDocument v1
-
-### 5.1 Purpose
-
-`CanonicalKnowledgeDocument` is the stable intermediate representation between source parsing and RAG processing.
-
-It SHALL preserve source structure and provenance without embedding RAG-specific decisions.
-
-### 5.2 Required top-level fields
+### 4.1 Required shape
 
 ```json
 {
@@ -188,7 +211,7 @@ It SHALL preserve source structure and provenance without embedding RAG-specific
       "provider": "rustfs",
       "bucket": "knowledge-raw",
       "objectKey": "tenant-17/files/file-01K/source.pdf",
-      "versionId": "optional-provider-version"
+      "versionId": "optional"
     }
   },
   "processing": {
@@ -201,34 +224,37 @@ It SHALL preserve source structure and provenance without embedding RAG-specific
 }
 ```
 
-### 5.3 Identity requirements
+### 4.2 Source identity
 
-`documentId` is the knowledge-document identity visible to AkmAI.
+`documentId` is the AkmAI knowledge-document identity.
 
-`fileId` is the stable FileService identity of the physical source artifact.
+`fileId` is the stable source artifact identity allocated by FileService.
 
-`sourceVersion` identifies the version of the source known to FileService.
+`sourceVersion` identifies the source version known to FileService.
 
-`contentHash` represents source content identity. It MUST NOT be a presigned URL and MUST NOT depend on temporary access credentials.
+`contentHash` identifies source content independently from object-storage URLs.
 
-A storage URL MUST NOT be treated as source identity.
+`version` and `sourceVersion` SHOULD be coherent for the v1 FILE source model. If both are used for different semantics later, that distinction must become explicit rather than implicit.
 
-### 5.4 Storage reference
+### 4.3 Storage reference
 
-The canonical contract SHOULD use a stable storage reference:
+A storage reference MAY contain:
 
-```json
-{
-  "provider": "rustfs",
-  "bucket": "knowledge-raw",
-  "objectKey": "...",
-  "versionId": "..."
-}
-```
+- provider;
+- bucket/container;
+- object key;
+- provider object version.
 
-A presigned URL MAY be produced operationally when content must be downloaded, but it MUST NOT be persisted as the canonical durable identity.
+It MUST NOT contain:
 
-### 5.5 Blocks
+- credentials;
+- authorization headers;
+- long-lived secrets;
+- presigned URL as durable identity.
+
+A presigned URL may be generated operationally by FileService but is not part of canonical identity, hashing or idempotency.
+
+### 4.4 Blocks
 
 Supported v1 block types:
 
@@ -240,162 +266,142 @@ Supported v1 block types:
 - `FOOTNOTE`;
 - `IMAGE_TEXT`.
 
-Each block MUST have:
+Each block must provide a stable `blockId` within the canonical document version and textual content.
 
-- stable `blockId` within a canonical document version;
-- block type;
-- textual representation;
-- optional heading level;
-- optional `pageFrom` / `pageTo`;
-- optional structured section path;
-- optional bounding box.
+Optional source-layout fields include:
 
-Recommended representation:
+- heading level;
+- `pageFrom` / `pageTo`;
+- section path;
+- bounding box.
 
-```json
-{
-  "blockId": "b-137",
-  "type": "PARAGRAPH",
-  "text": "PostgreSQL is the durable authority for graph state.",
-  "pageFrom": 37,
-  "pageTo": 37,
-  "sectionPath": ["Architecture", "Persistence", "PostgreSQL"],
-  "boundingBox": {
-    "x": 78.2,
-    "y": 192.5,
-    "width": 430.0,
-    "height": 84.0
-  }
-}
-```
+FileService block boundaries are source-structure boundaries, not final RAG chunk boundaries.
 
-The current scalar `sectionPath` representation in AkmAI SHOULD be migrated to a typed ordered path or an equivalent immutable value object. Backward compatibility MAY be maintained during migration.
+### 4.5 Contract validation
 
-### 5.6 Canonical contract validation
-
-AkmAI MUST reject a canonical document before expensive processing when any of the following is true:
+AkmAI MUST reject the request before expensive processing when any of the following is true:
 
 - unsupported `schemaVersion`;
-- blank `documentId`;
-- blank `version` / `sourceVersion`;
-- missing source identity;
-- blank/invalid language;
-- null domain;
+- missing/blank document identity;
+- missing/blank `fileId` or `sourceVersion`;
+- malformed `contentHash`;
+- unsupported language;
+- missing domain;
 - non-positive access level;
 - empty block list;
-- duplicate block IDs within one document version;
+- duplicate block IDs;
 - invalid page ranges;
 - invalid bounding boxes;
-- unsupported block type;
-- malformed storage reference when storage reference is present.
+- malformed storage reference;
+- invalid parser metadata when processing metadata is present.
 
-Validation failures MUST NOT allocate a generation and MUST NOT execute embedding.
-
----
-
-## 6. Determinism and fingerprints
-
-Three identities MUST remain conceptually separate:
-
-### 6.1 Request identity
-
-Examples:
-
-- HTTP `Idempotency-Key`;
-- command ID.
-
-Protects against command retry.
-
-### 6.2 Event identity
-
-Example:
-
-- `eventId` from broker/outbox.
-
-Protects against duplicate delivery.
-
-### 6.3 Content identity
-
-Example:
-
-- source `contentHash`;
-- optional normalized `canonicalHash`.
-
-Protects against duplicate content processing.
-
-AkmAI MUST NOT treat these as interchangeable values.
-
-### 6.4 Canonical hash
-
-A normalized canonical hash SHOULD be introduced for structured-content identity.
-
-It MUST be calculated over deterministic canonical serialization and MUST exclude volatile fields such as:
-
-- processing timestamps;
-- temporary URLs;
-- transport tracing IDs.
-
-### 6.5 Processing fingerprint
-
-A processing fingerprint SHOULD be available for future reprocessing decisions:
-
-```text
-SHA-256(
-  canonicalHash
-  + canonicalSchemaVersion
-  + semanticNormalizerVersion
-  + chunkerVersion
-  + embeddingProfile
-)
-```
-
-Expected behavior:
-
-- same canonical content + same processing fingerprint → reprocessing MAY be skipped/replayed;
-- same content + different chunker version → rechunk/reembed MAY be required;
-- same content + different embedding profile → reembed is required;
-- different canonical content → new processing attempt/generation is required.
+Validation failure MUST NOT allocate a generation or call embedding.
 
 ---
 
-## 7. Ingestion admission / Inbox
+## 5. Identity model
 
-### 7.1 Requirement
+The following identities have different semantics and MUST NOT be conflated.
 
-AkmAI SHALL preserve the current idempotency semantics for direct HTTP ingestion and SHALL be ready to accept an external event identity for asynchronous FileService integration.
+### 5.1 Request identity
 
-### 7.2 Required admission identities
+HTTP `Idempotency-Key` protects command retry.
 
-The admission layer SHOULD expose a transport-neutral model containing, where applicable:
+### 5.2 Source identity
 
-- request identity;
-- event identity;
-- document identity;
-- source/file identity;
-- content identity;
-- request fingerprint.
+`fileId + sourceVersion` identifies a FileService source version.
 
-### 7.3 Duplicate-event behavior
+### 5.3 Source content identity
 
-When the same `eventId` is delivered repeatedly:
+`contentHash` identifies source bytes/content supplied by FileService.
 
-- the first accepted delivery may process;
-- subsequent deliveries MUST NOT duplicate chunking, embedding, generation publication or graph side effects;
-- the duplicate SHALL be acknowledged/replayed according to transport semantics.
+### 5.4 Canonical content identity
 
-### 7.4 Existing HTTP idempotency
+`canonicalHash` identifies the normalized `CanonicalKnowledgeDocument` representation used by AkmAI.
 
-Existing `Idempotency-Key` behavior MUST remain backward compatible unless an explicit API major-version migration is introduced.
+### 5.5 Generation identity
+
+`documentId + generation + accessLevel` remains AkmAI's durable publication identity.
+
+### 5.6 Deferred event identity
+
+`eventId` belongs only to a future asynchronous delivery mechanism. It MUST NOT be overloaded into `Idempotency-Key`.
+
+---
+
+## 6. Canonical hash
+
+AkmAI SHALL provide one deterministic canonical hashing implementation for `CanonicalKnowledgeDocument`.
+
+The hash MUST:
+
+- use deterministic canonical serialization;
+- preserve semantic block order;
+- normalize textual values consistently;
+- include stable source/content identity;
+- include canonical structure relevant to meaning;
+- exclude volatile processing timestamps;
+- exclude temporary URLs;
+- exclude tracing/correlation identifiers;
+- exclude secrets.
+
+The canonical hash and request fingerprint are related but not identical concepts.
+
+For the FileService contract, the idempotency fingerprint SHOULD be constructed from the canonical hash plus stable request-processing inputs rather than implementing a separate canonicalization algorithm.
+
+The existing post-chunk projection fingerprint remains a different layer and MUST NOT be renamed conceptually into `canonicalHash`.
+
+---
+
+## 7. Mapping and provenance
+
+### 7.1 Canonical mapping
+
+`CanonicalDocumentMapper` is the compatibility boundary from canonical source structure into the current `KnowledgeDocument + SemanticUnit` model.
+
+It MUST:
+
+- preserve source identity in a controlled typed/whitelisted representation;
+- map blocks into semantic units;
+- preserve block IDs;
+- preserve page ranges;
+- preserve block-level bounding boxes where available;
+- preserve/derive section path deterministically;
+- continue using `UnitProvenance` as the chunk-level provenance model.
+
+### 7.2 Chunk provenance merge
+
+When one AkmAI chunk contains multiple canonical blocks:
+
+- block IDs are ordered and de-duplicated;
+- `pageFrom` is the minimum known page;
+- `pageTo` is the maximum known page;
+- block references remain traceable;
+- section path follows existing deterministic chunking semantics.
+
+### 7.3 Source metadata compatibility bridge
+
+The current runtime uses `Map<String,Object> metadata` heavily across `KnowledgeDocument`, chunks, projections and vectors.
+
+The v1 implementation MAY use one centralized source-provenance codec/bridge to carry stable source fields through this existing pipeline, provided that:
+
+- the keys are owned by one component;
+- source credentials are never copied;
+- parsing into typed `SourceProvenance` is centralized;
+- downstream code does not invent duplicate key names;
+- generic metadata is not treated as the public contract.
+
+This is preferred over introducing a second persistence hierarchy before there is evidence that one is required.
 
 ---
 
 ## 8. KnowledgeIngestionResult v1
 
-The current `KnowledgeIngestionResponse(documentId, chunkCount)` is insufficient for FileService integration.
+The legacy `KnowledgeIngestionResponse(documentId, chunkCount)` remains supported for backward compatibility.
 
-Introduce a richer result model while preserving a compatibility strategy.
+FileService-facing ingestion requires a richer result.
 
-### 8.1 Required fields
+### 8.1 Required semantics
 
 ```json
 {
@@ -414,633 +420,331 @@ Introduce a richer result model while preserving a compatibility strategy.
   },
   "processing": {
     "canonicalSchemaVersion": 1,
-    "semanticNormalizerVersion": "semantic-v1",
-    "chunkerVersion": "hierarchical-v2",
-    "embeddingProfile": "bge-m3-v2"
+    "canonicalHash": "...",
+    "embeddingProfile": "..."
   }
 }
 ```
 
 ### 8.2 Publication status
 
-The external result MUST distinguish at least:
+At minimum:
 
-- `PUBLISHED`;
-- `REPLAYED`;
-- `SUPERSEDED` where externally relevant;
-- `IN_PROGRESS` through the existing conflict/error model rather than pretending success;
-- unknown publication outcome through the existing explicit ambiguity error model.
+- `PUBLISHED` — durable publication confirmed;
+- `REPLAYED` — an equivalent previously successful request was replayed.
 
-`PUBLISHED` MUST mean that AkmAI has durable evidence that the generation committed.
+`IN_PROGRESS`, publication ambiguity and hard failure MUST remain explicit error/failure states rather than false success responses.
 
-### 8.3 Generation
+`SUPERSEDED` may remain internal unless FileService has a concrete need for it.
 
-Successful publication result MUST expose generation identity.
+### 8.3 Publication result invariant
 
-A generation allocated but not successfully published MUST NOT be returned as a successful published result.
+The result MUST be built after `PersistenceCoordinator` / publication outcome is known.
 
-### 8.4 Compatibility
+The result MUST expose the actual published generation.
 
-Preferred migration strategy:
-
-- introduce `KnowledgeIngestionResult` internally first;
-- map existing endpoint shape where backward compatibility is required;
-- add the richer contract either additively or behind a versioned endpoint/representation;
-- do not silently change old JSON semantics if external consumers already depend on them.
+The legacy response may continue to expose only `documentId` and chunk count through a compatibility mapper.
 
 ---
 
-## 9. KnowledgeDocumentPublished event v1
+## 9. Idempotency and replay
 
-### 9.1 Purpose
+Existing `Idempotency-Key` semantics remain authoritative.
 
-Durably notify FileService and other consumers that knowledge is available for retrieval.
+The FileService contract MUST reuse the same repository/lease/fencing flow.
 
-### 9.2 Event shape
+Required behavior:
 
-```json
-{
-  "schemaVersion": 1,
-  "eventId": "evt-01K...",
-  "eventType": "KnowledgeDocumentPublished",
-  "occurredAt": "2026-10-09T12:00:00Z",
-  "documentId": "doc-01K...",
-  "source": {
-    "type": "FILE",
-    "fileId": "file-01K...",
-    "sourceVersion": "17",
-    "contentHash": "sha256:..."
-  },
-  "generation": 42,
-  "chunkCount": 137
-}
-```
+- same key + same fingerprint → replay successful result;
+- same key + different fingerprint → `IDEMPOTENCY_KEY_REUSE`;
+- current live claim → `INGESTION_IN_PROGRESS`;
+- lost claim → explicit idempotency-loss error;
+- crash after durable publication → reclaim/replay must resolve the published generation rather than reprocess blindly.
 
-### 9.3 Outbox requirement
+For FileService-facing replay, AkmAI must retain or reconstruct the published `generation`.
 
-When asynchronous event delivery is implemented, creation of the publication event MUST be transactionally coupled to the durable publication state through an Outbox pattern or equivalent atomic mechanism.
+The legacy persisted `response_json` format must remain readable during migration.
 
-A crash after publication commit MUST NOT permanently lose the publication event.
-
-A retry MUST NOT create logically duplicated publication events for the same publication identity.
-
-### 9.4 Event semantics
-
-Consumers MUST assume at-least-once delivery.
-
-Event `eventId` MUST therefore be unique and suitable for Inbox deduplication.
+A schema change to a new replay envelope is optional for v1 if generation can be recovered safely from the existing idempotency/generation state without breaking compatibility.
 
 ---
 
-## 10. Typed SourceProvenance for retrieval
+## 10. Retrieval SourceProvenance
 
-The current generic `Map<String,Object> metadata` remains useful for extensibility, but stable provenance MUST NOT live only in untyped metadata.
+Stable provenance MUST be available as a typed retrieval concept even while generic metadata remains supported internally.
 
-Introduce a typed provenance model.
-
-### 10.1 Minimum typed fields
+Minimum typed fields:
 
 ```json
 {
+  "sourceType": "FILE",
   "fileId": "file-01K...",
   "sourceVersion": "17",
   "fileName": "architecture.pdf",
+  "mediaType": "application/pdf",
+  "contentHash": "sha256:...",
   "blockIds": ["b-137", "b-138"],
   "pageFrom": 37,
   "pageTo": 38,
-  "sectionPath": ["Architecture", "Persistence", "PostgreSQL"],
-  "contentHash": "sha256:..."
+  "sectionPath": ["Architecture", "Persistence", "PostgreSQL"]
 }
 ```
 
-### 10.2 Retrieval traceability invariant
+### 10.1 Traceability invariant
 
-For each persisted searchable chunk produced from a canonical document, AkmAI SHOULD be able to trace:
+For a searchable chunk derived from FileService input, AkmAI must be able to trace:
 
 ```text
 RetrievalHit
   → chunkId
-  → canonical block IDs
-  → canonical document version
-  → fileId/source identity
-  → original file reference
+  → canonical block IDs/pages
+  → documentId + generation
+  → fileId + sourceVersion + contentHash
 ```
 
-### 10.3 Metadata policy
+AkmAI does not need to return storage credentials or a presigned object URL.
 
-Typed fields:
+### 10.2 Retrieval pipeline preservation
 
-- routing identity;
-- source identity;
-- generation;
-- source version;
-- pages;
-- section path;
-- canonical block IDs;
-- durable content fingerprint.
+Typed provenance must survive every transformation that rebuilds a hit, including where applicable:
 
-Generic `metadata` remains for:
+- vector retrieval;
+- lexical retrieval;
+- identifier/reference retrieval;
+- fusion;
+- reranking;
+- parent expansion;
+- graph expansion;
+- diversity filtering;
+- final-context materialization.
 
-- experimental semantic labels;
-- extracted entities;
-- future enrichment attributes;
-- non-contractual diagnostic hints.
-
-Security-sensitive internal storage credentials MUST NOT be copied into retrieval metadata.
+If a transformation rebuilds a `RetrievalHit`, dropping provenance is a defect.
 
 ---
 
-## 11. URL and object-storage rules
+## 11. Persistence policy for v1
 
-### 11.1 Durable identity
+The compact v1 design does NOT require a new dedicated source-provenance table as a prerequisite.
 
-A full RustFS URL MUST NOT be the durable identity of a source.
+Source identity may initially travel through the existing projection/vector metadata path via a centralized typed codec, because this preserves the current generation transaction and minimizes schema risk.
 
-Use:
+A dedicated generation-level table such as `knowledge_document_source` SHOULD be introduced only when one of the following is demonstrated:
 
-- `fileId`;
-- storage provider;
-- bucket;
-- object key;
-- optional object version;
-- content hash.
+- source-level queries require it;
+- per-chunk duplication becomes operationally significant;
+- retention/purge semantics require normalized source rows;
+- provenance reconstruction from existing projection metadata is too expensive;
+- security or governance requires explicit typed columns;
+- benchmark evidence shows the model is superior without harming ingestion/publication cost.
 
-### 11.2 Presigned URLs
-
-Presigned URLs:
-
-- MAY be generated by FileService on demand;
-- MUST have bounded TTL;
-- MUST NOT be stored as a permanent canonical field;
-- MUST NOT be included in content fingerprints;
-- MUST NOT be used for idempotency identity.
-
-### 11.3 Retrieval output
-
-AkmAI SHOULD return a stable source reference, not an object-storage credential. A caller that needs source content SHOULD resolve it through FileService.
+If a new table is introduced later, it MUST remain subordinate to `documentId + generation + accessLevel` and MUST NOT become a parallel lifecycle authority.
 
 ---
 
-## 12. Processing/version fields
+## 12. Processing fingerprint
 
-AkmAI SHOULD make processing lineage explicit.
-
-Minimum future processing lineage:
-
-- canonical schema version;
-- parser version, when supplied by FileService;
-- semantic normalizer version;
-- chunker version;
-- embedding profile/version;
-- optional graph projection version.
-
-These versions MUST be treated as processing metadata, not source meaning.
-
----
-
-## 13. Lifecycle and state model
-
-Suggested cross-service state flow:
-
-### FileService
+A future processing fingerprint may combine:
 
 ```text
-UPLOADED
-  ↓
-STORED
-  ↓
-QUEUED_FOR_PARSE
-  ↓
-PARSING
-  ↓
-PARSED
-  ↓
-SUBMITTED_TO_KNOWLEDGE
-  ↓
-KNOWLEDGE_READY
+canonicalHash
++ canonical schema version
++ semantic normalizer version
++ chunker version
++ embedding profile
 ```
 
-Failure states:
+For v1 it is useful as lineage/diagnostic data, but it MUST NOT automatically skip processing without an explicit policy and test evidence.
+
+The current post-chunk projection fingerprint remains valid for its current generation/content-fencing purpose.
+
+---
+
+## 13. Backward compatibility
+
+The change MUST preserve current consumers unless an explicit API major-version migration is made.
+
+Required compatibility rules:
+
+- existing text-ingestion endpoint remains functional;
+- existing canonical ingestion remains readable/usable during migration;
+- legacy `KnowledgeIngestionResponse` JSON remains stable;
+- old idempotency replay rows remain readable;
+- retrieval metadata remains available for code that still consumes it;
+- typed provenance is additive;
+- generation/publication semantics are not weakened.
+
+---
+
+## 14. Security
+
+The following data MUST NOT be persisted in canonical identity, retrieval metadata or hashes:
+
+- access tokens;
+- authorization headers;
+- passwords;
+- object-storage credentials;
+- presigned URLs;
+- temporary query credentials.
+
+AkmAI should expose a stable source reference (`fileId`, version and content identity). FileService remains responsible for authorizing access to original binary content.
+
+ACL remains an AkmAI routing boundary and must remain part of generation identity/publication checks.
+
+---
+
+## 15. Positive cases
+
+The implementation must cover at least:
+
+1. valid PDF-derived canonical document → published generation;
+2. source identity survives canonical mapping, chunking and retrieval;
+3. one chunk formed from multiple blocks retains ordered block IDs and page range;
+4. same source request + same idempotency key → replay without duplicate generation;
+5. retry after caller loses response but publication committed → returns existing generation;
+6. new source version → new valid publication generation;
+7. same file bytes represented deterministically → same canonical hash when canonical content is unchanged;
+8. legacy text ingestion remains unaffected.
+
+---
+
+## 16. Negative and failure cases
+
+The implementation must cover at least:
+
+- unsupported canonical schema version;
+- empty block list;
+- duplicate block IDs;
+- invalid page range;
+- invalid bounding box;
+- malformed source content hash;
+- malformed storage reference;
+- unsupported language;
+- invalid access level;
+- same idempotency key with different canonical request;
+- idempotency claim lost before publication;
+- embedding failure;
+- publication failure;
+- publication outcome unknown;
+- superseded generation handling;
+- provenance accidentally dropped by retrieval-hit transformation.
+
+For all pre-processing validation failures:
+
+- no generation allocation;
+- no embedding call;
+- no partial publication.
+
+---
+
+## 17. Concurrency and recovery
+
+Existing AkmAI concurrency authority remains unchanged:
+
+- PostgreSQL transaction state;
+- generation fences;
+- idempotency claim/lease;
+- publication transaction;
+- lifecycle published-generation pointer.
+
+The FileService contract must not add a second concurrency authority.
+
+Required tests include:
+
+- concurrent same idempotency key;
+- expired claim reclaim;
+- crash/failure after generation allocation;
+- durable publication with lost caller response;
+- newer generation wins publication race;
+- 2+ service instances do not duplicate publication for the same current claim.
+
+---
+
+## 18. Performance constraints
+
+The adaptation should not materially regress existing ingestion/retrieval performance.
+
+At minimum measure or guard:
+
+- canonical hashing cost for large documents;
+- provenance metadata size for large block counts;
+- chunking throughput;
+- embedding batch behavior;
+- publication transaction duration;
+- retrieval-hit mapping overhead;
+- additional allocation caused by typed provenance.
+
+A dedicated provenance table is not justified unless its operational benefit exceeds its migration/query cost.
+
+---
+
+## 19. Deferred asynchronous extension
+
+The following is deliberately deferred from v1 completion:
 
 ```text
-UPLOAD_FAILED
-PARSE_FAILED
-SUBMISSION_FAILED
+FileService Outbox
+      ↓
+Broker
+      ↓
+AkmAI Inbox
+      ↓
+existing ingestion pipeline
+      ↓
+AkmAI Outbox
+      ↓
+KnowledgeDocumentPublished
 ```
 
-### AkmAI
+When asynchronous integration becomes a real requirement:
 
-Existing generation/idempotency lifecycle remains authoritative for knowledge publication.
+- `eventId` must remain distinct from HTTP idempotency key;
+- Inbox dedup must prevent duplicate processing side effects;
+- publication event creation must be transactionally coupled to publication, normally via Outbox;
+- delivery is at-least-once;
+- broker calls must not occur inside the publication DB transaction.
 
-FileService status MUST NOT be treated as proof that AkmAI generation publication succeeded.
-
-Only AkmAI result/event with durable publication evidence can move FileService to `KNOWLEDGE_READY`.
-
----
-
-## 14. Positive business cases
-
-### 14.1 New PDF
-
-1. FileService stores source in RustFS.
-2. FileService computes source hash.
-3. Parser produces canonical blocks.
-4. FileService emits/submits canonical document.
-5. AkmAI validates contract.
-6. Admission accepts new identity.
-7. AkmAI creates semantic chunks.
-8. AkmAI embeds and builds retrieval representation.
-9. AkmAI publishes a generation atomically.
-10. Result/event exposes published generation and source identity.
-11. Retrieval hits contain typed provenance back to file/page/section.
-
-### 14.2 Duplicate event delivery
-
-1. `KnowledgeDocumentReady(eventId=X)` is delivered.
-2. AkmAI processes and publishes.
-3. Same `eventId=X` is delivered again.
-4. AkmAI returns replay/ack behavior.
-5. No duplicate embeddings or publication side effects occur.
-
-### 14.3 Same source, retry of HTTP request
-
-Existing idempotency replay behavior remains unchanged.
-
-### 14.4 Parser version changes without source change
-
-FileService may produce a new canonical representation/version. AkmAI uses canonical/processing fingerprints to decide whether a new processing generation is necessary according to explicit policy.
-
-### 14.5 Chunker or embedding profile changes
-
-AkmAI can reprocess the same canonical source without requiring re-upload of the original binary.
+None of these are required to merge the synchronous FileService knowledge contract v1.
 
 ---
 
-## 15. Negative and failure cases
+## 20. Definition of Done
 
-### 15.1 Invalid canonical schema
+The FileService knowledge contract v1 is complete when all of the following are true:
 
-Reject before chunking and embedding.
+- `CanonicalKnowledgeDocument` is versioned and validated;
+- source identity uses `fileId/sourceVersion/contentHash`, not URL identity;
+- deterministic `canonicalHash` exists;
+- canonical mapping reuses `UnitProvenance`;
+- no second ingestion pipeline exists;
+- `PersistenceCoordinator` exposes publication/generation truth needed by the richer result;
+- FileService-facing result exposes the actual successful generation;
+- replay can return/reconstruct the successful generation;
+- legacy ingestion response remains backward compatible;
+- typed `SourceProvenance` is available on retrieval hits;
+- provenance survives retrieval/fusion/reranking/expansion paths;
+- storage credentials/presigned URLs do not leak into hashes or retrieval output;
+- positive, negative, concurrency and recovery tests are present;
+- PostgreSQL/Testcontainers E2E proves canonical input → publication → retrieval provenance;
+- full CI/verify is green on the exact branch head;
+- active documentation is updated to match executable behavior.
 
-### 15.2 Missing file/source identity
-
-Reject source contract as invalid for FileService integration.
-
-### 15.3 Expired presigned URL
-
-Must not invalidate source identity. File content access is resolved again through FileService/storage reference.
-
-### 15.4 FileService sends duplicate event
-
-AkmAI Inbox/admission deduplicates by event identity.
-
-### 15.5 Same request identity with different fingerprint
-
-Keep current `IDEMPOTENCY_KEY_REUSE` semantics.
-
-### 15.6 Embedding failure
-
-No publication event may claim success. Failed generation is not exposed as published.
-
-### 15.7 Publication call throws after commit
-
-Existing publication ambiguity resolver determines durable state. If committed, result/event may be published as success. If unknown, do not guess failure and do not emit a false success event.
-
-### 15.8 Outbox dispatcher unavailable
-
-Knowledge publication remains durable. Event remains pending in outbox and is delivered later.
-
-### 15.9 Broker redelivery
-
-Consumer deduplicates with Inbox/event identity.
-
-### 15.10 Source deleted from FileService after knowledge publication
-
-Policy must be explicit. Retrieval data MUST NOT silently pretend source is still downloadable. Future implementation should support source availability state or document withdrawal workflow; this is not required for the first contract patch.
-
-### 15.11 Access-level mismatch
-
-Request/source authority rules remain explicit. No arbitrary metadata field may override protected access-control fields.
+Inbox/Outbox/event-bus implementation is explicitly NOT part of this Definition of Done.
 
 ---
 
-## 16. Security requirements
+## 21. Final target
 
-- never persist access tokens or presigned query signatures into canonical/retrieval metadata;
-- protected fields (`accessLevel`, source identity, tenant identity when introduced) MUST NOT be overrideable by arbitrary metadata;
-- do not expose internal RustFS credentials in API responses;
-- source-reference authorization remains FileService responsibility;
-- AkmAI retrieval authorization remains based on AkmAI access-level semantics;
-- contract logs SHOULD avoid dumping entire document content at info/error level;
-- content hashes are identifiers, not authorization proofs.
-
----
-
-## 17. Observability requirements
-
-Add/extend metrics and tracing dimensions without creating unbounded-cardinality labels.
-
-Required logical observations:
-
-- canonical validation success/failure;
-- ingestion source type;
-- replay vs new processing;
-- duplicate event count;
-- publication result;
-- outbox pending/failure count when implemented;
-- provenance-mapping failures;
-- canonical schema version distribution;
-- parser/chunker/embedding processing lineage in structured logs/traces, not high-cardinality metrics.
-
-Trace/correlation SHOULD carry:
-
-- request ID;
-- event ID where applicable;
-- document ID;
-- file ID;
-- generation once allocated.
-
----
-
-## 18. Required AkmAI code changes
-
-### P0 — contract foundation
-
-1. Introduce explicit contract `schemaVersion`.
-2. Evolve `CanonicalDocument` toward `CanonicalKnowledgeDocument` semantics without breaking current ingestion unnecessarily.
-3. Introduce typed source descriptor / file reference.
-4. Introduce typed ordered section path.
-5. Add source/content identity fields required for FileService.
-6. Strengthen canonical validation.
-7. Preserve deterministic canonical fingerprinting.
-
-### P0 — ingestion result
-
-8. Introduce `KnowledgeIngestionResult` containing publication status, generation, source identity and processing lineage.
-9. Preserve compatibility for existing `KnowledgeIngestionResponse` consumers through mapping/versioning.
-10. Ensure replay returns the same durable logical result.
-
-### P0 — retrieval provenance
-
-11. Introduce typed `SourceProvenance`.
-12. Propagate block/page/section/source identity from canonical blocks into persisted chunks.
-13. Extend retrieval assembly so `RetrievalHit` exposes typed provenance.
-14. Keep generic metadata for extensibility, not core provenance.
-
-### P1 — async integration boundary
-
-15. Introduce transport-neutral event identity in ingestion admission.
-16. Add Inbox storage/claim semantics when broker integration is enabled.
-17. Define `KnowledgeDocumentPublished` event contract.
-18. Add durable AkmAI Outbox for publication events when asynchronous delivery is enabled.
-
-### P1 — processing lineage
-
-19. Track canonical schema version.
-20. Track parser version supplied by FileService.
-21. Track semantic normalizer/chunker version.
-22. Track embedding profile/version.
-23. Introduce canonical/processing fingerprint where required for safe reprocessing policy.
-
-### P2 — future lifecycle enhancements
-
-24. Source withdrawal/deletion propagation.
-25. Reparse/reindex orchestration API.
-26. Source availability indicator.
-27. Multi-artifact source packages if needed for tables/images/layout.
-
----
-
-## 19. Database/migration expectations
-
-Exact schema is implementation-specific, but the implementation SHALL support durable storage of:
-
-- source/file identity;
-- source version;
-- content hash;
-- canonical schema version;
-- processing lineage needed for reproducibility;
-- provenance mapping required by retrieval;
-- Inbox event identity where async consumption is enabled;
-- Outbox publication identity where async publication is enabled.
-
-Migration requirements:
-
-- additive migrations preferred;
-- no destructive rewrite of existing published generations;
-- old rows must remain readable;
-- nullability/default strategy must be explicitly documented for legacy documents;
-- indexes must exist for new lookup/dedup keys;
-- unique constraints must enforce event/idempotency identities where required.
-
----
-
-## 20. API compatibility policy
-
-The implementation MUST document whether each changed contract is:
-
-- internal only;
-- additive backward-compatible;
-- versioned breaking change.
-
-No silent semantic change is allowed for an already public field.
-
-`Map<String,Object> metadata` MUST NOT become a hidden substitute for contract versioning.
-
----
-
-## 21. Test specification
-
-### 21.1 Contract tests
-
-- valid canonical document accepted;
-- unsupported schema rejected;
-- missing file identity rejected for FileService source;
-- duplicate block IDs rejected;
-- invalid page range rejected;
-- invalid bounding box rejected;
-- section path order preserved;
-- arbitrary metadata cannot override protected source/access fields.
-
-### 21.2 Idempotency / Inbox tests
-
-- same request key + same fingerprint → replay;
-- same request key + different fingerprint → reject reuse;
-- same event ID delivered twice → one set of side effects;
-- concurrent duplicate event delivery → one owner/one publication;
-- lost claim/fencing behavior remains safe.
-
-### 21.3 Publication tests
-
-- published generation returned with generation ID;
-- embedding failure emits no success result/event;
-- publication ambiguity resolved from durable state;
-- unknown publication outcome emits no false failure/success event;
-- superseded generation not reported as newly published.
-
-### 21.4 Provenance tests
-
-- canonical block IDs survive into persisted chunk provenance;
-- pages survive;
-- ordered section path survives;
-- retrieval hit exposes typed provenance;
-- provenance does not contain presigned URL/token;
-- retrieval hit can be traced to document/file identity.
-
-### 21.5 Outbox tests
-
-When implemented:
-
-- publication + outbox write are atomic;
-- dispatcher failure leaves event retryable;
-- repeated dispatch does not change event identity;
-- consumer can deduplicate by event ID.
-
-### 21.6 Migration tests
-
-- pre-migration documents remain retrievable;
-- pre-migration idempotency replay still works;
-- old API response compatibility is preserved according to chosen strategy;
-- mixed old/new corpus does not break retrieval.
-
-### 21.7 Performance tests
-
-Measure before/after:
-
-- ingestion p50/p95/p99;
-- DB round trips;
-- extra row/storage cost per chunk for provenance;
-- serialization cost for canonical documents;
-- retrieval latency impact of typed provenance;
-- duplicate-event fast-path latency.
-
-No P0 contract work should introduce a material retrieval latency regression.
-
----
-
-## 22. Acceptance criteria
-
-The work is complete only when all of the following are true:
-
-1. AkmAI accepts a versioned canonical file-derived document without requiring pre-chunked RAG input.
-2. Stable FileService identity is preserved independently from RustFS URL.
-3. Successful ingestion exposes durable publication generation.
-4. Existing idempotency behavior remains correct.
-5. Duplicate asynchronous event delivery cannot duplicate ingestion side effects once Inbox integration is enabled.
-6. Retrieval hits expose typed source provenance.
-7. A retrieval hit can be traced to canonical block(s), source document version and file identity.
-8. Presigned URLs/tokens are absent from durable canonical/retrieval identity.
-9. Publication events have schema version and unique event identity.
-10. Outbox semantics prevent loss of a committed publication event once async publication is enabled.
-11. Positive, negative, concurrency and failure-injection tests cover all new invariants.
-12. Existing test suite remains green.
-13. Documentation is updated together with code.
-14. DB migrations are backward compatible and indexed.
-15. No duplicated alternative ingestion pipeline is introduced; text and canonical ingestion converge on the same downstream RAG pipeline.
-
----
-
-## 23. Implementation order
-
-### Phase A — P0 contract baseline
-
-1. Freeze contract names and versioning policy.
-2. Add typed source identity and provenance value objects.
-3. Evolve canonical document model.
-4. Extend canonical mapper.
-5. Extend chunk provenance propagation.
-6. Introduce richer ingestion result.
-7. Extend retrieval hit/output.
-8. Add DB migrations where required.
-9. Add tests.
-10. Update service documentation.
-
-### Phase B — async reliability
-
-1. Add event identity abstraction.
-2. Add Inbox repository/claiming semantics.
-3. Add publication event contract.
-4. Add Outbox persistence.
-5. Add dispatcher boundary.
-6. Add failure-injection/concurrency tests.
-
-### Phase C — reproducibility/reprocessing
-
-1. Canonical hash.
-2. Processing fingerprint.
-3. Parser/chunker/embedding lineage policy.
-4. Explicit reprocess/reindex rules.
-
-Do not implement Phase C heuristics before Phase A contract semantics are stable.
-
----
-
-## 24. Non-goals for this branch specification
-
-This specification does not require:
-
-- choosing Kafka vs RabbitMQ vs another broker;
-- implementing FileService;
-- configuring RustFS;
-- implementing OCR;
-- moving binary files through AkmAI;
-- embedding JSON field names as retrieval text;
-- making LLM parsing mandatory;
-- changing adaptive-graph learning semantics;
-- replacing generation publication architecture.
-
----
-
-## 25. Architectural invariants
-
-1. Original file and knowledge representation are different artifacts.
-2. URL is a locator, not durable identity.
-3. FileService parses source structure; AkmAI owns RAG semantics.
-4. Canonical JSON is an intermediate representation, not the embedding text format.
-5. Request identity, event identity and content identity are separate concepts.
-6. Published generation is the durable authority for knowledge availability.
-7. Retrieval provenance is first-class typed data.
-8. Generic metadata is not a substitute for typed core contracts.
-9. Async delivery is assumed at-least-once; consumers must be idempotent.
-10. Source provenance must remain recoverable after chunking.
-11. Contract schemas are explicitly versioned.
-12. Reprocessing policy must be deterministic and explainable.
-
----
-
-## 26. Definition of Done
-
-Before merging an implementation based on this specification:
-
-- code review confirms bounded-context ownership;
-- all contract records are documented;
-- OpenAPI/API examples are updated where applicable;
-- DB migration and rollback/compatibility notes exist;
-- unit tests cover validation/mapping;
-- integration tests cover persistence/publication;
-- failure-injection tests cover duplicate delivery, lost ownership and ambiguous publication;
-- retrieval tests verify provenance;
-- benchmark/regression check is recorded;
-- no dead compatibility scaffolding remains beyond explicitly documented temporary adapters;
-- documentation reflects the actual implementation, not the intended design.
-
----
-
-## 27. Final decision
-
-AkmAI should evolve from a text-centric ingestion contract to a versioned knowledge-ingestion boundary built around `CanonicalKnowledgeDocument`.
-
-The target interface is:
+The v1 contract should leave AkmAI with this stable boundary:
 
 ```text
 FileService
     │
     │ CanonicalKnowledgeDocument
     ▼
-AkmAI
+AkmAI existing ingestion pipeline
+    │
     ├── KnowledgeIngestionResult
-    ├── KnowledgeDocumentPublished
     └── RetrievalHit + SourceProvenance
 ```
 
-The implementation must extend the existing ingestion/generation architecture rather than create a parallel pipeline.
+The design deliberately prefers a small number of strong contracts over a larger integration framework. Future asynchronous transport can be added around this boundary without changing the core knowledge-processing model.
