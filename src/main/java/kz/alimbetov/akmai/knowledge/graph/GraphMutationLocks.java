@@ -4,13 +4,15 @@ import java.util.Collection;
 import java.util.TreeSet;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Shared transaction-scoped lock primitive for graph mutations.
  *
  * <p>Callers must already be inside a database transaction. Nodes are sorted
- * canonically before any lock is acquired, lifecycle rows are locked first,
- * then node advisory locks are acquired in the same deterministic order.</p>
+ * canonically before any lock is acquired. Lifecycle rows are locked first,
+ * then the exact published generation rows are validated/locked, and finally
+ * node advisory locks are acquired in the same deterministic order.</p>
  */
 @Component
 public class GraphMutationLocks {
@@ -24,6 +26,11 @@ public class GraphMutationLocks {
     }
 
     public void lockEligiblePublishedNodes(Collection<ChunkGraphNode> nodes) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+            throw new IllegalStateException(
+                    "graph mutation locks require an active database transaction"
+            );
+        }
         if (nodes == null || nodes.isEmpty()) {
             throw new IllegalArgumentException("graph mutation nodes must not be empty");
         }
@@ -36,11 +43,12 @@ public class GraphMutationLocks {
             lockOrder.add(node);
         }
 
-        lockOrder.forEach(this::lockEligiblePublishedGeneration);
+        lockOrder.forEach(this::lockEligibleLifecycle);
+        lockOrder.forEach(this::lockPublishedGeneration);
         lockOrder.forEach(this::lockNode);
     }
 
-    private void lockEligiblePublishedGeneration(ChunkGraphNode node) {
+    private void lockEligibleLifecycle(ChunkGraphNode node) {
         Integer eligible = jdbcTemplate.query(
                 """
                 SELECT 1
@@ -63,10 +71,36 @@ public class GraphMutationLocks {
         ).stream().findFirst().orElse(null);
 
         if (eligible == null) {
-            throw new IllegalStateException(
-                    "graph mutation requires READY/ACTIVE/PUBLISHED/non-expired generation"
-            );
+            throw ineligibleNode();
         }
+    }
+
+    private void lockPublishedGeneration(ChunkGraphNode node) {
+        Integer published = jdbcTemplate.query(
+                """
+                SELECT 1
+                FROM knowledge_document_generation
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND access_level = ?
+                  AND generation_status = 'PUBLISHED'
+                FOR SHARE
+                """,
+                (rs, rowNum) -> rs.getInt(1),
+                node.documentId(),
+                node.generation(),
+                node.accessLevel()
+        ).stream().findFirst().orElse(null);
+
+        if (published == null) {
+            throw ineligibleNode();
+        }
+    }
+
+    private IllegalStateException ineligibleNode() {
+        return new IllegalStateException(
+                "graph mutation requires READY/ACTIVE/PUBLISHED/non-expired generation"
+        );
     }
 
     private void lockNode(ChunkGraphNode node) {
