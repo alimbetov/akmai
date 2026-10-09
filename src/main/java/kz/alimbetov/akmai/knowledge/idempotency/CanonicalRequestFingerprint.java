@@ -67,24 +67,13 @@ public class CanonicalRequestFingerprint {
         return digest(canonical);
     }
 
+    /**
+     * FileService retries are identified by canonical semantic content. Parser timestamps and
+     * physical object-storage locations are deliberately excluded: neither changes the knowledge
+     * AkmAI is being asked to publish.
+     */
     public String fingerprint(CanonicalKnowledgeDocument document) {
-        TreeMap<String, Object> request = new TreeMap<>();
-        request.put("canonicalHash", canonicalKnowledgeHasher.hash(document));
-        request.put("processing", Map.of(
-                "parser", text(document.processing().parser()),
-                "parserVersion", text(document.processing().parserVersion()),
-                "parsedAt", document.processing().parsedAt().toString()
-        ));
-        if (document.source().storage() != null) {
-            var storage = document.source().storage();
-            LinkedHashMap<String, Object> storageValue = new LinkedHashMap<>();
-            storageValue.put("provider", text(storage.provider()));
-            storageValue.put("bucket", text(storage.bucket()));
-            storageValue.put("objectKey", text(storage.objectKey()));
-            storageValue.put("versionId", text(storage.versionId()));
-            request.put("storage", storageValue);
-        }
-        return digest(request);
+        return canonicalKnowledgeHasher.hash(document);
     }
 
     public String canonicalHash(CanonicalKnowledgeDocument document) {
