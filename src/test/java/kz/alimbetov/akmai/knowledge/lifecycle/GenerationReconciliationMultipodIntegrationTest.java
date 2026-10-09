@@ -93,7 +93,7 @@ class GenerationReconciliationMultipodIntegrationTest {
         ReconciliationProperties properties =
                 new ReconciliationProperties(
                         true,
-                        10,
+                        1,
                         1,
                         Duration.ofMinutes(5),
                         Duration.ofMinutes(5)
@@ -158,6 +158,40 @@ class GenerationReconciliationMultipodIntegrationTest {
 
         assertThat(reconciliation.reconcileBatch()).isEqualTo(1);
         assertThat(status("doc-busy", 1L)).isEqualTo("CLEANED");
+    }
+
+    @Test
+    void busyFirstPageDoesNotStarveUnlockedTailCandidate() throws Exception {
+        insertLifecycle("doc-a-busy", 2L);
+        insertGeneration("doc-a-busy", 1L, "FAILED");
+        insertLifecycle("doc-b-tail", 2L);
+        insertGeneration("doc-b-tail", 1L, "FAILED");
+
+        jdbc.update(
+                """
+                UPDATE knowledge_document_generation
+                SET failed_at = clock_timestamp() - interval '2 hours'
+                WHERE document_id = 'doc-a-busy'
+                  AND generation = 1
+                """
+        );
+
+        long lockKey = candidateLockKey("doc-a-busy", 1L);
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement statement = connection.prepareStatement(
+                    "SELECT pg_advisory_xact_lock(?)"
+            )) {
+                statement.setLong(1, lockKey);
+                statement.execute();
+            }
+
+            assertThat(reconciliation.reconcileBatch()).isEqualTo(1);
+            assertThat(status("doc-a-busy", 1L)).isEqualTo("FAILED");
+            assertThat(status("doc-b-tail", 1L)).isEqualTo("CLEANED");
+
+            connection.rollback();
+        }
     }
 
     @Test
