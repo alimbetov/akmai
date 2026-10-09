@@ -24,6 +24,7 @@ Status: **DRAFT** until one exact PR-head SHA passes CI, Retrieval Quality Gate,
 7. Require every migration document to be `VERIFIED`, then transition to `READY_TO_CUTOVER`.
 8. In one cutover transaction, revalidate the snapshot, lock lifecycle rows, retire source generations, publish candidate generations, switch lifecycle pointers, set the target profile active, return runtime to `IDLE`, and mark the migration `COMPLETED`.
 9. On failure, abort only while current owner/fencing authority is still valid. Stale owners are fenced from cleanup.
+10. If candidate-failure bookkeeping, abort, or lost-authority recovery also fails, the original migration failure remains primary and the secondary cleanup/recovery error is attached with `addSuppressed()`.
 
 ## Authority and fencing rules
 
@@ -65,16 +66,24 @@ After recovery, optional auto-migration runs only when the configured profile di
 - Published corpus contains a mixed source embedding profile: snapshot fails closed.
 - Source publication changes during candidate allocation: candidate staging fails.
 - Target embedding/model call fails: source publication remains authoritative and candidate generation is failed/cleaned through the abort path.
+- Candidate failure bookkeeping throws: the original staging/model failure is rethrown unchanged; bookkeeping failure is suppressed.
+- Abort bookkeeping throws: the original migration failure is rethrown unchanged; abort failure is suppressed.
+- Lost-authority recovery throws after the primary authority loss: the original `LostAuthorityException` remains primary and recovery failure is suppressed.
 - Any migration document is not verified: transition to `READY_TO_CUTOVER` is rejected.
 - Snapshot/lifecycle/source/candidate/profile validation changes before cutover: cutover fails before publication switch.
 - Unexpected row counts during source-retire/candidate-publish/lifecycle-switch: the cutover transaction rolls back.
 - Lease expires or another replica takes over: stale owner loses authority and must not continue authoritative cleanup or cutover.
+
+## Failure authority
+
+The first exception from the authoritative migration/staging path is the primary failure. Cleanup and recovery are diagnostic/recovery work and cannot replace it. `ReembeddingService.preservePrimaryFailure(...)` executes cleanup/recovery best-effort, returns a fallback result when the secondary action fails, and records the secondary `RuntimeException` as suppressed on the primary exception. A primary exception is never added as its own suppressed exception.
 
 ## Transaction boundaries
 
 - Begin, snapshot transition, candidate allocation, candidate persistence, ready-to-cutover, cutover, and abort are explicit database transactions through the dedicated re-embedding transaction template.
 - Embedding/model computation is performed outside the candidate persistence transaction.
 - Cutover is atomic across source retirement, candidate publication, lifecycle pointer switch, active-profile change, and migration completion.
+- Failure bookkeeping is a separate best-effort boundary after the primary failure and therefore must not redefine failure authority.
 
 ## Tests
 
@@ -88,7 +97,14 @@ Current executable coverage includes `ReembeddingIntegrationTest` for:
 - startup recovery ignoring a live remote lease;
 - startup recovery claiming an expired migration before abort.
 
-`ReembeddingPropertiesTest` additionally covers the heartbeat/lease startup invariant and the short-lease compatibility constructor.
+`ReembeddingPropertiesTest` covers the heartbeat/lease startup invariant and the short-lease compatibility constructor.
+
+`ReembeddingFailurePreservationTest` injects secondary cleanup failures and verifies:
+
+- cleanup failure is attached as suppressed to the original primary exception;
+- cleanup success returns its actual result without altering the primary exception;
+- cleanup executes exactly once;
+- the primary exception is never added as its own suppressed exception.
 
 ## Observability
 
@@ -100,7 +116,8 @@ Operational signals should distinguish at minimum:
 - startup recovery takeover;
 - per-document staging failure;
 - cutover failure;
-- migration completion/abort.
+- migration completion/abort;
+- secondary cleanup/recovery failure, with the authoritative primary failure retained in exception telemetry.
 
 The persisted migration and migration-document rows are the durable forensic source for owner, fence, lifecycle state and last error.
 
@@ -110,7 +127,4 @@ The persisted migration and migration-document rows are the durable forensic sou
 - For a crashed owner, allow the lease to expire; startup recovery or another replica may then claim the migration with a higher fence and abort it safely.
 - Failed REEMBEDDING generations remain cleanup-required and are handled by normal generation reconciliation/retention cleanup paths.
 - A stale replica must be treated as non-authoritative even if it still has in-memory migration state.
-
-## Known hardening item
-
-Failure cleanup must preserve the original migration/staging exception if secondary abort or candidate-failure bookkeeping itself throws. Secondary cleanup failure should be attached as suppressed diagnostic context rather than replace the primary business failure. This item remains part of the current hardening PR until executable coverage is added.
+- When primary and recovery failures coexist, operations should diagnose the primary exception first and inspect suppressed exceptions for recovery degradation.
