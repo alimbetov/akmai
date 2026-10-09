@@ -11,9 +11,15 @@ import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResult;
 import kz.alimbetov.akmai.knowledge.idempotency.CanonicalRequestFingerprint;
 import kz.alimbetov.akmai.knowledge.service.KnowledgeIngestionPort;
 import kz.alimbetov.akmai.observability.AsyncIngestionMetrics;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(
+        prefix = "akmai.ingestion.async-worker",
+        name = "enabled",
+        havingValue = "true"
+)
 public class AsyncIngestionWorker {
 
     private final KnowledgeIngestionPort ingestionPort;
