@@ -9,6 +9,13 @@ This directory contains current architecture contracts and active target/experim
 - [`rag-self-optimizing-platform-v1.1-technical-spec.md`](rag-self-optimizing-platform-v1.1-technical-spec.md) — **CURRENT / IMPLEMENTED** self-optimizing v1.1 engineering contract.
 - [`runtime-app-parameters.md`](runtime-app-parameters.md) — runtime-mutable parameter architecture; actual defaults remain authoritative in `src/main/resources/application.yml`.
 
+## Active target architecture
+
+| Document | Classification | Purpose |
+|---|---|---|
+| [`fileservice-knowledge-contract-v1.md`](fileservice-knowledge-contract-v1.md) | TARGET | FileService → AkmAI canonical knowledge boundary, source identity, provenance, Inbox/Outbox and publication contracts. |
+| [`fileservice-knowledge-contract-v1-implementation-checklist.md`](fileservice-knowledge-contract-v1-implementation-checklist.md) | TARGET IMPLEMENTATION CHECKLIST | Exact class/file/schema/test work breakdown for implementing the FileService contract on the existing ingestion/generation pipeline. |
+
 ## Adaptive retrieval and memory
 
 | Document | Classification | Purpose |
