@@ -2,7 +2,9 @@ package kz.alimbetov.akmai.knowledge.graph.dream;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
+import kz.alimbetov.akmai.knowledge.graph.ChunkGraphNode;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -110,6 +112,14 @@ public class DreamCandidateRepository {
                     negative_streak = EXCLUDED.negative_streak,
                     embedding_profile_id = EXCLUDED.embedding_profile_id,
                     last_verified_run_id = EXCLUDED.last_verified_run_id,
+                    retirement_reason = CASE
+                        WHEN EXCLUDED.state = 'ACTIVE' THEN NULL
+                        ELSE knowledge_chunk_dream_candidate.retirement_reason
+                    END,
+                    retired_at = CASE
+                        WHEN EXCLUDED.state = 'ACTIVE' THEN NULL
+                        ELSE knowledge_chunk_dream_candidate.retired_at
+                    END,
                     last_seen_at = CASE
                         WHEN EXCLUDED.mutual_knn
                         THEN EXCLUDED.last_seen_at
@@ -154,6 +164,172 @@ public class DreamCandidateRepository {
                     "Dream candidate observation rejected by fencing"
             );
         }
+    }
+
+    /**
+     * Returns ACTIVE pairs currently involving the source under the exact Dream
+     * policy epoch. The coordinator is single-owner, so this snapshot is used to
+     * apply retention hysteresis and to retire pairs that disappear from the
+     * source's current forward top-K.
+     */
+    public List<DreamPair> findActivePairsForSource(
+            int graphVersion,
+            String semanticPolicyFingerprint,
+            ChunkGraphNode source
+    ) {
+        if (graphVersion <= 0 || source == null) {
+            throw new IllegalArgumentException(
+                    "Dream active-pair lookup identity is required"
+            );
+        }
+        String fingerprint = requireText(
+                "semanticPolicyFingerprint",
+                semanticPolicyFingerprint
+        );
+        if (!fingerprint.matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException(
+                    "semanticPolicyFingerprint must be SHA-256 hex"
+            );
+        }
+
+        return jdbcTemplate.query(
+                """
+                SELECT access_level,
+                       node_a_document_id,
+                       node_a_generation,
+                       node_a_chunk_id,
+                       node_b_document_id,
+                       node_b_generation,
+                       node_b_chunk_id
+                FROM knowledge_chunk_dream_candidate
+                WHERE graph_version = ?
+                  AND semantic_policy_fingerprint = ?
+                  AND state = 'ACTIVE'
+                  AND access_level = ?
+                  AND (
+                      (
+                          node_a_document_id = ?
+                          AND node_a_generation = ?
+                          AND node_a_chunk_id = ?
+                      ) OR (
+                          node_b_document_id = ?
+                          AND node_b_generation = ?
+                          AND node_b_chunk_id = ?
+                      )
+                  )
+                """,
+                (rs, rowNum) -> DreamPair.of(
+                        new ChunkGraphNode(
+                                rs.getLong("access_level"),
+                                rs.getString("node_a_document_id"),
+                                rs.getLong("node_a_generation"),
+                                rs.getString("node_a_chunk_id")
+                        ),
+                        new ChunkGraphNode(
+                                rs.getLong("access_level"),
+                                rs.getString("node_b_document_id"),
+                                rs.getLong("node_b_generation"),
+                                rs.getString("node_b_chunk_id")
+                        )
+                ),
+                graphVersion,
+                fingerprint,
+                source.accessLevel(),
+                source.documentId(),
+                source.generation(),
+                source.chunkId(),
+                source.documentId(),
+                source.generation(),
+                source.chunkId()
+        );
+    }
+
+    /**
+     * Retires an existing ACTIVE observation without manufacturing a new
+     * candidate row. The data-modifying CTE distinguishes a missing row from a
+     * lost lease: no existing candidate is a safe no-op, while lost authority is
+     * always fatal.
+     */
+    public boolean markStaleIfActive(
+            DreamLeaseManager.Authority authority,
+            DreamPair pair,
+            UUID runId,
+            String reason,
+            Instant observedAt
+    ) {
+        if (authority == null || pair == null || runId == null
+                || observedAt == null) {
+            throw new IllegalArgumentException(
+                    "Dream stale-candidate identity is required"
+            );
+        }
+        String retirementReason = requireText("reason", reason);
+        StaleResult result = jdbcTemplate.queryForObject(
+                """
+                WITH live_authority AS (
+                    SELECT 1
+                    FROM adaptive_graph_dream_lease lease
+                    WHERE lease.graph_version = ?
+                      AND lease.semantic_policy_fingerprint = ?
+                      AND lease.owner_id = ?
+                      AND lease.fencing_token = ?
+                      AND lease.lease_until > clock_timestamp()
+                ), updated AS (
+                    UPDATE knowledge_chunk_dream_candidate candidate
+                    SET state = 'STALE',
+                        mutual_knn = FALSE,
+                        confidence = 0,
+                        positive_streak = 0,
+                        negative_streak = 1,
+                        last_verified_run_id = ?,
+                        retirement_reason = ?,
+                        last_verified_at = ?,
+                        retired_at = COALESCE(candidate.retired_at, ?),
+                        updated_at = clock_timestamp()
+                    WHERE candidate.access_level = ?
+                      AND candidate.node_a_document_id = ?
+                      AND candidate.node_a_generation = ?
+                      AND candidate.node_a_chunk_id = ?
+                      AND candidate.node_b_document_id = ?
+                      AND candidate.node_b_generation = ?
+                      AND candidate.node_b_chunk_id = ?
+                      AND candidate.graph_version = ?
+                      AND candidate.semantic_policy_fingerprint = ?
+                      AND candidate.state = 'ACTIVE'
+                      AND EXISTS (SELECT 1 FROM live_authority)
+                    RETURNING 1
+                )
+                SELECT EXISTS(SELECT 1 FROM live_authority) AS owned,
+                       EXISTS(SELECT 1 FROM updated) AS changed
+                """,
+                (rs, rowNum) -> new StaleResult(
+                        rs.getBoolean("owned"),
+                        rs.getBoolean("changed")
+                ),
+                authority.graphVersion(),
+                authority.policyFingerprint(),
+                authority.ownerId(),
+                authority.fencingToken(),
+                runId,
+                retirementReason,
+                Timestamp.from(observedAt),
+                Timestamp.from(observedAt),
+                pair.first().accessLevel(),
+                pair.first().documentId(),
+                pair.first().generation(),
+                pair.first().chunkId(),
+                pair.second().documentId(),
+                pair.second().generation(),
+                pair.second().chunkId(),
+                authority.graphVersion(),
+                authority.policyFingerprint()
+        );
+        if (result == null || !result.owned()) {
+            throw new DreamLeaseManager.LostDreamAuthorityException(
+                    "Dream candidate retirement rejected by fencing"
+            );
+        }
+        return result.changed();
     }
 
     private void requireObservation(Observation value) {
@@ -207,6 +383,9 @@ public class DreamCandidateRepository {
         if (!Double.isFinite(value) || value < 0 || value > 1) {
             throw new IllegalArgumentException(name + " must be in [0, 1]");
         }
+    }
+
+    private record StaleResult(boolean owned, boolean changed) {
     }
 
     public enum CandidateState {
