@@ -66,18 +66,9 @@ public class AppParameterService {
     }
 
     public ResolvedAppParameter get(AppParameterKey key) {
-        if (key == null) {
-            throw new IllegalArgumentException(
-                    "app parameter key must not be null"
-            );
-        }
+        requireKey(key);
         ResolvedAppParameter cached = cache.getIfPresent(key);
-        if (cached != null) {
-            return cached;
-        }
-        ResolvedAppParameter loaded = loadFailSafe(key);
-        cache.put(key, loaded);
-        return loaded;
+        return cached == null ? loadFailSafe(key) : cached;
     }
 
     public List<ResolvedAppParameter> list() {
@@ -88,19 +79,14 @@ public class AppParameterService {
     }
 
     public ResolvedAppParameter getAuthoritative(AppParameterKey key) {
-        if (key == null) {
-            throw new IllegalArgumentException(
-                    "app parameter key must not be null"
-            );
-        }
+        requireKey(key);
         try {
             ResolvedAppParameter resolved = repository.find(key.key())
                     .map(ResolvedAppParameter::from)
                     .orElseThrow(() -> new IllegalStateException(
                             "Missing persisted app parameter: " + key.key()
                     ));
-            remember(key, resolved);
-            return resolved;
+            return remember(key, resolved);
         } catch (DataAccessException exception) {
             throw new AppParameterUnavailableException(exception);
         }
@@ -120,11 +106,7 @@ public class AppParameterService {
             long expectedVersion,
             String updatedBy
     ) {
-        if (key == null) {
-            throw new IllegalArgumentException(
-                    "app parameter key must not be null"
-            );
-        }
+        requireKey(key);
         if (expectedVersion < 0) {
             throw new IllegalArgumentException(
                     "expectedVersion must not be negative"
@@ -156,6 +138,14 @@ public class AppParameterService {
 
     public void invalidateAll() {
         cache.invalidateAll();
+    }
+
+    private void requireKey(AppParameterKey key) {
+        if (key == null) {
+            throw new IllegalArgumentException(
+                    "app parameter key must not be null"
+            );
+        }
     }
 
     private Map<AppParameterKey, Boolean> lockParameterSnapshot() {
@@ -281,33 +271,36 @@ public class AppParameterService {
                     .orElse(null);
             if (resolved == null) {
                 LOGGER.warn("app_parameter_read event=missing key={}", key.key());
-                return lastKnownOrFallback(key);
+                return fallbackAndCache(key);
             }
-            remember(key, resolved);
-            return resolved;
+            return remember(key, resolved);
         } catch (DataAccessException exception) {
             LOGGER.warn(
                     "app_parameter_read event=fallback key={} errorType={}",
                     key.key(), exception.getClass().getSimpleName()
             );
-            return lastKnownOrFallback(key);
+            return fallbackAndCache(key);
         }
     }
 
-    private ResolvedAppParameter lastKnownOrFallback(AppParameterKey key) {
+    private synchronized ResolvedAppParameter fallbackAndCache(
+            AppParameterKey key
+    ) {
         ResolvedAppParameter known = lastKnownGood.get(key);
-        return known == null ? fallback(key) : known;
+        ResolvedAppParameter effective = known == null ? fallback(key) : known;
+        cache.put(key, effective);
+        return effective;
     }
 
-    private void remember(
+    private synchronized ResolvedAppParameter remember(
             AppParameterKey key,
             ResolvedAppParameter value
     ) {
-        ResolvedAppParameter effective = lastKnownGood.compute(
-                key,
-                (ignored, current) -> newer(current, value) ? value : current
-        );
+        ResolvedAppParameter current = lastKnownGood.get(key);
+        ResolvedAppParameter effective = newer(current, value) ? value : current;
+        lastKnownGood.put(key, effective);
         cache.put(key, effective);
+        return effective;
     }
 
     private boolean newer(
@@ -325,7 +318,7 @@ public class AppParameterService {
         return currentVersion == null || candidateVersion >= currentVersion;
     }
 
-    private void invalidateLocalState(AppParameterKey key) {
+    private synchronized void invalidateLocalState(AppParameterKey key) {
         cache.invalidate(key);
         lastKnownGood.remove(key);
     }
