@@ -125,7 +125,7 @@ public class AsyncIngestionScheduler {
             slots.release();
             boolean rescheduled = repository.markRetry(
                     claim,
-                    Instant.now().plus(properties.pollInterval()),
+                    properties.pollInterval(),
                     false,
                     AsyncIngestionFailureClassifier.Classification.RETRYABLE.name(),
                     "ASYNC_EXECUTOR_REJECTED",
