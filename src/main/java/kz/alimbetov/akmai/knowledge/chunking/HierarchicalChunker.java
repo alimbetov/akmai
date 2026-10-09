@@ -68,7 +68,7 @@ public class HierarchicalChunker {
         }
 
         List<KnowledgeChunk> result = new ArrayList<>();
-        int childChunkIndex = 0;
+        int childChunkIndex = firstChildChunkIndex(base);
 
         for (KnowledgeChunk parent : base) {
             List<String> childTexts = splitParent(document, parent);
@@ -89,6 +89,14 @@ public class HierarchicalChunker {
         }
 
         return List.copyOf(result);
+    }
+
+    private int firstChildChunkIndex(List<KnowledgeChunk> base) {
+        int maxParentChunkIndex = base.stream()
+                .mapToInt(KnowledgeChunk::chunkIndex)
+                .max()
+                .orElse(-1);
+        return Math.addExact(maxParentChunkIndex, 1);
     }
 
     public long searchableChunkCount(List<KnowledgeChunk> chunks) {
