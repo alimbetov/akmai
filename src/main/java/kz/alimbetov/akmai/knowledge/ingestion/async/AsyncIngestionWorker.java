@@ -10,6 +10,7 @@ import kz.alimbetov.akmai.knowledge.api.CanonicalKnowledgeDocument;
 import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResult;
 import kz.alimbetov.akmai.knowledge.idempotency.CanonicalRequestFingerprint;
 import kz.alimbetov.akmai.knowledge.service.KnowledgeIngestionPort;
+import kz.alimbetov.akmai.observability.AsyncIngestionMetrics;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -22,6 +23,7 @@ public class AsyncIngestionWorker {
     private final AsyncIngestionProperties properties;
     private final CanonicalRequestFingerprint canonicalFingerprint;
     private final ObjectMapper objectMapper;
+    private final AsyncIngestionMetrics metrics;
 
     public AsyncIngestionWorker(
             KnowledgeIngestionPort ingestionPort,
@@ -30,7 +32,8 @@ public class AsyncIngestionWorker {
             AsyncIngestionFailureClassifier failureClassifier,
             AsyncIngestionProperties properties,
             CanonicalRequestFingerprint canonicalFingerprint,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            AsyncIngestionMetrics metrics
     ) {
         this.ingestionPort = ingestionPort;
         this.repository = repository;
@@ -39,9 +42,13 @@ public class AsyncIngestionWorker {
         this.properties = properties;
         this.canonicalFingerprint = canonicalFingerprint;
         this.objectMapper = objectMapper;
+        this.metrics = metrics;
     }
 
     public void process(AsyncIngestionClaim claim) {
+        Instant startedAt = Instant.now();
+        metrics.processingStarted();
+        String outcome = "failed";
         try (AsyncIngestionHeartbeat.Handle lease = heartbeat.register(claim)) {
             try {
                 CanonicalKnowledgeDocument document = loadAndValidate(claim.job());
@@ -50,21 +57,41 @@ public class AsyncIngestionWorker {
                         claim.job().internalIdempotencyKey()
                 );
                 if (lease.ownershipLost()) {
+                    metrics.leaseLost();
+                    outcome = "lease_lost";
                     return;
                 }
                 validateResult(claim.job(), result);
-                repository.markIngested(
+                if (repository.markIngested(
                         claim,
                         result.publication().generation(),
                         result.publication().chunkCount(),
                         result.processing().embeddingProfile()
-                );
+                )) {
+                    metrics.ingested();
+                    if (result.publication().status()
+                            == KnowledgeIngestionResult.PublicationStatus.REPLAYED) {
+                        metrics.replayRecovery();
+                    }
+                    outcome = "ingested";
+                } else {
+                    metrics.leaseLost();
+                    outcome = "lease_lost";
+                }
             } catch (RuntimeException exception) {
                 if (lease.ownershipLost()) {
+                    metrics.leaseLost();
+                    outcome = "lease_lost";
                     return;
                 }
-                handleFailure(claim, exception);
+                outcome = handleFailure(claim, exception);
             }
+        } finally {
+            metrics.processingFinished();
+            metrics.processing(
+                    outcome,
+                    Duration.between(startedAt, Instant.now())
+            );
         }
     }
 
@@ -141,7 +168,7 @@ public class AsyncIngestionWorker {
         }
     }
 
-    private void handleFailure(
+    private String handleFailure(
             AsyncIngestionClaim claim,
             RuntimeException exception
     ) {
@@ -150,29 +177,43 @@ public class AsyncIngestionWorker {
         int consumedFailures = claim.job().failureCount()
                 + (failure.consumesFailureBudget() ? 1 : 0);
 
+        if (failure.classification()
+                == AsyncIngestionFailureClassifier.Classification.AMBIGUOUS) {
+            metrics.ambiguous();
+        }
+
         if (!failure.retryable()
                 || (failure.consumesFailureBudget()
                     && consumedFailures >= properties.maxAttempts())) {
-            repository.markFailed(
+            if (repository.markFailed(
                     claim,
                     failure.classification().name(),
                     failure.code(),
                     exception.getMessage()
-            );
-            return;
+            )) {
+                metrics.failed();
+                return "failed";
+            }
+            metrics.leaseLost();
+            return "lease_lost";
         }
 
         Duration delay = failure.suggestedDelay() == null
                 ? backoff(consumedFailures)
                 : bounded(failure.suggestedDelay());
-        repository.markRetry(
+        if (repository.markRetry(
                 claim,
                 Instant.now().plus(delay),
                 failure.consumesFailureBudget(),
                 failure.classification().name(),
                 failure.code(),
                 exception.getMessage()
-        );
+        )) {
+            metrics.retry();
+            return "retry";
+        }
+        metrics.leaseLost();
+        return "lease_lost";
     }
 
     private Duration backoff(int consumedFailures) {
