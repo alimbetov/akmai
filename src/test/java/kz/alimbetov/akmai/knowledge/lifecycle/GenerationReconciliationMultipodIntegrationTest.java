@@ -247,7 +247,7 @@ class GenerationReconciliationMultipodIntegrationTest {
                 SELECT count(*)
                 FROM knowledge_audit_event
                 WHERE event_type = 'GENERATION_VERIFIED'
-                  AND entity_id LIKE 'doc-storm-%'
+                  AND document_id LIKE 'doc-storm-%'
                 """,
                 Integer.class
         );
