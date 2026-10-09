@@ -203,7 +203,7 @@ public class AsyncIngestionWorker {
                 : bounded(failure.suggestedDelay());
         if (repository.markRetry(
                 claim,
-                Instant.now().plus(delay),
+                delay,
                 failure.consumesFailureBudget(),
                 failure.classification().name(),
                 failure.code(),
