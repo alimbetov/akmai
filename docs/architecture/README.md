@@ -8,8 +8,7 @@ This directory contains current architecture contracts and active target/experim
 - [`adaptive-graph-runtime.md`](adaptive-graph-runtime.md) — **CURRENT** Adaptive Association Graph behavior and feature boundaries.
 - [`rag-self-optimizing-platform-v1.1-technical-spec.md`](rag-self-optimizing-platform-v1.1-technical-spec.md) — **CURRENT / IMPLEMENTED** self-optimizing v1.1 engineering contract.
 - [`fileservice-knowledge-contract-v1.md`](fileservice-knowledge-contract-v1.md) — **CURRENT** FileService → AkmAI canonical knowledge boundary implemented in the existing ingestion/generation pipeline.
-- [`async-ingestion-worker-v1.md`](async-ingestion-worker-v1.md) — **TARGET** durable asynchronous ingestion admission/queue/worker architecture with lease/fencing, retries and bounded concurrency.
-- [`async-ingestion-worker-v1-technical-review.md`](async-ingestion-worker-v1-technical-review.md) — **TARGET / NORMATIVE REFINEMENT** code-aligned review of the async-ingestion target. It supersedes the original target where the documents differ and binds the design to the existing idempotency, generation and publication primitives.
+- [`async-ingestion-worker-v1.md`](async-ingestion-worker-v1.md) — **TARGET / IMPLEMENTATION AUTHORITY** async admission + PostgreSQL durable job queue + worker orchestration aligned to the existing idempotency, generation and publication primitives. Includes the P0 stale-generation recovery prerequisite and default document concurrency of three per instance.
 - [`runtime-app-parameters.md`](runtime-app-parameters.md) — runtime-mutable parameter architecture; actual defaults remain authoritative in `src/main/resources/application.yml`.
 
 For concrete HTTP/service request-response examples and RAG question/answer contracts, see [`../services/external-api-contracts.md`](../services/external-api-contracts.md).
@@ -19,8 +18,7 @@ For concrete HTTP/service request-response examples and RAG question/answer cont
 | Document | Classification | Purpose |
 |---|---|---|
 | [`fileservice-knowledge-contract-v1.md`](fileservice-knowledge-contract-v1.md) | CURRENT | Synchronous-first FileService → AkmAI canonical service boundary using the existing ingestion/generation pipeline, stable source identity, generation-aware result/replay and typed retrieval provenance. The canonical v1 service path is implemented; a dedicated public canonical REST endpoint is not currently exposed. |
-| [`async-ingestion-worker-v1.md`](async-ingestion-worker-v1.md) | TARGET | Evolves the FileService boundary to `202 Accepted` + PostgreSQL durable ingestion jobs + bounded worker execution. Reuses the existing `KnowledgeIngestionService`; default target concurrency is three simultaneous ingestions per AkmAI instance, not fixed batches of three. |
-| [`async-ingestion-worker-v1-technical-review.md`](async-ingestion-worker-v1-technical-review.md) | TARGET / NORMATIVE REFINEMENT | Adapts the async target to the current code: separate job lease and existing ingestion-idempotency lease; stable internal idempotency key; existing `addCanonicalKnowledge`/publication/replay semantics; active-claim-aware stale-generation recovery as a P0 prerequisite. |
+| [`async-ingestion-worker-v1.md`](async-ingestion-worker-v1.md) | TARGET / IMPLEMENTATION AUTHORITY | Evolves the FileService boundary to `202 Accepted` + `knowledge_ingestion_job` + bounded worker execution while preserving `KnowledgeIngestionService` as the sole RAG ingestion engine. Defines separate job vs ingestion leases, stable internal idempotency key/replay recovery, P0 active-claim-aware stale-generation recovery, retry/ambiguity semantics and benchmark requirements. |
 
 ## Adaptive retrieval and memory
 
