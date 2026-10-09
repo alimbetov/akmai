@@ -25,4 +25,17 @@ jobs:
       - name: Formatting
         run: mvn -B spotless:check
       - name: Test and verify
-        run: mvn -B clean verify
+        shell: bash
+        run: |
+          set -o pipefail
+          mvn -B clean verify 2>&1 | tee maven-verify.log
+      - name: Upload verification diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-verification-diagnostics-${{ github.run_attempt }}
+          if-no-files-found: warn
+          path: |
+            maven-verify.log
+            **/target/surefire-reports/**
+            **/target/failsafe-reports/**

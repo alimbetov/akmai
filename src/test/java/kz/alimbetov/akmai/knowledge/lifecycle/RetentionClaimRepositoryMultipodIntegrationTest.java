@@ -165,7 +165,7 @@ class RetentionClaimRepositoryMultipodIntegrationTest {
         jdbc.update(
                 """
                 UPDATE knowledge_embedding_runtime
-                SET migration_status = 'RUNNING'
+                SET migration_status = 'PREPARING'
                 WHERE singleton_id = 1
                 """
         );

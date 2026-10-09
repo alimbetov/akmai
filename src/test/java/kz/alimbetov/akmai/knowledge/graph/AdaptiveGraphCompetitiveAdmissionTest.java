@@ -39,7 +39,7 @@ class AdaptiveGraphCompetitiveAdmissionTest {
     }
 
     @Test
-    void runtimeParameterCanEnableCompetitionWithoutRestart() {
+    void staticOuterGateCannotBeEnabledByRuntimeParameter() {
         AkmaiMetrics metrics = mock(AkmaiMetrics.class);
         AppParameterService appParameters =
                 mock(AppParameterService.class);
@@ -60,12 +60,8 @@ class AdaptiveGraphCompetitiveAdmissionTest {
         candidates.add(graph("graph-1", "HOT", 0.90, 2));
 
         assertThat(admission.admit(candidates))
-                .extracting(RetrievalHit::chunkId)
-                .containsSubsequence(
-                        "base-4",
-                        "graph-1",
-                        "base-5"
-                );
+                .containsExactlyElementsOf(candidates);
+        verifyNoInteractions(metrics);
     }
 
     @Test

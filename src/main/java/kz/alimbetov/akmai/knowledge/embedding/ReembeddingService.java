@@ -532,7 +532,8 @@ public class ReembeddingService {
                       AND document_status = 'SNAPSHOT'
                     """,
                     candidate,
-                    authority.migrationId()
+                    authority.migrationId(),
+                    snapshot.documentId()
             );
             if (documentUpdated != 1) {
                 throw new IllegalStateException(
