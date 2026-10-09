@@ -16,8 +16,8 @@ class LargeQuerySmokeTest {
     void largeMultiIntentQuestionRemainsBoundedAndDeduplicated() {
         QueryChunker chunker = chunker();
         String question = IntStream.rangeClosed(1, 40)
-                .mapToObj(index -> "Please explain requirement " + index
-                        + " for contract KZ-2026-001847, including evidence, exceptions and monitoring obligations.")
+                .mapToObj(index -> "What is required for requirement " + index
+                        + " in contract KZ-2026-001847, and what monitoring is required for the evidence and exceptions?")
                 .reduce((left, right) -> left + " " + right)
                 .orElseThrow();
 
