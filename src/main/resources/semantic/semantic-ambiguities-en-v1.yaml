@@ -10,7 +10,6 @@ entries:
     conceptIds:
       - manufacturing.maintenance_reliability.preventive_maintenance_schedule
       - construction_real_estate.facilities_management.preventive_facility_maintenance
-      - construction_real_estate.facilities_management.planned_preventive_maintenance
       - transport_logistics.fleet_operations.vehicle_preventive_maintenance
     rationale: Preventive maintenance can target manufacturing equipment, building facilities, or transport fleets and requires domain context.
 
