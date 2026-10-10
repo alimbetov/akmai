@@ -4,23 +4,23 @@ Status: TARGET / review record for `feature/semantic-domain-corpus-v2`.
 
 ## Scope
 
-This review covers the first balanced expansion beyond finance:
+This review now covers two balanced expansion rounds beyond finance:
 
 - `insurance`: Batch D, completing +400;
-- `energy_utilities`: Batch A +100;
-- `oil_gas_mining`: Batch A +100;
-- `manufacturing`: Batch A +100;
-- `construction_real_estate`: Batch A +100;
-- `transport_logistics`: Batch A +100;
-- `agriculture_food`: Batch A +100.
+- `energy_utilities`: Batch A +100 and Batch B +100;
+- `oil_gas_mining`: Batch A +100 and Batch B +100;
+- `manufacturing`: Batch A +100 and Batch B +100;
+- `construction_real_estate`: Batch A +100 and Batch B +100;
+- `transport_logistics`: Batch A +100 and Batch B +100;
+- `agriculture_food`: Batch A +100 and Batch B +100.
 
-Together with the already completed finance and insurance batches, the English canonical corpus target represented by this branch is 1,784 concepts.
+Together with the completed finance and insurance expansions, the English canonical corpus represented by this branch now targets 2,384 concepts.
 
 ## Review method
 
 The stage uses the same production normalization as `EnglishSemanticConceptCatalog` and the advisory token-overlap policy from `SemanticCorpusNearDuplicateAuditor`.
 
-For the 700 phrases introduced in this stage slice, an overlap review at the existing 0.66 threshold produced 165 lexical candidates, including 59 cross-domain candidates. No stage-local cross-domain pair exceeded the threshold score of 0.66. These candidates are review input only; lexical similarity is not sufficient evidence for an automatic merge.
+For Batch A, an overlap review at the existing 0.66 threshold produced 165 lexical candidates, including 59 cross-domain candidates. No stage-local cross-domain pair exceeded the threshold score of 0.66. Batch B is admitted under the same rules and remains subject to the complete branch-level near-duplicate review before release. Lexical similarity is review input only; it is never sufficient evidence for an automatic merge.
 
 Every candidate is assigned one of the existing review dispositions:
 
@@ -54,9 +54,35 @@ The review found several cases that were too close to remain independent canonic
 
 - `root cause failure analysis` overlapped materially with the baseline `root cause analysis`; it was replaced by `bad actor equipment analysis`.
 
+## Batch B coverage
+
+### Energy / utilities
+
+Batch B deepens unit commitment, grid security, market settlement, storage and renewable operations. Representative concepts include `voltage stability analysis`, `locational marginal pricing`, `battery degradation model`, and `grid forming inverter`.
+
+### Oil / gas / mining
+
+Batch B deepens petrophysics and reservoir modeling, pipeline hydraulics/integrity, refinery process economics and mine planning. Representative concepts include `pressure transient analysis`, `line pack management`, `refinery crude slate`, and `cutoff grade optimization`.
+
+### Manufacturing
+
+Batch B deepens capacity and production planning, quality statistics, reliability engineering and process control. Representative concepts include `capable to promise`, `process sigma level`, `Weibull failure analysis`, and `model predictive control`.
+
+### Construction / real estate
+
+Batch B deepens design verification, lease economics, facilities lifecycle management and project controls. Representative concepts include `seismic load analysis`, `exit capitalization rate`, `building condition index`, and `time impact analysis`.
+
+### Transport / logistics
+
+Batch B deepens freight economics, warehouse execution, fleet lifecycle and supply-chain control. Representative concepts include `carrier tender process`, `warehouse slotting optimization`, `vehicle lifecycle cost`, and `safety stock optimization`.
+
+### Agriculture / food
+
+Batch B deepens agronomy, livestock production, food-process validation and food-safety systems. Representative concepts include `variable rate fertilization`, `feed conversion ratio`, `thermal process validation`, and `food fraud vulnerability`.
+
 ## Explicit ambiguity registrations
 
-The ambiguity registry now records generic surfaces whose meaning is legitimately domain-dependent:
+The ambiguity registry records generic surfaces whose meaning is legitimately domain-dependent:
 
 - `preventive maintenance` — manufacturing equipment, building facilities, or vehicle fleets;
 - `capacity planning` — power transmission, manufacturing capacity requirements, warehouse distribution, or supplier capacity;
@@ -84,20 +110,21 @@ These are not aliases: a domain expert would expect different supporting documen
 
 ## Release gates
 
-Stage 2 is admissible only when the current branch head passes:
+Stage 2 Batch B is admissible only when the current branch head passes:
 
 1. canonical normalized uniqueness;
 2. multi-word phrase constraints;
 3. expected per-domain and per-subdomain counts;
 4. ambiguity registry referential integrity;
 5. English surface ownership checks;
-6. repository CI;
-7. Retrieval Quality Gate;
-8. Retrieval Storage Final Benchmark;
-9. Production Image Build.
+6. complete near-duplicate review with no unresolved merge-class candidates;
+7. repository CI;
+8. Retrieval Quality Gate;
+9. Retrieval Storage Final Benchmark;
+10. Production Image Build.
 
-Until those gates complete successfully, the 1,784-concept state is implemented but provisional.
+Until those gates complete successfully, the 2,384-concept state is implemented but provisional.
 
 ## Next expansion
 
-After Stage 2 is green, continue with the second +100 batch for the six Stage 2 domains before moving to the science/technology domain group. This keeps semantic coverage balanced and prevents finance/insurance from dominating retrieval vocabulary.
+After Stage 2 Batch B is green and consolidated, continue Batch C (+100 each) for the same six domains or start the science/technology domain group according to retrieval-quality balance. The default recommendation is to finish the Stage 2 operational group to +400/domain before multilingual transfer.
