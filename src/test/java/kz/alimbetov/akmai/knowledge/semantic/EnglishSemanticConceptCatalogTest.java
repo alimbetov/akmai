@@ -18,14 +18,14 @@ class EnglishSemanticConceptCatalogTest {
             Map.entry("construction_real_estate", 424L),
             Map.entry("transport_logistics", 424L),
             Map.entry("agriculture_food", 424L),
-            Map.entry("mathematics_statistics", 224L),
-            Map.entry("physics_astronomy", 224L),
+            Map.entry("mathematics_statistics", 324L),
+            Map.entry("physics_astronomy", 324L),
             Map.entry("chemistry_materials", 424L),
             Map.entry("biology_genetics", 424L),
             Map.entry("computer_science_ai", 424L),
             Map.entry("medicine_pharmacology", 424L),
-            Map.entry("earth_environmental_science", 224L),
-            Map.entry("psychology_sociology", 224L)
+            Map.entry("earth_environmental_science", 324L),
+            Map.entry("psychology_sociology", 324L)
     );
 
     private final SemanticDomainCatalog domains = new SemanticDomainCatalog();
@@ -34,7 +34,7 @@ class EnglishSemanticConceptCatalogTest {
     @Test
     void corpusContainsExpectedCuratedConceptCounts() {
         assertThat(catalog.version()).isEqualTo("semantic-concepts-en-v2");
-        assertThat(catalog.concepts()).hasSize(5984);
+        assertThat(catalog.concepts()).hasSize(6384);
 
         Map<String, Long> byDomain = catalog.concepts().stream()
                 .collect(Collectors.groupingBy(
@@ -63,11 +63,19 @@ class EnglishSemanticConceptCatalogTest {
     }
 
     @Test
-    void stageFourBatchABDomainsContainFiftyNewConceptsPerSubdomain() {
-        assertSubdomainCounts("mathematics_statistics", 56L);
-        assertSubdomainCounts("physics_astronomy", 56L);
-        assertSubdomainCounts("earth_environmental_science", 56L);
-        assertSubdomainCounts("psychology_sociology", 56L);
+    void stageFourBatchABCDomainsContainSeventyFiveNewConceptsPerSubdomain() {
+        assertSubdomainCounts("mathematics_statistics", 81L);
+        assertSubdomainCounts("physics_astronomy", 81L);
+        assertSubdomainCounts("earth_environmental_science", 81L);
+        assertSubdomainCounts("psychology_sociology", 81L);
+    }
+
+    @Test
+    void representativeStageFourBatchCConceptsRemainStableAndClassified() {
+        assertConcept("mathematics_statistics.probability_statistics.martingale_convergence_theorem", "probability_statistics");
+        assertConcept("physics_astronomy.astrophysics.standard_siren_distance", "astrophysics");
+        assertConcept("earth_environmental_science.climate_science.climate_emulator_model", "climate_science");
+        assertConcept("psychology_sociology.sociology_methods.multilevel_regression_poststratification", "sociology_methods");
     }
 
     @Test
