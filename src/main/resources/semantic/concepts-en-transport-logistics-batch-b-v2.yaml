@@ -4,7 +4,7 @@ domains:
     subdomains:
       - id: freight_transport
         phrases:
-          - freight lane analysis
+          - lane profitability analysis
           - transport mode selection
           - intermodal route planning
           - freight capacity planning
@@ -12,10 +12,10 @@ domains:
           - freight rate negotiation
           - line haul operation
           - drayage transport service
-          - rail terminal dwell
+          - rail wagon turnaround
           - port terminal dwell
           - cargo consolidation strategy
-          - cargo deconsolidation process
+          - consolidation center unloading
           - load factor optimization
           - vehicle cube utilization
           - shipment density analysis
@@ -24,28 +24,28 @@ domains:
           - delivery time variance
           - freight damage rate
           - cargo claims management
-          - dangerous goods transport
+          - hazardous cargo compliance
           - customs transit procedure
           - freight documentation control
           - multimodal transport contract
           - transport capacity reservation
       - id: warehousing_distribution
         phrases:
-          - warehouse slotting optimization
+          - dynamic slotting policy
           - storage location assignment
           - warehouse capacity planning
-          - dock door scheduling
+          - dock appointment optimization
           - inbound appointment scheduling
           - receiving process control
           - putaway strategy optimization
-          - replenishment task planning
+          - forward pick replenishment
           - picking productivity analysis
           - packing productivity analysis
-          - wave picking process
+          - wave release planning
           - batch picking strategy
           - zone picking strategy
-          - cross docking operation
-          - warehouse labor planning
+          - flow through distribution
+          - labor standards engineering
           - warehouse congestion analysis
           - order accuracy rate
           - inventory record accuracy
@@ -54,22 +54,22 @@ domains:
           - distribution route staging
           - parcel sortation process
           - distribution throughput analysis
-          - warehouse safety management
+          - material handling safety
           - warehouse automation strategy
       - id: fleet_operations
         phrases:
           - fleet replacement planning
-          - vehicle lifecycle cost
+          - vehicle economic life
           - fleet capacity planning
           - vehicle assignment strategy
           - route adherence monitoring
-          - driver hours compliance
-          - driver behavior scoring
+          - hours of service audit
+          - driver risk profiling
           - vehicle idling analysis
           - fuel consumption benchmarking
-          - fleet emissions monitoring
+          - fleet carbon intensity
           - preventive fleet servicing
-          - vehicle inspection program
+          - inspection defect management
           - tire management program
           - fleet downtime analysis
           - breakdown response process
@@ -81,7 +81,7 @@ domains:
           - driver training program
           - vehicle residual value
           - fleet leasing strategy
-          - fleet insurance management
+          - fleet claims administration
           - total fleet cost
       - id: supply_chain
         phrases:
@@ -90,12 +90,12 @@ domains:
           - distribution network design
           - supply demand balancing
           - sales inventory planning
-          - inventory positioning strategy
-          - safety stock optimization
+          - inventory deployment policy
+          - safety stock segmentation
           - reorder point calculation
           - supplier capacity assessment
           - supplier risk monitoring
-          - supplier diversification strategy
+          - supplier concentration reduction
           - sourcing lead time
           - order cycle time
           - perfect order rate
@@ -108,5 +108,5 @@ domains:
           - disruption response planning
           - alternate sourcing strategy
           - contingency transport plan
-          - supply chain visibility
+          - shipment milestone visibility
           - control tower operation
