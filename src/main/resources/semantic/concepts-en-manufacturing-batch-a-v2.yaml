@@ -64,7 +64,7 @@ domains:
           - failure mode analysis
           - reliability block diagram
           - fault tree analysis
-          - root cause failure analysis
+          - bad actor equipment analysis
           - mean time repair
           - maintenance backlog management
           - maintenance schedule compliance
