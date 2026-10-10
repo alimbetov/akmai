@@ -4,36 +4,46 @@ Status: TARGET / review record for `feature/semantic-domain-corpus-v2`.
 
 ## Scope
 
-Stage 4 starts the final English-first domain group with one balanced +100 round for each remaining baseline-only domain:
+Stage 4 now contains two balanced +100 rounds for each of the four final English-first domains:
 
-- `mathematics_statistics`: 24 baseline + 100 = 124;
-- `physics_astronomy`: 24 baseline + 100 = 124;
-- `earth_environmental_science`: 24 baseline + 100 = 124;
-- `psychology_sociology`: 24 baseline + 100 = 124.
+- `mathematics_statistics`: 24 baseline + 200 = 224;
+- `physics_astronomy`: 24 baseline + 200 = 224;
+- `earth_environmental_science`: 24 baseline + 200 = 224;
+- `psychology_sociology`: 24 baseline + 200 = 224.
 
-The branch target becomes 5,584 English concepts: 384 baseline concepts plus 5,200 additions.
+The branch target is now 5,984 English concepts: 384 baseline concepts plus 5,600 additions.
 
 ## Distribution
 
-Each Stage 4 domain keeps its existing four-subdomain taxonomy. Batch A contributes 25 new canonical multi-word concepts to each existing subdomain. No parallel taxonomy is introduced.
+Each Stage 4 domain keeps its existing four-subdomain taxonomy. Batch A and Batch B each contribute 25 new canonical multi-word concepts to every existing subdomain, so each Stage 4 subdomain now contains 56 concepts total: 6 baseline + 50 v2 additions.
+
+No parallel taxonomy is introduced.
 
 ## Coverage emphasis
 
 ### Mathematics / statistics
 
-Probability and statistical estimation, algebra and geometry, constrained/robust optimization and numerical analysis. Representative additions include `bootstrap resampling method`, `singular value decomposition`, `distributionally robust optimization`, and `Krylov subspace method`.
+Batch A established probability/statistical estimation, algebra/geometry, constrained optimization and numerical analysis. Batch B deepens Bayesian and causal methods, algebraic/topological structures, modern optimization algorithms and numerical linear/PDE methods.
+
+Representative Batch B additions include `Bayesian hierarchical model`, `canonical correlation analysis`, `Fenchel duality relation`, `bilevel optimization problem`, `adaptive mesh refinement`, and `adjoint sensitivity method`.
 
 ### Physics / astronomy
 
-Analytical mechanics, thermodynamics/statistical mechanics, electromagnetism and astrophysics. Representative additions include `Hamiltonian mechanics formulation`, `grand canonical ensemble`, `electromagnetic scattering cross section`, and `gravitational lensing analysis`.
+Batch A established analytical mechanics, thermodynamics/statistical mechanics, electromagnetism and astrophysics. Batch B adds constrained mechanics, statistical distributions and irreversible thermodynamics, field/gauge methods and advanced stellar/cosmological concepts.
+
+Representative Batch B additions include `Poisson bracket formulation`, `Onsager reciprocal relation`, `electromagnetic reciprocity theorem`, `stellar population synthesis`, and `gravitational wave background`.
 
 ### Earth / environmental science
 
-Geology and geophysics, climate dynamics, hydrology and environmental assessment. Representative additions include `seismic hazard assessment`, `climate sensitivity estimate`, `groundwater recharge estimation`, and `cumulative impact assessment`.
+Batch A established geology/geophysics, climate dynamics, hydrology and environmental assessment. Batch B adds basin and structural analysis, climate feedback/pathway concepts, groundwater/flood modeling and environmental due-diligence/restoration methods.
+
+Representative Batch B additions include `sequence stratigraphy framework`, `equilibrium climate sensitivity`, `groundwater vulnerability mapping`, `source apportionment analysis`, and `environmental due diligence`.
 
 ### Psychology / sociology
 
-Cognitive processes, learning and behavior, social psychology and empirical sociology methods. Representative additions include `executive function assessment`, `delay discounting behavior`, `group polarization effect`, and `respondent driven sampling`.
+Batch A established cognition, learning/behavior, social psychology and empirical sociology methods. Batch B deepens perception/metacognition, reinforcement schedules and conditioning, group/interpersonal mechanisms and quantitative/longitudinal sociology methodology.
+
+Representative Batch B additions include `attentional blink effect`, `signal detection sensitivity`, `behavioral momentum theory`, `cognitive dissonance effect`, `structural equation modeling`, and `event history analysis`.
 
 ## Pre-Stage-4 quality remediation
 
@@ -59,12 +69,14 @@ Stage 4 uses the existing production guardrails unchanged:
 6. ambiguity entries must reference real canonical IDs;
 7. near-duplicate review remains advisory but unresolved merge-class candidates block acceptance.
 
+Batch B was intentionally biased toward materially deeper methods and domain concepts rather than lexical variants of Batch A. Count growth alone is not treated as acceptance.
+
 ## Release gates
 
-Stage 4 Batch A is admissible only when the current branch head passes:
+Stage 4 Batch A+B is admissible only when the current branch head passes:
 
-1. expected 5,584 total concepts;
-2. 124 concepts per Stage 4 domain and 31 per Stage 4 subdomain;
+1. expected 5,984 total concepts;
+2. 224 concepts per Stage 4 domain and 56 per Stage 4 subdomain;
 3. canonical normalized uniqueness;
 4. multi-word phrase constraints;
 5. ambiguity registry referential integrity;
@@ -75,8 +87,8 @@ Stage 4 Batch A is admissible only when the current branch head passes:
 10. Retrieval Storage Final Benchmark;
 11. Production Image Build.
 
-Until those gates complete successfully, the 5,584-concept state is implemented but provisional.
+Until those gates complete successfully, the 5,984-concept state is implemented but provisional.
 
 ## Next expansion
 
-After Batch A is consolidated, continue balanced Batch B (+100 each) across the same four domains. Do not add Batch E to any of the twelve already completed domains.
+After Batch B is green and consolidated, continue balanced Batch C (+100 each) across the same four domains, taking them to 324 concepts each. Do not add Batch E to any of the twelve already completed domains.
