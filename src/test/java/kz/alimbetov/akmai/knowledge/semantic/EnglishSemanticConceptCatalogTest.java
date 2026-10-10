@@ -17,7 +17,7 @@ class EnglishSemanticConceptCatalogTest {
     @Test
     void corpusContainsCuratedPhraseConceptsForEveryDomain() {
         assertThat(catalog.version()).isEqualTo("semantic-concepts-en-v2");
-        assertThat(catalog.concepts()).hasSize(984);
+        assertThat(catalog.concepts()).hasSize(1084);
 
         Map<String, Long> byDomain = catalog.concepts().stream()
                 .collect(Collectors.groupingBy(
@@ -28,7 +28,7 @@ class EnglishSemanticConceptCatalogTest {
         assertThat(byDomain.keySet())
                 .containsExactlyInAnyOrderElementsOf(domains.domainIds());
         assertThat(byDomain.get("finance_banking")).isEqualTo(424L);
-        assertThat(byDomain.get("insurance")).isEqualTo(224L);
+        assertThat(byDomain.get("insurance")).isEqualTo(324L);
         byDomain.entrySet().stream()
                 .filter(entry -> !entry.getKey().equals("finance_banking"))
                 .filter(entry -> !entry.getKey().equals("insurance"))
@@ -55,7 +55,7 @@ class EnglishSemanticConceptCatalogTest {
     }
 
     @Test
-    void insuranceBatchesAddFiftyConceptsPerExistingSubdomain() {
+    void insuranceBatchesAddSeventyFiveConceptsPerExistingSubdomain() {
         Map<String, Long> insuranceBySubdomain = catalog
                 .conceptsForDomain("insurance")
                 .stream()
@@ -65,10 +65,26 @@ class EnglishSemanticConceptCatalogTest {
                 ));
 
         assertThat(insuranceBySubdomain)
-                .containsEntry("underwriting_pricing", 56L)
-                .containsEntry("claims_management", 56L)
-                .containsEntry("life_health", 56L)
-                .containsEntry("property_casualty", 56L);
+                .containsEntry("underwriting_pricing", 81L)
+                .containsEntry("claims_management", 81L)
+                .containsEntry("life_health", 81L)
+                .containsEntry("property_casualty", 81L);
+    }
+
+    @Test
+    void representativeInsuranceBatchCConceptsRemainStableAndClassified() {
+        assertThat(catalog.require(
+                "insurance.underwriting_pricing.generalized_linear_pricing"
+        ).subdomainId()).isEqualTo("underwriting_pricing");
+        assertThat(catalog.require(
+                "insurance.claims_management.ultimate_loss_estimate"
+        ).subdomainId()).isEqualTo("claims_management");
+        assertThat(catalog.require(
+                "insurance.life_health.embedded_value_analysis"
+        ).subdomainId()).isEqualTo("life_health");
+        assertThat(catalog.require(
+                "insurance.property_casualty.catastrophe_return_period"
+        ).subdomainId()).isEqualTo("property_casualty");
     }
 
     @Test
