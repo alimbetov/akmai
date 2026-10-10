@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.knowledge.semantic;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -113,7 +114,9 @@ public final class SemanticCorpusNearDuplicateAuditor {
         if (normalized.isBlank()) {
             return Set.of();
         }
-        return Set.of(normalized.split("\\s+"));
+        return new LinkedHashSet<>(
+                Arrays.asList(normalized.split("\\s+"))
+        );
     }
 
     private static int intersectionSize(
