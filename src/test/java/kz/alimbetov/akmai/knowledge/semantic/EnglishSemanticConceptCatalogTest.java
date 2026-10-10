@@ -20,10 +20,10 @@ class EnglishSemanticConceptCatalogTest {
             Map.entry("agriculture_food", 424L),
             Map.entry("mathematics_statistics", 24L),
             Map.entry("physics_astronomy", 24L),
-            Map.entry("chemistry_materials", 324L),
-            Map.entry("biology_genetics", 324L),
-            Map.entry("computer_science_ai", 324L),
-            Map.entry("medicine_pharmacology", 324L),
+            Map.entry("chemistry_materials", 424L),
+            Map.entry("biology_genetics", 424L),
+            Map.entry("computer_science_ai", 424L),
+            Map.entry("medicine_pharmacology", 424L),
             Map.entry("earth_environmental_science", 24L),
             Map.entry("psychology_sociology", 24L)
     );
@@ -34,7 +34,7 @@ class EnglishSemanticConceptCatalogTest {
     @Test
     void corpusContainsExpectedCuratedConceptCounts() {
         assertThat(catalog.version()).isEqualTo("semantic-concepts-en-v2");
-        assertThat(catalog.concepts()).hasSize(4784);
+        assertThat(catalog.concepts()).hasSize(5184);
 
         Map<String, Long> byDomain = catalog.concepts().stream()
                 .collect(Collectors.groupingBy(
@@ -56,14 +56,18 @@ class EnglishSemanticConceptCatalogTest {
         assertSubdomainCounts("construction_real_estate", 106L);
         assertSubdomainCounts("transport_logistics", 106L);
         assertSubdomainCounts("agriculture_food", 106L);
+        assertSubdomainCounts("computer_science_ai", 106L);
+        assertSubdomainCounts("medicine_pharmacology", 106L);
+        assertSubdomainCounts("biology_genetics", 106L);
+        assertSubdomainCounts("chemistry_materials", 106L);
     }
 
     @Test
-    void scienceTechnologyBatchABCDomainsContainSeventyFiveNewConceptsPerSubdomain() {
-        assertSubdomainCounts("computer_science_ai", 81L);
-        assertSubdomainCounts("medicine_pharmacology", 81L);
-        assertSubdomainCounts("biology_genetics", 81L);
-        assertSubdomainCounts("chemistry_materials", 81L);
+    void representativeScienceTechnologyBatchDConceptsRemainStableAndClassified() {
+        assertConcept("computer_science_ai.software_systems.linearizability_verification_method", "software_systems");
+        assertConcept("medicine_pharmacology.pharmacology.therapeutic_drug_monitoring", "pharmacology");
+        assertConcept("biology_genetics.genetics.homologous_repair_deficiency", "genetics");
+        assertConcept("chemistry_materials.materials_science.damage_tolerance_analysis", "materials_science");
     }
 
     @Test
