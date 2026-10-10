@@ -5,6 +5,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.text.Normalizer;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -18,7 +19,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class EnglishSemanticConceptCatalog {
 
-    private static final String RESOURCE = "semantic/concepts-en-v1.yaml";
+    private static final String BASE_RESOURCE = "semantic/concepts-en-v1.yaml";
+    private static final List<String> SUPPLEMENTAL_RESOURCES = List.of(
+            "semantic/concepts-en-finance-batch-a-v2.yaml"
+    );
+    private static final String COMBINED_VERSION = "semantic-concepts-en-v2";
 
     private final String version;
     private final List<SemanticConcept> concepts;
@@ -221,14 +226,97 @@ public class EnglishSemanticConceptCatalog {
 
     private static EnglishConceptCorpusDefinition loadDefinition() {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        try (var input = new ClassPathResource(RESOURCE).getInputStream()) {
+        EnglishConceptCorpusDefinition base = loadDefinition(
+                mapper,
+                BASE_RESOURCE
+        );
+        List<EnglishConceptCorpusDefinition> supplements =
+                SUPPLEMENTAL_RESOURCES.stream()
+                        .map(resource -> loadDefinition(mapper, resource))
+                        .toList();
+        return mergeDefinitions(base, supplements);
+    }
+
+    private static EnglishConceptCorpusDefinition mergeDefinitions(
+            EnglishConceptCorpusDefinition base,
+            List<EnglishConceptCorpusDefinition> supplements
+    ) {
+        LinkedHashMap<String, LinkedHashMap<String, List<String>>> merged =
+                new LinkedHashMap<>();
+
+        appendDefinition(merged, base);
+        for (EnglishConceptCorpusDefinition supplement : supplements) {
+            appendDefinition(merged, supplement);
+        }
+
+        List<EnglishConceptCorpusDefinition.DomainConcepts> domains =
+                merged.entrySet().stream()
+                        .map(domainEntry ->
+                                new EnglishConceptCorpusDefinition.DomainConcepts(
+                                        domainEntry.getKey(),
+                                        domainEntry.getValue().entrySet().stream()
+                                                .map(subdomainEntry ->
+                                                        new EnglishConceptCorpusDefinition.SubdomainConcepts(
+                                                                subdomainEntry.getKey(),
+                                                                subdomainEntry.getValue()
+                                                        )
+                                                )
+                                                .toList()
+                                )
+                        )
+                        .toList();
+
+        return new EnglishConceptCorpusDefinition(
+                COMBINED_VERSION,
+                domains
+        );
+    }
+
+    private static void appendDefinition(
+            LinkedHashMap<String, LinkedHashMap<String, List<String>>> merged,
+            EnglishConceptCorpusDefinition definition
+    ) {
+        if (definition == null
+                || definition.version() == null
+                || definition.version().isBlank()) {
+            throw new IllegalArgumentException(
+                    "English semantic concept corpus version is required"
+            );
+        }
+        for (var domain : definition.domains()) {
+            LinkedHashMap<String, List<String>> subdomains =
+                    merged.computeIfAbsent(
+                            domain.domainId(),
+                            ignored -> new LinkedHashMap<>()
+                    );
+            for (var subdomain : domain.subdomains()) {
+                List<String> current = subdomains.get(subdomain.id());
+                if (current == null) {
+                    subdomains.put(
+                            subdomain.id(),
+                            List.copyOf(subdomain.phrases())
+                    );
+                    continue;
+                }
+                ArrayList<String> combined = new ArrayList<>(current);
+                combined.addAll(subdomain.phrases());
+                subdomains.put(subdomain.id(), List.copyOf(combined));
+            }
+        }
+    }
+
+    private static EnglishConceptCorpusDefinition loadDefinition(
+            ObjectMapper mapper,
+            String resource
+    ) {
+        try (var input = new ClassPathResource(resource).getInputStream()) {
             return mapper.readValue(
                     input,
                     EnglishConceptCorpusDefinition.class
             );
         } catch (IOException exception) {
             throw new UncheckedIOException(
-                    "Cannot load English semantic concept corpus " + RESOURCE,
+                    "Cannot load English semantic concept corpus " + resource,
                     exception
             );
         }
