@@ -28,11 +28,15 @@ Implemented on this branch, but not considered quality-stable until exact-head C
 - `AsyncIngestionHeartbeat` — renewal success, lost ownership, renewal failure isolation, duplicate registration and close semantics;
 - `GenerationReconciliationScheduler` — disabled gate, early-stop, run bound and propagated failure;
 - `RetentionScheduler` — disabled gate, stale-recovery bound, drain budget and failure preservation;
+- `RetentionWorkerPool` — saturation/backpressure plus recovery/refill after cleanup failure without permit leakage;
 - `ReembeddingLeaseHeartbeatScheduler` and `ReembeddingStartupRunner` — delegation, ownership and startup orchestration boundaries;
 - `AdaptiveGraphDreamScheduler` — explicit trigger delegation/failure contract;
+- `AdaptiveGraphDreamCoordinator` — deterministic budget exhaustion -> `PARTIAL_BUDGET`, authoritative finalization and no execution of later lanes;
 - `RetentionEconomicsSampler` — disabled and failure paths in addition to success metrics;
 - `ParallelIngestionExecutor` — large-input bounded execution, maximum in-flight concurrency and cancellation of sibling work after exceptional completion;
-- `AdaptiveGraphMaintenanceScheduler` — static/runtime safety gate, runtime disable between batches, early-stop, `maxBatchesPerRun` bound and failure metrics.
+- `AdaptiveGraphMaintenanceScheduler` — static/runtime safety gate, runtime disable between batches, early-stop, `maxBatchesPerRun` bound and failure metrics;
+- `AuditPartitionMaintenanceScheduler` — startup/cron delegation and visible DB failure contract;
+- audit partition PostgreSQL authority — repeated contenders cannot bypass the transaction advisory lock while an owner is active.
 
 Publication replay is not being duplicated blindly: the repository already has publication contract, concurrent publication, persistence-coordinator and async replay-recovery evidence. Additional tests should only be added when they prove a missing side-effect or round-trip invariant.
 
@@ -40,17 +44,17 @@ Publication replay is not being duplicated blindly: the repository already has p
 
 | Area | Production component | Evidence after this branch | Remaining gap | Priority |
 |---|---|---|---|---|
-| Async ingestion dispatch | `AsyncIngestionScheduler` | direct scheduler + worker/repository/replay tests | exact-head CI / load qualification | P0 implemented |
+| Async ingestion dispatch | `AsyncIngestionScheduler` | direct scheduler + worker/repository/replay tests | release load qualification | P0 implemented |
 | Reconciliation orchestration | `GenerationReconciliationScheduler` | service multipod + observability + direct control-flow tests | exact-head CI | P0 implemented |
-| Retention orchestration | `RetentionScheduler` | worker-pool + observability + PostgreSQL recovery + direct control-flow tests | exact-head CI | P0 implemented |
+| Retention orchestration | `RetentionScheduler`, `RetentionWorkerPool` | worker-pool saturation/failure recovery + observability + PostgreSQL recovery + direct control-flow tests | release load qualification | P0 implemented |
 | Re-embedding heartbeat | `ReembeddingLeaseHeartbeatScheduler` | direct scheduler + HA/lease integration | exact-head CI | P0 implemented |
 | Dream trigger | `AdaptiveGraphDreamScheduler` | direct scheduler + coordinator/lease/fencing tests | exact-head CI | P0 implemented |
 | Retention economics | `RetentionEconomicsSampler` | positive/disabled/failure tests | no material orchestration gap | P1 implemented |
 | Ingestion chunk executor | `ParallelIngestionExecutor` | large-input, bounded-concurrency and exceptional-cancellation tests | release load matrix | P1 implemented |
 | Generation publication | `GenerationPublicationService` / `PersistenceCoordinator` | publication/replay/concurrency/failure-model evidence | only add call-count tests for a demonstrated missing invariant | P1 reassessed |
-| Dream coordinator | `AdaptiveGraphDreamCoordinator` | coordinator/lease/checkpoint/candidate tests | deterministic budget/timeout/fencing stress matrix | P1 remaining |
-| Graph maintenance | `AdaptiveGraphMaintenanceScheduler` + maintenance transaction | multipod/integration + direct scheduler bound/failure tests | deeper transactional rollback stress only | P1 substantially covered |
-| Audit partition maintenance | `AuditPartitionMaintenanceScheduler` | PostgreSQL advisory-lock integration test | repeated contender stress | P2 remaining |
+| Dream coordinator | `AdaptiveGraphDreamCoordinator` | lease/lost-authority failure model + deterministic budget-stop finalization | wall-clock timeout remains a runtime/load concern, not a fragile CI microbenchmark | P1 implemented |
+| Graph maintenance | `AdaptiveGraphMaintenanceScheduler` + maintenance transaction | multipod/integration + direct scheduler bound/failure tests | deeper rollback stress only if a missing invariant is demonstrated | P1 substantially covered |
+| Audit partition maintenance | `AuditPartitionMaintenanceScheduler` + PostgreSQL function | direct entry-point/failure test + advisory-lock integration + repeated contender stress | exact-head CI | P2 implemented |
 
 ## P0 acceptance contracts
 
@@ -70,17 +74,26 @@ Publication replay is not being duplicated blindly: the repository already has p
 3. Full batches cannot exceed `maxBatchesPerRun`.
 4. Service failure remains visible to the scheduler/CI and is not converted into success.
 
-### Retention scheduler
+### Retention scheduler and worker pool
 
 1. `enabled=false` performs no recovery, claim, or observation work.
 2. Stale-ingestion recovery stops on the first partial batch.
 3. Recovery cannot exceed `maxBatchesPerRun`.
 4. The worker drain budget is exactly `batchSize * maxBatchesPerRun` and is independent of recovered-row count.
 5. Existing primary-failure preservation semantics remain intact.
+6. Saturated worker permits prevent over-claiming.
+7. A cleanup exception releases its permit and the active bounded drain can refill with the next durable claim.
 
 ### Heartbeat and Dream trigger
 
 Thin schedulers are tested as explicit contracts: exactly one delegation per trigger and no exception swallowing. Correct distributed authority remains in their already-tested lease/fencing layers.
+
+### Dream coordinator
+
+1. Budget exhaustion is a bounded partial outcome, not a generic failure.
+2. Partial-budget finalization records the exact stop reason.
+3. Later lanes do not execute after budget exhaustion.
+4. Per-run discovery state, heartbeat session and lease are released on the partial path.
 
 ## Performance/reliability contracts
 
@@ -90,6 +103,7 @@ Performance tests in this pass MUST be deterministic and CI-safe:
 - prove backpressure when all permits are occupied;
 - prove capacity recovery after completion/failure/rejection;
 - prove sibling work is cancelled after an exceptional completion when the processor contract requires fail-fast behavior;
+- prove a failed worker task cannot permanently consume an execution permit;
 - avoid sleeps where latches/captured tasks can prove state;
 - avoid creating one executor per document/chunk;
 - preserve existing shared bounded executors;
@@ -101,11 +115,10 @@ Release/load qualification remains separate and should exercise document concurr
 
 After exact-head CI is green:
 
-1. add deterministic Dream coordinator stress cases for budget exhaustion, timeout and stale fencing without ANN parallelism;
-2. add maintenance transaction rollback stress only where existing multipod tests do not already prove the invariant;
-3. add repeated advisory-lock contender stress for audit partition maintenance;
-4. run async-ingestion load qualification at document concurrency `1 / 3 / 5 / 8` and record throughput, queue wait p95/p99, DB-pool saturation and retry behavior;
-5. only after those checks, promote this roadmap from `ACTIVE QUALITY ROADMAP` to a completed/verified baseline.
+1. run async-ingestion load qualification at document concurrency `1 / 3 / 5 / 8` and record throughput, queue wait p95/p99, DB-pool saturation and retry behavior;
+2. run multi-pod failure qualification with worker kill/reclaim, DB timeout, embedding `429/5xx` and publication replay;
+3. only add additional rollback/concurrency tests where a concrete missing invariant is found; do not duplicate already-proven repository/transaction contracts;
+4. promote this roadmap from `ACTIVE QUALITY ROADMAP` to a completed/verified baseline only after the exact-head CI and release/load evidence are both recorded.
 
 ## Exit criteria
 
