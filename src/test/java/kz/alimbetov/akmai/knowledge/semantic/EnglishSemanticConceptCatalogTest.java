@@ -9,15 +9,32 @@ import org.junit.jupiter.api.Test;
 
 class EnglishSemanticConceptCatalogTest {
 
-    private final SemanticDomainCatalog domains =
-            new SemanticDomainCatalog();
-    private final EnglishSemanticConceptCatalog catalog =
-            new EnglishSemanticConceptCatalog(domains);
+    private static final Map<String, Long> EXPECTED_DOMAIN_COUNTS = Map.ofEntries(
+            Map.entry("finance_banking", 424L),
+            Map.entry("insurance", 424L),
+            Map.entry("energy_utilities", 124L),
+            Map.entry("oil_gas_mining", 124L),
+            Map.entry("manufacturing", 124L),
+            Map.entry("construction_real_estate", 124L),
+            Map.entry("transport_logistics", 124L),
+            Map.entry("agriculture_food", 124L),
+            Map.entry("mathematics_statistics", 24L),
+            Map.entry("physics_astronomy", 24L),
+            Map.entry("chemistry_materials", 24L),
+            Map.entry("biology_genetics", 24L),
+            Map.entry("computer_science_ai", 24L),
+            Map.entry("medicine_pharmacology", 24L),
+            Map.entry("earth_environmental_science", 24L),
+            Map.entry("psychology_sociology", 24L)
+    );
+
+    private final SemanticDomainCatalog domains = new SemanticDomainCatalog();
+    private final EnglishSemanticConceptCatalog catalog = new EnglishSemanticConceptCatalog(domains);
 
     @Test
-    void corpusContainsCuratedPhraseConceptsForEveryDomain() {
+    void corpusContainsExpectedCuratedConceptCounts() {
         assertThat(catalog.version()).isEqualTo("semantic-concepts-en-v2");
-        assertThat(catalog.concepts()).hasSize(1084);
+        assertThat(catalog.concepts()).hasSize(1784);
 
         Map<String, Long> byDomain = catalog.concepts().stream()
                 .collect(Collectors.groupingBy(
@@ -25,158 +42,43 @@ class EnglishSemanticConceptCatalogTest {
                         Collectors.counting()
                 ));
 
-        assertThat(byDomain.keySet())
-                .containsExactlyInAnyOrderElementsOf(domains.domainIds());
-        assertThat(byDomain.get("finance_banking")).isEqualTo(424L);
-        assertThat(byDomain.get("insurance")).isEqualTo(324L);
-        byDomain.entrySet().stream()
-                .filter(entry -> !entry.getKey().equals("finance_banking"))
-                .filter(entry -> !entry.getKey().equals("insurance"))
-                .forEach(entry -> assertThat(entry.getValue())
-                        .as(entry.getKey())
-                        .isEqualTo(24L));
+        assertThat(byDomain).containsExactlyInAnyOrderEntriesOf(EXPECTED_DOMAIN_COUNTS);
+        assertThat(byDomain.keySet()).containsExactlyInAnyOrderElementsOf(domains.domainIds());
     }
 
     @Test
-    void financeBatchesAddOneHundredConceptsPerExistingSubdomain() {
-        Map<String, Long> financeBySubdomain = catalog
-                .conceptsForDomain("finance_banking")
-                .stream()
-                .collect(Collectors.groupingBy(
-                        SemanticConcept::subdomainId,
-                        Collectors.counting()
-                ));
-
-        assertThat(financeBySubdomain)
-                .containsEntry("lending_credit", 106L)
-                .containsEntry("deposits_liquidity", 106L)
-                .containsEntry("risk_capital", 106L)
-                .containsEntry("payments_compliance", 106L);
+    void financeAndInsuranceContainOneHundredNewConceptsPerSubdomain() {
+        assertSubdomainCounts("finance_banking", 106L);
+        assertSubdomainCounts("insurance", 106L);
     }
 
     @Test
-    void insuranceBatchesAddSeventyFiveConceptsPerExistingSubdomain() {
-        Map<String, Long> insuranceBySubdomain = catalog
-                .conceptsForDomain("insurance")
-                .stream()
-                .collect(Collectors.groupingBy(
-                        SemanticConcept::subdomainId,
-                        Collectors.counting()
-                ));
-
-        assertThat(insuranceBySubdomain)
-                .containsEntry("underwriting_pricing", 81L)
-                .containsEntry("claims_management", 81L)
-                .containsEntry("life_health", 81L)
-                .containsEntry("property_casualty", 81L);
+    void stageTwoDomainsContainTwentyFiveNewConceptsPerSubdomain() {
+        assertSubdomainCounts("energy_utilities", 31L);
+        assertSubdomainCounts("oil_gas_mining", 31L);
+        assertSubdomainCounts("manufacturing", 31L);
+        assertSubdomainCounts("construction_real_estate", 31L);
+        assertSubdomainCounts("transport_logistics", 31L);
+        assertSubdomainCounts("agriculture_food", 31L);
     }
 
     @Test
-    void representativeInsuranceBatchCConceptsRemainStableAndClassified() {
-        assertThat(catalog.require(
-                "insurance.underwriting_pricing.generalized_linear_pricing"
-        ).subdomainId()).isEqualTo("underwriting_pricing");
-        assertThat(catalog.require(
-                "insurance.claims_management.ultimate_loss_estimate"
-        ).subdomainId()).isEqualTo("claims_management");
-        assertThat(catalog.require(
-                "insurance.life_health.embedded_value_analysis"
-        ).subdomainId()).isEqualTo("life_health");
-        assertThat(catalog.require(
-                "insurance.property_casualty.catastrophe_return_period"
-        ).subdomainId()).isEqualTo("property_casualty");
-    }
-
-    @Test
-    void representativeInsuranceBatchBConceptsRemainStableAndClassified() {
-        assertThat(catalog.require(
-                "insurance.underwriting_pricing.technical_premium_calculation"
-        ).subdomainId()).isEqualTo("underwriting_pricing");
-        assertThat(catalog.require(
-                "insurance.claims_management.automated_claims_adjudication"
-        ).subdomainId()).isEqualTo("claims_management");
-        assertThat(catalog.require(
-                "insurance.life_health.prior_authorization_process"
-        ).subdomainId()).isEqualTo("life_health");
-        assertThat(catalog.require(
-                "insurance.property_casualty.directors_officers_liability"
-        ).subdomainId()).isEqualTo("property_casualty");
-    }
-
-    @Test
-    void representativeInsuranceBatchAConceptsRemainStableAndClassified() {
-        assertThat(catalog.require(
-                "insurance.underwriting_pricing.premium_rate_adequacy"
-        ).subdomainId()).isEqualTo("underwriting_pricing");
-        assertThat(catalog.require(
-                "insurance.claims_management.first_notice_of_loss"
-        ).subdomainId()).isEqualTo("claims_management");
-        assertThat(catalog.require(
-                "insurance.life_health.medical_loss_ratio"
-        ).subdomainId()).isEqualTo("life_health");
-        assertThat(catalog.require(
-                "insurance.property_casualty.probable_maximum_loss"
-        ).subdomainId()).isEqualTo("property_casualty");
-    }
-
-    @Test
-    void representativeBatchDConceptsRemainStableAndClassified() {
-        assertThat(catalog.require(
-                "finance_banking.lending_credit.borrower_repayment_capacity"
-        ).subdomainId()).isEqualTo("lending_credit");
-        assertThat(catalog.require(
-                "finance_banking.deposits_liquidity.funding_maturity_ladder"
-        ).subdomainId()).isEqualTo("deposits_liquidity");
-        assertThat(catalog.require(
-                "finance_banking.risk_capital.reverse_stress_testing"
-        ).subdomainId()).isEqualTo("risk_capital");
-        assertThat(catalog.require(
-                "finance_banking.payments_compliance.sanctions_evasion_detection"
-        ).subdomainId()).isEqualTo("payments_compliance");
-    }
-
-    @Test
-    void representativeBatchCConceptsRemainStableAndClassified() {
-        assertThat(catalog.require(
-                "finance_banking.lending_credit.expected_credit_loss"
-        ).subdomainId()).isEqualTo("lending_credit");
-        assertThat(catalog.require(
-                "finance_banking.deposits_liquidity.liquidity_early_warning"
-        ).subdomainId()).isEqualTo("deposits_liquidity");
-        assertThat(catalog.require(
-                "finance_banking.risk_capital.risk_weighted_asset_density"
-        ).subdomainId()).isEqualTo("risk_capital");
-        assertThat(catalog.require(
-                "finance_banking.payments_compliance.mule_account_detection"
-        ).subdomainId()).isEqualTo("payments_compliance");
-    }
-
-    @Test
-    void representativeBatchBConceptsRemainStableAndClassified() {
-        assertThat(catalog.require(
-                "finance_banking.lending_credit.project_finance_lending"
-        ).subdomainId()).isEqualTo("lending_credit");
-        assertThat(catalog.require(
-                "finance_banking.deposits_liquidity.liquidity_survival_horizon"
-        ).subdomainId()).isEqualTo("deposits_liquidity");
-        assertThat(catalog.require(
-                "finance_banking.risk_capital.expected_shortfall_measure"
-        ).subdomainId()).isEqualTo("risk_capital");
-        assertThat(catalog.require(
-                "finance_banking.payments_compliance.source_of_wealth_verification"
-        ).subdomainId()).isEqualTo("payments_compliance");
+    void representativeStageTwoConceptsRemainStableAndClassified() {
+        assertConcept("insurance.underwriting_pricing.risk_appetite_calibration", "underwriting_pricing");
+        assertConcept("energy_utilities.power_grid.grid_contingency_analysis", "power_grid");
+        assertConcept("oil_gas_mining.upstream_operations.managed_pressure_drilling", "upstream_operations");
+        assertConcept("manufacturing.quality_management.measurement_system_analysis", "quality_management");
+        assertConcept("construction_real_estate.project_controls.critical_path_analysis", "project_controls");
+        assertConcept("transport_logistics.supply_chain.supply_chain_visibility", "supply_chain");
+        assertConcept("agriculture_food.food_safety.critical_control_point", "food_safety");
     }
 
     @Test
     void primaryConceptsAreMultiWordPhrases() {
-        assertThat(catalog.concepts())
-                .allSatisfy(concept -> {
-                    String[] tokens =
-                            concept.preferredPhrase().split("\\s+");
-                    assertThat(tokens.length)
-                            .as(concept.id())
-                            .isBetween(2, 6);
-                });
+        assertThat(catalog.concepts()).allSatisfy(concept -> {
+            String[] tokens = concept.preferredPhrase().split("\\s+");
+            assertThat(tokens.length).as(concept.id()).isBetween(2, 6);
+        });
     }
 
     @Test
@@ -191,18 +93,25 @@ class EnglishSemanticConceptCatalogTest {
 
     @Test
     void canonicalIdsRemainLanguageIndependentAndStable() {
-        SemanticConcept concept = catalog.concepts().stream()
-                .filter(value ->
-                        value.preferredPhrase()
-                                .equals("capital adequacy ratio")
-                )
-                .findFirst()
-                .orElseThrow();
-
-        assertThat(concept.id()).isEqualTo(
+        SemanticConcept concept = catalog.require(
                 "finance_banking.risk_capital.capital_adequacy_ratio"
         );
+        assertThat(concept.preferredPhrase()).isEqualTo("capital adequacy ratio");
         assertThat(concept.domainId()).isEqualTo("finance_banking");
         assertThat(concept.subdomainId()).isEqualTo("risk_capital");
+    }
+
+    private void assertSubdomainCounts(String domainId, long expected) {
+        Map<String, Long> bySubdomain = catalog.conceptsForDomain(domainId).stream()
+                .collect(Collectors.groupingBy(
+                        SemanticConcept::subdomainId,
+                        Collectors.counting()
+                ));
+        assertThat(bySubdomain).hasSize(4);
+        assertThat(bySubdomain.values()).allSatisfy(count -> assertThat(count).isEqualTo(expected));
+    }
+
+    private void assertConcept(String id, String subdomainId) {
+        assertThat(catalog.require(id).subdomainId()).isEqualTo(subdomainId);
     }
 }
