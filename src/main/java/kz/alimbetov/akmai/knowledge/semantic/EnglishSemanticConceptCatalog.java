@@ -23,7 +23,8 @@ public class EnglishSemanticConceptCatalog {
     private static final List<String> SUPPLEMENTAL_RESOURCES = List.of(
             "semantic/concepts-en-finance-batch-a-v2.yaml",
             "semantic/concepts-en-finance-batch-b-v2.yaml",
-            "semantic/concepts-en-finance-batch-c-v2.yaml"
+            "semantic/concepts-en-finance-batch-c-v2.yaml",
+            "semantic/concepts-en-finance-batch-d-v2.yaml"
     );
     private static final String COMBINED_VERSION = "semantic-concepts-en-v2";
 
