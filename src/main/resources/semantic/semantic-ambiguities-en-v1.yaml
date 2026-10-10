@@ -1,0 +1,59 @@
+version: semantic-ambiguities-en-v1
+entries:
+  - surface: risk assessment
+    conceptIds:
+      - finance_banking.lending_credit.credit_risk_assessment
+      - earth_environmental_science.environmental_assessment.ecological_risk_assessment
+    rationale: Generic wording is insufficient to choose financial credit risk versus environmental risk assessment.
+
+  - surface: preventive maintenance
+    conceptIds:
+      - manufacturing.maintenance_reliability.preventive_maintenance_schedule
+      - construction_real_estate.facilities_management.preventive_facility_maintenance
+      - transport_logistics.fleet_operations.vehicle_preventive_maintenance
+    rationale: Preventive maintenance can target manufacturing equipment, building facilities, or transport fleets and requires domain context.
+
+  - surface: decision making
+    conceptIds:
+      - psychology_sociology.cognitive_psychology.decision_making_process
+      - psychology_sociology.social_psychology.group_decision_making
+    rationale: Query context is required to distinguish individual cognitive decision making from group decision making.
+
+  - surface: risk model
+    conceptIds:
+      - insurance.underwriting_pricing.actuarial_pricing_model
+      - insurance.life_health.mortality_risk_model
+      - insurance.property_casualty.catastrophe_risk_model
+    rationale: Generic risk-model wording does not identify the actuarial, mortality, or catastrophe modeling intent.
+
+  - surface: capacity planning
+    conceptIds:
+      - energy_utilities.power_grid.transmission_capacity_planning
+      - transport_logistics.warehousing_distribution.distribution_capacity_planning
+      - transport_logistics.supply_chain.supplier_capacity_planning
+      - manufacturing.production_systems.capacity_requirements_planning
+    rationale: Capacity planning is domain-specific across grid transmission, distribution operations, suppliers, and manufacturing resources.
+
+  - surface: settlement reconciliation
+    conceptIds:
+      - finance_banking.payments_compliance.payment_reconciliation_process
+      - energy_utilities.energy_markets.settlement_reconciliation_process
+    rationale: Settlement reconciliation can describe payment operations or electricity-market settlement and must be resolved from context.
+
+  - surface: reserve requirement
+    conceptIds:
+      - finance_banking.deposits_liquidity.cash_reserve_requirement
+      - energy_utilities.power_generation.generation_reserve_requirement
+    rationale: Reserve requirement has materially different banking-liquidity and electricity-reliability meanings.
+
+  - surface: risk appetite
+    conceptIds:
+      - finance_banking.risk_capital.risk_appetite_framework
+      - insurance.underwriting_pricing.underwriting_risk_appetite
+    rationale: Generic risk-appetite language does not distinguish enterprise banking risk governance from insurance underwriting appetite.
+
+  - surface: asset management
+    conceptIds:
+      - construction_real_estate.facilities_management.property_asset_management
+      - energy_utilities.power_grid.substation_asset_management
+    rationale: Asset management may refer to property portfolios or regulated grid assets and should remain context-sensitive.

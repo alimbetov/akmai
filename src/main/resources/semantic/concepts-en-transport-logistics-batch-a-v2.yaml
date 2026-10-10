@@ -1,0 +1,112 @@
+version: semantic-concepts-en-transport-logistics-batch-a-v2
+domains:
+  - domainId: transport_logistics
+    subdomains:
+      - id: freight_transport
+        phrases:
+          - freight lane analysis
+          - modal split analysis
+          - intermodal transport planning
+          - container transport service
+          - bulk freight transport
+          - less than truckload
+          - full truckload service
+          - rail wagon utilization
+          - rail terminal dwell
+          - port container dwell
+          - air freight capacity
+          - air cargo yield
+          - freight rate index
+          - transport cost allocation
+          - cargo consolidation service
+          - cargo deconsolidation process
+          - cross docking operation
+          - freight forwarding service
+          - customs brokerage process
+          - dangerous goods transport
+          - oversized cargo transport
+          - temperature controlled transport
+          - transport damage rate
+          - freight claims management
+          - carrier performance monitoring
+      - id: warehousing_distribution
+        phrases:
+          - warehouse slotting optimization
+          - warehouse space utilization
+          - dock door scheduling
+          - yard management system
+          - inbound receiving process
+          - putaway optimization strategy
+          - replenishment task planning
+          - wave picking process
+          - zone picking process
+          - batch picking process
+          - pick path optimization
+          - packing station design
+          - shipping dock operation
+          - inventory cycle counting
+          - inventory accuracy rate
+          - warehouse labor planning
+          - warehouse productivity rate
+          - distribution capacity planning
+          - cross dock scheduling
+          - returns processing center
+          - reverse logistics operation
+          - value added services
+          - warehouse safety management
+          - temperature mapping study
+          - distribution order cycle
+      - id: fleet_operations
+        phrases:
+          - fleet replacement strategy
+          - vehicle lifecycle cost
+          - fleet acquisition planning
+          - vehicle preventive maintenance
+          - vehicle downtime analysis
+          - fleet availability rate
+          - driver utilization rate
+          - driver hours compliance
+          - electronic logging device
+          - fleet route adherence
+          - vehicle idling reduction
+          - fuel consumption monitoring
+          - fleet tire management
+          - telematics event monitoring
+          - driver behavior scoring
+          - harsh braking event
+          - speed compliance monitoring
+          - fleet accident frequency
+          - vehicle inspection program
+          - roadworthiness compliance check
+          - fleet insurance management
+          - fleet emissions monitoring
+          - electric fleet transition
+          - charging infrastructure planning
+          - fleet total ownership
+      - id: supply_chain
+        phrases:
+          - supply chain visibility
+          - supplier risk assessment
+          - supplier capacity planning
+          - supplier performance scorecard
+          - purchase order fulfillment
+          - material lead time
+          - safety stock optimization
+          - inventory replenishment policy
+          - demand forecast accuracy
+          - sales operations planning
+          - integrated business planning
+          - available to promise
+          - capable to promise
+          - order allocation rule
+          - multi echelon inventory
+          - inventory positioning strategy
+          - network capacity planning
+          - supply disruption scenario
+          - supplier diversification strategy
+          - dual sourcing strategy
+          - nearshoring supply strategy
+          - reshoring supply strategy
+          - supply chain control tower
+          - end to end traceability
+          - supply chain carbon

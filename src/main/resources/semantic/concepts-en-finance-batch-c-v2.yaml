@@ -1,0 +1,112 @@
+version: semantic-concepts-en-finance-batch-c-v2
+domains:
+  - domainId: finance_banking
+    subdomains:
+      - id: lending_credit
+        phrases:
+          - credit portfolio migration
+          - obligor risk rating
+          - borrower risk classification
+          - credit risk segmentation
+          - lending policy exception
+          - collateral eligibility criteria
+          - collateral haircut methodology
+          - loan amortization schedule
+          - balloon payment structure
+          - covenant breach remediation
+          - distressed debt restructuring
+          - debt refinancing transaction
+          - credit exposure aggregation
+          - single borrower limit
+          - connected counterparty exposure
+          - credit concentration threshold
+          - watchlist account management
+          - special mention loan
+          - past due classification
+          - impaired loan assessment
+          - expected credit loss
+          - lifetime credit loss
+          - twelve month credit loss
+          - cure rate analysis
+          - recovery rate estimation
+      - id: deposits_liquidity
+        phrases:
+          - stable funding requirement
+          - wholesale funding profile
+          - retail deposit stickiness
+          - nonoperational deposit balance
+          - operational deposit balance
+          - liquidity coverage buffer
+          - contingent funding source
+          - secured funding capacity
+          - unsecured funding capacity
+          - funding rollover risk
+          - short term funding ratio
+          - long term funding ratio
+          - liquidity asset haircut
+          - central bank facility
+          - emergency liquidity assistance
+          - deposit concentration threshold
+          - contractual cash inflow
+          - contractual cash outflow
+          - behavioral cash flow
+          - liquidity risk limit
+          - liquidity early warning
+          - funding plan execution
+          - treasury liquidity position
+          - collateral funding requirement
+          - settlement liquidity requirement
+      - id: risk_capital
+        phrases:
+          - risk weighted asset density
+          - standardized credit risk approach
+          - standardized market risk approach
+          - standardized operational risk approach
+          - advanced measurement approach
+          - internal model approval
+          - model validation framework
+          - stress capital buffer
+          - systemic risk buffer
+          - capital surcharge requirement
+          - minimum capital requirement
+          - capital distribution restriction
+          - dividend distribution constraint
+          - capital recovery plan
+          - capital contingency action
+          - risk aggregation framework
+          - enterprise risk taxonomy
+          - risk limit framework
+          - risk escalation process
+          - risk acceptance criteria
+          - interest rate shock
+          - basis risk exposure
+          - spread risk exposure
+          - foreign exchange risk
+          - equity price risk
+      - id: payments_compliance
+        phrases:
+          - sanctions list screening
+          - name screening process
+          - payment beneficiary screening
+          - originator information verification
+          - funds transfer regulation
+          - suspicious transaction report
+          - transaction risk scoring
+          - customer risk rating
+          - geographic risk assessment
+          - product risk assessment
+          - channel risk assessment
+          - money laundering risk
+          - terrorist financing risk
+          - proliferation financing risk
+          - correspondent banking screening
+          - nested correspondent relationship
+          - shell bank prohibition
+          - payment transparency requirement
+          - wire transfer traceability
+          - fraud case management
+          - card fraud investigation
+          - account takeover detection
+          - mule account detection
+          - payment velocity control
+          - transaction limit control

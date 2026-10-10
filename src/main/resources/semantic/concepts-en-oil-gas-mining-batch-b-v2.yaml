@@ -1,0 +1,112 @@
+version: semantic-concepts-en-oil-gas-mining-batch-b-v2
+domains:
+  - domainId: oil_gas_mining
+    subdomains:
+      - id: upstream_operations
+        phrases:
+          - seismic inversion analysis
+          - well log interpretation
+          - petrophysical property model
+          - reservoir simulation model
+          - static reservoir model
+          - dynamic reservoir model
+          - well test analysis
+          - pressure transient analysis
+          - decline curve analysis
+          - production allocation model
+          - artificial lift optimization
+          - water injection strategy
+          - gas injection strategy
+          - well integrity surveillance
+          - casing integrity assessment
+          - cement bond evaluation
+          - drilling fluid performance
+          - directional drilling plan
+          - geosteering decision process
+          - drilling performance monitoring
+          - rate of penetration
+          - lost circulation management
+          - formation damage mitigation
+          - well stimulation program
+          - abandonment liability estimate
+      - id: midstream_operations
+        phrases:
+          - pipeline hydraulic simulation
+          - pipeline throughput capacity
+          - line pack optimization
+          - gas nomination process
+          - shipper balancing process
+          - pipeline pressure management
+          - compressor performance monitoring
+          - compressor station optimization
+          - leak detection performance
+          - corrosion rate monitoring
+          - inline inspection program
+          - cathodic protection monitoring
+          - pipeline right of way
+          - pipeline pigging program
+          - tank farm operations
+          - terminal inventory balance
+          - vapor recovery system
+          - custody transfer metering
+          - metering uncertainty analysis
+          - gas quality compliance
+          - crude quality specification
+          - terminal throughput analysis
+          - storage capacity planning
+          - pipeline outage planning
+          - midstream asset integrity
+      - id: downstream_operations
+        phrases:
+          - refinery feedstock slate
+          - refinery contribution margin
+          - linear programming refinery
+          - distillation column operation
+          - catalytic cracking unit
+          - hydrocracking unit operation
+          - hydrotreating unit operation
+          - reformer severity control
+          - sulfur recovery performance
+          - hydrogen balance management
+          - refinery fuel network
+          - flare system management
+          - energy intensity benchmark
+          - refinery yield optimization
+          - product blending optimization
+          - octane pool management
+          - sulfur specification control
+          - refinery inventory management
+          - process unit utilization
+          - refinery reliability program
+          - turnaround workpack planning
+          - turnaround critical path
+          - refinery fouling monitoring
+          - catalyst deactivation monitoring
+          - downstream margin optimization
+      - id: mining_operations
+        phrases:
+          - mine planning model
+          - pit optimization study
+          - stripping ratio analysis
+          - cutoff grade optimization
+          - grade control drilling
+          - blast design optimization
+          - fragmentation size analysis
+          - haul road design
+          - truck shovel optimization
+          - mine fleet dispatch
+          - ore grade reconciliation
+          - mine production reconciliation
+          - stockpile blending strategy
+          - crusher utilization analysis
+          - grinding circuit efficiency
+          - flotation recovery analysis
+          - leaching recovery analysis
+          - mineral processing recovery
+          - tailings facility operations
+          - tailings dam monitoring
+          - mine water management
+          - slope stability monitoring
+          - ground control management
+          - mine ventilation planning
+          - mine closure liability

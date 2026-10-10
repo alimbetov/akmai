@@ -1,0 +1,112 @@
+version: semantic-concepts-en-energy-utilities-batch-b-v2
+domains:
+  - domainId: energy_utilities
+    subdomains:
+      - id: power_generation
+        phrases:
+          - unit commitment optimization
+          - economic dispatch model
+          - incremental heat rate
+          - generator ramp rate
+          - spinning reserve requirement
+          - nonspinning reserve capacity
+          - ancillary service provision
+          - black start readiness
+          - generator outage schedule
+          - equivalent forced outage
+          - planned outage factor
+          - equivalent availability factor
+          - unit capacity utilization
+          - minimum generation limit
+          - startup fuel consumption
+          - shutdown fuel consumption
+          - generation fuel mix
+          - thermal efficiency degradation
+          - boiler combustion efficiency
+          - turbine performance testing
+          - condenser performance analysis
+          - excitation system tuning
+          - power plant heat balance
+          - generation asset strategy
+          - generation maintenance window
+      - id: power_grid
+        phrases:
+          - transmission transfer capability
+          - distribution capacity planning
+          - contingency power flow
+          - n minus one security
+          - voltage stability analysis
+          - transient stability analysis
+          - reactive power planning
+          - fault level analysis
+          - short circuit study
+          - protection selectivity analysis
+          - relay setting coordination
+          - substation capacity assessment
+          - transformer thermal loading
+          - feeder load balancing
+          - feeder loss calculation
+          - network reconfiguration strategy
+          - outage restoration plan
+          - system restoration sequence
+          - network congestion relief
+          - transmission constraint management
+          - distribution automation scheme
+          - advanced metering infrastructure
+          - feeder reliability analysis
+          - grid resilience planning
+          - interconnection impact study
+      - id: energy_markets
+        phrases:
+          - nodal market settlement
+          - clearing price formation
+          - congestion rent calculation
+          - imbalance settlement calculation
+          - bilateral power contract
+          - power offtake agreement
+          - capacity auction clearing
+          - ancillary service market
+          - balancing settlement mechanism
+          - market participant registration
+          - settlement interval calculation
+          - wholesale market surveillance
+          - market power mitigation
+          - congestion hedge rights
+          - transmission access tariff
+          - distribution use tariff
+          - retail electricity tariff
+          - tariff cost allocation
+          - allowed revenue calculation
+          - regulatory asset base
+          - demand response market
+          - aggregated energy portfolio
+          - energy trading strategy
+          - forward power contract
+          - power hedge portfolio
+      - id: renewable_energy
+        phrases:
+          - solar resource assessment
+          - wind resource characterization
+          - photovoltaic performance ratio
+          - solar inverter efficiency
+          - wind turbine availability
+          - wind farm wake loss
+          - renewable curtailment analysis
+          - forecast error distribution
+          - grid forming control
+          - battery state of charge
+          - battery lifetime model
+          - storage roundtrip efficiency
+          - energy storage dispatch
+          - storage duration requirement
+          - renewable capacity factor
+          - renewable yield assessment
+          - hybrid energy system
+          - solar storage integration
+          - wind storage integration
+          - renewable interconnection queue
+          - clean energy mandate
+          - green certificate market
+          - renewable project bankability
+          - merchant renewable exposure
+          - renewable capture price

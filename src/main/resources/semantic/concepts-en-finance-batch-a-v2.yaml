@@ -1,0 +1,112 @@
+version: semantic-concepts-en-finance-batch-a-v2
+domains:
+  - domainId: finance_banking
+    subdomains:
+      - id: lending_credit
+        phrases:
+          - mortgage loan origination
+          - commercial loan underwriting
+          - small business lending
+          - revolving credit facility
+          - syndicated loan agreement
+          - secured lending exposure
+          - unsecured consumer credit
+          - loan portfolio concentration
+          - borrower affordability assessment
+          - debt to income ratio
+          - loan to value ratio
+          - credit scoring model
+          - borrower default probability
+          - loss given default
+          - exposure at default
+          - credit approval authority
+          - credit application workflow
+          - loan covenant monitoring
+          - collateral valuation process
+          - collateral coverage ratio
+          - loan restructuring program
+          - delinquency management process
+          - early repayment penalty
+          - credit limit utilization
+          - loan maturity profile
+      - id: deposits_liquidity
+        phrases:
+          - demand deposit account
+          - term deposit product
+          - savings deposit account
+          - wholesale funding concentration
+          - retail funding stability
+          - deposit maturity profile
+          - deposit runoff rate
+          - liquidity buffer composition
+          - high quality liquid assets
+          - liquidity risk appetite
+          - liquidity contingency plan
+          - funding concentration risk
+          - intraday liquidity management
+          - liquidity gap analysis
+          - cash flow mismatch
+          - deposit withdrawal behavior
+          - core deposit ratio
+          - funding liquidity risk
+          - liquidity reserve policy
+          - maturity transformation risk
+          - committed liquidity facility
+          - collateral liquidity value
+          - liquidity stress scenario
+          - deposit repricing behavior
+          - funding cost analysis
+      - id: risk_capital
+        phrases:
+          - common equity tier one
+          - tier one capital ratio
+          - total capital ratio
+          - regulatory capital requirement
+          - economic capital model
+          - capital conservation buffer
+          - countercyclical capital buffer
+          - leverage ratio requirement
+          - capital planning process
+          - capital stress testing
+          - risk appetite framework
+          - credit risk capital
+          - market risk capital
+          - operational risk exposure
+          - interest rate risk
+          - banking book risk
+          - concentration risk limit
+          - counterparty credit risk
+          - country risk exposure
+          - sovereign risk exposure
+          - risk adjusted return
+          - economic value sensitivity
+          - earnings at risk
+          - stress loss estimate
+          - capital allocation framework
+      - id: payments_compliance
+        phrases:
+          - real time gross settlement
+          - automated clearing house
+          - card payment authorization
+          - payment transaction screening
+          - sanctions screening process
+          - customer due diligence
+          - enhanced due diligence
+          - beneficial ownership verification
+          - politically exposed person
+          - transaction monitoring system
+          - anti fraud controls
+          - payment reconciliation process
+          - correspondent banking relationship
+          - correspondent banking due diligence
+          - wire transfer screening
+          - payment message validation
+          - payment exception handling
+          - chargeback dispute process
+          - merchant fraud monitoring
+          - cardholder authentication process
+          - instant payment processing
+          - payment clearing cycle
+          - payment settlement finality
+          - financial crime risk
+          - regulatory reporting obligation

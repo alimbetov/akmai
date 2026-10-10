@@ -1,0 +1,112 @@
+version: semantic-concepts-en-insurance-batch-a-v2
+domains:
+  - domainId: insurance
+    subdomains:
+      - id: underwriting_pricing
+        phrases:
+          - risk selection criteria
+          - underwriting authority limit
+          - underwriting referral process
+          - premium rate adequacy
+          - rate filing process
+          - experience rating methodology
+          - credibility weighting method
+          - exposure rating method
+          - schedule rating adjustment
+          - manual rate calculation
+          - policy risk classification
+          - hazard risk assessment
+          - occupancy risk classification
+          - geographic risk factor
+          - catastrophe load factor
+          - expense loading factor
+          - profit loading factor
+          - loss cost projection
+          - premium adequacy review
+          - renewal underwriting review
+          - new business underwriting
+          - portfolio underwriting strategy
+          - underwriting guideline exception
+          - policy deductible structure
+          - coverage attachment point
+      - id: claims_management
+        phrases:
+          - first notice of loss
+          - claims triage process
+          - claim severity assessment
+          - claim liability evaluation
+          - coverage verification process
+          - claim investigation procedure
+          - claim documentation review
+          - claim payment authorization
+          - claim settlement negotiation
+          - claim litigation management
+          - claims leakage analysis
+          - claims fraud investigation
+          - subrogation recovery process
+          - salvage recovery process
+          - reinsurance claim recovery
+          - claim reserve adequacy
+          - case reserve estimation
+          - incurred but not reported
+          - claims development pattern
+          - loss development factor
+          - claims closure rate
+          - claims reopening analysis
+          - claims expense allocation
+          - claims quality assurance
+          - catastrophe claims response
+      - id: life_health
+        phrases:
+          - term life insurance
+          - whole life insurance
+          - universal life insurance
+          - group life insurance
+          - individual health insurance
+          - group health insurance
+          - critical illness coverage
+          - disability income coverage
+          - long term care insurance
+          - deferred annuity contract
+          - immediate annuity contract
+          - policy surrender value
+          - cash value accumulation
+          - beneficiary designation
+          - policy lapse risk
+          - mortality assumption basis
+          - morbidity assumption basis
+          - policyholder persistency rate
+          - premium waiver benefit
+          - conversion privilege provision
+          - medical underwriting assessment
+          - health claims utilization
+          - provider network management
+          - medical loss ratio
+          - benefit eligibility determination
+      - id: property_casualty
+        phrases:
+          - commercial property coverage
+          - homeowners insurance coverage
+          - motor insurance coverage
+          - general liability coverage
+          - professional liability coverage
+          - product liability coverage
+          - workers compensation coverage
+          - marine cargo insurance
+          - aviation hull insurance
+          - cyber insurance coverage
+          - construction all risk
+          - equipment breakdown coverage
+          - natural catastrophe exposure
+          - probable maximum loss
+          - maximum foreseeable loss
+          - property replacement cost
+          - actual cash value
+          - business income loss
+          - extra expense coverage
+          - policy aggregate limit
+          - occurrence coverage trigger
+          - claims made coverage
+          - coinsurance clause application
+          - deductible retention amount
+          - catastrophe exposure accumulation
