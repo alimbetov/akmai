@@ -1,0 +1,112 @@
+version: semantic-concepts-en-transport-logistics-batch-d-v2
+domains:
+  - domainId: transport_logistics
+    subdomains:
+      - id: freight_transport
+        phrases:
+          - carrier contract compliance
+          - tender rejection analysis
+          - lane profitability analysis
+          - spot rate volatility
+          - accessorial charge analysis
+          - detention cost monitoring
+          - demurrage cost monitoring
+          - backhaul revenue analysis
+          - empty equipment repositioning
+          - load tender leadtime
+          - shipment booking accuracy
+          - freight audit process
+          - freight payment validation
+          - cargo capacity reservation
+          - terminal handoff performance
+          - border documentation accuracy
+          - customs inspection delay
+          - port dwell variability
+          - rail service reliability
+          - transit exception rate
+          - delivery appointment compliance
+          - cargo theft exposure
+          - damage claim severity
+          - carrier liability assessment
+          - freight service recovery
+      - id: warehousing_distribution
+        phrases:
+          - dynamic slotting policy
+          - location utilization index
+          - reserve storage strategy
+          - forward pick replenishment
+          - dock appointment compliance
+          - yard trailer utilization
+          - receiving accuracy rate
+          - putaway accuracy rate
+          - replenishment accuracy rate
+          - picking travel distance
+          - order batching optimization
+          - wave release strategy
+          - sorter throughput efficiency
+          - conveyor downtime analysis
+          - automation fault recovery
+          - robotic fleet utilization
+          - labor standard accuracy
+          - productivity incentive model
+          - inventory aging profile
+          - dead stock identification
+          - returns recovery value
+          - parcel sort accuracy
+          - distribution service level
+          - warehouse cost allocation
+          - fulfillment cost per order
+      - id: fleet_operations
+        phrases:
+          - fleet duty cycle
+          - vehicle mission profile
+          - route energy consumption
+          - driver risk profile
+          - driver compliance score
+          - fatigue event monitoring
+          - accident preventability review
+          - incident root cause
+          - vehicle defect severity
+          - inspection failure rate
+          - unscheduled repair frequency
+          - repair vendor quality
+          - maintenance cost per mile
+          - tire wear analysis
+          - fuel anomaly detection
+          - idle fuel consumption
+          - electric range degradation
+          - charger availability rate
+          - charging queue management
+          - depot charging strategy
+          - battery health degradation
+          - telematics coverage quality
+          - vehicle remarketing value
+          - fleet lease cost
+          - fleet lifecycle economics
+      - id: supply_chain
+        phrases:
+          - demand shaping strategy
+          - forecast consumption policy
+          - supply allocation logic
+          - constrained allocation model
+          - inventory decoupling strategy
+          - inventory service policy
+          - service level segmentation
+          - replenishment frequency design
+          - order policy optimization
+          - supplier recovery leadtime
+          - supplier capacity reservation
+          - supplier dependency index
+          - sole source exposure
+          - sourcing flexibility assessment
+          - alternate material qualification
+          - shortage allocation process
+          - expedite cost analysis
+          - backlog aging analysis
+          - order priority governance
+          - customer allocation rule
+          - resilience scenario testing
+          - supply continuity plan
+          - logistics cost to serve
+          - total landed cost
+          - supply chain working capital
