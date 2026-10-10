@@ -50,18 +50,7 @@ class AuditPartitionMaintenanceIntegrationTest {
     @Test
     void concurrentReplicaSkipsPartitionDdlWhileAuthorityIsHeld()
             throws Exception {
-        String suffix = jdbc.queryForObject(
-                """
-                SELECT to_char(
-                    date_trunc('month', clock_timestamp())
-                        + interval '2 months',
-                    'YYYY_MM'
-                )
-                """,
-                String.class
-        );
-        assertThat(suffix).matches("[0-9]{4}_[0-9]{2}");
-        String partition = "knowledge_audit_event_" + suffix;
+        String partition = futurePartitionName();
 
         jdbc.execute("DROP TABLE IF EXISTS public." + partition);
         assertThat(partitionExists(partition)).isFalse();
@@ -88,6 +77,55 @@ class AuditPartitionMaintenanceIntegrationTest {
 
         jdbc.execute("SELECT akmai_admin.maintain_audit_partitions()");
         assertThat(partitionExists(partition)).isTrue();
+    }
+
+    @Test
+    void repeatedContendersCannotBypassPartitionMaintenanceAuthority()
+            throws Exception {
+        String partition = futurePartitionName();
+
+        jdbc.execute("DROP TABLE IF EXISTS public." + partition);
+        assertThat(partitionExists(partition)).isFalse();
+
+        try (Connection owner = dataSource.getConnection()) {
+            owner.setAutoCommit(false);
+            try (Statement statement = owner.createStatement()) {
+                statement.execute(
+                        "SELECT pg_advisory_xact_lock(" +
+                                "hashtext('akmai.audit.partition-maintenance')::bigint)"
+                );
+            }
+
+            for (int attempt = 0; attempt < 12; attempt++) {
+                try (Connection contender = dataSource.getConnection();
+                        Statement statement = contender.createStatement()) {
+                    statement.execute(
+                            "SELECT akmai_admin.maintain_audit_partitions()"
+                    );
+                }
+                assertThat(partitionExists(partition)).isFalse();
+            }
+
+            owner.commit();
+        }
+
+        jdbc.execute("SELECT akmai_admin.maintain_audit_partitions()");
+        assertThat(partitionExists(partition)).isTrue();
+    }
+
+    private String futurePartitionName() {
+        String suffix = jdbc.queryForObject(
+                """
+                SELECT to_char(
+                    date_trunc('month', clock_timestamp())
+                        + interval '2 months',
+                    'YYYY_MM'
+                )
+                """,
+                String.class
+        );
+        assertThat(suffix).matches("[0-9]{4}_[0-9]{2}");
+        return "knowledge_audit_event_" + suffix;
     }
 
     private boolean partitionExists(String partition) {
