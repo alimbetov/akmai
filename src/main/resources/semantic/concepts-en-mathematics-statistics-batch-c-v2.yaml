@@ -1,0 +1,112 @@
+version: semantic-concepts-en-mathematics-statistics-batch-c-v2
+domains:
+  - domainId: mathematics_statistics
+    subdomains:
+      - id: probability_statistics
+        phrases:
+          - martingale convergence theorem
+          - law total variance
+          - delta method approximation
+          - bootstrap confidence interval
+          - profile likelihood method
+          - restricted maximum likelihood
+          - generalized method moments
+          - sandwich variance estimator
+          - cluster robust variance
+          - heteroskedasticity consistent variance
+          - empirical process theory
+          - asymptotic normality theorem
+          - sufficient statistic factorization
+          - Rao Blackwell theorem
+          - Lehmann Scheffe theorem
+          - order statistic distribution
+          - censored likelihood estimation
+          - competing risks model
+          - frailty survival model
+          - recurrent event model
+          - multistate transition model
+          - missing not at random
+          - multiple imputation pooling
+          - inverse probability weighting
+          - missingness sensitivity analysis
+      - id: algebra_geometry
+        phrases:
+          - eigenvector perturbation analysis
+          - matrix spectral radius
+          - positive definite matrix
+          - generalized eigenvalue problem
+          - Kronecker product algebra
+          - tensor contraction operation
+          - multilinear rank decomposition
+          - principal ideal domain
+          - unique factorization domain
+          - finite field extension
+          - polynomial quotient ring
+          - representation character theory
+          - root system classification
+          - Weyl group action
+          - algebraic curve genus
+          - projective variety dimension
+          - singularity resolution method
+          - sheaf cohomology computation
+          - de Rham cohomology
+          - fundamental homology class
+          - geodesic deviation equation
+          - sectional curvature bound
+          - Ricci curvature tensor
+          - symplectic form preservation
+          - convex hull algorithm
+      - id: optimization
+        phrases:
+          - strong duality condition
+          - weak duality bound
+          - saddle point formulation
+          - proximal point algorithm
+          - primal dual algorithm
+          - stochastic proximal method
+          - variance reduced gradient
+          - conditional gradient method
+          - Frank Wolfe algorithm
+          - trust region subproblem
+          - sequential linear programming
+          - mixed complementarity problem
+          - robust counterpart formulation
+          - distributionally robust chance constraint
+          - Wasserstein ambiguity set
+          - Lagrangian relaxation method
+          - column generation method
+          - branch price algorithm
+          - branch cut algorithm
+          - cutting stock formulation
+          - stochastic programming recourse
+          - two stage optimization
+          - multistage stochastic optimization
+          - Pareto frontier approximation
+          - hyperparameter search strategy
+      - id: numerical_methods
+        phrases:
+          - backward differentiation formula
+          - symplectic integration method
+          - exponential integrator method
+          - operator exponential method
+          - deferred correction method
+          - Richardson iteration method
+          - Arnoldi iteration method
+          - Lanczos iteration method
+          - incomplete factorization preconditioner
+          - algebraic multigrid method
+          - geometric multigrid method
+          - mesh quality metric
+          - adaptive quadrature algorithm
+          - sparse grid quadrature
+          - pseudospectral approximation method
+          - radial basis interpolation
+          - barycentric interpolation formula
+          - nonlinear root finding
+          - trust region solver
+          - Jacobian free Newton Krylov
+          - differential algebraic solver
+          - stiff equation integration
+          - numerical dispersion analysis
+          - numerical dissipation analysis
+          - a posteriori error estimate
