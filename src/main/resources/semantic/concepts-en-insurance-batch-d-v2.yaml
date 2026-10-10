@@ -27,7 +27,7 @@ domains:
           - policy fee structure
           - premium installment factor
           - renewal offer strategy
-          - underwriting referral governance
+          - underwriter workload allocation
           - underwriting decision quality
       - id: claims_management
         phrases:
@@ -87,11 +87,11 @@ domains:
         phrases:
           - property exposure schedule
           - statement of values
-          - building replacement valuation
+          - property exposure geocoding
           - business interruption worksheet
           - business continuity exposure
           - equipment breakdown risk
-          - machinery breakdown risk
+          - pressure vessel exposure
           - cargo accumulation exposure
           - marine hull exposure
           - aviation liability exposure
@@ -99,11 +99,11 @@ domains:
           - cyber extortion coverage
           - privacy liability coverage
           - product recall coverage
-          - professional indemnity limit
+          - fiduciary liability exposure
           - public liability exposure
           - employers liability exposure
           - construction defect claim
-          - environmental impairment liability
+          - environmental cleanup expense
           - pollution legal liability
           - catastrophe aggregate limit
           - policy sublimit structure
