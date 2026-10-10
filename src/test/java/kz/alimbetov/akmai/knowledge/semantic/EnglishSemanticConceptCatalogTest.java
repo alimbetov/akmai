@@ -16,7 +16,8 @@ class EnglishSemanticConceptCatalogTest {
 
     @Test
     void corpusContainsCuratedPhraseConceptsForEveryDomain() {
-        assertThat(catalog.concepts()).hasSize(384);
+        assertThat(catalog.version()).isEqualTo("semantic-concepts-en-v2");
+        assertThat(catalog.concepts()).hasSize(484);
 
         Map<String, Long> byDomain = catalog.concepts().stream()
                 .collect(Collectors.groupingBy(
@@ -26,11 +27,29 @@ class EnglishSemanticConceptCatalogTest {
 
         assertThat(byDomain.keySet())
                 .containsExactlyInAnyOrderElementsOf(domains.domainIds());
-        byDomain.forEach((domain, count) ->
-                assertThat(count)
-                        .as(domain)
-                        .isEqualTo(24L)
-        );
+        assertThat(byDomain.get("finance_banking")).isEqualTo(124L);
+        byDomain.entrySet().stream()
+                .filter(entry -> !entry.getKey().equals("finance_banking"))
+                .forEach(entry -> assertThat(entry.getValue())
+                        .as(entry.getKey())
+                        .isEqualTo(24L));
+    }
+
+    @Test
+    void financeBatchAAddsTwentyFiveConceptsPerExistingSubdomain() {
+        Map<String, Long> financeBySubdomain = catalog
+                .conceptsForDomain("finance_banking")
+                .stream()
+                .collect(Collectors.groupingBy(
+                        SemanticConcept::subdomainId,
+                        Collectors.counting()
+                ));
+
+        assertThat(financeBySubdomain)
+                .containsEntry("lending_credit", 31L)
+                .containsEntry("deposits_liquidity", 31L)
+                .containsEntry("risk_capital", 31L)
+                .containsEntry("payments_compliance", 31L);
     }
 
     @Test
