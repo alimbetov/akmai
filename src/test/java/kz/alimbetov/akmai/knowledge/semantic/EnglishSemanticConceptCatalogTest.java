@@ -20,10 +20,10 @@ class EnglishSemanticConceptCatalogTest {
             Map.entry("agriculture_food", 424L),
             Map.entry("mathematics_statistics", 24L),
             Map.entry("physics_astronomy", 24L),
-            Map.entry("chemistry_materials", 24L),
-            Map.entry("biology_genetics", 24L),
-            Map.entry("computer_science_ai", 24L),
-            Map.entry("medicine_pharmacology", 24L),
+            Map.entry("chemistry_materials", 124L),
+            Map.entry("biology_genetics", 124L),
+            Map.entry("computer_science_ai", 124L),
+            Map.entry("medicine_pharmacology", 124L),
             Map.entry("earth_environmental_science", 24L),
             Map.entry("psychology_sociology", 24L)
     );
@@ -34,7 +34,7 @@ class EnglishSemanticConceptCatalogTest {
     @Test
     void corpusContainsExpectedCuratedConceptCounts() {
         assertThat(catalog.version()).isEqualTo("semantic-concepts-en-v2");
-        assertThat(catalog.concepts()).hasSize(3584);
+        assertThat(catalog.concepts()).hasSize(3984);
 
         Map<String, Long> byDomain = catalog.concepts().stream()
                 .collect(Collectors.groupingBy(
@@ -56,6 +56,22 @@ class EnglishSemanticConceptCatalogTest {
         assertSubdomainCounts("construction_real_estate", 106L);
         assertSubdomainCounts("transport_logistics", 106L);
         assertSubdomainCounts("agriculture_food", 106L);
+    }
+
+    @Test
+    void scienceTechnologyBatchADomainsContainTwentyFiveNewConceptsPerSubdomain() {
+        assertSubdomainCounts("computer_science_ai", 31L);
+        assertSubdomainCounts("medicine_pharmacology", 31L);
+        assertSubdomainCounts("biology_genetics", 31L);
+        assertSubdomainCounts("chemistry_materials", 31L);
+    }
+
+    @Test
+    void representativeScienceTechnologyBatchAConceptsRemainStableAndClassified() {
+        assertConcept("computer_science_ai.machine_learning.model_drift_detection", "machine_learning");
+        assertConcept("medicine_pharmacology.clinical_trials.adaptive_trial_design", "clinical_trials");
+        assertConcept("biology_genetics.genetics.polygenic_risk_score", "genetics");
+        assertConcept("chemistry_materials.materials_science.fracture_toughness_testing", "materials_science");
     }
 
     @Test
