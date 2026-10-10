@@ -1,0 +1,112 @@
+version: semantic-concepts-en-physics-astronomy-batch-b-v2
+domains:
+  - domainId: physics_astronomy
+    subdomains:
+      - id: classical_mechanics
+        phrases:
+          - d Alembert principle
+          - Poisson bracket formulation
+          - canonical transformation method
+          - Hamilton Jacobi equation
+          - Noether conservation theorem
+          - variational mechanics principle
+          - generalized force coordinate
+          - holonomic constraint system
+          - nonholonomic constraint dynamics
+          - small oscillation analysis
+          - normal mode frequency
+          - Coriolis force effect
+          - centrifugal force effect
+          - rotating reference frame
+          - inertia tensor diagonalization
+          - Euler rigid body equation
+          - gyroscopic stability analysis
+          - collision impulse response
+          - coefficient restitution measurement
+          - viscous drag force
+          - terminal velocity calculation
+          - Bernoulli flow equation
+          - Navier Stokes equation
+          - Reynolds transport theorem
+          - vorticity transport equation
+      - id: thermodynamics
+        phrases:
+          - thermodynamic potential transform
+          - Legendre transform thermodynamics
+          - Gibbs Duhem relation
+          - fugacity coefficient calculation
+          - activity coefficient model
+          - phase diagram construction
+          - critical point behavior
+          - spinodal decomposition thermodynamics
+          - Joule Thomson effect
+          - isentropic expansion process
+          - isothermal compressibility coefficient
+          - thermal expansion coefficient
+          - Maxwell Boltzmann distribution
+          - Bose Einstein distribution
+          - Fermi Dirac distribution
+          - equipartition theorem application
+          - density states function
+          - partition function derivative
+          - free energy perturbation
+          - chemical affinity relation
+          - entropy balance equation
+          - exergy destruction analysis
+          - irreversible entropy generation
+          - Onsager reciprocal relation
+          - fluctuation theorem application
+      - id: electromagnetism
+        phrases:
+          - vector potential formulation
+          - gauge transformation field
+          - Lorenz gauge condition
+          - Coulomb gauge condition
+          - electromagnetic tensor formulation
+          - displacement current density
+          - bound charge density
+          - polarization current density
+          - magnetization current density
+          - Fresnel reflection coefficient
+          - Brewster angle condition
+          - total internal reflection
+          - wave polarization ellipse
+          - group velocity dispersion
+          - phase velocity relation
+          - evanescent wave field
+          - wave impedance medium
+          - scattering matrix method
+          - transfer matrix method
+          - resonant cavity quality
+          - dipole radiation field
+          - multipole expansion field
+          - electromagnetic reciprocity theorem
+          - plasma skin depth
+          - cyclotron resonance frequency
+      - id: astrophysics
+        phrases:
+          - stellar structure equation
+          - hydrostatic equilibrium star
+          - stellar opacity model
+          - main sequence lifetime
+          - stellar population synthesis
+          - binary star evolution
+          - Roche lobe overflow
+          - common envelope evolution
+          - compact object merger
+          - neutron star cooling
+          - pulsar spin down
+          - magnetar magnetic field
+          - black hole spin
+          - accretion disk instability
+          - tidal disruption event
+          - galaxy luminosity function
+          - galaxy stellar mass
+          - halo occupation distribution
+          - weak lensing shear
+          - strong lensing system
+          - dark energy equation
+          - cosmological parameter inference
+          - reionization history model
+          - intergalactic medium absorption
+          - gravitational wave background
