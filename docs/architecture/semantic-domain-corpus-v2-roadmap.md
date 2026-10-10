@@ -48,7 +48,7 @@ A qualifying entry MUST:
 - normally contain 2–6 lexical tokens;
 - have a specific, useful domain meaning;
 - be suitable for semantic retrieval/query expansion;
-- be unique after normalization;
+- be globally unique after canonical normalization;
 - not be a trivial morphological duplicate of another entry;
 - not duplicate a phrase already present in the global/core alias corpus;
 - preserve the existing domain/subdomain semantics;
@@ -81,9 +81,10 @@ To keep review manageable, each domain is delivered in **four internal batches o
 Before adding bulk vocabulary:
 
 - retain the current `domainId` and `subdomain.id` hierarchy;
-- define deterministic normalization for duplicate detection;
+- keep deterministic normalization in `EnglishSemanticConceptCatalog`;
+- enforce global canonical phrase uniqueness at catalog load time;
 - define phrase-count validation per domain;
-- define cross-domain collision reporting;
+- define near-duplicate review and consolidation rules;
 - define tests for blank/duplicate/overlong/underspecified entries;
 - record baseline phrase counts and benchmark metrics.
 
@@ -141,8 +142,10 @@ Exit criterion: +1,600 phrases in this stage; cumulative +6,400.
 
 After all domain batches:
 
-- deduplicate normalized phrases globally;
-- identify intentional cross-domain ambiguous phrases;
+- verify normalized phrase uniqueness globally;
+- review all near-duplicate candidates;
+- merge only phrases that resolve to the same semantic intent;
+- preserve distinct phrases when they represent materially different concepts, scopes, processes or metrics;
 - check subdomain balance;
 - remove weak/synthetic phrases;
 - run retrieval benchmark and compare against the pre-v2 baseline;
@@ -160,7 +163,73 @@ Port approved semantic concepts/surfaces in this order:
 
 Translation is not sufficient. Each target language must use real professional terminology and domain usage. English phrase identity and domain assignment remain stable while language-specific surfaces may differ structurally.
 
-## 6. Implementation strategy
+## 6. Duplicate and near-duplicate policy
+
+The corpus distinguishes three different cases.
+
+### 6.1 Exact and normalized duplicates — forbidden
+
+Two canonical English phrases are duplicates when they become identical after the production normalization used by `EnglishSemanticConceptCatalog`:
+
+- Unicode NFC normalization;
+- lowercase conversion;
+- punctuation/non-alphanumeric separators converted to spaces;
+- repeated whitespace collapsed;
+- leading/trailing whitespace removed.
+
+Examples that must collapse to one canonical phrase:
+
+- `Risk-Weighted Assets` / `risk weighted assets`;
+- `cross-border payment` / `cross border payment`;
+- `Know Your Customer` / `know your customer`.
+
+The runtime catalog must fail fast if the same normalized canonical phrase is assigned to more than one semantic concept, including across different subdomains or domains.
+
+### 6.2 Morphological or wording-only duplicates — consolidate
+
+Phrases that differ only by trivial number, inflection or non-semantic wording should normally be represented by one canonical concept and later handled through aliases/surfaces.
+
+Examples:
+
+- `credit risk limit` / `credit risk limits`;
+- `loan approval workflow` / `loan approval process` when both are used for exactly the same workflow in the corpus;
+- `customer identity verification` / `verification of customer identity` when no semantic distinction is intended.
+
+These variants must not be counted as separate entries merely to satisfy the +400 target.
+
+### 6.3 Related but semantically distinct phrases — preserve
+
+Lexical similarity alone is not a reason to merge phrases. Keep both entries when their professional intent is materially different.
+
+Examples:
+
+- `facility maintenance plan` vs `preventive facility maintenance`;
+- `decision making process` vs `group decision making`;
+- `credit risk assessment` vs `credit risk appetite`;
+- `capital adequacy ratio` vs `internal capital assessment`.
+
+The review rule is semantic: merge only when two phrases would retrieve essentially the same concept and evidence. Do not merge simply because they share most tokens.
+
+### 6.4 Near-duplicate review procedure
+
+Every 100-phrase batch must be compared against:
+
+1. the existing v1 English corpus;
+2. all previously accepted v2 batches;
+3. phrases in the same subdomain;
+4. phrases in other domains that share a high lexical overlap;
+5. global/core aliases where the same meaning is already represented.
+
+For every candidate pair, choose exactly one disposition:
+
+- `KEEP_BOTH` — meanings are distinct;
+- `MERGE_CANONICAL` — keep one preferred phrase and move the other wording to an alias/surface layer later;
+- `REJECT_DUPLICATE` — remove the new candidate;
+- `REASSIGN` — phrase belongs in another domain/subdomain.
+
+Near-duplicate detection may use token overlap, normalized edit similarity or embeddings as a review aid, but **must not automatically delete phrases based only on a similarity threshold**.
+
+## 7. Implementation strategy
 
 Use **one branch** for the initiative: `feature/semantic-domain-corpus-v2`.
 
@@ -174,7 +243,7 @@ Do not create one branch per domain, batch or language.
 
 The initial implementation should extend the existing semantic resources and tests before considering a schema redesign. A concept-centric v3 schema may be justified later, but v2 should first establish high-quality corpus content and measurable retrieval value using the current runtime contract.
 
-## 7. Quality rules
+## 8. Quality rules
 
 ### Positive cases
 
@@ -197,7 +266,7 @@ Reject:
 - near-duplicates created only to reach the numeric quota;
 - translations or aliases incorrectly inserted into the English canonical phrase list.
 
-## 8. Required validation
+## 9. Required validation
 
 CI/test coverage should verify at minimum:
 
@@ -205,8 +274,9 @@ CI/test coverage should verify at minimum:
 - domain IDs are unique;
 - subdomain IDs are unique within a domain;
 - no blank phrases;
-- normalized phrase uniqueness within a domain;
-- report cross-domain duplicates/collisions;
+- normalized canonical phrases are globally unique;
+- duplicate canonical phrases fail at catalog construction/startup rather than being silently accepted;
+- each batch has an explicit near-duplicate review against the entire accepted corpus;
 - exactly or at least 400 **new approved phrases per domain** relative to the recorded v1 baseline;
 - each 100-phrase batch is unique relative to all prior batches in that domain;
 - phrases remain within configured semantic expansion limits at runtime;
@@ -214,7 +284,7 @@ CI/test coverage should verify at minimum:
 
 A count gate alone is insufficient. The final release gate is retrieval quality.
 
-## 9. Benchmark gates
+## 10. Benchmark gates
 
 For each completed 100-phrase batch, add representative queries covering:
 
@@ -237,24 +307,27 @@ Track at least:
 
 A domain batch should not be considered complete if phrase count increases while retrieval precision materially regresses.
 
-## 10. Language rollout rule
+## 11. Language rollout rule
 
 Do not create independent dictionaries per language.
 
 The English corpus is the reviewed semantic reference. Later language work maps professional local surfaces to the same semantic/domain intent. RU/KK may add language-specific terminology that has no literal English equivalent, but such additions must still receive an explicit canonical semantic mapping.
 
-## 11. Definition of done for v2 English
+## 12. Definition of done for v2 English
 
 Semantic Domain Corpus v2 English is complete when:
 
 - all 16 existing domains have +400 new curated multi-word phrases;
-- 6,400 additions pass normalization and collision checks;
+- 6,400 additions pass global normalization/duplicate checks;
+- every 100-phrase batch has completed near-duplicate review;
+- wording-only duplicates have been consolidated rather than counted separately;
+- semantically distinct close phrases are preserved intentionally;
 - subdomain distribution has been reviewed;
 - benchmark quality is no worse than baseline on precision/grounding and shows measurable recall improvement on terminology-heavy queries;
 - corpus documentation and tests are current;
 - the English reference is stable enough to begin RU translation/curation without changing concept/domain identities continuously.
 
-## 12. First execution slice
+## 13. First execution slice
 
 Start with `finance_banking` only.
 
@@ -267,4 +340,4 @@ The domain is delivered as four sequential curated batches:
 
 Total: **+400 new English finance/banking phrases**.
 
-The first batch serves as the calibration set for phrase quality, duplicate detection, benchmark design and review standards. Subsequent batches expand coverage while being checked against all previously accepted phrases. Only after `finance_banking` reaches +400 and passes quality gates should the same procedure be repeated for the remaining 15 domains.
+Before each batch is accepted, run the duplicate/near-duplicate review defined above. The first batch serves as the calibration set for phrase quality, duplicate detection, benchmark design and review standards. Subsequent batches expand coverage while being checked against all previously accepted phrases. Only after `finance_banking` reaches +400 and passes quality gates should the same procedure be repeated for the remaining 15 domains.
