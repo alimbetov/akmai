@@ -1,0 +1,112 @@
+version: semantic-concepts-en-medicine-pharmacology-batch-b-v2
+domains:
+  - domainId: medicine_pharmacology
+    subdomains:
+      - id: clinical_diagnosis
+        phrases:
+          - pretest probability estimate
+          - likelihood ratio interpretation
+          - diagnostic threshold decision
+          - clinical phenotype classification
+          - syndrome recognition pattern
+          - disease staging assessment
+          - severity score calibration
+          - prognostic score validation
+          - diagnostic pathway optimization
+          - incidental finding management
+          - discordant test interpretation
+          - serial biomarker monitoring
+          - imaging response assessment
+          - pathology grading system
+          - molecular diagnostic assay
+          - point of care testing
+          - diagnostic specimen adequacy
+          - false positive investigation
+          - false negative investigation
+          - diagnostic stewardship program
+          - referral pathway coordination
+          - multidisciplinary case review
+          - clinical decision threshold
+          - diagnostic delay analysis
+          - missed diagnosis audit
+      - id: pharmacology
+        phrases:
+          - compartment pharmacokinetic model
+          - population pharmacokinetic model
+          - nonlinear pharmacokinetic model
+          - clearance variability analysis
+          - exposure response relationship
+          - concentration effect model
+          - target concentration strategy
+          - dose proportionality assessment
+          - accumulation ratio estimate
+          - drug transporter interaction
+          - cytochrome enzyme interaction
+          - first pass metabolism
+          - protein binding displacement
+          - renal clearance mechanism
+          - hepatic extraction ratio
+          - therapeutic window assessment
+          - maximum tolerated dose
+          - minimum effective concentration
+          - drug receptor selectivity
+          - off target effect
+          - tolerance development mechanism
+          - withdrawal effect assessment
+          - medication error prevention
+          - pharmacovigilance signal detection
+          - benefit risk assessment
+      - id: clinical_trials
+        phrases:
+          - stratified randomization method
+          - block randomization method
+          - treatment allocation ratio
+          - endpoint adjudication committee
+          - blinded outcome assessment
+          - estimand definition framework
+          - treatment policy strategy
+          - hypothetical estimand strategy
+          - composite endpoint analysis
+          - time to event endpoint
+          - recurrent event analysis
+          - multiplicity adjustment method
+          - subgroup analysis plan
+          - sensitivity analysis plan
+          - covariate adjustment model
+          - baseline imbalance assessment
+          - treatment adherence analysis
+          - protocol compliance assessment
+          - trial recruitment rate
+          - screening failure rate
+          - participant retention rate
+          - data monitoring charter
+          - serious adverse event
+          - dose escalation design
+          - dose expansion cohort
+      - id: epidemiology
+        phrases:
+          - standardized incidence ratio
+          - standardized mortality ratio
+          - incidence rate ratio
+          - prevalence ratio estimate
+          - risk difference estimate
+          - number needed treat
+          - number needed harm
+          - causal inference framework
+          - propensity score matching
+          - inverse probability weighting
+          - instrumental variable analysis
+          - difference in differences
+          - interrupted time series
+          - regression discontinuity design
+          - target trial emulation
+          - immortal time bias
+          - collider bias assessment
+          - residual confounding analysis
+          - misclassification bias analysis
+          - loss to followup bias
+          - cluster effect adjustment
+          - survey weighting method
+          - age period cohort
+          - spatial disease clustering
+          - epidemic growth rate
