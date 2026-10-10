@@ -1,0 +1,112 @@
+version: semantic-concepts-en-oil-gas-mining-batch-d-v2
+domains:
+  - domainId: oil_gas_mining
+    subdomains:
+      - id: upstream_operations
+        phrases:
+          - basin modeling workflow
+          - source rock maturity
+          - hydrocarbon charge modeling
+          - seal integrity assessment
+          - trap integrity analysis
+          - prospect volumetric estimate
+          - uncertainty range analysis
+          - reserves booking workflow
+          - contingent resource classification
+          - reservoir connectivity assessment
+          - pressure depletion strategy
+          - waterflood surveillance program
+          - injection conformance analysis
+          - reservoir sweep efficiency
+          - well productivity index
+          - skin factor analysis
+          - completion performance review
+          - perforation efficiency assessment
+          - production allocation reconciliation
+          - well surveillance program
+          - flowing pressure analysis
+          - bottomhole pressure estimate
+          - wax management program
+          - asphaltene risk assessment
+          - souring risk management
+      - id: midstream_operations
+        phrases:
+          - pipeline throughput capacity
+          - compressor availability analysis
+          - compressor reliability program
+          - station operating envelope
+          - pipeline hydraulic constraint
+          - pipeline pressure excursion
+          - gas inventory balancing
+          - nomination variance analysis
+          - imbalance penalty calculation
+          - pipeline quality bank
+          - measurement balance reconciliation
+          - metering station uncertainty
+          - leak consequence modeling
+          - rupture consequence analysis
+          - integrity management segment
+          - high consequence area
+          - pipeline defect assessment
+          - corrosion mitigation strategy
+          - stress corrosion cracking
+          - geohazard threat assessment
+          - terminal inventory variance
+          - tank settlement monitoring
+          - storage injection capacity
+          - storage withdrawal capacity
+          - terminal demurrage analysis
+      - id: downstream_operations
+        phrases:
+          - refinery planning model
+          - crude valuation model
+          - crude opportunity cost
+          - feedstock optimization model
+          - refinery constraint margin
+          - distillation tray efficiency
+          - furnace tube monitoring
+          - exchanger fouling analysis
+          - catalyst activity monitoring
+          - hydrogen purity management
+          - hydrogen network optimization
+          - sulfur balance analysis
+          - amine solvent management
+          - sour water stripping
+          - steam balance optimization
+          - flare minimization strategy
+          - refinery loss accounting
+          - hydrocarbon loss monitoring
+          - refinery turnaround readiness
+          - process safety criticality
+          - unit constraint removal
+          - refinery debottleneck study
+          - product margin optimization
+          - refinery working capital
+          - carbon abatement planning
+      - id: mining_operations
+        phrases:
+          - mineral inventory reconciliation
+          - reserve depletion tracking
+          - grade control reconciliation
+          - resource model validation
+          - kriging variance analysis
+          - conditional simulation model
+          - mine design optimization
+          - bench phase sequencing
+          - waste dump scheduling
+          - haulage cost modeling
+          - payload compliance monitoring
+          - equipment dispatch efficiency
+          - drill pattern optimization
+          - blast fragmentation control
+          - ore boundary control
+          - dilution reconciliation analysis
+          - metallurgical recovery model
+          - plant throughput forecast
+          - concentrate moisture control
+          - tailings deposition strategy
+          - tailings beach management
+          - pit dewatering strategy
+          - slope radar monitoring
+          - mine rehabilitation planning
+          - closure provision estimate
