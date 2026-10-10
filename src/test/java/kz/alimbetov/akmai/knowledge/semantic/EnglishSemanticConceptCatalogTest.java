@@ -17,7 +17,7 @@ class EnglishSemanticConceptCatalogTest {
     @Test
     void corpusContainsCuratedPhraseConceptsForEveryDomain() {
         assertThat(catalog.version()).isEqualTo("semantic-concepts-en-v2");
-        assertThat(catalog.concepts()).hasSize(484);
+        assertThat(catalog.concepts()).hasSize(584);
 
         Map<String, Long> byDomain = catalog.concepts().stream()
                 .collect(Collectors.groupingBy(
@@ -27,7 +27,7 @@ class EnglishSemanticConceptCatalogTest {
 
         assertThat(byDomain.keySet())
                 .containsExactlyInAnyOrderElementsOf(domains.domainIds());
-        assertThat(byDomain.get("finance_banking")).isEqualTo(124L);
+        assertThat(byDomain.get("finance_banking")).isEqualTo(224L);
         byDomain.entrySet().stream()
                 .filter(entry -> !entry.getKey().equals("finance_banking"))
                 .forEach(entry -> assertThat(entry.getValue())
@@ -36,7 +36,7 @@ class EnglishSemanticConceptCatalogTest {
     }
 
     @Test
-    void financeBatchAAddsTwentyFiveConceptsPerExistingSubdomain() {
+    void financeBatchesAddFiftyConceptsPerExistingSubdomain() {
         Map<String, Long> financeBySubdomain = catalog
                 .conceptsForDomain("finance_banking")
                 .stream()
@@ -46,10 +46,26 @@ class EnglishSemanticConceptCatalogTest {
                 ));
 
         assertThat(financeBySubdomain)
-                .containsEntry("lending_credit", 31L)
-                .containsEntry("deposits_liquidity", 31L)
-                .containsEntry("risk_capital", 31L)
-                .containsEntry("payments_compliance", 31L);
+                .containsEntry("lending_credit", 56L)
+                .containsEntry("deposits_liquidity", 56L)
+                .containsEntry("risk_capital", 56L)
+                .containsEntry("payments_compliance", 56L);
+    }
+
+    @Test
+    void representativeBatchBConceptsRemainStableAndClassified() {
+        assertThat(catalog.require(
+                "finance_banking.lending_credit.project_finance_lending"
+        ).subdomainId()).isEqualTo("lending_credit");
+        assertThat(catalog.require(
+                "finance_banking.deposits_liquidity.liquidity_survival_horizon"
+        ).subdomainId()).isEqualTo("deposits_liquidity");
+        assertThat(catalog.require(
+                "finance_banking.risk_capital.expected_shortfall_measure"
+        ).subdomainId()).isEqualTo("risk_capital");
+        assertThat(catalog.require(
+                "finance_banking.payments_compliance.source_of_wealth_verification"
+        ).subdomainId()).isEqualTo("payments_compliance");
     }
 
     @Test
