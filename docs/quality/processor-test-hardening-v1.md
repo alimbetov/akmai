@@ -20,21 +20,37 @@ The repository does not currently publish a class-by-class JaCoCo coverage basel
 
 Raw line coverage is not accepted as a substitute for concurrency and failure-model coverage.
 
+## Execution status
+
+Implemented on this branch, but not considered quality-stable until exact-head CI is green:
+
+- `AsyncIngestionScheduler` — direct polling, capacity, claim-failure, rejection/retry and backlog-observation contracts;
+- `AsyncIngestionHeartbeat` — renewal success, lost ownership, renewal failure isolation, duplicate registration and close semantics;
+- `GenerationReconciliationScheduler` — disabled gate, early-stop, run bound and propagated failure;
+- `RetentionScheduler` — disabled gate, stale-recovery bound, drain budget and failure preservation;
+- `ReembeddingLeaseHeartbeatScheduler` and `ReembeddingStartupRunner` — delegation, ownership and startup orchestration boundaries;
+- `AdaptiveGraphDreamScheduler` — explicit trigger delegation/failure contract;
+- `RetentionEconomicsSampler` — disabled and failure paths in addition to success metrics;
+- `ParallelIngestionExecutor` — large-input bounded execution, maximum in-flight concurrency and cancellation of sibling work after exceptional completion;
+- `AdaptiveGraphMaintenanceScheduler` — static/runtime safety gate, runtime disable between batches, early-stop, `maxBatchesPerRun` bound and failure metrics.
+
+Publication replay is not being duplicated blindly: the repository already has publication contract, concurrent publication, persistence-coordinator and async replay-recovery evidence. Additional tests should only be added when they prove a missing side-effect or round-trip invariant.
+
 ## Inventory and priority
 
-| Area | Production component | Current evidence | Gap | Priority |
+| Area | Production component | Evidence after this branch | Remaining gap | Priority |
 |---|---|---|---|---|
-| Async ingestion dispatch | `AsyncIngestionScheduler` | worker/repository/replay tests | no direct poll/backpressure/rejection test although blueprint names one | P0 |
-| Reconciliation orchestration | `GenerationReconciliationScheduler` | service multipod + observability tests | loop bound, early stop and disabled gate need direct control-flow proof | P0 |
-| Retention orchestration | `RetentionScheduler` | worker-pool + observability + PostgreSQL recovery tests | disabled gate and stale-recovery batch bounds need direct proof | P0 |
-| Re-embedding heartbeat | `ReembeddingLeaseHeartbeatScheduler` | HA/lease integration below scheduler | scheduled delegation/failure propagation boundary has no direct test | P0 |
-| Dream trigger | `AdaptiveGraphDreamScheduler` | coordinator/lease/fencing tests | trigger boundary has no direct executable contract | P0 |
-| Retention economics | `RetentionEconomicsSampler` | success metric test | disabled and sampling-failure isolation branches are shallow | P1 |
-| Ingestion chunk executor | `ParallelIngestionExecutor` | bounded large-document test | saturation/failure cancellation must remain bounded | P1 |
-| Generation publication | `GenerationPublicationService` / `PersistenceCoordinator` | persistence/failure-model/integration tests | verify no extra publication round-trips/side effects under replay | P1 |
-| Dream coordinator | `AdaptiveGraphDreamCoordinator` | coordinator/lease/checkpoint/candidate tests | load-budget and timeout/fencing regression matrix | P1 |
-| Graph maintenance | `AdaptiveGraphMaintenanceScheduler` + maintenance transaction | multipod/integration tests | sustained bounded-batch progression and rollback stress | P1 |
-| Audit partition maintenance | `AuditPartitionMaintenanceScheduler` | PostgreSQL advisory-lock integration test | repeated contender stress | P2 |
+| Async ingestion dispatch | `AsyncIngestionScheduler` | direct scheduler + worker/repository/replay tests | exact-head CI / load qualification | P0 implemented |
+| Reconciliation orchestration | `GenerationReconciliationScheduler` | service multipod + observability + direct control-flow tests | exact-head CI | P0 implemented |
+| Retention orchestration | `RetentionScheduler` | worker-pool + observability + PostgreSQL recovery + direct control-flow tests | exact-head CI | P0 implemented |
+| Re-embedding heartbeat | `ReembeddingLeaseHeartbeatScheduler` | direct scheduler + HA/lease integration | exact-head CI | P0 implemented |
+| Dream trigger | `AdaptiveGraphDreamScheduler` | direct scheduler + coordinator/lease/fencing tests | exact-head CI | P0 implemented |
+| Retention economics | `RetentionEconomicsSampler` | positive/disabled/failure tests | no material orchestration gap | P1 implemented |
+| Ingestion chunk executor | `ParallelIngestionExecutor` | large-input, bounded-concurrency and exceptional-cancellation tests | release load matrix | P1 implemented |
+| Generation publication | `GenerationPublicationService` / `PersistenceCoordinator` | publication/replay/concurrency/failure-model evidence | only add call-count tests for a demonstrated missing invariant | P1 reassessed |
+| Dream coordinator | `AdaptiveGraphDreamCoordinator` | coordinator/lease/checkpoint/candidate tests | deterministic budget/timeout/fencing stress matrix | P1 remaining |
+| Graph maintenance | `AdaptiveGraphMaintenanceScheduler` + maintenance transaction | multipod/integration + direct scheduler bound/failure tests | deeper transactional rollback stress only | P1 substantially covered |
+| Audit partition maintenance | `AuditPartitionMaintenanceScheduler` | PostgreSQL advisory-lock integration test | repeated contender stress | P2 remaining |
 
 ## P0 acceptance contracts
 
@@ -73,6 +89,7 @@ Performance tests in this pass MUST be deterministic and CI-safe:
 - assert bounded submissions and bounded claims rather than elapsed milliseconds;
 - prove backpressure when all permits are occupied;
 - prove capacity recovery after completion/failure/rejection;
+- prove sibling work is cancelled after an exceptional completion when the processor contract requires fail-fast behavior;
 - avoid sleeps where latches/captured tasks can prove state;
 - avoid creating one executor per document/chunk;
 - preserve existing shared bounded executors;
@@ -80,23 +97,25 @@ Performance tests in this pass MUST be deterministic and CI-safe:
 
 Release/load qualification remains separate and should exercise document concurrency `1 / 3 / 5 / 8`, JDBC-pool saturation, embedding throttling, queue wait p95/p99 and multi-pod lease recovery.
 
-## P1 follow-up
+## Remaining work
 
-After P0 is green:
+After exact-head CI is green:
 
-1. extend `ParallelIngestionExecutorTest` with saturation and exceptional-completion cases;
-2. add publication replay call-count/side-effect regression checks;
-3. add Dream budget/timeout stress tests with deterministic fake stores;
-4. add maintenance batch-progression/rollback stress cases;
-5. record benchmark evidence for the async worker `1 / 3 / 5 / 8` matrix.
+1. add deterministic Dream coordinator stress cases for budget exhaustion, timeout and stale fencing without ANN parallelism;
+2. add maintenance transaction rollback stress only where existing multipod tests do not already prove the invariant;
+3. add repeated advisory-lock contender stress for audit partition maintenance;
+4. run async-ingestion load qualification at document concurrency `1 / 3 / 5 / 8` and record throughput, queue wait p95/p99, DB-pool saturation and retry behavior;
+5. only after those checks, promote this roadmap from `ACTIVE QUALITY ROADMAP` to a completed/verified baseline.
 
 ## Exit criteria
 
-P0 is complete only when:
+This hardening pass is complete only when:
 
 - every P0 component has direct executable positive and negative/control-flow tests;
 - async scheduler tests prove bounded capacity and rejection recovery;
-- no new unbounded executor, queue, retry loop, or wall-clock-dependent test is introduced;
+- processor saturation and failure paths remain bounded and do not leak permits/ownership;
+- no new unbounded executor, queue, retry loop, or wall-clock-dependent microbenchmark gate is introduced;
 - `mvn spotless:check` passes;
 - `mvn clean verify` passes on the exact branch head;
-- any defect discovered by tests is fixed in this same branch with a regression test.
+- any defect discovered by tests is fixed in this same branch with a regression test;
+- load qualification evidence is recorded separately from deterministic CI contracts.
