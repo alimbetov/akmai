@@ -12,12 +12,12 @@ class EnglishSemanticConceptCatalogTest {
     private static final Map<String, Long> EXPECTED_DOMAIN_COUNTS = Map.ofEntries(
             Map.entry("finance_banking", 424L),
             Map.entry("insurance", 424L),
-            Map.entry("energy_utilities", 324L),
-            Map.entry("oil_gas_mining", 324L),
-            Map.entry("manufacturing", 324L),
-            Map.entry("construction_real_estate", 324L),
-            Map.entry("transport_logistics", 324L),
-            Map.entry("agriculture_food", 324L),
+            Map.entry("energy_utilities", 424L),
+            Map.entry("oil_gas_mining", 424L),
+            Map.entry("manufacturing", 424L),
+            Map.entry("construction_real_estate", 424L),
+            Map.entry("transport_logistics", 424L),
+            Map.entry("agriculture_food", 424L),
             Map.entry("mathematics_statistics", 24L),
             Map.entry("physics_astronomy", 24L),
             Map.entry("chemistry_materials", 24L),
@@ -34,7 +34,7 @@ class EnglishSemanticConceptCatalogTest {
     @Test
     void corpusContainsExpectedCuratedConceptCounts() {
         assertThat(catalog.version()).isEqualTo("semantic-concepts-en-v2");
-        assertThat(catalog.concepts()).hasSize(2984);
+        assertThat(catalog.concepts()).hasSize(3584);
 
         Map<String, Long> byDomain = catalog.concepts().stream()
                 .collect(Collectors.groupingBy(
@@ -47,19 +47,25 @@ class EnglishSemanticConceptCatalogTest {
     }
 
     @Test
-    void financeAndInsuranceContainOneHundredNewConceptsPerSubdomain() {
+    void expandedDomainsContainOneHundredNewConceptsPerSubdomain() {
         assertSubdomainCounts("finance_banking", 106L);
         assertSubdomainCounts("insurance", 106L);
+        assertSubdomainCounts("energy_utilities", 106L);
+        assertSubdomainCounts("oil_gas_mining", 106L);
+        assertSubdomainCounts("manufacturing", 106L);
+        assertSubdomainCounts("construction_real_estate", 106L);
+        assertSubdomainCounts("transport_logistics", 106L);
+        assertSubdomainCounts("agriculture_food", 106L);
     }
 
     @Test
-    void stageTwoDomainsContainSeventyFiveNewConceptsPerSubdomain() {
-        assertSubdomainCounts("energy_utilities", 81L);
-        assertSubdomainCounts("oil_gas_mining", 81L);
-        assertSubdomainCounts("manufacturing", 81L);
-        assertSubdomainCounts("construction_real_estate", 81L);
-        assertSubdomainCounts("transport_logistics", 81L);
-        assertSubdomainCounts("agriculture_food", 81L);
+    void representativeStageTwoBatchDConceptsRemainStableAndClassified() {
+        assertConcept("energy_utilities.power_grid.probabilistic_load_flow", "power_grid");
+        assertConcept("oil_gas_mining.midstream_operations.high_consequence_area", "midstream_operations");
+        assertConcept("manufacturing.maintenance_reliability.lifecycle_maintenance_cost", "maintenance_reliability");
+        assertConcept("construction_real_estate.project_controls.completion_probability_estimate", "project_controls");
+        assertConcept("transport_logistics.supply_chain.total_landed_cost", "supply_chain");
+        assertConcept("agriculture_food.food_safety.traceability_response_time", "food_safety");
     }
 
     @Test
@@ -78,8 +84,8 @@ class EnglishSemanticConceptCatalogTest {
         assertConcept("oil_gas_mining.mining_operations.cutoff_grade_optimization", "mining_operations");
         assertConcept("manufacturing.maintenance_reliability.weibull_failure_analysis", "maintenance_reliability");
         assertConcept("construction_real_estate.project_controls.time_impact_analysis", "project_controls");
-        assertConcept("transport_logistics.warehousing_distribution.warehouse_slotting_optimization", "warehousing_distribution");
-        assertConcept("agriculture_food.food_safety.food_fraud_vulnerability", "food_safety");
+        assertConcept("transport_logistics.warehousing_distribution.dynamic_slotting_policy", "warehousing_distribution");
+        assertConcept("agriculture_food.food_safety.authenticity_risk_assessment", "food_safety");
     }
 
     @Test
