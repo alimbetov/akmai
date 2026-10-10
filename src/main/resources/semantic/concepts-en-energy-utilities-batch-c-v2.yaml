@@ -1,0 +1,112 @@
+version: semantic-concepts-en-energy-utilities-batch-c-v2
+domains:
+  - domainId: energy_utilities
+    subdomains:
+      - id: power_generation
+        phrases:
+          - generator startup sequence
+          - generator shutdown sequence
+          - hot start capability
+          - cold start capability
+          - warm start capability
+          - minimum up time
+          - minimum down time
+          - ramping reserve requirement
+          - synchronized reserve response
+          - governor response testing
+          - turbine heat rate
+          - boiler heat balance
+          - condenser vacuum performance
+          - cooling tower performance
+          - auxiliary load optimization
+          - generator efficiency curve
+          - unit derating analysis
+          - outage extension risk
+          - maintenance outage optimization
+          - generation reliability index
+          - fuel burn optimization
+          - fuel quality management
+          - emissions compliance dispatch
+          - combined heat dispatch
+          - cogeneration load optimization
+      - id: power_grid
+        phrases:
+          - state estimation analysis
+          - optimal power flow
+          - dynamic security assessment
+          - transient voltage recovery
+          - frequency stability analysis
+          - inertia adequacy assessment
+          - oscillation damping analysis
+          - power system harmonics
+          - voltage profile optimization
+          - reactive reserve margin
+          - transformer thermal rating
+          - dynamic line rating
+          - conductor sag monitoring
+          - feeder hosting capacity
+          - distribution voltage control
+          - conservation voltage reduction
+          - distributed generation hosting
+          - microgrid islanding strategy
+          - black start restoration
+          - transmission outage coordination
+          - substation reliability assessment
+          - protection system misoperation
+          - wide area monitoring
+          - synchrophasor data analysis
+          - grid forming controls
+      - id: energy_markets
+        phrases:
+          - day ahead bidding
+          - intraday power trading
+          - real time market
+          - scarcity pricing mechanism
+          - uplift payment allocation
+          - imbalance price exposure
+          - nodal price forecast
+          - basis risk management
+          - congestion hedge strategy
+          - capacity accreditation method
+          - resource adequacy market
+          - ancillary reserve pricing
+          - frequency regulation pricing
+          - balancing responsibility agreement
+          - retail supplier margin
+          - customer switching rate
+          - tariff revenue reconciliation
+          - network tariff design
+          - cost reflective tariff
+          - regulated return allowance
+          - stranded cost recovery
+          - demand response settlement
+          - market liquidity analysis
+          - power trading limit
+          - energy portfolio optimization
+      - id: renewable_energy
+        phrases:
+          - photovoltaic degradation rate
+          - solar clipping analysis
+          - solar soiling loss
+          - solar shading analysis
+          - inverter loading ratio
+          - wind turbine power curve
+          - wind turbine curtailment
+          - wake steering strategy
+          - wind resource uncertainty
+          - turbine lifetime extension
+          - storage degradation cost
+          - battery cycle aging
+          - battery calendar aging
+          - storage capacity fade
+          - battery thermal management
+          - battery dispatch optimization
+          - storage revenue stacking
+          - renewable firming strategy
+          - renewable forecast bias
+          - renewable congestion exposure
+          - renewable basis risk
+          - interconnection upgrade cost
+          - grid connection curtailment
+          - renewable merchant pricing
+          - hybrid plant dispatch
