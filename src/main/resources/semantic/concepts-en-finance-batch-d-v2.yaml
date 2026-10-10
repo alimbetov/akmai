@@ -20,8 +20,8 @@ domains:
           - receivables financing structure
           - inventory financing structure
           - export credit financing
-          - trade finance facility
-          - bridge loan financing
+          - documentary trade finance
+          - acquisition bridge financing
           - mezzanine debt financing
           - subordinated loan structure
           - credit portfolio diversification
@@ -31,8 +31,8 @@ domains:
           - default recovery strategy
       - id: deposits_liquidity
         phrases:
-          - deposit insurance coverage
-          - deposit pricing strategy
+          - insured deposit protection
+          - deposit rate strategy
           - deposit renewal behavior
           - early withdrawal behavior
           - retail deposit segmentation
@@ -63,8 +63,8 @@ domains:
           - tier two capital
           - additional tier one capital
           - capital instrument eligibility
-          - capital buffer requirement
-          - capital management policy
+          - capital buffer calibration
+          - capital management governance
           - capital issuance program
           - capital redemption approval
           - risk adjusted capital return
@@ -95,9 +95,9 @@ domains:
           - suspicious behavior detection
           - unusual activity monitoring
           - sanctions evasion detection
-          - payment fraud prevention
+          - payment fraud control
           - social engineering fraud
-          - card not present fraud
+          - remote card fraud
           - merchant transaction monitoring
           - payment dispute management
           - payment chargeback management
