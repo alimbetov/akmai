@@ -27,7 +27,14 @@ public class EnglishSemanticConceptCatalog {
             "semantic/concepts-en-finance-batch-d-v2.yaml",
             "semantic/concepts-en-insurance-batch-a-v2.yaml",
             "semantic/concepts-en-insurance-batch-b-v2.yaml",
-            "semantic/concepts-en-insurance-batch-c-v2.yaml"
+            "semantic/concepts-en-insurance-batch-c-v2.yaml",
+            "semantic/concepts-en-insurance-batch-d-v2.yaml",
+            "semantic/concepts-en-energy-utilities-batch-a-v2.yaml",
+            "semantic/concepts-en-oil-gas-mining-batch-a-v2.yaml",
+            "semantic/concepts-en-manufacturing-batch-a-v2.yaml",
+            "semantic/concepts-en-construction-real-estate-batch-a-v2.yaml",
+            "semantic/concepts-en-transport-logistics-batch-a-v2.yaml",
+            "semantic/concepts-en-agriculture-food-batch-a-v2.yaml"
     );
     private static final String COMBINED_VERSION = "semantic-concepts-en-v2";
 
@@ -35,9 +42,7 @@ public class EnglishSemanticConceptCatalog {
     private final List<SemanticConcept> concepts;
     private final Map<String, SemanticConcept> byId;
 
-    public EnglishSemanticConceptCatalog(
-            SemanticDomainCatalog domainCatalog
-    ) {
+    public EnglishSemanticConceptCatalog(SemanticDomainCatalog domainCatalog) {
         this(domainCatalog, loadDefinition());
     }
 
@@ -45,27 +50,19 @@ public class EnglishSemanticConceptCatalog {
             SemanticDomainCatalog domainCatalog,
             EnglishConceptCorpusDefinition definition
     ) {
-        if (definition == null
-                || definition.version() == null
-                || definition.version().isBlank()) {
-            throw new IllegalArgumentException(
-                    "English semantic concept corpus version is required"
-            );
+        if (definition == null || definition.version() == null || definition.version().isBlank()) {
+            throw new IllegalArgumentException("English semantic concept corpus version is required");
         }
         this.version = definition.version();
 
-        LinkedHashMap<String, SemanticConcept> conceptsById =
-                new LinkedHashMap<>();
-        LinkedHashMap<String, String> phraseOwners =
-                new LinkedHashMap<>();
+        LinkedHashMap<String, SemanticConcept> conceptsById = new LinkedHashMap<>();
+        LinkedHashMap<String, String> phraseOwners = new LinkedHashMap<>();
         LinkedHashSet<String> coveredDomains = new LinkedHashSet<>();
 
         for (var domain : definition.domains()) {
             domainCatalog.require(domain.domainId());
             if (!coveredDomains.add(domain.domainId())) {
-                throw new IllegalArgumentException(
-                        "Duplicate concept domain: " + domain.domainId()
-                );
+                throw new IllegalArgumentException("Duplicate concept domain: " + domain.domainId());
             }
 
             Set<String> subdomainIds = new LinkedHashSet<>();
@@ -73,44 +70,24 @@ public class EnglishSemanticConceptCatalog {
                 validateSubdomainId(subdomain.id());
                 if (!subdomainIds.add(subdomain.id())) {
                     throw new IllegalArgumentException(
-                            "Duplicate semantic subdomain: "
-                                    + domain.domainId()
-                                    + "/"
-                                    + subdomain.id()
+                            "Duplicate semantic subdomain: " + domain.domainId() + "/" + subdomain.id()
                     );
                 }
 
                 for (String phrase : subdomain.phrases()) {
                     String normalized = normalizePhrase(phrase);
-                    validatePhrase(
-                            domain.domainId(),
-                            subdomain.id(),
-                            normalized
-                    );
+                    validatePhrase(domain.domainId(), subdomain.id(), normalized);
 
-                    String owner = domain.domainId()
-                            + "/"
-                            + subdomain.id();
-                    String existingOwner = phraseOwners.putIfAbsent(
-                            normalized,
-                            owner
-                    );
+                    String owner = domain.domainId() + "/" + subdomain.id();
+                    String existingOwner = phraseOwners.putIfAbsent(normalized, owner);
                     if (existingOwner != null) {
                         throw new IllegalArgumentException(
                                 "Duplicate canonical semantic phrase after normalization: '"
-                                        + normalized
-                                        + "' owned by "
-                                        + existingOwner
-                                        + " and "
-                                        + owner
+                                        + normalized + "' owned by " + existingOwner + " and " + owner
                         );
                     }
 
-                    String id = conceptId(
-                            domain.domainId(),
-                            subdomain.id(),
-                            normalized
-                    );
+                    String id = conceptId(domain.domainId(), subdomain.id(), normalized);
                     SemanticConcept concept = new SemanticConcept(
                             id,
                             domain.domainId(),
@@ -118,9 +95,7 @@ public class EnglishSemanticConceptCatalog {
                             normalized
                     );
                     if (conceptsById.putIfAbsent(id, concept) != null) {
-                        throw new IllegalArgumentException(
-                                "Duplicate semantic concept id: " + id
-                        );
+                        throw new IllegalArgumentException("Duplicate semantic concept id: " + id);
                     }
                 }
             }
@@ -129,9 +104,7 @@ public class EnglishSemanticConceptCatalog {
         if (!coveredDomains.equals(domainCatalog.domainIds())) {
             throw new IllegalArgumentException(
                     "English semantic concept corpus must cover every domain; expected="
-                            + domainCatalog.domainIds()
-                            + ", actual="
-                            + coveredDomains
+                            + domainCatalog.domainIds() + ", actual=" + coveredDomains
             );
         }
 
@@ -139,10 +112,7 @@ public class EnglishSemanticConceptCatalog {
         this.concepts = conceptsById.values().stream()
                 .sorted(
                         Comparator.comparingInt(
-                                        (SemanticConcept concept) ->
-                                                tokenCount(
-                                                        concept.preferredPhrase()
-                                                )
+                                        (SemanticConcept concept) -> tokenCount(concept.preferredPhrase())
                                 )
                                 .reversed()
                                 .thenComparing(SemanticConcept::id)
@@ -161,9 +131,7 @@ public class EnglishSemanticConceptCatalog {
     public SemanticConcept require(String id) {
         SemanticConcept concept = byId.get(id);
         if (concept == null) {
-            throw new IllegalArgumentException(
-                    "Unknown semantic concept: " + id
-            );
+            throw new IllegalArgumentException("Unknown semantic concept: " + id);
         }
         return concept;
     }
@@ -182,29 +150,18 @@ public class EnglishSemanticConceptCatalog {
         }
     }
 
-    private static void validatePhrase(
-            String domainId,
-            String subdomainId,
-            String phrase
-    ) {
+    private static void validatePhrase(String domainId, String subdomainId, String phrase) {
         int tokens = tokenCount(phrase);
         if (tokens < 2 || tokens > 6) {
             throw new IllegalArgumentException(
                     "primary semantic concepts must contain 2-6 words: "
-                            + domainId
-                            + "/"
-                            + subdomainId
-                            + " -> "
-                            + phrase
+                            + domainId + "/" + subdomainId + " -> " + phrase
             );
         }
     }
 
     static String normalizePhrase(String value) {
-        return Normalizer.normalize(
-                        value == null ? "" : value,
-                        Normalizer.Form.NFC
-                )
+        return Normalizer.normalize(value == null ? "" : value, Normalizer.Form.NFC)
                 .toLowerCase(Locale.ROOT)
                 .trim()
                 .replaceAll("[^\\p{L}\\p{N}]+", " ")
@@ -218,28 +175,16 @@ public class EnglishSemanticConceptCatalog {
         return value.split("\\s+").length;
     }
 
-    private static String conceptId(
-            String domainId,
-            String subdomainId,
-            String phrase
-    ) {
-        return domainId
-                + "."
-                + subdomainId
-                + "."
-                + phrase.replace(' ', '_');
+    private static String conceptId(String domainId, String subdomainId, String phrase) {
+        return domainId + "." + subdomainId + "." + phrase.replace(' ', '_');
     }
 
     private static EnglishConceptCorpusDefinition loadDefinition() {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        EnglishConceptCorpusDefinition base = loadDefinition(
-                mapper,
-                BASE_RESOURCE
-        );
-        List<EnglishConceptCorpusDefinition> supplements =
-                SUPPLEMENTAL_RESOURCES.stream()
-                        .map(resource -> loadDefinition(mapper, resource))
-                        .toList();
+        EnglishConceptCorpusDefinition base = loadDefinition(mapper, BASE_RESOURCE);
+        List<EnglishConceptCorpusDefinition> supplements = SUPPLEMENTAL_RESOURCES.stream()
+                .map(resource -> loadDefinition(mapper, resource))
+                .toList();
         return mergeDefinitions(base, supplements);
     }
 
@@ -247,61 +192,43 @@ public class EnglishSemanticConceptCatalog {
             EnglishConceptCorpusDefinition base,
             List<EnglishConceptCorpusDefinition> supplements
     ) {
-        LinkedHashMap<String, LinkedHashMap<String, List<String>>> merged =
-                new LinkedHashMap<>();
-
+        LinkedHashMap<String, LinkedHashMap<String, List<String>>> merged = new LinkedHashMap<>();
         appendDefinition(merged, base);
         for (EnglishConceptCorpusDefinition supplement : supplements) {
             appendDefinition(merged, supplement);
         }
 
-        List<EnglishConceptCorpusDefinition.DomainConcepts> domains =
-                merged.entrySet().stream()
-                        .map(domainEntry ->
-                                new EnglishConceptCorpusDefinition.DomainConcepts(
-                                        domainEntry.getKey(),
-                                        domainEntry.getValue().entrySet().stream()
-                                                .map(subdomainEntry ->
-                                                        new EnglishConceptCorpusDefinition.SubdomainConcepts(
-                                                                subdomainEntry.getKey(),
-                                                                subdomainEntry.getValue()
-                                                        )
-                                                )
-                                                .toList()
-                                )
-                        )
-                        .toList();
+        List<EnglishConceptCorpusDefinition.DomainConcepts> domains = merged.entrySet().stream()
+                .map(domainEntry -> new EnglishConceptCorpusDefinition.DomainConcepts(
+                        domainEntry.getKey(),
+                        domainEntry.getValue().entrySet().stream()
+                                .map(subdomainEntry -> new EnglishConceptCorpusDefinition.SubdomainConcepts(
+                                        subdomainEntry.getKey(),
+                                        subdomainEntry.getValue()
+                                ))
+                                .toList()
+                ))
+                .toList();
 
-        return new EnglishConceptCorpusDefinition(
-                COMBINED_VERSION,
-                domains
-        );
+        return new EnglishConceptCorpusDefinition(COMBINED_VERSION, domains);
     }
 
     private static void appendDefinition(
             LinkedHashMap<String, LinkedHashMap<String, List<String>>> merged,
             EnglishConceptCorpusDefinition definition
     ) {
-        if (definition == null
-                || definition.version() == null
-                || definition.version().isBlank()) {
-            throw new IllegalArgumentException(
-                    "English semantic concept corpus version is required"
-            );
+        if (definition == null || definition.version() == null || definition.version().isBlank()) {
+            throw new IllegalArgumentException("English semantic concept corpus version is required");
         }
         for (var domain : definition.domains()) {
-            LinkedHashMap<String, List<String>> subdomains =
-                    merged.computeIfAbsent(
-                            domain.domainId(),
-                            ignored -> new LinkedHashMap<>()
-                    );
+            LinkedHashMap<String, List<String>> subdomains = merged.computeIfAbsent(
+                    domain.domainId(),
+                    ignored -> new LinkedHashMap<>()
+            );
             for (var subdomain : domain.subdomains()) {
                 List<String> current = subdomains.get(subdomain.id());
                 if (current == null) {
-                    subdomains.put(
-                            subdomain.id(),
-                            List.copyOf(subdomain.phrases())
-                    );
+                    subdomains.put(subdomain.id(), List.copyOf(subdomain.phrases()));
                     continue;
                 }
                 ArrayList<String> combined = new ArrayList<>(current);
@@ -311,15 +238,9 @@ public class EnglishSemanticConceptCatalog {
         }
     }
 
-    private static EnglishConceptCorpusDefinition loadDefinition(
-            ObjectMapper mapper,
-            String resource
-    ) {
+    private static EnglishConceptCorpusDefinition loadDefinition(ObjectMapper mapper, String resource) {
         try (var input = new ClassPathResource(resource).getInputStream()) {
-            return mapper.readValue(
-                    input,
-                    EnglishConceptCorpusDefinition.class
-            );
+            return mapper.readValue(input, EnglishConceptCorpusDefinition.class);
         } catch (IOException exception) {
             throw new UncheckedIOException(
                     "Cannot load English semantic concept corpus " + resource,
