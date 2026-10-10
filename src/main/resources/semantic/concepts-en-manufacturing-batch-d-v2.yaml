@@ -1,0 +1,112 @@
+version: semantic-concepts-en-manufacturing-batch-d-v2
+domains:
+  - domainId: manufacturing
+    subdomains:
+      - id: production_systems
+        phrases:
+          - demand capacity reconciliation
+          - finite loading strategy
+          - constrained resource planning
+          - production freeze horizon
+          - planning time fence
+          - campaign changeover strategy
+          - batch campaign efficiency
+          - manufacturing order sequencing
+          - queue discipline policy
+          - bottleneck throughput target
+          - constraint buffer penetration
+          - work center saturation
+          - shift capacity utilization
+          - labor flexibility index
+          - cross training coverage
+          - production recovery plan
+          - lost production opportunity
+          - line starvation analysis
+          - line blocking analysis
+          - buffer inventory control
+          - production synchronization method
+          - mixed model sequencing
+          - takt adherence monitoring
+          - production stability index
+          - capacity expansion trigger
+      - id: quality_management
+        phrases:
+          - supplier capability assessment
+          - supplier process maturity
+          - incoming defect containment
+          - inspection escape probability
+          - measurement traceability control
+          - calibration drift analysis
+          - gauge bias correction
+          - process capability target
+          - tolerance capability analysis
+          - design tolerance allocation
+          - deviation permit process
+          - concession approval workflow
+          - nonconformance disposition board
+          - defect root taxonomy
+          - recurring defect analysis
+          - warranty exposure estimate
+          - complaint severity classification
+          - customer escape analysis
+          - layered audit compliance
+          - control plan effectiveness
+          - inspection frequency optimization
+          - quality risk prioritization
+          - prevention cost analysis
+          - appraisal cost analysis
+          - failure cost analysis
+      - id: maintenance_reliability
+        phrases:
+          - reliability centered task
+          - maintenance effectiveness index
+          - preventive maintenance optimization
+          - predictive lead time
+          - failure precursor detection
+          - degradation threshold model
+          - condition monitoring coverage
+          - lubrication contamination index
+          - bearing remaining life
+          - motor insulation health
+          - rotating equipment balance
+          - shaft alignment verification
+          - precision lubrication practice
+          - maintenance planner workload
+          - maintenance scheduling efficiency
+          - planned schedule stability
+          - backlog risk ranking
+          - critical spare availability
+          - spare obsolescence management
+          - repair quality verification
+          - repeat failure rate
+          - bad actor elimination
+          - reliability loss accounting
+          - asset renewal strategy
+          - lifecycle maintenance cost
+      - id: industrial_operations
+        phrases:
+          - process constraint hierarchy
+          - control performance benchmark
+          - valve stiction detection
+          - loop oscillation detection
+          - analyzer calibration drift
+          - instrument fault detection
+          - sensor redundancy validation
+          - alarm load metric
+          - standing alarm reduction
+          - nuisance alarm elimination
+          - operator response reliability
+          - bypass duration monitoring
+          - safety function demand
+          - safety function availability
+          - barrier degradation monitoring
+          - permit risk assessment
+          - energy isolation audit
+          - procedure deviation control
+          - startup readiness assurance
+          - shutdown readiness assurance
+          - operating discipline audit
+          - shift communication quality
+          - utility efficiency index
+          - process loss intensity
+          - environmental performance indicator
