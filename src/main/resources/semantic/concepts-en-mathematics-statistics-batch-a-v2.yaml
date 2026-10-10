@@ -1,0 +1,112 @@
+version: semantic-concepts-en-mathematics-statistics-batch-a-v2
+domains:
+  - domainId: mathematics_statistics
+    subdomains:
+      - id: probability_statistics
+        phrases:
+          - generalized linear model
+          - survival analysis model
+          - bootstrap resampling method
+          - jackknife variance estimate
+          - Markov chain process
+          - Monte Carlo simulation
+          - covariance matrix estimation
+          - robust regression method
+          - quantile regression model
+          - time series decomposition
+          - autoregressive moving average
+          - state space model
+          - Gaussian process regression
+          - kernel density estimation
+          - empirical distribution function
+          - likelihood ratio test
+          - Wald test statistic
+          - score test statistic
+          - multiple testing correction
+          - false discovery rate
+          - statistical power analysis
+          - sample size determination
+          - missing data imputation
+          - stratified sampling estimator
+          - survey variance estimation
+      - id: algebra_geometry
+        phrases:
+          - singular value decomposition
+          - Jordan canonical form
+          - tensor product space
+          - group representation theory
+          - ring homomorphism structure
+          - field extension degree
+          - polynomial ideal basis
+          - Groebner basis computation
+          - affine algebraic variety
+          - projective geometry space
+          - Lie group structure
+          - Lie algebra representation
+          - differential form calculus
+          - Riemannian metric tensor
+          - geodesic curvature analysis
+          - topological vector space
+          - homology group computation
+          - cohomology ring structure
+          - fundamental group calculation
+          - simplicial complex topology
+          - convex polytope geometry
+          - quadratic form classification
+          - matrix condition number
+          - sparse matrix decomposition
+          - orthogonal projection operator
+      - id: optimization
+        phrases:
+          - Lagrangian dual problem
+          - Karush Kuhn Tucker
+          - primal feasibility condition
+          - dual feasibility condition
+          - complementary slackness condition
+          - interior point method
+          - sequential quadratic programming
+          - trust region method
+          - proximal gradient method
+          - coordinate descent method
+          - stochastic gradient method
+          - augmented Lagrangian method
+          - penalty function method
+          - barrier function method
+          - semidefinite programming model
+          - second order cone
+          - mixed integer programming
+          - branch bound optimization
+          - cutting plane method
+          - Benders decomposition method
+          - decomposition optimization strategy
+          - robust optimization model
+          - chance constrained optimization
+          - distributionally robust optimization
+          - optimality gap estimate
+      - id: numerical_methods
+        phrases:
+          - finite element method
+          - finite volume method
+          - spectral discretization method
+          - Runge Kutta integration
+          - multistep integration method
+          - adaptive time stepping
+          - Newton Raphson iteration
+          - quasi Newton method
+          - Krylov subspace method
+          - conjugate gradient method
+          - preconditioned iterative solver
+          - multigrid solution method
+          - sparse direct solver
+          - numerical quadrature rule
+          - interpolation error estimate
+          - polynomial interpolation method
+          - spline interpolation method
+          - Richardson extrapolation method
+          - Monte Carlo integration
+          - eigenvalue iteration method
+          - singular value computation
+          - numerical differentiation scheme
+          - boundary value solver
+          - initial value solver
+          - mesh convergence study
