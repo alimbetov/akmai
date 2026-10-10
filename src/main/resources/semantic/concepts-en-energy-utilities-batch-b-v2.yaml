@@ -6,32 +6,32 @@ domains:
         phrases:
           - unit commitment optimization
           - economic dispatch model
-          - heat rate curve
+          - incremental heat rate
           - generator ramp rate
           - spinning reserve requirement
           - nonspinning reserve capacity
           - ancillary service provision
-          - black start capability
+          - black start readiness
           - generator outage schedule
-          - forced outage rate
+          - equivalent forced outage
           - planned outage factor
           - equivalent availability factor
-          - capacity factor analysis
-          - minimum stable generation
-          - startup cost model
-          - shutdown cost model
+          - unit capacity utilization
+          - minimum generation limit
+          - startup fuel consumption
+          - shutdown fuel consumption
           - generation fuel mix
           - thermal efficiency degradation
-          - boiler efficiency monitoring
+          - boiler combustion efficiency
           - turbine performance testing
           - condenser performance analysis
-          - generator excitation system
+          - excitation system tuning
           - power plant heat balance
           - generation asset strategy
           - generation maintenance window
       - id: power_grid
         phrases:
-          - transmission capacity planning
+          - transmission transfer capability
           - distribution capacity planning
           - contingency power flow
           - n minus one security
@@ -40,16 +40,16 @@ domains:
           - reactive power planning
           - fault level analysis
           - short circuit study
-          - protection coordination study
+          - protection selectivity analysis
           - relay setting coordination
           - substation capacity assessment
-          - transformer loading analysis
+          - transformer thermal loading
           - feeder load balancing
-          - distribution loss analysis
+          - feeder loss calculation
           - network reconfiguration strategy
           - outage restoration plan
           - system restoration sequence
-          - grid congestion management
+          - network congestion relief
           - transmission constraint management
           - distribution automation scheme
           - advanced metering infrastructure
@@ -58,20 +58,20 @@ domains:
           - interconnection impact study
       - id: energy_markets
         phrases:
-          - locational marginal pricing
-          - market clearing price
+          - nodal market settlement
+          - clearing price formation
           - congestion rent calculation
-          - energy imbalance settlement
+          - imbalance settlement calculation
           - bilateral power contract
-          - power purchase agreement
-          - capacity auction design
+          - power offtake agreement
+          - capacity auction clearing
           - ancillary service market
           - balancing settlement mechanism
           - market participant registration
           - settlement interval calculation
           - wholesale market surveillance
           - market power mitigation
-          - congestion revenue rights
+          - congestion hedge rights
           - transmission access tariff
           - distribution use tariff
           - retail electricity tariff
@@ -79,33 +79,33 @@ domains:
           - allowed revenue calculation
           - regulatory asset base
           - demand response market
-          - virtual power plant
+          - aggregated energy portfolio
           - energy trading strategy
           - forward power contract
-          - electricity hedging strategy
+          - power hedge portfolio
       - id: renewable_energy
         phrases:
           - solar resource assessment
-          - wind resource assessment
+          - wind resource characterization
           - photovoltaic performance ratio
           - solar inverter efficiency
           - wind turbine availability
           - wind farm wake loss
           - renewable curtailment analysis
-          - renewable forecasting error
-          - grid forming inverter
+          - forecast error distribution
+          - grid forming control
           - battery state of charge
-          - battery degradation model
+          - battery lifetime model
           - storage roundtrip efficiency
           - energy storage dispatch
           - storage duration requirement
           - renewable capacity factor
-          - renewable project yield
+          - renewable yield assessment
           - hybrid energy system
           - solar storage integration
           - wind storage integration
           - renewable interconnection queue
-          - renewable portfolio standard
+          - clean energy mandate
           - green certificate market
           - renewable project bankability
           - merchant renewable exposure
