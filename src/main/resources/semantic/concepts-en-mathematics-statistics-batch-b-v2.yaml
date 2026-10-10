@@ -1,0 +1,112 @@
+version: semantic-concepts-en-mathematics-statistics-batch-b-v2
+domains:
+  - domainId: mathematics_statistics
+    subdomains:
+      - id: probability_statistics
+        phrases:
+          - Bayesian hierarchical model
+          - Markov chain Monte Carlo
+          - convergence diagnostic statistic
+          - posterior predictive check
+          - importance sampling estimator
+          - rejection sampling algorithm
+          - hidden Markov model
+          - Kalman filter estimate
+          - particle filter method
+          - copula dependence model
+          - extreme value distribution
+          - generalized additive model
+          - mixed effects model
+          - random effects estimator
+          - generalized estimating equation
+          - causal inference estimator
+          - propensity score weighting
+          - instrumental variable estimator
+          - regression discontinuity design
+          - difference in differences
+          - permutation test procedure
+          - sequential probability test
+          - empirical Bayes estimate
+          - shrinkage covariance estimator
+          - canonical correlation analysis
+      - id: algebra_geometry
+        phrases:
+          - spectral theorem application
+          - Schur decomposition method
+          - Cholesky factorization method
+          - QR factorization method
+          - matrix exponential computation
+          - multilinear tensor decomposition
+          - exterior algebra construction
+          - quotient group structure
+          - Sylow subgroup theorem
+          - Galois group analysis
+          - module decomposition theorem
+          - Noetherian ring property
+          - algebraic number field
+          - elliptic curve group
+          - algebraic topology invariant
+          - homotopy group computation
+          - fiber bundle structure
+          - tangent bundle construction
+          - symplectic manifold structure
+          - affine connection geometry
+          - curvature tensor analysis
+          - sectional curvature measure
+          - manifold embedding theorem
+          - computational geometry triangulation
+          - Voronoi diagram construction
+      - id: optimization
+        phrases:
+          - convex conjugate function
+          - Fenchel duality relation
+          - subgradient optimization method
+          - bundle method optimization
+          - mirror descent algorithm
+          - accelerated gradient method
+          - projected gradient method
+          - alternating direction multiplier method
+          - successive convex approximation
+          - majorization minimization algorithm
+          - stochastic approximation method
+          - sample average approximation
+          - scenario optimization method
+          - bilevel optimization problem
+          - mathematical program equilibrium
+          - complementarity problem formulation
+          - network flow optimization
+          - assignment optimization problem
+          - vehicle routing formulation
+          - facility location model
+          - optimal transport problem
+          - model predictive control
+          - derivative free optimization
+          - Bayesian optimization method
+          - evolutionary optimization algorithm
+      - id: numerical_methods
+        phrases:
+          - LU factorization algorithm
+          - GMRES iterative method
+          - BiCGSTAB iterative method
+          - domain decomposition method
+          - operator splitting method
+          - implicit time integration
+          - explicit time integration
+          - adaptive mesh refinement
+          - finite element assembly
+          - spectral element method
+          - boundary element method
+          - fast multipole method
+          - automatic differentiation method
+          - adjoint sensitivity method
+          - numerical continuation method
+          - bifurcation tracking method
+          - shooting method solver
+          - collocation solution method
+          - method of lines discretization
+          - level set method
+          - fast marching method
+          - conservation law solver
+          - Riemann problem solver
+          - truncation error analysis
+          - floating point error
