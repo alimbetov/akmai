@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.knowledge.ingestion;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -97,6 +98,45 @@ class ParallelIngestionExecutorTest {
         } finally {
             releaseFirstWave.countDown();
             caller.shutdownNow();
+            ingestionExecutor.shutdownNow();
+        }
+    }
+
+    @Test
+    void exceptionalCompletionCancelsOtherInFlightEnrichment() throws Exception {
+        ExecutorService ingestionExecutor = BoundedExecutorFactory.create(2, 2);
+        IdentifierExtractor identifiers = mock(IdentifierExtractor.class);
+        CountDownLatch blockerEntered = new CountDownLatch(1);
+        CountDownLatch blockerInterrupted = new CountDownLatch(1);
+        IllegalStateException failure = new IllegalStateException("identifier failure");
+
+        when(identifiers.extract(anyString())).thenAnswer(invocation -> {
+            String text = invocation.getArgument(0);
+            if ("raw 0".equals(text)) {
+                blockerEntered.countDown();
+                try {
+                    new CountDownLatch(1).await();
+                } catch (InterruptedException exception) {
+                    blockerInterrupted.countDown();
+                    Thread.currentThread().interrupt();
+                }
+                return List.of();
+            }
+
+            if (!blockerEntered.await(5, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("blocking chunk did not start");
+            }
+            throw failure;
+        });
+
+        ParallelIngestionExecutor service =
+                new ParallelIngestionExecutor(identifiers, ingestionExecutor);
+
+        try {
+            assertThatThrownBy(() -> service.execute(List.of(chunk(0), chunk(1))))
+                    .isSameAs(failure);
+            assertThat(blockerInterrupted.await(2, TimeUnit.SECONDS)).isTrue();
+        } finally {
             ingestionExecutor.shutdownNow();
         }
     }
