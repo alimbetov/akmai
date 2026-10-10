@@ -30,11 +30,17 @@ public class EnglishSemanticConceptCatalog {
             "semantic/concepts-en-insurance-batch-c-v2.yaml",
             "semantic/concepts-en-insurance-batch-d-v2.yaml",
             "semantic/concepts-en-energy-utilities-batch-a-v2.yaml",
+            "semantic/concepts-en-energy-utilities-batch-b-v2.yaml",
             "semantic/concepts-en-oil-gas-mining-batch-a-v2.yaml",
+            "semantic/concepts-en-oil-gas-mining-batch-b-v2.yaml",
             "semantic/concepts-en-manufacturing-batch-a-v2.yaml",
+            "semantic/concepts-en-manufacturing-batch-b-v2.yaml",
             "semantic/concepts-en-construction-real-estate-batch-a-v2.yaml",
+            "semantic/concepts-en-construction-real-estate-batch-b-v2.yaml",
             "semantic/concepts-en-transport-logistics-batch-a-v2.yaml",
-            "semantic/concepts-en-agriculture-food-batch-a-v2.yaml"
+            "semantic/concepts-en-transport-logistics-batch-b-v2.yaml",
+            "semantic/concepts-en-agriculture-food-batch-a-v2.yaml",
+            "semantic/concepts-en-agriculture-food-batch-b-v2.yaml"
     );
     private static final String COMBINED_VERSION = "semantic-concepts-en-v2";
 
