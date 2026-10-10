@@ -79,7 +79,7 @@ domains:
           - vehicle routing formulation
           - facility location model
           - optimal transport problem
-          - model predictive control
+          - receding horizon optimization
           - derivative free optimization
           - Bayesian optimization method
           - evolutionary optimization algorithm
