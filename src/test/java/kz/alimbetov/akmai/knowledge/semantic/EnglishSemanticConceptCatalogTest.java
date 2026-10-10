@@ -12,12 +12,12 @@ class EnglishSemanticConceptCatalogTest {
     private static final Map<String, Long> EXPECTED_DOMAIN_COUNTS = Map.ofEntries(
             Map.entry("finance_banking", 424L),
             Map.entry("insurance", 424L),
-            Map.entry("energy_utilities", 224L),
-            Map.entry("oil_gas_mining", 224L),
-            Map.entry("manufacturing", 224L),
-            Map.entry("construction_real_estate", 224L),
-            Map.entry("transport_logistics", 224L),
-            Map.entry("agriculture_food", 224L),
+            Map.entry("energy_utilities", 324L),
+            Map.entry("oil_gas_mining", 324L),
+            Map.entry("manufacturing", 324L),
+            Map.entry("construction_real_estate", 324L),
+            Map.entry("transport_logistics", 324L),
+            Map.entry("agriculture_food", 324L),
             Map.entry("mathematics_statistics", 24L),
             Map.entry("physics_astronomy", 24L),
             Map.entry("chemistry_materials", 24L),
@@ -34,7 +34,7 @@ class EnglishSemanticConceptCatalogTest {
     @Test
     void corpusContainsExpectedCuratedConceptCounts() {
         assertThat(catalog.version()).isEqualTo("semantic-concepts-en-v2");
-        assertThat(catalog.concepts()).hasSize(2384);
+        assertThat(catalog.concepts()).hasSize(2984);
 
         Map<String, Long> byDomain = catalog.concepts().stream()
                 .collect(Collectors.groupingBy(
@@ -53,13 +53,23 @@ class EnglishSemanticConceptCatalogTest {
     }
 
     @Test
-    void stageTwoDomainsContainFiftyNewConceptsPerSubdomain() {
-        assertSubdomainCounts("energy_utilities", 56L);
-        assertSubdomainCounts("oil_gas_mining", 56L);
-        assertSubdomainCounts("manufacturing", 56L);
-        assertSubdomainCounts("construction_real_estate", 56L);
-        assertSubdomainCounts("transport_logistics", 56L);
-        assertSubdomainCounts("agriculture_food", 56L);
+    void stageTwoDomainsContainSeventyFiveNewConceptsPerSubdomain() {
+        assertSubdomainCounts("energy_utilities", 81L);
+        assertSubdomainCounts("oil_gas_mining", 81L);
+        assertSubdomainCounts("manufacturing", 81L);
+        assertSubdomainCounts("construction_real_estate", 81L);
+        assertSubdomainCounts("transport_logistics", 81L);
+        assertSubdomainCounts("agriculture_food", 81L);
+    }
+
+    @Test
+    void representativeStageTwoBatchCConceptsRemainStableAndClassified() {
+        assertConcept("energy_utilities.power_grid.state_estimation_analysis", "power_grid");
+        assertConcept("oil_gas_mining.upstream_operations.reservoir_material_balance", "upstream_operations");
+        assertConcept("manufacturing.maintenance_reliability.vibration_spectrum_analysis", "maintenance_reliability");
+        assertConcept("construction_real_estate.project_controls.integrated_master_schedule", "project_controls");
+        assertConcept("transport_logistics.supply_chain.demand_sensing_process", "supply_chain");
+        assertConcept("agriculture_food.food_safety.food_authenticity_testing", "food_safety");
     }
 
     @Test
