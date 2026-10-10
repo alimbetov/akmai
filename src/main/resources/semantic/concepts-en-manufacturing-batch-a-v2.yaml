@@ -1,0 +1,112 @@
+version: semantic-concepts-en-manufacturing-batch-a-v2
+domains:
+  - domainId: manufacturing
+    subdomains:
+      - id: production_systems
+        phrases:
+          - master production schedule
+          - material requirements planning
+          - capacity requirements planning
+          - finite capacity scheduling
+          - production order release
+          - work center loading
+          - line changeover time
+          - setup time reduction
+          - single minute exchange
+          - work in process
+          - production bottleneck analysis
+          - cycle time reduction
+          - throughput rate analysis
+          - production leveling method
+          - heijunka scheduling approach
+          - kanban replenishment system
+          - pull production system
+          - push production system
+          - cellular manufacturing layout
+          - mixed model production
+          - batch size optimization
+          - production sequence optimization
+          - shop floor control
+          - work instruction management
+          - operator standard work
+      - id: quality_management
+        phrases:
+          - process capability analysis
+          - measurement system analysis
+          - gage repeatability reproducibility
+          - control chart monitoring
+          - first article inspection
+          - final quality inspection
+          - supplier quality audit
+          - supplier corrective action
+          - customer complaint analysis
+          - eight discipline process
+          - failure mode effects
+          - design failure analysis
+          - process failure analysis
+          - quality escape investigation
+          - defect containment action
+          - corrective action effectiveness
+          - preventive action program
+          - quality cost analysis
+          - scrap rate monitoring
+          - rework rate monitoring
+          - yield loss analysis
+          - first pass yield
+          - rolled throughput yield
+          - quality plan development
+          - inspection sampling plan
+      - id: maintenance_reliability
+        phrases:
+          - condition based maintenance
+          - maintenance strategy optimization
+          - asset criticality analysis
+          - failure mode analysis
+          - reliability block diagram
+          - fault tree analysis
+          - root cause failure analysis
+          - mean time repair
+          - maintenance backlog management
+          - maintenance schedule compliance
+          - planned maintenance percentage
+          - emergency maintenance rate
+          - spare parts criticality
+          - maintenance inventory optimization
+          - lubrication management program
+          - vibration condition monitoring
+          - oil condition monitoring
+          - thermal imaging inspection
+          - ultrasound condition monitoring
+          - motor current analysis
+          - predictive failure detection
+          - remaining useful life
+          - equipment health index
+          - shutdown maintenance planning
+          - turnaround maintenance planning
+      - id: industrial_operations
+        phrases:
+          - industrial control system
+          - supervisory control acquisition
+          - distributed control system
+          - human machine interface
+          - industrial network architecture
+          - process historian system
+          - industrial data acquisition
+          - manufacturing data integration
+          - process alarm management
+          - alarm rationalization study
+          - process safety management
+          - hazard operability study
+          - layer protection analysis
+          - safety instrumented system
+          - safety integrity level
+          - permit to work
+          - lockout tagout procedure
+          - confined space entry
+          - hot work permit
+          - industrial energy management
+          - compressed air efficiency
+          - steam system optimization
+          - water consumption reduction
+          - industrial waste minimization
+          - plant utility optimization
