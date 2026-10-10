@@ -1,0 +1,112 @@
+version: semantic-concepts-en-psychology-sociology-batch-a-v2
+domains:
+  - domainId: psychology_sociology
+    subdomains:
+      - id: cognitive_psychology
+        phrases:
+          - executive function assessment
+          - attentional control process
+          - inhibitory control mechanism
+          - cognitive flexibility measure
+          - episodic memory encoding
+          - semantic memory retrieval
+          - procedural memory learning
+          - prospective memory performance
+          - metacognitive monitoring process
+          - problem solving strategy
+          - reasoning bias assessment
+          - decision heuristic effect
+          - perceptual decision making
+          - visual attention allocation
+          - auditory attention processing
+          - cognitive control network
+          - mental workload assessment
+          - dual task interference
+          - task switching cost
+          - response inhibition task
+          - working memory updating
+          - long term memory consolidation
+          - recognition memory accuracy
+          - retrieval practice effect
+          - cognitive aging trajectory
+      - id: behavioral_psychology
+        phrases:
+          - operant conditioning process
+          - classical conditioning paradigm
+          - reinforcement learning behavior
+          - extinction learning process
+          - stimulus generalization effect
+          - stimulus discrimination learning
+          - avoidance learning behavior
+          - approach behavior tendency
+          - reward sensitivity measure
+          - punishment sensitivity measure
+          - self regulation behavior
+          - goal directed behavior
+          - habitual action control
+          - behavioral activation system
+          - behavioral inhibition system
+          - contingency management intervention
+          - exposure therapy procedure
+          - behavioral shaping procedure
+          - token economy program
+          - behavioral self monitoring
+          - adherence behavior pattern
+          - risk taking behavior
+          - delay discounting behavior
+          - impulse control assessment
+          - prosocial behavior intervention
+      - id: social_psychology
+        phrases:
+          - social cognition process
+          - attribution bias effect
+          - fundamental attribution error
+          - social comparison process
+          - interpersonal trust formation
+          - group polarization effect
+          - bystander intervention effect
+          - diffusion responsibility effect
+          - social facilitation effect
+          - social loafing behavior
+          - group cohesion measure
+          - intergroup conflict process
+          - prejudice reduction intervention
+          - implicit attitude measure
+          - stereotype threat effect
+          - social norm compliance
+          - normative social influence
+          - informational social influence
+          - conformity pressure effect
+          - obedience authority effect
+          - interpersonal attraction factor
+          - relationship satisfaction measure
+          - attachment style pattern
+          - collective identity formation
+          - group status hierarchy
+      - id: sociology_methods
+        phrases:
+          - cross sectional survey
+          - multistage sampling design
+          - stratified random sampling
+          - cluster sampling design
+          - respondent driven sampling
+          - ethnographic field study
+          - participant observation method
+          - focus group analysis
+          - content analysis method
+          - grounded theory analysis
+          - thematic analysis method
+          - social mobility analysis
+          - income inequality measure
+          - occupational class structure
+          - residential segregation index
+          - population aging trend
+          - migration flow analysis
+          - fertility rate analysis
+          - mortality rate analysis
+          - household composition trend
+          - network centrality measure
+          - community detection analysis
+          - social capital measure
+          - institutional trust measure
+          - panel data analysis
