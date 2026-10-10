@@ -1,0 +1,112 @@
+version: semantic-concepts-en-psychology-sociology-batch-b-v2
+domains:
+  - domainId: psychology_sociology
+    subdomains:
+      - id: cognitive_psychology
+        phrases:
+          - attentional blink effect
+          - visual search efficiency
+          - change blindness effect
+          - inattentional blindness effect
+          - signal detection sensitivity
+          - perceptual threshold estimation
+          - sensory adaptation process
+          - mental rotation task
+          - spatial cognition ability
+          - language comprehension process
+          - lexical decision task
+          - semantic priming effect
+          - episodic future thinking
+          - source memory accuracy
+          - autobiographical memory recall
+          - prospective judgment bias
+          - confidence calibration measure
+          - metacognitive accuracy index
+          - cognitive interference control
+          - response conflict monitoring
+          - speed accuracy tradeoff
+          - reaction time distribution
+          - learning curve analysis
+          - transfer of learning
+          - cognitive strategy selection
+      - id: behavioral_psychology
+        phrases:
+          - positive reinforcement schedule
+          - negative reinforcement schedule
+          - positive punishment procedure
+          - negative punishment procedure
+          - variable ratio schedule
+          - variable interval schedule
+          - fixed ratio schedule
+          - fixed interval schedule
+          - conditioned reinforcer effect
+          - discriminative stimulus control
+          - stimulus control transfer
+          - response generalization gradient
+          - extinction burst behavior
+          - spontaneous recovery effect
+          - renewal effect conditioning
+          - reinstatement effect conditioning
+          - contingency degradation effect
+          - learned helplessness paradigm
+          - behavioral momentum theory
+          - matching law behavior
+          - choice allocation behavior
+          - delay aversion tendency
+          - behavioral persistence measure
+          - self efficacy behavior
+          - relapse prevention strategy
+      - id: social_psychology
+        phrases:
+          - cognitive dissonance effect
+          - self perception theory
+          - impression formation process
+          - impression management strategy
+          - actor observer bias
+          - self serving bias
+          - false consensus effect
+          - pluralistic ignorance effect
+          - groupthink decision process
+          - minority influence effect
+          - social dominance orientation
+          - system justification belief
+          - intergroup contact effect
+          - realistic conflict theory
+          - common ingroup identity
+          - deindividuation group effect
+          - collective action intention
+          - social exclusion response
+          - ostracism behavioral effect
+          - interpersonal reciprocity norm
+          - social exchange relationship
+          - equity theory relationship
+          - persuasion route processing
+          - attitude behavior consistency
+          - moral disengagement process
+      - id: sociology_methods
+        phrases:
+          - probability sampling framework
+          - nonprobability sampling method
+          - quota sampling design
+          - snowball sampling method
+          - survey weighting adjustment
+          - nonresponse bias adjustment
+          - measurement invariance testing
+          - latent class analysis
+          - structural equation modeling
+          - multilevel social analysis
+          - event history analysis
+          - sequence analysis method
+          - cohort effect analysis
+          - age period cohort
+          - life course analysis
+          - social network centrality
+          - exponential random graph
+          - stochastic actor model
+          - community structure analysis
+          - social diffusion model
+          - demographic transition model
+          - population projection method
+          - migration transition model
+          - inequality decomposition method
+          - qualitative comparative analysis
