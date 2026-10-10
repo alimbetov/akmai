@@ -1,0 +1,112 @@
+version: semantic-concepts-en-oil-gas-mining-batch-a-v2
+domains:
+  - domainId: oil_gas_mining
+    subdomains:
+      - id: upstream_operations
+        phrases:
+          - seismic interpretation workflow
+          - prospect risk assessment
+          - exploration well design
+          - appraisal drilling program
+          - development well planning
+          - well trajectory design
+          - drilling mud program
+          - casing design program
+          - cementing job design
+          - well control procedure
+          - blowout preventer test
+          - managed pressure drilling
+          - directional drilling survey
+          - formation pressure estimate
+          - pore pressure prediction
+          - fracture gradient estimate
+          - production logging survey
+          - well stimulation design
+          - hydraulic fracturing treatment
+          - acid stimulation program
+          - artificial lift selection
+          - production decline analysis
+          - water cut monitoring
+          - gas oil ratio
+          - well integrity management
+      - id: midstream_operations
+        phrases:
+          - pipeline hydraulic model
+          - pipeline capacity analysis
+          - pipeline pressure control
+          - compressor station operation
+          - pump station operation
+          - line pack management
+          - gas quality specification
+          - natural gas dehydration
+          - gas sweetening process
+          - liquids recovery unit
+          - custody transfer measurement
+          - metering station calibration
+          - pipeline leak detection
+          - pipeline corrosion monitoring
+          - cathodic protection system
+          - in line inspection
+          - pigging operation schedule
+          - right of way inspection
+          - terminal tank management
+          - tank inventory reconciliation
+          - marine loading operation
+          - truck loading terminal
+          - pipeline nomination process
+          - gas balancing process
+          - storage injection withdrawal
+      - id: downstream_operations
+        phrases:
+          - refinery crude slate
+          - crude assay analysis
+          - atmospheric distillation unit
+          - vacuum distillation unit
+          - fluid catalytic cracking
+          - hydrocracking process unit
+          - catalytic reforming unit
+          - hydrotreating process unit
+          - delayed coking unit
+          - sulfur recovery unit
+          - refinery hydrogen balance
+          - refinery steam balance
+          - refinery fuel gas
+          - octane blending model
+          - gasoline pool optimization
+          - diesel cetane specification
+          - refinery margin analysis
+          - gross refining margin
+          - refinery energy intensity
+          - process heater efficiency
+          - flare gas recovery
+          - refinery emissions monitoring
+          - turnaround scope planning
+          - unit reliability monitoring
+          - product quality giveaway
+      - id: mining_operations
+        phrases:
+          - exploration drilling campaign
+          - geological block model
+          - grade tonnage curve
+          - resource estimation method
+          - reserve conversion process
+          - pit optimization model
+          - mine production schedule
+          - strip ratio analysis
+          - waste rock management
+          - ore grade control
+          - blast design pattern
+          - drill blast operation
+          - haul truck dispatch
+          - crusher throughput optimization
+          - grinding circuit performance
+          - flotation recovery rate
+          - leach recovery rate
+          - metallurgical balance calculation
+          - tailings storage facility
+          - tailings dam stability
+          - mine dewatering system
+          - ventilation network design
+          - ground control monitoring
+          - mine closure plan
+          - reclamation liability estimate
