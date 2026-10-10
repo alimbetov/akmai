@@ -1,0 +1,112 @@
+version: semantic-concepts-en-chemistry-materials-batch-c-v2
+domains:
+  - domainId: chemistry_materials
+    subdomains:
+      - id: organic_chemistry
+        phrases:
+          - reaction mechanism elucidation
+          - isotope labeling study
+          - kinetic reaction profiling
+          - competing pathway analysis
+          - catalyst deactivation mechanism
+          - catalyst turnover frequency
+          - catalyst turnover number
+          - ligand effect analysis
+          - directing group strategy
+          - C H activation
+          - chemoselective bond formation
+          - stereochemical outcome prediction
+          - reaction coordinate analysis
+          - transition metal catalysis
+          - photocatalytic reaction design
+          - electrocatalytic synthesis pathway
+          - flow chemistry process
+          - continuous reaction processing
+          - reaction quench strategy
+          - impurity fate mapping
+          - intermediate isolation strategy
+          - crystallization endpoint control
+          - solvent swap process
+          - process mass intensity
+          - atom economy assessment
+      - id: analytical_chemistry
+        phrases:
+          - calibration transfer method
+          - detector response factor
+          - relative response factor
+          - analyte recovery profile
+          - dilution integrity assessment
+          - autosampler stability study
+          - bench top stability
+          - freeze thaw stability
+          - long term stability
+          - incurred sample reanalysis
+          - blank interference assessment
+          - selectivity interference study
+          - peak integration consistency
+          - retention index matching
+          - mass accuracy verification
+          - isotope pattern matching
+          - spectral deconvolution process
+          - baseline correction method
+          - signal drift correction
+          - analytical batch acceptance
+          - quality control sample
+          - proficiency z score
+          - traceability chain documentation
+          - measurement bias estimate
+          - laboratory control chart
+      - id: physical_chemistry
+        phrases:
+          - transition state energy
+          - reaction free energy
+          - equilibrium composition calculation
+          - chemical affinity measure
+          - thermodynamic integration method
+          - free energy perturbation
+          - potential of mean force
+          - solvent activity coefficient
+          - osmotic pressure measurement
+          - interfacial tension measurement
+          - surface pressure isotherm
+          - contact angle measurement
+          - wetting behavior analysis
+          - capillary pressure effect
+          - diffusion coefficient measurement
+          - viscosity temperature dependence
+          - ionic conductivity measurement
+          - dielectric relaxation spectroscopy
+          - molecular diffusion simulation
+          - radial distribution function
+          - solvation free energy
+          - proton transfer mechanism
+          - electron density distribution
+          - vibrational frequency calculation
+          - excited state dynamics
+      - id: materials_science
+        phrases:
+          - phase transformation kinetics
+          - precipitation hardening response
+          - recrystallization behavior analysis
+          - texture evolution analysis
+          - grain growth kinetics
+          - Hall Petch relationship
+          - dislocation strengthening mechanism
+          - transformation toughening mechanism
+          - fatigue crack initiation
+          - fracture surface analysis
+          - stress corrosion cracking
+          - hydrogen embrittlement assessment
+          - corrosion fatigue behavior
+          - oxidation scale growth
+          - coating degradation mechanism
+          - interface debonding mechanism
+          - delamination resistance testing
+          - composite damage evolution
+          - fiber pullout mechanism
+          - polymer creep behavior
+          - polymer aging mechanism
+          - ceramic thermal shock
+          - sintering densification kinetics
+          - additive defect characterization
+          - residual porosity analysis
