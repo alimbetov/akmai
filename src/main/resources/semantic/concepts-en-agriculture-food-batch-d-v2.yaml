@@ -1,0 +1,112 @@
+version: semantic-concepts-en-agriculture-food-batch-d-v2
+domains:
+  - domainId: agriculture_food
+    subdomains:
+      - id: crop_science
+        phrases:
+          - soil infiltration rate
+          - soil aggregate stability
+          - soil carbon content
+          - nutrient mineralization rate
+          - nitrogen leaching risk
+          - phosphorus runoff risk
+          - potassium deficiency index
+          - root development assessment
+          - canopy closure monitoring
+          - crop stress classification
+          - thermal time accumulation
+          - growing degree days
+          - crop water productivity
+          - irrigation scheduling efficiency
+          - drainage performance assessment
+          - field drainage design
+          - yield response curve
+          - yield variability analysis
+          - harvest moisture target
+          - crop lodging assessment
+          - weed resistance monitoring
+          - pest economic threshold
+          - disease infection forecast
+          - seed emergence uniformity
+          - field productivity zoning
+      - id: livestock_production
+        phrases:
+          - herd replacement rate
+          - productive life analysis
+          - lactation persistency index
+          - milk solids yield
+          - breeding efficiency metric
+          - insemination success rate
+          - pregnancy loss monitoring
+          - calf survival rate
+          - animal mobility score
+          - rumen efficiency indicator
+          - feed refusal monitoring
+          - ration consistency assessment
+          - forage digestibility analysis
+          - feed cost per gain
+          - pasture utilization efficiency
+          - grazing residual height
+          - heat load index
+          - barn stocking density
+          - water consumption efficiency
+          - medicine withdrawal compliance
+          - antimicrobial resistance monitoring
+          - disease incidence tracking
+          - culling reason analysis
+          - animal welfare audit
+          - livestock biosecurity readiness
+      - id: food_processing
+        phrases:
+          - ingredient variability analysis
+          - dosing system verification
+          - batch recipe accuracy
+          - mixing energy consumption
+          - thermal lethality calculation
+          - process residence time
+          - moisture migration analysis
+          - fermentation endpoint control
+          - cooling capacity assessment
+          - freezer load management
+          - thawing yield analysis
+          - fill volume accuracy
+          - net content compliance
+          - package leak testing
+          - barrier property assessment
+          - oxygen scavenger performance
+          - refrigeration efficiency index
+          - clean in place validation
+          - sanitation chemical control
+          - changeover loss analysis
+          - startup waste monitoring
+          - process rework rate
+          - finished product yield
+          - production mass balance
+          - processing energy intensity
+      - id: food_safety
+        phrases:
+          - hazard control verification
+          - preventive control effectiveness
+          - sanitation verification testing
+          - pathogen environmental zoning
+          - hygienic zoning assessment
+          - microbial indicator trending
+          - allergen changeover validation
+          - allergen swab verification
+          - label allergen declaration
+          - traceability data completeness
+          - supplier risk classification
+          - ingredient vulnerability assessment
+          - authenticity risk assessment
+          - food defense vulnerability
+          - tamper evidence verification
+          - intentional contamination response
+          - recall scope determination
+          - withdrawal effectiveness review
+          - traceability response time
+          - cold chain excursion
+          - storage temperature verification
+          - regulatory noncompliance handling
+          - product hold decision
+          - release authorization control
+          - food safety escalation
