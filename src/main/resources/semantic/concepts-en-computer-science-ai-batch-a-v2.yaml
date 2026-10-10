@@ -1,0 +1,112 @@
+version: semantic-concepts-en-computer-science-ai-batch-a-v2
+domains:
+  - domainId: computer_science_ai
+    subdomains:
+      - id: algorithms_data_structures
+        phrases:
+          - amortized complexity analysis
+          - divide conquer algorithm
+          - greedy optimization algorithm
+          - branch bound search
+          - backtracking search algorithm
+          - randomized algorithm analysis
+          - approximation algorithm design
+          - streaming algorithm model
+          - external memory algorithm
+          - disjoint set structure
+          - priority queue structure
+          - suffix tree index
+          - bloom filter structure
+          - skip list structure
+          - segment tree structure
+          - binary indexed tree
+          - topological sorting algorithm
+          - minimum spanning tree
+          - maximum flow algorithm
+          - bipartite matching algorithm
+          - string matching algorithm
+          - computational geometry algorithm
+          - cache oblivious algorithm
+          - online algorithm analysis
+          - parameterized complexity analysis
+      - id: software_systems
+        phrases:
+          - microservice architecture pattern
+          - event driven architecture
+          - message queue system
+          - distributed consensus protocol
+          - leader election protocol
+          - replicated state machine
+          - eventual consistency model
+          - strong consistency model
+          - distributed transaction protocol
+          - database replication strategy
+          - database sharding strategy
+          - write ahead logging
+          - multiversion concurrency control
+          - optimistic concurrency control
+          - pessimistic locking strategy
+          - idempotent request handling
+          - circuit breaker pattern
+          - bulkhead isolation pattern
+          - service discovery mechanism
+          - load balancing strategy
+          - autoscaling control loop
+          - observability telemetry pipeline
+          - distributed tracing system
+          - configuration management system
+          - infrastructure deployment pipeline
+      - id: machine_learning
+        phrases:
+          - gradient boosting model
+          - random forest model
+          - support vector machine
+          - logistic regression model
+          - probabilistic graphical model
+          - Bayesian network model
+          - hidden Markov model
+          - reinforcement learning policy
+          - policy gradient method
+          - value function approximation
+          - self supervised learning
+          - transfer learning strategy
+          - domain adaptation method
+          - contrastive learning objective
+          - representation learning model
+          - hyperparameter optimization process
+          - cross validation strategy
+          - model calibration analysis
+          - model drift detection
+          - concept drift detection
+          - feature importance analysis
+          - model explainability method
+          - uncertainty estimation model
+          - ensemble learning method
+          - active learning strategy
+      - id: data_nlp
+        phrases:
+          - tokenization processing pipeline
+          - subword segmentation method
+          - text classification model
+          - sequence labeling model
+          - machine translation system
+          - question answering system
+          - text summarization model
+          - document ranking model
+          - learning to rank
+          - dense retrieval model
+          - sparse retrieval model
+          - retrieval augmented generation
+          - semantic search system
+          - knowledge graph embedding
+          - relation extraction model
+          - coreference resolution system
+          - sentiment analysis model
+          - topic modeling method
+          - language model fine tuning
+          - prompt optimization strategy
+          - context window management
+          - hallucination detection method
+          - factual consistency evaluation
+          - embedding similarity search
+          - vector database indexing
