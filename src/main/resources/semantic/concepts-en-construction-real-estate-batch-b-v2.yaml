@@ -34,7 +34,7 @@ domains:
           - property income capitalization
           - property terminal value
           - stabilized occupancy rate
-          - lease expiry profile
+          - lease event schedule
           - weighted average lease
           - tenant credit quality
           - rental growth assumption
