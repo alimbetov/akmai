@@ -4,21 +4,21 @@ Status: TARGET / review record for `feature/semantic-domain-corpus-v2`.
 
 ## Scope
 
-Stage 2 now contains three balanced +100 rounds for the six operational domains:
+Stage 2 is complete for the six operational domains. Each now contains four balanced +100 rounds:
 
-- `energy_utilities`: Batch A/B/C = +300, 324 total;
-- `oil_gas_mining`: Batch A/B/C = +300, 324 total;
-- `manufacturing`: Batch A/B/C = +300, 324 total;
-- `construction_real_estate`: Batch A/B/C = +300, 324 total;
-- `transport_logistics`: Batch A/B/C = +300, 324 total;
-- `agriculture_food`: Batch A/B/C = +300, 324 total.
+- `energy_utilities`: Batch A/B/C/D = +400, 424 total;
+- `oil_gas_mining`: Batch A/B/C/D = +400, 424 total;
+- `manufacturing`: Batch A/B/C/D = +400, 424 total;
+- `construction_real_estate`: Batch A/B/C/D = +400, 424 total;
+- `transport_logistics`: Batch A/B/C/D = +400, 424 total;
+- `agriculture_food`: Batch A/B/C/D = +400, 424 total.
 
-Reference domains remain complete at:
+Reference domains are also complete:
 
 - `finance_banking`: +400, 424 total;
 - `insurance`: +400, 424 total.
 
-The English canonical corpus represented by this branch now targets 2,984 concepts: 384 baseline concepts plus 2,600 additions.
+The English canonical corpus represented by this branch now targets 3,584 concepts: 384 baseline concepts plus 3,200 additions.
 
 ## Review method
 
@@ -33,63 +33,35 @@ Every supplement is loaded through the production `EnglishSemanticConceptCatalog
 
 `SemanticCorpusNearDuplicateAuditor` remains advisory. Lexical similarity produces review candidates but never performs automatic merges.
 
-## Exact-duplicate defect discovered during Batch C
+## Exact-duplicate debt discovered during Stage 2
 
-While preparing Batch C, review of the already committed Stage 2 A/B files found that several Batch B entries repeated Batch A canonical phrases exactly. This is a real corpus defect because `EnglishSemanticConceptCatalog` intentionally rejects global normalized duplicates.
+During Batch C preparation, review of already committed Stage 2 A/B files found exact canonical repeats. Because `EnglishSemanticConceptCatalog` intentionally rejects normalized duplicates, these were treated as blocking corpus defects rather than tolerated aliases.
 
-The issue was fixed before declaring the 2,984-concept state admissible. Quotas were preserved by replacing repeated entries with distinct professional concepts rather than weakening the uniqueness gate.
+The uniqueness gate was not weakened. Repeated entries were replaced by distinct professional concepts while preserving the 25-per-subdomain batch contract.
 
-### Energy / utilities cleanup
+Representative corrections included:
 
-Repeated A/B concepts included examples such as:
+- Energy/Utilities: `heat rate curve` → `incremental heat rate`, repeated market/grid/storage surfaces replaced with distinct operational concepts;
+- Oil/Gas/Mining: `pipeline capacity analysis` → `pipeline throughput capacity`, repeated drilling/refinery/mining surfaces replaced with independent concepts;
+- Manufacturing/Transport: cross-domain repeats such as generic planning/ATP/CTP surfaces were made domain-specific;
+- Construction/RE: repeated lease-event wording was replaced;
+- Transport/Logistics: repeated warehouse/fleet/supply-chain surfaces were replaced, including `warehouse slotting optimization` → `dynamic slotting policy`;
+- Agriculture/Food: repeated crop/livestock/process/food-safety surfaces were replaced, including `food fraud vulnerability` → `authenticity risk assessment`.
 
-- `heat rate curve`;
-- `forced outage rate`;
-- `capacity factor analysis`;
-- `minimum stable generation`;
-- `startup cost model`;
-- `black start capability`;
-- `transmission capacity planning`;
-- `locational marginal pricing`;
-- `market clearing price`;
-- `wind resource assessment`;
-- `battery degradation model`.
+This defect class is now part of the Stage 2 quality record: sequential batch review must include exact cross-batch comparison before a batch is considered admissible.
 
-Batch B now uses distinct concepts such as `incremental heat rate`, `equivalent forced outage`, `transmission transfer capability`, `nodal market settlement`, `wind resource characterization`, and `battery lifetime model`.
+## Batch D coverage
 
-### Oil / gas / mining cleanup
+Batch D completes the target without adding synonym padding. Representative additions include:
 
-Repeated A/B concepts included `seismic interpretation workflow`, `drilling mud program`, `well integrity management`, `pipeline capacity analysis`, `line pack management`, `pipeline pressure control`, `custody transfer measurement`, `refinery crude slate`, `refinery margin analysis`, `turnaround scope planning`, `crusher throughput optimization`, and `tailings storage facility`.
+- Energy: `probabilistic load flow`, `frequency nadir assessment`, `capacity performance obligation`, `renewable adequacy contribution`;
+- Oil/gas/mining: `reservoir sweep efficiency`, `high consequence area`, `refinery loss accounting`, `conditional simulation model`;
+- Manufacturing: `production stability index`, `quality risk prioritization`, `lifecycle maintenance cost`, `valve stiction detection`;
+- Construction/real estate: `vibration serviceability assessment`, `rental reversion analysis`, `lifecycle replacement reserve`, `completion probability estimate`;
+- Transport/logistics: `spot rate volatility`, `fulfillment cost per order`, `fleet lifecycle economics`, `total landed cost`;
+- Agriculture/food: `crop water productivity`, `feed cost per gain`, `production mass balance`, `traceability response time`.
 
-They were replaced by distinct concepts such as `seismic inversion analysis`, `drilling fluid performance`, `pipeline throughput capacity`, `line pack optimization`, `custody transfer metering`, `refinery feedstock slate`, `turnaround workpack planning`, and `tailings facility operations`.
-
-### Manufacturing / construction cross-batch cleanup
-
-- Manufacturing Batch B no longer reuses cross-domain canonical surfaces `sales operations planning`, `available to promise`, and `capable to promise`; they were replaced with manufacturing-specific concepts.
-- Construction Batch B no longer repeats `lease expiry profile`; it now uses `lease event schedule`.
-
-### Transport / logistics cleanup
-
-Batch B repeated a significant set of Batch A concepts, including freight, warehouse, fleet and supply-chain surfaces such as `freight lane analysis`, `warehouse slotting optimization`, `dock door scheduling`, `vehicle lifecycle cost`, `driver hours compliance`, `fleet emissions monitoring`, `safety stock optimization`, and `supply chain visibility`.
-
-These were replaced with independent concepts such as `lane profitability analysis`, `dynamic slotting policy`, `dock appointment optimization`, `vehicle economic life`, `hours of service audit`, `fleet carbon intensity`, `safety stock segmentation`, and `shipment milestone visibility`.
-
-### Agriculture / food cleanup
-
-Agriculture Batch B contained the largest repeated A/B cluster. Repeated concepts included `crop rotation planning`, `soil moisture monitoring`, `feed conversion ratio`, `body condition scoring`, `thermal process validation`, `pasteurization process control`, `hazard analysis plan`, `critical control point`, `environmental monitoring program`, `supplier food safety`, and `food fraud vulnerability`.
-
-They were replaced with distinct concepts including `crop sequence design`, `soil water profile`, `feed efficiency benchmark`, `condition score distribution`, `thermal lethality calculation`, `pasteurization hold time`, `food hazard register`, `critical limit verification`, `zone sampling strategy`, `supplier hazard review`, and `authenticity risk assessment`.
-
-## Batch C coverage
-
-Batch C adds another 25 concepts per existing subdomain. Representative additions include:
-
-- Energy: `state estimation analysis`, `dynamic line rating`, `scarcity pricing mechanism`, `battery cycle aging`;
-- Oil/gas/mining: `reservoir material balance`, `pipeline transient analysis`, `crude compatibility analysis`, `geostatistical block estimation`;
-- Manufacturing: `drum buffer rope`, `layered process audit`, `vibration spectrum analysis`, `control valve performance`;
-- Construction/real estate: `pile load testing`, `tenant concentration risk`, `asset condition index`, `integrated master schedule`;
-- Transport/logistics: `carrier capacity commitment`, `inventory dwell time`, `driver fatigue management`, `demand sensing process`;
-- Agriculture/food: `soil salinity monitoring`, `lactation curve analysis`, `fermentation yield monitoring`, `food authenticity testing`.
+Each Batch D file contains exactly 25 concepts for each of the domain's four existing subdomains.
 
 ## Explicit ambiguity registrations
 
@@ -105,14 +77,16 @@ Existing explicit generic-surface ambiguity registrations remain in force, inclu
 - `risk model`;
 - `decision making`.
 
+New Batch D canonical forms should be added to the ambiguity registry only when the same generic user surface can legitimately resolve to multiple distinct concepts. Similar terminology alone is not sufficient.
+
 ## Release gates
 
-Stage 2 Batch C is admissible only when the current branch head passes:
+Completed Stage 2 is admissible only when the current branch head passes:
 
 1. canonical normalized uniqueness;
 2. multi-word phrase constraints;
-3. expected 2,984 total concepts;
-4. 324 concepts for each Stage 2 domain and 81 per Stage 2 subdomain;
+3. expected 3,584 total concepts;
+4. 424 concepts for each of the eight expanded domains and 106 per subdomain;
 5. ambiguity registry referential integrity;
 6. English surface ownership checks;
 7. near-duplicate review with no unresolved merge-class candidates;
@@ -121,8 +95,8 @@ Stage 2 Batch C is admissible only when the current branch head passes:
 10. Retrieval Storage Final Benchmark;
 11. Production Image Build.
 
-Until those gates complete successfully, the 2,984-concept state is implemented but provisional.
+Until those gates complete successfully, the 3,584-concept state is implemented but provisional.
 
 ## Next expansion
 
-After Stage 2 Batch C is green and consolidated, complete Batch D (+100 each) for these six operational domains. That will bring all eight expanded operational/reference domains to the +400 target before moving to the science/technology domain group or multilingual RU → KK transfer.
+After Stage 2 is green and consolidated, stop deepening these eight domains. The next English-first stage should expand the remaining science/technology domains rather than add a fifth batch here. Recommended next group: `computer_science_ai`, `medicine_pharmacology`, `biology_genetics`, and `chemistry_materials`, using the same +100 batch and cross-domain review discipline.
