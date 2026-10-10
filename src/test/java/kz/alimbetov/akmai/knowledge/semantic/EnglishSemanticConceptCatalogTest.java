@@ -20,10 +20,10 @@ class EnglishSemanticConceptCatalogTest {
             Map.entry("agriculture_food", 424L),
             Map.entry("mathematics_statistics", 24L),
             Map.entry("physics_astronomy", 24L),
-            Map.entry("chemistry_materials", 124L),
-            Map.entry("biology_genetics", 124L),
-            Map.entry("computer_science_ai", 124L),
-            Map.entry("medicine_pharmacology", 124L),
+            Map.entry("chemistry_materials", 224L),
+            Map.entry("biology_genetics", 224L),
+            Map.entry("computer_science_ai", 224L),
+            Map.entry("medicine_pharmacology", 224L),
             Map.entry("earth_environmental_science", 24L),
             Map.entry("psychology_sociology", 24L)
     );
@@ -34,7 +34,7 @@ class EnglishSemanticConceptCatalogTest {
     @Test
     void corpusContainsExpectedCuratedConceptCounts() {
         assertThat(catalog.version()).isEqualTo("semantic-concepts-en-v2");
-        assertThat(catalog.concepts()).hasSize(3984);
+        assertThat(catalog.concepts()).hasSize(4384);
 
         Map<String, Long> byDomain = catalog.concepts().stream()
                 .collect(Collectors.groupingBy(
@@ -59,11 +59,19 @@ class EnglishSemanticConceptCatalogTest {
     }
 
     @Test
-    void scienceTechnologyBatchADomainsContainTwentyFiveNewConceptsPerSubdomain() {
-        assertSubdomainCounts("computer_science_ai", 31L);
-        assertSubdomainCounts("medicine_pharmacology", 31L);
-        assertSubdomainCounts("biology_genetics", 31L);
-        assertSubdomainCounts("chemistry_materials", 31L);
+    void scienceTechnologyBatchABDomainsContainFiftyNewConceptsPerSubdomain() {
+        assertSubdomainCounts("computer_science_ai", 56L);
+        assertSubdomainCounts("medicine_pharmacology", 56L);
+        assertSubdomainCounts("biology_genetics", 56L);
+        assertSubdomainCounts("chemistry_materials", 56L);
+    }
+
+    @Test
+    void representativeScienceTechnologyBatchBConceptsRemainStableAndClassified() {
+        assertConcept("computer_science_ai.software_systems.fencing_token_protocol", "software_systems");
+        assertConcept("medicine_pharmacology.epidemiology.target_trial_emulation", "epidemiology");
+        assertConcept("biology_genetics.genetics.mutational_signature_analysis", "genetics");
+        assertConcept("chemistry_materials.materials_science.grain_boundary_engineering", "materials_science");
     }
 
     @Test
