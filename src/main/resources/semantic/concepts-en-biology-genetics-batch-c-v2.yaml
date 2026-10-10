@@ -1,0 +1,112 @@
+version: semantic-concepts-en-biology-genetics-batch-c-v2
+domains:
+  - domainId: biology_genetics
+    subdomains:
+      - id: molecular_biology
+        phrases:
+          - transcription elongation control
+          - promoter proximal pausing
+          - enhancer RNA transcription
+          - chromatin remodeling complex
+          - nucleosome eviction process
+          - nucleosome sliding mechanism
+          - DNA replication licensing
+          - replication origin firing
+          - replication stress response
+          - telomere maintenance pathway
+          - telomerase activity regulation
+          - RNA splicing regulation
+          - spliceosome assembly process
+          - RNA export mechanism
+          - ribosome biogenesis pathway
+          - translational initiation control
+          - translational elongation rate
+          - protein quality control
+          - unfolded protein degradation
+          - ubiquitin ligase activity
+          - proteasome substrate recognition
+          - phosphatase signaling pathway
+          - scaffold protein interaction
+          - transcription factor network
+          - enhancer activity profiling
+      - id: genetics
+        phrases:
+          - rare disease variant
+          - variant segregation evidence
+          - pathogenic variant classification
+          - benign variant classification
+          - variant functional evidence
+          - allele specific expression
+          - expression quantitative trait
+          - splicing quantitative trait
+          - methylation quantitative trait
+          - fine mapping analysis
+          - credible variant set
+          - colocalization analysis method
+          - polygenic architecture model
+          - genetic risk stratification
+          - polygenic score portability
+          - founder haplotype analysis
+          - runs homozygosity analysis
+          - consanguinity coefficient estimate
+          - effective population size
+          - demographic history inference
+          - selection sweep detection
+          - local ancestry inference
+          - mutational burden analysis
+          - somatic clonal expansion
+          - variant recurrence analysis
+      - id: cell_biology
+        phrases:
+          - membrane trafficking regulation
+          - receptor endocytosis kinetics
+          - receptor recycling pathway
+          - endosomal sorting complex
+          - vesicle budding mechanism
+          - vesicle fusion machinery
+          - mitochondrial biogenesis program
+          - mitochondrial stress response
+          - peroxisome biogenesis pathway
+          - organelle quality control
+          - ER mitochondria contact
+          - lysosome membrane integrity
+          - autophagic flux measurement
+          - macroautophagy regulation pathway
+          - selective autophagy mechanism
+          - ferroptosis signaling pathway
+          - necroptosis signaling pathway
+          - pyroptosis signaling pathway
+          - cell competition mechanism
+          - collective cell migration
+          - epithelial barrier integrity
+          - mechanosensitive ion channel
+          - substrate stiffness response
+          - cellular traction force
+          - cell shape regulation
+      - id: physiology
+        phrases:
+          - cardiac preload regulation
+          - cardiac afterload regulation
+          - coronary blood flow
+          - vascular compliance measurement
+          - endothelial function assessment
+          - pulmonary vascular resistance
+          - respiratory drive regulation
+          - dead space ventilation
+          - oxygen extraction ratio
+          - renal plasma flow
+          - filtration fraction estimate
+          - renal concentrating mechanism
+          - water balance regulation
+          - aldosterone secretion control
+          - cortisol circadian rhythm
+          - glucose tolerance response
+          - pancreatic beta function
+          - insulin resistance assessment
+          - autonomic balance assessment
+          - sympathetic nerve activity
+          - parasympathetic tone regulation
+          - neuromuscular junction function
+          - gut brain signaling
+          - hepatic clearance function
+          - systemic inflammatory response
