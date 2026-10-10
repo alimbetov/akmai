@@ -45,6 +45,8 @@ public class EnglishSemanticConceptCatalog {
 
         LinkedHashMap<String, SemanticConcept> conceptsById =
                 new LinkedHashMap<>();
+        LinkedHashMap<String, String> phraseOwners =
+                new LinkedHashMap<>();
         LinkedHashSet<String> coveredDomains = new LinkedHashSet<>();
 
         for (var domain : definition.domains()) {
@@ -74,6 +76,25 @@ public class EnglishSemanticConceptCatalog {
                             subdomain.id(),
                             normalized
                     );
+
+                    String owner = domain.domainId()
+                            + "/"
+                            + subdomain.id();
+                    String existingOwner = phraseOwners.putIfAbsent(
+                            normalized,
+                            owner
+                    );
+                    if (existingOwner != null) {
+                        throw new IllegalArgumentException(
+                                "Duplicate canonical semantic phrase after normalization: '"
+                                        + normalized
+                                        + "' owned by "
+                                        + existingOwner
+                                        + " and "
+                                        + owner
+                        );
+                    }
+
                     String id = conceptId(
                             domain.domainId(),
                             subdomain.id(),
