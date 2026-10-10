@@ -1,0 +1,112 @@
+version: semantic-concepts-en-transport-logistics-batch-b-v2
+domains:
+  - domainId: transport_logistics
+    subdomains:
+      - id: freight_transport
+        phrases:
+          - freight lane analysis
+          - transport mode selection
+          - intermodal route planning
+          - freight capacity planning
+          - carrier tender process
+          - freight rate negotiation
+          - line haul operation
+          - drayage transport service
+          - rail terminal dwell
+          - port terminal dwell
+          - cargo consolidation strategy
+          - cargo deconsolidation process
+          - load factor optimization
+          - vehicle cube utilization
+          - shipment density analysis
+          - freight cost allocation
+          - transit time reliability
+          - delivery time variance
+          - freight damage rate
+          - cargo claims management
+          - dangerous goods transport
+          - customs transit procedure
+          - freight documentation control
+          - multimodal transport contract
+          - transport capacity reservation
+      - id: warehousing_distribution
+        phrases:
+          - warehouse slotting optimization
+          - storage location assignment
+          - warehouse capacity planning
+          - dock door scheduling
+          - inbound appointment scheduling
+          - receiving process control
+          - putaway strategy optimization
+          - replenishment task planning
+          - picking productivity analysis
+          - packing productivity analysis
+          - wave picking process
+          - batch picking strategy
+          - zone picking strategy
+          - cross docking operation
+          - warehouse labor planning
+          - warehouse congestion analysis
+          - order accuracy rate
+          - inventory record accuracy
+          - cycle counting program
+          - shrinkage loss monitoring
+          - distribution route staging
+          - parcel sortation process
+          - distribution throughput analysis
+          - warehouse safety management
+          - warehouse automation strategy
+      - id: fleet_operations
+        phrases:
+          - fleet replacement planning
+          - vehicle lifecycle cost
+          - fleet capacity planning
+          - vehicle assignment strategy
+          - route adherence monitoring
+          - driver hours compliance
+          - driver behavior scoring
+          - vehicle idling analysis
+          - fuel consumption benchmarking
+          - fleet emissions monitoring
+          - preventive fleet servicing
+          - vehicle inspection program
+          - tire management program
+          - fleet downtime analysis
+          - breakdown response process
+          - roadside assistance program
+          - fleet spare vehicle
+          - telematics alert management
+          - geofence compliance monitoring
+          - fleet accident analysis
+          - driver training program
+          - vehicle residual value
+          - fleet leasing strategy
+          - fleet insurance management
+          - total fleet cost
+      - id: supply_chain
+        phrases:
+          - supply chain segmentation
+          - network design optimization
+          - distribution network design
+          - supply demand balancing
+          - sales inventory planning
+          - inventory positioning strategy
+          - safety stock optimization
+          - reorder point calculation
+          - supplier capacity assessment
+          - supplier risk monitoring
+          - supplier diversification strategy
+          - sourcing lead time
+          - order cycle time
+          - perfect order rate
+          - fill rate analysis
+          - service level optimization
+          - demand variability analysis
+          - bullwhip effect analysis
+          - supply planning horizon
+          - logistics scenario modeling
+          - disruption response planning
+          - alternate sourcing strategy
+          - contingency transport plan
+          - supply chain visibility
+          - control tower operation
