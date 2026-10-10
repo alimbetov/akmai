@@ -30,6 +30,7 @@ Implemented on this branch, but not considered quality-stable until exact-head C
 - `RetentionScheduler` — disabled gate, stale-recovery bound, drain budget and failure preservation;
 - `RetentionWorkerPool` — saturation/backpressure plus recovery/refill after cleanup failure without permit leakage;
 - `ReembeddingLeaseHeartbeatScheduler` and `ReembeddingStartupRunner` — delegation, ownership and startup orchestration boundaries;
+- `EmbeddingProfileService` — startup ordering, bootstrap when runtime has no active profile, missing-active fail-closed behavior and configured/active mismatch rejection;
 - `AdaptiveGraphDreamScheduler` — explicit trigger delegation/failure contract;
 - `AdaptiveGraphDreamCoordinator` — deterministic budget exhaustion -> `PARTIAL_BUDGET`, authoritative finalization and no execution of later lanes;
 - `RetentionEconomicsSampler` — disabled and failure paths in addition to success metrics;
@@ -47,6 +48,7 @@ Publication replay is not being duplicated blindly: the repository already has p
 | Async ingestion dispatch | `AsyncIngestionScheduler` | direct scheduler + worker/repository/replay tests | release load qualification | P0 implemented |
 | Reconciliation orchestration | `GenerationReconciliationScheduler` | service multipod + observability + direct control-flow tests | exact-head CI | P0 implemented |
 | Retention orchestration | `RetentionScheduler`, `RetentionWorkerPool` | worker-pool saturation/failure recovery + observability + PostgreSQL recovery + direct control-flow tests | release load qualification | P0 implemented |
+| Embedding profile startup | `EmbeddingProfileService` | direct startup/bootstrap/fail-closed tests + readiness integration | exact-head CI | P0 implemented |
 | Re-embedding heartbeat | `ReembeddingLeaseHeartbeatScheduler` | direct scheduler + HA/lease integration | exact-head CI | P0 implemented |
 | Dream trigger | `AdaptiveGraphDreamScheduler` | direct scheduler + coordinator/lease/fencing tests | exact-head CI | P0 implemented |
 | Retention economics | `RetentionEconomicsSampler` | positive/disabled/failure tests | no material orchestration gap | P1 implemented |
@@ -83,6 +85,13 @@ Publication replay is not being duplicated blindly: the repository already has p
 5. Existing primary-failure preservation semantics remain intact.
 6. Saturated worker permits prevent over-claiming.
 7. A cleanup exception releases its permit and the active bounded drain can refill with the next durable claim.
+
+### Embedding profile startup
+
+1. Storage exists before profile persistence/activation is attempted.
+2. Empty runtime state bootstraps the configured profile through the same durable path.
+3. A runtime reference to a missing profile fails closed.
+4. Configured/active profile mismatch fails closed before ingestion/query code can silently mix embedding spaces.
 
 ### Heartbeat and Dream trigger
 
