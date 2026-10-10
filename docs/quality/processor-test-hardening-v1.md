@@ -37,6 +37,8 @@ Implemented on this branch, but not considered quality-stable until exact-head C
 - `ParallelIngestionExecutor` — large-input bounded execution, maximum in-flight concurrency and cancellation of sibling work after exceptional completion;
 - `HydeQueryGenerator` and `MultiQueryGenerator` — disabled/no-submit behavior, bounded-executor rejection fallback and timeout cancellation;
 - `OllamaSemanticEntailmentClient` — empty-input/no-submit behavior, executor-saturation fail-closed semantics and timeout cancellation;
+- shared `queryIntelligenceExecutor` — production `2 + 16` bounded capacity is saturated with one real pool and HyDE, multi-query and entailment all degrade without retry amplification;
+- `Reranker` / `rerankerExecutor` — timeout cancellation, caller-thread avoidance, bounded queue and production `AbortPolicy` rejection fallback;
 - `AdaptiveGraphMaintenanceScheduler` — static/runtime safety gate, runtime disable between batches, early-stop, `maxBatchesPerRun` bound and failure metrics;
 - `AuditPartitionMaintenanceScheduler` — startup/cron delegation and visible DB failure contract;
 - audit partition PostgreSQL authority — repeated contenders cannot bypass the transaction advisory lock while an owner is active.
@@ -51,8 +53,8 @@ Publication replay is not being duplicated blindly: the repository already has p
 | Reconciliation orchestration | `GenerationReconciliationScheduler` | service multipod + observability + direct control-flow tests | exact-head CI | P0 implemented |
 | Retention orchestration | `RetentionScheduler`, `RetentionWorkerPool` | worker-pool saturation/failure recovery + observability + PostgreSQL recovery + direct control-flow tests | release load qualification | P0 implemented |
 | Embedding profile startup | `EmbeddingProfileService` | direct startup/bootstrap/fail-closed tests + readiness integration | exact-head CI | P0 implemented |
-| Query-intelligence overload | `HydeQueryGenerator`, `MultiQueryGenerator` | direct no-submit/rejection/timeout-cancellation tests | release saturation qualification | P0 implemented |
-| Semantic entailment overload | `OllamaSemanticEntailmentClient` | direct no-submit/rejection/timeout fail-closed tests | live semantic calibration remains separate | P0 implemented |
+| Query-intelligence overload | `HydeQueryGenerator`, `MultiQueryGenerator`, `OllamaSemanticEntailmentClient`, `queryIntelligenceExecutor` | direct component rejection/timeout tests + real shared-executor saturation test | release saturation qualification with live model latency | P0 implemented |
+| Reranker overload | `Reranker`, `RerankerExecutorConfig` | timeout interruption + saturation fallback + production bounded-config test | release retrieval load qualification | P0 implemented |
 | Re-embedding heartbeat | `ReembeddingLeaseHeartbeatScheduler` | direct scheduler + HA/lease integration | exact-head CI | P0 implemented |
 | Dream trigger | `AdaptiveGraphDreamScheduler` | direct scheduler + coordinator/lease/fencing tests | exact-head CI | P0 implemented |
 | Retention economics | `RetentionEconomicsSampler` | positive/disabled/failure tests | no material orchestration gap | P1 implemented |
@@ -103,6 +105,9 @@ Publication replay is not being duplicated blindly: the repository already has p
 2. Executor rejection produces a bounded fallback instead of retry amplification.
 3. Model timeout cancels the submitted task with interruption requested.
 4. Semantic entailment failure degrades to `INSUFFICIENT` for every affected claim rather than inventing support.
+5. Saturating the real shared `queryIntelligenceExecutor` causes one bounded rejection per optional processor call; no caller-thread execution or hidden retry loop is introduced.
+6. Reranking remains isolated on `rerankerExecutor`; query-intelligence saturation is not represented as reranker saturation.
+7. Production `rerankerExecutor` remains single-threaded, bounded by `rerankerCandidates`, and rejects excess work instead of using an unbounded queue or caller-runs policy.
 
 ### Heartbeat and Dream trigger
 
@@ -125,6 +130,7 @@ Performance tests in this pass MUST be deterministic and CI-safe:
 - prove sibling work is cancelled after an exceptional completion when the processor contract requires fail-fast behavior;
 - prove a failed worker task cannot permanently consume an execution permit;
 - prove optional query intelligence fails open/closed according to its contract under shared-executor saturation without submitting unbounded retries;
+- prove separately bounded executors remain explicit isolation boundaries rather than accidentally sharing a saturation domain;
 - avoid sleeps where latches/captured tasks can prove state;
 - avoid creating one executor per document/chunk;
 - preserve existing shared bounded executors;
@@ -138,9 +144,10 @@ After exact-head CI is green:
 
 1. run async-ingestion load qualification at document concurrency `1 / 3 / 5 / 8` and record throughput, queue wait p95/p99, DB-pool saturation and retry behavior;
 2. run multi-pod failure qualification with worker kill/reclaim, DB timeout, embedding `429/5xx` and publication replay;
-3. run shared query-intelligence executor saturation qualification while HyDE, multi-query, reranking and semantic entailment are enabled together;
-4. only add additional rollback/concurrency tests where a concrete missing invariant is found; do not duplicate already-proven repository/transaction contracts;
-5. promote this roadmap from `ACTIVE QUALITY ROADMAP` to a completed/verified baseline only after the exact-head CI and release/load evidence are both recorded.
+3. run live query-intelligence saturation qualification with HyDE, multi-query and semantic entailment enabled together; reranking is measured separately because it owns a different bounded executor;
+4. run retrieval/reranker load qualification and confirm query-intelligence overload cannot consume reranker capacity;
+5. only add additional rollback/concurrency tests where a concrete missing invariant is found; do not duplicate already-proven repository/transaction contracts;
+6. promote this roadmap from `ACTIVE QUALITY ROADMAP` to a completed/verified baseline only after the exact-head CI and release/load evidence are both recorded.
 
 ## Exit criteria
 
