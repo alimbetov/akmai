@@ -4,13 +4,13 @@ domains:
     subdomains:
       - id: power_generation
         phrases:
-          - startup fuel consumption
+          - startup energy requirement
           - shutdown thermal stress
           - boiler ramp constraint
           - turbine ramp capability
           - generator minimum load
           - unit cycling cost
-          - equivalent forced outage
+          - forced outage performance metric
           - outage cause classification
           - maintenance reserve planning
           - generation adequacy contribution
