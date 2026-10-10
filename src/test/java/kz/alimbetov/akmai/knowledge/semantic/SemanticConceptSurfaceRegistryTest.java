@@ -3,9 +3,13 @@ package kz.alimbetov.akmai.knowledge.semantic;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class SemanticConceptSurfaceRegistryTest {
+
+    private static final int MULTILINGUAL_V1_BASELINE = 384;
 
     private final SemanticDomainCatalog domainCatalog =
             new SemanticDomainCatalog();
@@ -20,25 +24,27 @@ class SemanticConceptSurfaceRegistryTest {
             );
 
     @Test
-    void everyCanonicalConceptGetsExactlyOneSurfacePerCompletedLanguage() {
-        List<String> canonicalIds = conceptCatalog.concepts().stream()
+    void englishSurfacesTrackCurrentCanonicalCorpusWhileTranslatedPacksStayOnTheirVersionedBaseline() {
+        assertThat(registry.surfaces("en"))
+                .hasSameSizeAs(conceptCatalog.concepts());
+
+        Set<String> canonicalIds = conceptCatalog.concepts().stream()
                 .map(SemanticConcept::id)
-                .toList();
+                .collect(Collectors.toSet());
 
-        for (String language : List.of("en", "ru", "kk", "zh", "de", "fr", "es", "pt", "it", "tr", "el")) {
+        for (String language : List.of("ru", "kk", "zh", "de", "fr", "es", "pt", "it", "tr", "el")) {
             assertThat(registry.surfaces(language))
                     .as(language)
-                    .hasSameSizeAs(conceptCatalog.concepts());
-
-            assertThat(registry.surfaces(language))
-                    .as(language)
-                    .extracting(SemanticConceptSurface::conceptId)
-                    .containsExactlyInAnyOrderElementsOf(canonicalIds);
+                    .hasSize(MULTILINGUAL_V1_BASELINE)
+                    .allSatisfy(surface ->
+                            assertThat(canonicalIds)
+                                    .contains(surface.conceptId())
+                    );
         }
     }
 
     @Test
-    void completedSurfacePacksPreserveAllDomainsAndSubdomains() {
+    void completedV1SurfacePacksPreserveAllDomainsAndSubdomains() {
         List<String> canonicalDomains = conceptCatalog.concepts().stream()
                 .map(SemanticConcept::domainId)
                 .distinct()
@@ -106,9 +112,9 @@ class SemanticConceptSurfaceRegistryTest {
     }
 
     @Test
-    void completedLanguageVersionsAreIndependent() {
+    void languageVersionsAreIndependent() {
         assertThat(registry.version("en"))
-                .isEqualTo("semantic-concepts-en-v1");
+                .isEqualTo("semantic-concepts-en-v2");
         assertThat(registry.version("ru"))
                 .isEqualTo("semantic-surfaces-ru-v1");
         assertThat(registry.version("kk"))
