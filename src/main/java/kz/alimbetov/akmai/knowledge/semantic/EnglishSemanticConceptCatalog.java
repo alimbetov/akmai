@@ -32,21 +32,27 @@ public class EnglishSemanticConceptCatalog {
             "semantic/concepts-en-energy-utilities-batch-a-v2.yaml",
             "semantic/concepts-en-energy-utilities-batch-b-v2.yaml",
             "semantic/concepts-en-energy-utilities-batch-c-v2.yaml",
+            "semantic/concepts-en-energy-utilities-batch-d-v2.yaml",
             "semantic/concepts-en-oil-gas-mining-batch-a-v2.yaml",
             "semantic/concepts-en-oil-gas-mining-batch-b-v2.yaml",
             "semantic/concepts-en-oil-gas-mining-batch-c-v2.yaml",
+            "semantic/concepts-en-oil-gas-mining-batch-d-v2.yaml",
             "semantic/concepts-en-manufacturing-batch-a-v2.yaml",
             "semantic/concepts-en-manufacturing-batch-b-v2.yaml",
             "semantic/concepts-en-manufacturing-batch-c-v2.yaml",
+            "semantic/concepts-en-manufacturing-batch-d-v2.yaml",
             "semantic/concepts-en-construction-real-estate-batch-a-v2.yaml",
             "semantic/concepts-en-construction-real-estate-batch-b-v2.yaml",
             "semantic/concepts-en-construction-real-estate-batch-c-v2.yaml",
+            "semantic/concepts-en-construction-real-estate-batch-d-v2.yaml",
             "semantic/concepts-en-transport-logistics-batch-a-v2.yaml",
             "semantic/concepts-en-transport-logistics-batch-b-v2.yaml",
             "semantic/concepts-en-transport-logistics-batch-c-v2.yaml",
+            "semantic/concepts-en-transport-logistics-batch-d-v2.yaml",
             "semantic/concepts-en-agriculture-food-batch-a-v2.yaml",
             "semantic/concepts-en-agriculture-food-batch-b-v2.yaml",
-            "semantic/concepts-en-agriculture-food-batch-c-v2.yaml"
+            "semantic/concepts-en-agriculture-food-batch-c-v2.yaml",
+            "semantic/concepts-en-agriculture-food-batch-d-v2.yaml"
     );
     private static final String COMBINED_VERSION = "semantic-concepts-en-v2";
 
