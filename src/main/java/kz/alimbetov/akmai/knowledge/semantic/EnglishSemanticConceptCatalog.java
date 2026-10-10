@@ -68,7 +68,11 @@ public class EnglishSemanticConceptCatalog {
             "semantic/concepts-en-chemistry-materials-batch-a-v2.yaml",
             "semantic/concepts-en-chemistry-materials-batch-b-v2.yaml",
             "semantic/concepts-en-chemistry-materials-batch-c-v2.yaml",
-            "semantic/concepts-en-chemistry-materials-batch-d-v2.yaml"
+            "semantic/concepts-en-chemistry-materials-batch-d-v2.yaml",
+            "semantic/concepts-en-mathematics-statistics-batch-a-v2.yaml",
+            "semantic/concepts-en-physics-astronomy-batch-a-v2.yaml",
+            "semantic/concepts-en-earth-environmental-science-batch-a-v2.yaml",
+            "semantic/concepts-en-psychology-sociology-batch-a-v2.yaml"
     );
     private static final String COMBINED_VERSION = "semantic-concepts-en-v2";
 
