@@ -1,0 +1,112 @@
+version: semantic-concepts-en-energy-utilities-batch-d-v2
+domains:
+  - domainId: energy_utilities
+    subdomains:
+      - id: power_generation
+        phrases:
+          - startup fuel consumption
+          - shutdown thermal stress
+          - boiler ramp constraint
+          - turbine ramp capability
+          - generator minimum load
+          - unit cycling cost
+          - equivalent forced outage
+          - outage cause classification
+          - maintenance reserve planning
+          - generation adequacy contribution
+          - primary frequency response
+          - secondary frequency response
+          - governor droop setting
+          - automatic voltage regulation
+          - excitation limiter coordination
+          - generator reactive capability
+          - synchronous condenser operation
+          - condenser fouling assessment
+          - cooling system efficiency
+          - heat recovery performance
+          - steam cycle optimization
+          - combustion tuning program
+          - emissions performance testing
+          - fuel inventory assurance
+          - generation portfolio optimization
+      - id: power_grid
+        phrases:
+          - probabilistic load flow
+          - security constrained dispatch
+          - remedial action scheme
+          - special protection scheme
+          - underfrequency load shedding
+          - undervoltage load shedding
+          - restoration switching sequence
+          - dynamic reactive support
+          - voltage collapse margin
+          - frequency nadir assessment
+          - rate change frequency
+          - system inertia estimation
+          - oscillatory mode identification
+          - electromechanical mode damping
+          - transformer loss evaluation
+          - transformer aging assessment
+          - cable thermal rating
+          - conductor temperature monitoring
+          - feeder voltage optimization
+          - distributed voltage regulation
+          - outage cause analytics
+          - reliability worth assessment
+          - resilience event modeling
+          - wildfire grid mitigation
+          - storm restoration analytics
+      - id: energy_markets
+        phrases:
+          - security constrained market
+          - reserve cooptimization model
+          - energy reserve cooptimization
+          - marginal loss pricing
+          - scarcity reserve demand
+          - capacity performance obligation
+          - reliability must run
+          - uplift cost causation
+          - revenue adequacy assessment
+          - congestion surplus allocation
+          - nodal settlement validation
+          - bilateral settlement netting
+          - collateral requirement calculation
+          - credit exposure monitoring
+          - market participant default
+          - virtual bidding strategy
+          - financial transmission auction
+          - demand bid participation
+          - distributed resource aggregation
+          - retail load obligation
+          - supplier switching settlement
+          - tariff true up
+          - regulatory revenue cap
+          - performance based regulation
+          - energy affordability metric
+      - id: renewable_energy
+        phrases:
+          - photovoltaic availability loss
+          - solar degradation warranty
+          - inverter availability monitoring
+          - tracker performance assessment
+          - solar resource uncertainty
+          - wind shear analysis
+          - wind turbulence intensity
+          - turbine gearbox condition
+          - turbine blade inspection
+          - wind curtailment forecast
+          - storage depth discharge
+          - battery roundtrip degradation
+          - battery cell imbalance
+          - battery state estimation
+          - storage warranty management
+          - storage cycling strategy
+          - long duration storage
+          - renewable capacity accreditation
+          - renewable adequacy contribution
+          - hybrid inverter control
+          - renewable ramp forecasting
+          - solar forecast uncertainty
+          - wind forecast uncertainty
+          - renewable hedge effectiveness
+          - renewable offtake structure
