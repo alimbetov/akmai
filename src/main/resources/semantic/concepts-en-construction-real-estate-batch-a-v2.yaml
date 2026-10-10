@@ -48,7 +48,7 @@ domains:
           - triple net lease
           - gross lease structure
           - property absorption rate
-          - market vacancy rate
+          - lease expiry profile
           - development feasibility study
           - highest best use
           - land residual valuation
@@ -61,7 +61,7 @@ domains:
           - facility condition assessment
           - asset lifecycle plan
           - building maintenance strategy
-          - planned preventive maintenance
+          - facility maintenance prioritization
           - reactive maintenance process
           - facility work order
           - service level agreement
