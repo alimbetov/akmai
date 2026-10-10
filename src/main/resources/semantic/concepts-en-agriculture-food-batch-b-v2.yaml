@@ -4,22 +4,22 @@ domains:
     subdomains:
       - id: crop_science
         phrases:
-          - crop rotation planning
-          - planting density optimization
-          - seed variety selection
-          - soil moisture monitoring
+          - crop sequence design
+          - row spacing optimization
+          - cultivar suitability analysis
+          - soil water profile
           - soil organic matter
           - nutrient deficiency diagnosis
           - fertilizer application rate
           - variable rate fertilization
           - irrigation water efficiency
           - evapotranspiration estimation
-          - drought stress monitoring
+          - drought response assessment
           - crop phenology tracking
           - remote sensing agriculture
           - vegetation index analysis
           - yield gap analysis
-          - harvest timing optimization
+          - harvest readiness index
           - crop loss assessment
           - pest pressure monitoring
           - weed management strategy
@@ -31,29 +31,29 @@ domains:
           - precision seeding system
       - id: livestock_production
         phrases:
-          - herd health protocol
+          - herd disease surveillance
           - veterinary treatment record
-          - feed conversion ratio
+          - feed efficiency benchmark
           - ration nutrient balance
           - forage quality analysis
           - animal growth monitoring
-          - body condition scoring
+          - condition score distribution
           - reproductive cycle monitoring
-          - artificial insemination program
-          - calving interval analysis
-          - milk yield monitoring
-          - somatic cell count
-          - mastitis control program
-          - livestock mortality rate
+          - insemination success rate
+          - calving pattern monitoring
+          - milk production forecast
+          - bulk milk cell count
+          - mastitis incidence monitoring
+          - herd attrition analysis
           - biosecurity control plan
-          - vaccination schedule management
+          - vaccination compliance rate
           - antimicrobial use monitoring
           - animal identification system
           - herd replacement planning
           - housing ventilation management
           - livestock heat stress
-          - pasture grazing management
-          - stocking density control
+          - pasture utilization planning
+          - stocking rate adjustment
           - feed inventory planning
           - manure management system
       - id: food_processing
@@ -63,16 +63,16 @@ domains:
           - recipe batch control
           - process yield analysis
           - processing loss monitoring
-          - thermal process validation
-          - pasteurization process control
-          - sterilization process control
+          - thermal lethality calculation
+          - pasteurization hold time
+          - sterilization lethality target
           - mixing process uniformity
           - filling line efficiency
           - packaging line efficiency
           - packaging seal integrity
-          - modified atmosphere packaging
+          - gas composition control
           - cold storage management
-          - freezing process control
+          - freezer residence time
           - thawing process control
           - moisture content control
           - texture quality measurement
@@ -80,26 +80,26 @@ domains:
           - sensory evaluation program
           - shelf stability testing
           - production lot traceability
-          - food waste reduction
+          - byproduct recovery program
           - processing capacity planning
           - plant sanitation scheduling
       - id: food_safety
         phrases:
-          - hazard analysis plan
-          - critical control point
+          - food hazard register
+          - critical limit verification
           - preventive control program
-          - sanitation standard procedure
-          - environmental monitoring program
-          - pathogen testing program
+          - sanitation control record
+          - zone sampling strategy
+          - pathogen test verification
           - microbial trend analysis
-          - allergen cross contact
+          - allergen zoning control
           - allergen labeling control
           - foreign material detection
-          - metal detector verification
+          - metal detector challenge
           - x ray inspection
-          - supplier food safety
-          - food defense plan
-          - food fraud vulnerability
+          - supplier hazard review
+          - food defense vulnerability
+          - authenticity risk assessment
           - recall readiness program
           - recall effectiveness check
           - traceability verification test
