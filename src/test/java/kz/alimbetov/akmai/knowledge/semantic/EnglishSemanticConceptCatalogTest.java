@@ -18,14 +18,14 @@ class EnglishSemanticConceptCatalogTest {
             Map.entry("construction_real_estate", 424L),
             Map.entry("transport_logistics", 424L),
             Map.entry("agriculture_food", 424L),
-            Map.entry("mathematics_statistics", 24L),
-            Map.entry("physics_astronomy", 24L),
+            Map.entry("mathematics_statistics", 124L),
+            Map.entry("physics_astronomy", 124L),
             Map.entry("chemistry_materials", 424L),
             Map.entry("biology_genetics", 424L),
             Map.entry("computer_science_ai", 424L),
             Map.entry("medicine_pharmacology", 424L),
-            Map.entry("earth_environmental_science", 24L),
-            Map.entry("psychology_sociology", 24L)
+            Map.entry("earth_environmental_science", 124L),
+            Map.entry("psychology_sociology", 124L)
     );
 
     private final SemanticDomainCatalog domains = new SemanticDomainCatalog();
@@ -34,7 +34,7 @@ class EnglishSemanticConceptCatalogTest {
     @Test
     void corpusContainsExpectedCuratedConceptCounts() {
         assertThat(catalog.version()).isEqualTo("semantic-concepts-en-v2");
-        assertThat(catalog.concepts()).hasSize(5184);
+        assertThat(catalog.concepts()).hasSize(5584);
 
         Map<String, Long> byDomain = catalog.concepts().stream()
                 .collect(Collectors.groupingBy(
@@ -47,7 +47,7 @@ class EnglishSemanticConceptCatalogTest {
     }
 
     @Test
-    void expandedDomainsContainOneHundredNewConceptsPerSubdomain() {
+    void completedDomainsContainOneHundredNewConceptsPerSubdomain() {
         assertSubdomainCounts("finance_banking", 106L);
         assertSubdomainCounts("insurance", 106L);
         assertSubdomainCounts("energy_utilities", 106L);
@@ -63,9 +63,25 @@ class EnglishSemanticConceptCatalogTest {
     }
 
     @Test
+    void stageFourBatchADomainsContainTwentyFiveNewConceptsPerSubdomain() {
+        assertSubdomainCounts("mathematics_statistics", 31L);
+        assertSubdomainCounts("physics_astronomy", 31L);
+        assertSubdomainCounts("earth_environmental_science", 31L);
+        assertSubdomainCounts("psychology_sociology", 31L);
+    }
+
+    @Test
+    void representativeStageFourBatchAConceptsRemainStableAndClassified() {
+        assertConcept("mathematics_statistics.probability_statistics.bootstrap_resampling_method", "probability_statistics");
+        assertConcept("physics_astronomy.astrophysics.gravitational_lensing_analysis", "astrophysics");
+        assertConcept("earth_environmental_science.climate_science.climate_sensitivity_estimate", "climate_science");
+        assertConcept("psychology_sociology.cognitive_psychology.executive_function_assessment", "cognitive_psychology");
+    }
+
+    @Test
     void representativeScienceTechnologyBatchDConceptsRemainStableAndClassified() {
         assertConcept("computer_science_ai.software_systems.linearizability_verification_method", "software_systems");
-        assertConcept("medicine_pharmacology.pharmacology.therapeutic_drug_monitoring", "pharmacology");
+        assertConcept("medicine_pharmacology.pharmacology.therapeutic_concentration_monitoring", "pharmacology");
         assertConcept("biology_genetics.genetics.homologous_repair_deficiency", "genetics");
         assertConcept("chemistry_materials.materials_science.damage_tolerance_analysis", "materials_science");
     }
