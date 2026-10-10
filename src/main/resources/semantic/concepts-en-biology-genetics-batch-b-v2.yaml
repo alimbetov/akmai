@@ -1,0 +1,112 @@
+version: semantic-concepts-en-biology-genetics-batch-b-v2
+domains:
+  - domainId: biology_genetics
+    subdomains:
+      - id: molecular_biology
+        phrases:
+          - transcription initiation complex
+          - transcription termination mechanism
+          - RNA polymerase pausing
+          - enhancer promoter interaction
+          - chromatin looping mechanism
+          - nucleosome positioning pattern
+          - histone acetylation state
+          - DNA damage response
+          - double strand break repair
+          - homologous recombination repair
+          - nonhomologous end joining
+          - replication fork stability
+          - DNA mismatch repair
+          - RNA editing mechanism
+          - messenger RNA decay
+          - nonsense mediated decay
+          - translational control mechanism
+          - ribosome profiling analysis
+          - protein trafficking pathway
+          - protein secretion pathway
+          - protein complex assembly
+          - posttranslational processing pathway
+          - molecular interaction network
+          - transcriptional regulatory network
+          - epigenomic profiling method
+      - id: genetics
+        phrases:
+          - rare variant burden
+          - variant allele frequency
+          - genotype quality score
+          - sequencing depth coverage
+          - genome assembly quality
+          - haplotype phasing method
+          - identity by descent
+          - identity by state
+          - ancestry inference method
+          - population stratification control
+          - genomic inflation factor
+          - genetic correlation estimate
+          - pleiotropic effect analysis
+          - epistasis interaction analysis
+          - polygenic score calibration
+          - family based association
+          - transmission disequilibrium test
+          - linkage peak analysis
+          - gene environment interaction
+          - penetrance modifier analysis
+          - mosaic variant detection
+          - clonal evolution analysis
+          - mutational signature analysis
+          - germline mosaicism assessment
+          - genotype calling pipeline
+      - id: cell_biology
+        phrases:
+          - cell polarity establishment
+          - cell junction assembly
+          - tight junction integrity
+          - adherens junction signaling
+          - focal adhesion dynamics
+          - extracellular vesicle release
+          - membrane potential regulation
+          - calcium signaling dynamics
+          - organelle contact site
+          - mitochondrial fission process
+          - mitochondrial fusion process
+          - mitophagy quality control
+          - endoplasmic reticulum stress
+          - unfolded protein response
+          - Golgi trafficking pathway
+          - lysosomal acidification process
+          - autophagosome formation process
+          - phagocytosis uptake process
+          - cell mechanotransduction pathway
+          - cell fate specification
+          - lineage commitment process
+          - asymmetric cell division
+          - contact inhibition response
+          - anoikis resistance mechanism
+          - cellular stress granule
+      - id: physiology
+        phrases:
+          - heart rate variability
+          - stroke volume regulation
+          - venous return control
+          - baroreceptor reflex response
+          - pulmonary compliance measurement
+          - airway resistance regulation
+          - ventilation perfusion matching
+          - oxygen dissociation curve
+          - renal autoregulation mechanism
+          - tubular secretion process
+          - sodium balance regulation
+          - potassium balance regulation
+          - osmotic pressure regulation
+          - hepatic glucose production
+          - insulin sensitivity response
+          - glucagon secretion response
+          - adrenal stress response
+          - hypothalamic appetite control
+          - neuromuscular transmission process
+          - motor unit recruitment
+          - vestibular reflex control
+          - gastrointestinal absorption process
+          - bile acid circulation
+          - immune tolerance mechanism
+          - sleep wake regulation
