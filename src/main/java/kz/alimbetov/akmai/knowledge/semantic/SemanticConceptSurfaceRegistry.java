@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -188,6 +189,10 @@ public class SemanticConceptSurfaceRegistry {
 
     public List<SemanticConceptSurface> surfaces(String language) {
         return byLanguage.getOrDefault(language, List.of());
+    }
+
+    public Set<String> languages() {
+        return Set.copyOf(byLanguage.keySet());
     }
 
     public boolean supports(String language) {
