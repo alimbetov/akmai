@@ -25,7 +25,8 @@ public class EnglishSemanticConceptCatalog {
             "semantic/concepts-en-finance-batch-b-v2.yaml",
             "semantic/concepts-en-finance-batch-c-v2.yaml",
             "semantic/concepts-en-finance-batch-d-v2.yaml",
-            "semantic/concepts-en-insurance-batch-a-v2.yaml"
+            "semantic/concepts-en-insurance-batch-a-v2.yaml",
+            "semantic/concepts-en-insurance-batch-b-v2.yaml"
     );
     private static final String COMBINED_VERSION = "semantic-concepts-en-v2";
 
