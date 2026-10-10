@@ -1,0 +1,112 @@
+version: semantic-concepts-en-biology-genetics-batch-a-v2
+domains:
+  - domainId: biology_genetics
+    subdomains:
+      - id: molecular_biology
+        phrases:
+          - transcription factor binding
+          - promoter activity regulation
+          - enhancer element function
+          - epigenetic gene regulation
+          - DNA methylation pattern
+          - histone modification profile
+          - chromatin accessibility analysis
+          - messenger RNA processing
+          - alternative splicing event
+          - RNA interference pathway
+          - microRNA target regulation
+          - ribosome translation efficiency
+          - protein posttranslational modification
+          - protein degradation pathway
+          - ubiquitin proteasome system
+          - protein protein interaction
+          - signal transduction cascade
+          - receptor signaling pathway
+          - kinase phosphorylation cascade
+          - second messenger signaling
+          - transcriptional response program
+          - molecular chaperone activity
+          - nucleic acid hybridization
+          - genome editing mechanism
+          - CRISPR guide design
+      - id: genetics
+        phrases:
+          - genome wide association
+          - polygenic risk score
+          - linkage disequilibrium analysis
+          - haplotype block analysis
+          - allele frequency spectrum
+          - genotype imputation process
+          - variant annotation pipeline
+          - variant pathogenicity assessment
+          - copy number variation
+          - structural variant detection
+          - de novo mutation
+          - germline variant analysis
+          - somatic variant analysis
+          - pedigree segregation analysis
+          - genetic linkage analysis
+          - quantitative trait locus
+          - heritability estimate model
+          - genetic penetrance estimate
+          - genotype phenotype association
+          - population admixture analysis
+          - founder effect analysis
+          - genetic drift model
+          - selection coefficient estimate
+          - recombination rate mapping
+          - Mendelian randomization analysis
+      - id: cell_biology
+        phrases:
+          - cell cycle checkpoint
+          - mitotic spindle assembly
+          - chromosome segregation process
+          - cytokinesis regulation mechanism
+          - apoptosis signaling pathway
+          - autophagy regulation pathway
+          - lysosomal degradation pathway
+          - mitochondrial membrane potential
+          - mitochondrial respiration rate
+          - cellular oxidative stress
+          - reactive oxygen species
+          - membrane receptor trafficking
+          - vesicle transport pathway
+          - endocytosis uptake mechanism
+          - exocytosis secretion mechanism
+          - cytoskeletal remodeling process
+          - actin polymerization dynamics
+          - microtubule organization center
+          - cell adhesion complex
+          - extracellular matrix interaction
+          - epithelial mesenchymal transition
+          - cell migration assay
+          - organelle biogenesis process
+          - cellular senescence program
+          - stemness maintenance pathway
+      - id: physiology
+        phrases:
+          - cardiac output regulation
+          - vascular resistance control
+          - blood pressure homeostasis
+          - myocardial contractility response
+          - pulmonary ventilation control
+          - alveolar gas exchange
+          - oxygen transport capacity
+          - acid base regulation
+          - glomerular filtration rate
+          - tubular reabsorption process
+          - electrolyte balance regulation
+          - fluid volume homeostasis
+          - glucose homeostasis control
+          - insulin secretion response
+          - thyroid hormone regulation
+          - hypothalamic pituitary axis
+          - autonomic nervous regulation
+          - synaptic transmission process
+          - sensory signal transduction
+          - skeletal muscle contraction
+          - thermoregulation control mechanism
+          - gastrointestinal motility regulation
+          - hepatic metabolic function
+          - immune physiological response
+          - circadian rhythm regulation
