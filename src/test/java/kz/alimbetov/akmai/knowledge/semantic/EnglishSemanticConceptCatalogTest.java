@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.knowledge.semantic;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
@@ -42,6 +43,16 @@ class EnglishSemanticConceptCatalogTest {
                             .as(concept.id())
                             .isBetween(2, 6);
                 });
+    }
+
+    @Test
+    void canonicalPhrasesAreGloballyUniqueAfterNormalization() {
+        Set<String> normalized = catalog.concepts().stream()
+                .map(SemanticConcept::preferredPhrase)
+                .map(EnglishSemanticConceptCatalog::normalizePhrase)
+                .collect(Collectors.toSet());
+
+        assertThat(normalized).hasSize(catalog.concepts().size());
     }
 
     @Test
