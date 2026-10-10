@@ -1,0 +1,112 @@
+version: semantic-concepts-en-agriculture-food-batch-a-v2
+domains:
+  - domainId: agriculture_food
+    subdomains:
+      - id: crop_science
+        phrases:
+          - soil moisture monitoring
+          - soil fertility assessment
+          - nitrogen application rate
+          - phosphorus application rate
+          - potassium application rate
+          - variable rate application
+          - remote crop sensing
+          - satellite crop monitoring
+          - crop growth model
+          - phenology stage monitoring
+          - planting density optimization
+          - seed variety selection
+          - germination rate analysis
+          - crop rotation planning
+          - cover crop management
+          - conservation tillage practice
+          - weed pressure assessment
+          - herbicide resistance management
+          - fungicide application timing
+          - insect population monitoring
+          - crop water requirement
+          - evapotranspiration estimate
+          - drought stress monitoring
+          - harvest timing optimization
+          - postharvest loss reduction
+      - id: livestock_production
+        phrases:
+          - herd health protocol
+          - veterinary treatment plan
+          - vaccination schedule management
+          - biosecurity control program
+          - feed conversion ratio
+          - daily weight gain
+          - body condition scoring
+          - milk yield monitoring
+          - somatic cell count
+          - mastitis control program
+          - calving interval analysis
+          - estrus detection system
+          - artificial insemination program
+          - genetic selection index
+          - breeding value estimate
+          - animal housing ventilation
+          - heat stress management
+          - water intake monitoring
+          - pasture grazing management
+          - stocking density control
+          - rumen health monitoring
+          - feed ration optimization
+          - livestock mortality rate
+          - animal traceability program
+          - antimicrobial stewardship program
+      - id: food_processing
+        phrases:
+          - raw material receiving
+          - ingredient specification control
+          - recipe formulation management
+          - batch mixing process
+          - thermal process validation
+          - pasteurization process control
+          - sterilization process control
+          - retort process monitoring
+          - fermentation process control
+          - drying process optimization
+          - freezing process control
+          - chilling process management
+          - portion control system
+          - filling line operation
+          - sealing integrity testing
+          - packaging material specification
+          - modified atmosphere packaging
+          - cleaning sanitation process
+          - clean in place
+          - production yield monitoring
+          - food waste reduction
+          - line changeover procedure
+          - process loss analysis
+          - sensory quality evaluation
+          - finished product release
+      - id: food_safety
+        phrases:
+          - hazard analysis plan
+          - critical control point
+          - critical limit monitoring
+          - corrective action procedure
+          - verification activity program
+          - validation activity program
+          - sanitation standard procedure
+          - environmental monitoring program
+          - pathogen testing program
+          - microbiological sampling plan
+          - foreign material control
+          - metal detector verification
+          - xray inspection system
+          - allergen cross contact
+          - allergen label verification
+          - supplier food safety
+          - food defense plan
+          - food fraud vulnerability
+          - traceability recall test
+          - product recall procedure
+          - temperature control monitoring
+          - cold storage compliance
+          - pest control program
+          - water quality monitoring
+          - regulatory food inspection
