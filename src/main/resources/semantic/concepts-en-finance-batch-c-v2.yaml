@@ -11,7 +11,7 @@ domains:
           - lending policy exception
           - collateral eligibility criteria
           - collateral haircut methodology
-          - loan amortization schedule
+          - scheduled principal repayment profile
           - balloon payment structure
           - covenant breach remediation
           - distressed debt restructuring
@@ -37,20 +37,20 @@ domains:
           - nonoperational deposit balance
           - operational deposit balance
           - liquidity coverage buffer
-          - contingent funding source
+          - contingency funding capacity
           - secured funding capacity
           - unsecured funding capacity
           - funding rollover risk
           - short term funding ratio
           - long term funding ratio
           - liquidity asset haircut
-          - central bank facility
-          - emergency liquidity assistance
+          - central bank liquidity access
+          - emergency central bank support
           - deposit concentration threshold
           - contractual cash inflow
           - contractual cash outflow
           - behavioral cash flow
-          - liquidity risk limit
+          - liquidity limit utilization
           - liquidity early warning
           - funding plan execution
           - treasury liquidity position
@@ -58,24 +58,24 @@ domains:
           - settlement liquidity requirement
       - id: risk_capital
         phrases:
-          - risk weighted asset density
-          - standardized credit risk approach
+          - risk asset intensity
+          - regulatory credit risk method
           - standardized market risk approach
           - standardized operational risk approach
           - advanced measurement approach
           - internal model approval
           - model validation framework
-          - stress capital buffer
+          - stress capital requirement
           - systemic risk buffer
           - capital surcharge requirement
-          - minimum capital requirement
+          - minimum regulatory capital
           - capital distribution restriction
-          - dividend distribution constraint
+          - dividend payout restriction
           - capital recovery plan
           - capital contingency action
           - risk aggregation framework
           - enterprise risk taxonomy
-          - risk limit framework
+          - enterprise risk limit structure
           - risk escalation process
           - risk acceptance criteria
           - interest rate shock
@@ -85,14 +85,14 @@ domains:
           - equity price risk
       - id: payments_compliance
         phrases:
-          - sanctions list screening
+          - sanctions screening governance
           - name screening process
           - payment beneficiary screening
           - originator information verification
           - funds transfer regulation
           - suspicious transaction report
-          - transaction risk scoring
-          - customer risk rating
+          - transaction monitoring risk score
+          - customer due diligence rating
           - geographic risk assessment
           - product risk assessment
           - channel risk assessment
