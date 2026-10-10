@@ -1,0 +1,112 @@
+version: semantic-concepts-en-chemistry-materials-batch-a-v2
+domains:
+  - domainId: chemistry_materials
+    subdomains:
+      - id: organic_chemistry
+        phrases:
+          - nucleophilic substitution reaction
+          - electrophilic addition reaction
+          - elimination reaction pathway
+          - aromatic substitution reaction
+          - carbonyl addition reaction
+          - aldol condensation reaction
+          - Grignard reagent reaction
+          - organometallic coupling reaction
+          - catalytic hydrogenation process
+          - oxidation reduction reaction
+          - protecting group strategy
+          - retrosynthetic analysis method
+          - chiral catalyst design
+          - enantioselective synthesis route
+          - regioselective reaction control
+          - chemoselective reaction control
+          - reaction intermediate stabilization
+          - transition state analysis
+          - reaction condition screening
+          - solvent effect analysis
+          - catalyst loading optimization
+          - reagent stoichiometry optimization
+          - side reaction suppression
+          - product purification strategy
+          - synthetic route scalability
+      - id: analytical_chemistry
+        phrases:
+          - liquid chromatography analysis
+          - gas chromatography analysis
+          - tandem mass spectrometry
+          - nuclear magnetic resonance
+          - infrared spectroscopy analysis
+          - ultraviolet visible spectroscopy
+          - atomic absorption spectroscopy
+          - inductively coupled plasma
+          - electrochemical detection method
+          - fluorescence detection method
+          - chromatographic peak resolution
+          - retention time stability
+          - calibration model validation
+          - method detection limit
+          - quantitation limit estimation
+          - analytical method validation
+          - sample matrix effect
+          - internal standard method
+          - external standard method
+          - recovery study assessment
+          - precision repeatability study
+          - intermediate precision study
+          - measurement uncertainty estimate
+          - reference material traceability
+          - instrument performance qualification
+      - id: physical_chemistry
+        phrases:
+          - reaction rate constant
+          - activation energy estimate
+          - Arrhenius temperature dependence
+          - transition state theory
+          - diffusion controlled reaction
+          - chemical potential gradient
+          - Gibbs free energy
+          - enthalpy change calculation
+          - entropy change calculation
+          - phase diagram analysis
+          - vapor liquid equilibrium
+          - liquid liquid equilibrium
+          - solid liquid equilibrium
+          - activity coefficient model
+          - fugacity coefficient model
+          - electrolyte solution model
+          - electrochemical impedance spectroscopy
+          - electrode reaction kinetics
+          - redox potential measurement
+          - surface energy analysis
+          - adsorption isotherm model
+          - colloidal stability analysis
+          - molecular dynamics simulation
+          - quantum chemistry calculation
+          - statistical thermodynamics model
+      - id: materials_science
+        phrases:
+          - grain size distribution
+          - crystallographic texture analysis
+          - dislocation density measurement
+          - phase fraction analysis
+          - microstructure property relationship
+          - tensile strength measurement
+          - fracture toughness testing
+          - fatigue crack growth
+          - creep deformation behavior
+          - hardness testing method
+          - elastic modulus measurement
+          - thermal expansion coefficient
+          - thermal conductivity measurement
+          - electrical conductivity measurement
+          - dielectric property analysis
+          - corrosion rate measurement
+          - oxidation resistance testing
+          - wear resistance testing
+          - tribological performance analysis
+          - polymer glass transition
+          - composite interface strength
+          - ceramic sintering behavior
+          - additive manufacturing material
+          - nanostructure characterization method
+          - material failure analysis
