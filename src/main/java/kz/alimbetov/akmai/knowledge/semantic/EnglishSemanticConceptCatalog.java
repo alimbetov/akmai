@@ -55,12 +55,16 @@ public class EnglishSemanticConceptCatalog {
             "semantic/concepts-en-agriculture-food-batch-d-v2.yaml",
             "semantic/concepts-en-computer-science-ai-batch-a-v2.yaml",
             "semantic/concepts-en-computer-science-ai-batch-b-v2.yaml",
+            "semantic/concepts-en-computer-science-ai-batch-c-v2.yaml",
             "semantic/concepts-en-medicine-pharmacology-batch-a-v2.yaml",
             "semantic/concepts-en-medicine-pharmacology-batch-b-v2.yaml",
+            "semantic/concepts-en-medicine-pharmacology-batch-c-v2.yaml",
             "semantic/concepts-en-biology-genetics-batch-a-v2.yaml",
             "semantic/concepts-en-biology-genetics-batch-b-v2.yaml",
+            "semantic/concepts-en-biology-genetics-batch-c-v2.yaml",
             "semantic/concepts-en-chemistry-materials-batch-a-v2.yaml",
-            "semantic/concepts-en-chemistry-materials-batch-b-v2.yaml"
+            "semantic/concepts-en-chemistry-materials-batch-b-v2.yaml",
+            "semantic/concepts-en-chemistry-materials-batch-c-v2.yaml"
     );
     private static final String COMBINED_VERSION = "semantic-concepts-en-v2";
 
