@@ -2,6 +2,8 @@ package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -61,6 +63,53 @@ class RetentionEconomicsSamplerTest {
                 .gauge().value()).isEqualTo(12.0);
         assertThat(registry.get("akmai.retention.economics.sample")
                 .tag("outcome", "SUCCESS")
+                .timer().count()).isEqualTo(1);
+    }
+
+    @Test
+    void disabledSamplerDoesNotQueryDatabaseOrPublishMetrics() {
+        RetentionEconomicsService service =
+                mock(RetentionEconomicsService.class);
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        AkmaiMetrics metrics = new AkmaiMetrics(registry);
+        RetentionEconomicsSampler sampler = new RetentionEconomicsSampler(
+                service,
+                new RetentionEconomicsProperties(
+                        false,
+                        Duration.ofMinutes(15)
+                ),
+                metrics
+        );
+
+        sampler.sample();
+
+        verify(service, never()).snapshot();
+        assertThat(registry.find("akmai.retention.economics.sample")
+                .timer()).isNull();
+    }
+
+    @Test
+    void snapshotFailureIsIsolatedAndReportedAsFailedSample() {
+        RetentionEconomicsService service =
+                mock(RetentionEconomicsService.class);
+        when(service.snapshot()).thenThrow(
+                new IllegalStateException("statistics unavailable")
+        );
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        AkmaiMetrics metrics = new AkmaiMetrics(registry);
+        RetentionEconomicsSampler sampler = new RetentionEconomicsSampler(
+                service,
+                new RetentionEconomicsProperties(
+                        true,
+                        Duration.ofMinutes(15)
+                ),
+                metrics
+        );
+
+        sampler.sample();
+
+        assertThat(registry.get("akmai.retention.economics.sample")
+                .tag("outcome", "FAILED")
                 .timer().count()).isEqualTo(1);
     }
 }
