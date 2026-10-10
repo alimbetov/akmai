@@ -1,0 +1,112 @@
+version: semantic-concepts-en-medicine-pharmacology-batch-d-v2
+domains:
+  - domainId: medicine_pharmacology
+    subdomains:
+      - id: clinical_diagnosis
+        phrases:
+          - diagnostic pathway adherence
+          - referral urgency classification
+          - symptom burden score
+          - diagnostic test utilization
+          - diagnostic yield analysis
+          - diagnostic cascade assessment
+          - incidentaloma management pathway
+          - multidisciplinary diagnostic conference
+          - clinical phenotype refinement
+          - longitudinal symptom tracking
+          - disease trajectory modeling
+          - organ failure classification
+          - bedside risk score
+          - deterioration warning score
+          - escalation protocol compliance
+          - diagnostic uncertainty communication
+          - safety net followup
+          - diagnostic result reconciliation
+          - critical result notification
+          - laboratory alert threshold
+          - imaging followup recommendation
+          - pathology concordance review
+          - diagnostic quality indicator
+          - missed followup audit
+          - diagnostic harm assessment
+      - id: pharmacology
+        phrases:
+          - exposure margin assessment
+          - therapeutic drug monitoring
+          - dose individualization strategy
+          - genotype guided dosing
+          - renal function dosing
+          - hepatic impairment dosing
+          - pediatric dose scaling
+          - geriatric dose adjustment
+          - drug food interaction
+          - drug disease interaction
+          - QT prolongation risk
+          - proarrhythmic liability assessment
+          - hepatotoxicity signal assessment
+          - nephrotoxicity signal assessment
+          - immunogenicity risk assessment
+          - antidrug antibody response
+          - receptor reserve effect
+          - partial agonist activity
+          - competitive antagonist model
+          - irreversible inhibition mechanism
+          - target engagement biomarker
+          - pharmacodynamic biomarker response
+          - exposure matching strategy
+          - dose interruption rule
+          - dose reduction algorithm
+      - id: clinical_trials
+        phrases:
+          - protocol feasibility assessment
+          - country feasibility assessment
+          - site activation timeline
+          - enrollment feasibility estimate
+          - recruitment funnel analysis
+          - randomization compliance audit
+          - blinding integrity assessment
+          - endpoint measurement reliability
+          - interrater reliability assessment
+          - central adjudication process
+          - trial supply accountability
+          - investigational product compliance
+          - data query resolution
+          - source data verification
+          - risk based monitoring
+          - centralized monitoring strategy
+          - trial master file
+          - essential document completeness
+          - protocol violation classification
+          - safety reporting timeline
+          - expedited safety reporting
+          - development safety report
+          - statistical programming validation
+          - clinical database validation
+          - trial closeout procedure
+      - id: epidemiology
+        phrases:
+          - disease surveillance sensitivity
+          - disease surveillance specificity
+          - case ascertainment completeness
+          - capture recapture estimate
+          - excess case detection
+          - outbreak threshold detection
+          - endemic baseline estimate
+          - epidemic peak timing
+          - force infection estimate
+          - effective reproduction number
+          - household transmission rate
+          - community transmission intensity
+          - seroprevalence survey design
+          - seroconversion rate estimate
+          - vaccine breakthrough rate
+          - screening program effectiveness
+          - population screening coverage
+          - health inequality gradient
+          - socioeconomic risk gradient
+          - geographic incidence gradient
+          - environmental exposure linkage
+          - occupational exposure assessment
+          - ecological study design
+          - nested case control
+          - case crossover design
