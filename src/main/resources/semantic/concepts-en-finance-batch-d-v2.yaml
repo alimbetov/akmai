@@ -1,0 +1,112 @@
+version: semantic-concepts-en-finance-batch-d-v2
+domains:
+  - domainId: finance_banking
+    subdomains:
+      - id: lending_credit
+        phrases:
+          - borrower repayment capacity
+          - obligor default history
+          - credit bureau inquiry
+          - loan seasoning period
+          - collateral perfection process
+          - security interest registration
+          - guarantee enforceability assessment
+          - guarantor credit assessment
+          - debt restructuring terms
+          - covenant compliance certificate
+          - credit facility utilization
+          - loan drawdown request
+          - borrowing base calculation
+          - receivables financing structure
+          - inventory financing structure
+          - export credit financing
+          - trade finance facility
+          - bridge loan financing
+          - mezzanine debt financing
+          - subordinated loan structure
+          - credit portfolio diversification
+          - sector concentration exposure
+          - geographic credit concentration
+          - collateral concentration risk
+          - default recovery strategy
+      - id: deposits_liquidity
+        phrases:
+          - deposit insurance coverage
+          - deposit pricing strategy
+          - deposit renewal behavior
+          - early withdrawal behavior
+          - retail deposit segmentation
+          - wholesale deposit segmentation
+          - funding source diversification
+          - funding maturity ladder
+          - liquidity transfer charge
+          - liquidity buffer monetization
+          - high quality collateral
+          - intraday funding requirement
+          - payment liquidity buffer
+          - liquidity contingency trigger
+          - funding stress indicator
+          - deposit outflow assumption
+          - wholesale runoff assumption
+          - retail runoff assumption
+          - liquidity risk governance
+          - liquidity reporting framework
+          - cash concentration structure
+          - treasury cash positioning
+          - reserve account management
+          - liquidity collateral optimization
+          - funding market access
+      - id: risk_capital
+        phrases:
+          - capital adequacy planning
+          - regulatory capital stack
+          - tier two capital
+          - additional tier one capital
+          - capital instrument eligibility
+          - capital buffer requirement
+          - capital management policy
+          - capital issuance program
+          - capital redemption approval
+          - risk adjusted capital return
+          - return on risk assets
+          - stress testing framework
+          - reverse stress testing
+          - scenario analysis framework
+          - sensitivity analysis framework
+          - market risk limit
+          - credit risk limit
+          - operational risk limit
+          - liquidity risk limit framework
+          - counterparty exposure limit
+          - risk concentration framework
+          - model governance framework
+          - model inventory management
+          - model performance monitoring
+          - risk data aggregation
+      - id: payments_compliance
+        phrases:
+          - customer onboarding screening
+          - customer identification program
+          - ongoing due diligence
+          - periodic customer review
+          - customer risk segmentation
+          - beneficial owner screening
+          - transaction pattern analysis
+          - suspicious behavior detection
+          - unusual activity monitoring
+          - sanctions evasion detection
+          - payment fraud prevention
+          - social engineering fraud
+          - card not present fraud
+          - merchant transaction monitoring
+          - payment dispute management
+          - payment chargeback management
+          - payment authorization controls
+          - transaction authentication controls
+          - beneficiary confirmation service
+          - payment routing control
+          - settlement reconciliation control
+          - payment operations resilience
+          - regulatory breach reporting
+          - compliance monitoring program
+          - financial sanctions compliance
