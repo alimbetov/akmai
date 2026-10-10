@@ -1,0 +1,112 @@
+version: semantic-concepts-en-earth-environmental-science-batch-b-v2
+domains:
+  - domainId: earth_environmental_science
+    subdomains:
+      - id: geology
+        phrases:
+          - mineral phase equilibrium
+          - petrographic thin section
+          - sediment grain analysis
+          - facies association analysis
+          - sequence stratigraphy framework
+          - provenance zircon dating
+          - basin thermal history
+          - burial history modeling
+          - tectonic subsidence analysis
+          - fold geometry analysis
+          - fault kinematic analysis
+          - stress inversion method
+          - earthquake recurrence interval
+          - seismic moment magnitude
+          - ground motion prediction
+          - site response analysis
+          - liquefaction susceptibility assessment
+          - landslide susceptibility mapping
+          - volcanic ash dispersal
+          - magma viscosity estimate
+          - metamorphic pressure temperature
+          - thermochronology cooling history
+          - geophysical inversion model
+          - magnetotelluric resistivity survey
+          - gravity survey inversion
+      - id: climate_science
+        phrases:
+          - equilibrium climate sensitivity
+          - transient climate response
+          - earth energy imbalance
+          - aerosol indirect effect
+          - cloud radiative effect
+          - ocean overturning circulation
+          - ocean carbon uptake
+          - land carbon sink
+          - permafrost carbon feedback
+          - snow albedo feedback
+          - sea ice feedback
+          - tropical cyclone attribution
+          - atmospheric river frequency
+          - blocking circulation pattern
+          - stratospheric ozone response
+          - climate model bias
+          - climate model calibration
+          - climate model weighting
+          - detection attribution method
+          - shared socioeconomic pathway
+          - representative concentration pathway
+          - net zero pathway
+          - carbon dioxide removal
+          - methane emission scenario
+          - climate tipping cascade
+      - id: hydrology
+        phrases:
+          - unit hydrograph method
+          - hydrologic model calibration
+          - hydrologic parameter uncertainty
+          - soil water retention
+          - Richards equation solution
+          - Darcy flow equation
+          - aquifer storage coefficient
+          - groundwater head contour
+          - groundwater age dating
+          - groundwater vulnerability mapping
+          - saltwater intrusion model
+          - vadose zone transport
+          - solute breakthrough curve
+          - river rating curve
+          - environmental flow regime
+          - reservoir sedimentation rate
+          - flood frequency curve
+          - probable maximum flood
+          - design storm hydrograph
+          - snow water equivalent
+          - glacier runoff contribution
+          - rainfall frequency analysis
+          - drainage network extraction
+          - urban drainage model
+          - water allocation model
+      - id: environmental_assessment
+        phrases:
+          - source apportionment analysis
+          - air dispersion modeling
+          - emission factor inventory
+          - carbon footprint assessment
+          - scope three emissions
+          - environmental materiality assessment
+          - ecological impact pathway
+          - ecological restoration planning
+          - habitat fragmentation analysis
+          - biodiversity baseline monitoring
+          - species occupancy modeling
+          - ecological connectivity analysis
+          - environmental DNA monitoring
+          - contaminated sediment assessment
+          - vapor intrusion assessment
+          - remediation technology screening
+          - risk based remediation
+          - brownfield redevelopment assessment
+          - environmental due diligence
+          - environmental permit compliance
+          - effluent discharge monitoring
+          - ambient noise monitoring
+          - odor impact assessment
+          - waste hierarchy assessment
+          - circular economy assessment
