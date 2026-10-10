@@ -32,7 +32,7 @@ domains:
       - id: pharmacology
         phrases:
           - exposure margin assessment
-          - therapeutic drug monitoring
+          - therapeutic concentration monitoring
           - dose individualization strategy
           - genotype guided dosing
           - renal function dosing
