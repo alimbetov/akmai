@@ -20,10 +20,10 @@ class EnglishSemanticConceptCatalogTest {
             Map.entry("agriculture_food", 424L),
             Map.entry("mathematics_statistics", 24L),
             Map.entry("physics_astronomy", 24L),
-            Map.entry("chemistry_materials", 224L),
-            Map.entry("biology_genetics", 224L),
-            Map.entry("computer_science_ai", 224L),
-            Map.entry("medicine_pharmacology", 224L),
+            Map.entry("chemistry_materials", 324L),
+            Map.entry("biology_genetics", 324L),
+            Map.entry("computer_science_ai", 324L),
+            Map.entry("medicine_pharmacology", 324L),
             Map.entry("earth_environmental_science", 24L),
             Map.entry("psychology_sociology", 24L)
     );
@@ -34,7 +34,7 @@ class EnglishSemanticConceptCatalogTest {
     @Test
     void corpusContainsExpectedCuratedConceptCounts() {
         assertThat(catalog.version()).isEqualTo("semantic-concepts-en-v2");
-        assertThat(catalog.concepts()).hasSize(4384);
+        assertThat(catalog.concepts()).hasSize(4784);
 
         Map<String, Long> byDomain = catalog.concepts().stream()
                 .collect(Collectors.groupingBy(
@@ -59,11 +59,19 @@ class EnglishSemanticConceptCatalogTest {
     }
 
     @Test
-    void scienceTechnologyBatchABDomainsContainFiftyNewConceptsPerSubdomain() {
-        assertSubdomainCounts("computer_science_ai", 56L);
-        assertSubdomainCounts("medicine_pharmacology", 56L);
-        assertSubdomainCounts("biology_genetics", 56L);
-        assertSubdomainCounts("chemistry_materials", 56L);
+    void scienceTechnologyBatchABCDomainsContainSeventyFiveNewConceptsPerSubdomain() {
+        assertSubdomainCounts("computer_science_ai", 81L);
+        assertSubdomainCounts("medicine_pharmacology", 81L);
+        assertSubdomainCounts("biology_genetics", 81L);
+        assertSubdomainCounts("chemistry_materials", 81L);
+    }
+
+    @Test
+    void representativeScienceTechnologyBatchCConceptsRemainStableAndClassified() {
+        assertConcept("computer_science_ai.software_systems.event_sourcing_pattern", "software_systems");
+        assertConcept("medicine_pharmacology.clinical_trials.platform_trial_design", "clinical_trials");
+        assertConcept("biology_genetics.genetics.local_ancestry_inference", "genetics");
+        assertConcept("chemistry_materials.materials_science.stress_corrosion_cracking", "materials_science");
     }
 
     @Test
