@@ -9,7 +9,7 @@ Migration strategy: **English canonical corpus first, then language surfaces are
 
 Expand AkmAI's semantic knowledge layer without adding another retrieval lane.
 
-The first release establishes a substantially deeper English professional phrase corpus. Each existing semantic `domainId` receives **100 new curated multi-word professional phrases**. Existing phrases remain in place and are reviewed separately; they do not count toward the +100 quota.
+The first release establishes a substantially deeper English professional phrase corpus. Each existing semantic `domainId` receives **400 new curated multi-word professional phrases**. This is the original +100 target plus **+300 additional new phrases per domain**. Existing phrases remain in place and are reviewed separately; they do not count toward the +400 quota.
 
 The English corpus becomes the semantic reference for later Russian, Kazakh and other language surfaces.
 
@@ -38,9 +38,9 @@ Current domain IDs:
 15. `earth_environmental_science`
 16. `psychology_sociology`
 
-Target expansion: **1,600 new English phrases** in total.
+Target expansion: **6,400 new English phrases** in total.
 
-## 3. What counts toward the 100-phrase quota
+## 3. What counts toward the 400-phrase quota
 
 A qualifying entry MUST:
 
@@ -55,22 +55,24 @@ A qualifying entry MUST:
 - avoid vendor/product names unless the concept itself is domain-standard;
 - avoid unstable news-specific or temporary terminology.
 
-Single-word terms, acronyms and abbreviations may be curated later as aliases, but **do not count toward the +100 multi-word phrase quota**.
+Single-word terms, acronyms and abbreviations may be curated later as aliases, but **do not count toward the +400 multi-word phrase quota**.
 
 ## 4. Phrase composition target per domain
 
-The 100 new phrases should be intentionally diversified rather than generated as near-duplicates.
+The 400 new phrases should be intentionally diversified rather than generated as near-duplicates.
 
 Recommended composition:
 
-- 25 core concepts and canonical professional terms;
-- 20 process/workflow phrases;
-- 15 risk/control/compliance phrases where relevant;
-- 15 measurement/metric/model phrases;
-- 15 operational/system phrases;
-- 10 specialist or advanced phrases.
+- 100 core concepts and canonical professional terms;
+- 80 process/workflow phrases;
+- 60 risk/control/compliance phrases where relevant;
+- 60 measurement/metric/model phrases;
+- 60 operational/system phrases;
+- 40 specialist or advanced phrases.
 
 This distribution is guidance, not a rigid ontology. Scientific domains may substitute experimentally appropriate categories.
+
+To keep review manageable, each domain is delivered in **four internal batches of 100 phrases**. A later batch must not repeat, lightly rephrase or mechanically extend earlier batches merely to satisfy quota.
 
 ## 5. Delivery stages
 
@@ -89,7 +91,7 @@ Exit criterion: corpus changes can be validated automatically in CI.
 
 ### Stage 1 — Finance and regulated business
 
-Add +100 new English phrases to each:
+Add +400 new English phrases to each:
 
 - `finance_banking`;
 - `insurance`.
@@ -98,11 +100,11 @@ Why first: terminology is phrase-heavy, ambiguity-sensitive and highly valuable 
 
 Required review themes include lending, deposits, capital, liquidity, payments, financial crime, underwriting, claims, actuarial concepts and risk.
 
-Exit criterion: +200 unique phrases, semantic tests green, no uncontrolled expansion regression.
+Exit criterion: +800 unique phrases, semantic tests green, no uncontrolled expansion regression.
 
 ### Stage 2 — Industrial and infrastructure domains
 
-Add +100 new English phrases to each:
+Add +400 new English phrases to each:
 
 - `energy_utilities`;
 - `oil_gas_mining`;
@@ -111,29 +113,29 @@ Add +100 new English phrases to each:
 - `transport_logistics`;
 - `agriculture_food`.
 
-Exit criterion: +600 phrases in this stage; cumulative +800.
+Exit criterion: +2,400 phrases in this stage; cumulative +3,200.
 
 ### Stage 3 — Computing, medicine and life sciences
 
-Add +100 new English phrases to each:
+Add +400 new English phrases to each:
 
 - `computer_science_ai`;
 - `medicine_pharmacology`;
 - `biology_genetics`;
 - `chemistry_materials`.
 
-Exit criterion: +400 phrases in this stage; cumulative +1,200.
+Exit criterion: +1,600 phrases in this stage; cumulative +4,800.
 
 ### Stage 4 — Mathematics, physics, environment and human sciences
 
-Add +100 new English phrases to each:
+Add +400 new English phrases to each:
 
 - `mathematics_statistics`;
 - `physics_astronomy`;
 - `earth_environmental_science`;
 - `psychology_sociology`.
 
-Exit criterion: +400 phrases in this stage; cumulative +1,600.
+Exit criterion: +1,600 phrases in this stage; cumulative +6,400.
 
 ### Stage 5 — English corpus consolidation
 
@@ -165,10 +167,10 @@ Use **one branch** for the initiative: `feature/semantic-domain-corpus-v2`.
 Prefer small commits inside the branch:
 
 - one corpus-contract/testing commit;
-- one commit per domain or tightly related domain pair;
+- one commit per 100-phrase domain batch;
 - one final consolidation/benchmark commit.
 
-Do not create one branch per domain or language.
+Do not create one branch per domain, batch or language.
 
 The initial implementation should extend the existing semantic resources and tests before considering a schema redesign. A concept-centric v3 schema may be justified later, but v2 should first establish high-quality corpus content and measurable retrieval value using the current runtime contract.
 
@@ -205,7 +207,8 @@ CI/test coverage should verify at minimum:
 - no blank phrases;
 - normalized phrase uniqueness within a domain;
 - report cross-domain duplicates/collisions;
-- exactly or at least 100 **new approved phrases per domain** relative to the recorded v1 baseline;
+- exactly or at least 400 **new approved phrases per domain** relative to the recorded v1 baseline;
+- each 100-phrase batch is unique relative to all prior batches in that domain;
 - phrases remain within configured semantic expansion limits at runtime;
 - representative queries continue to return deterministic, bounded expansions.
 
@@ -213,7 +216,7 @@ A count gate alone is insufficient. The final release gate is retrieval quality.
 
 ## 9. Benchmark gates
 
-For each completed stage, add representative queries covering:
+For each completed 100-phrase batch, add representative queries covering:
 
 - exact professional phrase;
 - paraphrase;
@@ -244,8 +247,8 @@ The English corpus is the reviewed semantic reference. Later language work maps 
 
 Semantic Domain Corpus v2 English is complete when:
 
-- all 16 existing domains have +100 new curated multi-word phrases;
-- 1,600 additions pass normalization and collision checks;
+- all 16 existing domains have +400 new curated multi-word phrases;
+- 6,400 additions pass normalization and collision checks;
 - subdomain distribution has been reviewed;
 - benchmark quality is no worse than baseline on precision/grounding and shows measurable recall improvement on terminology-heavy queries;
 - corpus documentation and tests are current;
@@ -255,4 +258,13 @@ Semantic Domain Corpus v2 English is complete when:
 
 Start with `finance_banking` only.
 
-The first concrete batch will add **100 new English banking/finance phrases**, distributed across the existing subdomains. It serves as the calibration set for phrase quality, duplicate detection, benchmark design and review standards. Only after this batch passes quality gates should the same procedure be repeated for the remaining 15 domains.
+The domain is delivered as four sequential curated batches:
+
+1. Batch A: first +100 phrases;
+2. Batch B: additional +100;
+3. Batch C: additional +100;
+4. Batch D: additional +100.
+
+Total: **+400 new English finance/banking phrases**.
+
+The first batch serves as the calibration set for phrase quality, duplicate detection, benchmark design and review standards. Subsequent batches expand coverage while being checked against all previously accepted phrases. Only after `finance_banking` reaches +400 and passes quality gates should the same procedure be repeated for the remaining 15 domains.
