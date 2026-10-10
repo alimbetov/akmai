@@ -4,12 +4,12 @@ domains:
     subdomains:
       - id: production_systems
         phrases:
-          - sales operations planning
+          - aggregate production planning
           - production capacity model
           - rough cut capacity
           - order promising process
-          - available to promise
-          - capable to promise
+          - finished goods availability
+          - capacity promise calculation
           - production campaign planning
           - sequence dependent setup
           - changeover matrix optimization
