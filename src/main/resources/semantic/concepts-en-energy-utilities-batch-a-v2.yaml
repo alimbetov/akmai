@@ -1,0 +1,112 @@
+version: semantic-concepts-en-energy-utilities-batch-a-v2
+domains:
+  - domainId: energy_utilities
+    subdomains:
+      - id: power_generation
+        phrases:
+          - unit commitment schedule
+          - economic dispatch optimization
+          - heat rate curve
+          - generator availability factor
+          - forced outage rate
+          - planned outage schedule
+          - capacity factor analysis
+          - generation reserve requirement
+          - ramp rate constraint
+          - minimum stable generation
+          - startup cost model
+          - shutdown cost model
+          - fuel consumption forecast
+          - fuel supply constraint
+          - boiler efficiency monitoring
+          - turbine performance curve
+          - auxiliary power consumption
+          - generator excitation system
+          - automatic generation control
+          - black start capability
+          - plant load factor
+          - generation maintenance outage
+          - emissions dispatch constraint
+          - combined heat power
+          - cogeneration efficiency analysis
+      - id: power_grid
+        phrases:
+          - transmission capacity planning
+          - distribution load forecast
+          - grid contingency analysis
+          - n minus one criterion
+          - voltage stability assessment
+          - reactive power compensation
+          - power factor correction
+          - short circuit analysis
+          - protection coordination study
+          - relay setting calculation
+          - transformer loading analysis
+          - substation asset management
+          - distribution feeder automation
+          - outage management system
+          - system average interruption
+          - customer average interruption
+          - distribution loss analysis
+          - technical network losses
+          - nontechnical network losses
+          - grid restoration plan
+          - demand response integration
+          - distributed energy resources
+          - hosting capacity analysis
+          - grid congestion management
+          - transmission expansion planning
+      - id: energy_markets
+        phrases:
+          - locational marginal pricing
+          - market clearing price
+          - system marginal price
+          - energy imbalance settlement
+          - ancillary services market
+          - frequency response market
+          - capacity auction design
+          - congestion revenue rights
+          - financial transmission rights
+          - power purchase agreement
+          - bilateral energy contract
+          - merchant power exposure
+          - spark spread analysis
+          - dark spread analysis
+          - load shape forecast
+          - peak demand pricing
+          - time of use tariff
+          - dynamic electricity pricing
+          - retail energy switching
+          - supplier balancing responsibility
+          - renewable curtailment compensation
+          - market power monitoring
+          - electricity hedging strategy
+          - energy trading risk
+          - settlement reconciliation process
+      - id: renewable_energy
+        phrases:
+          - solar capacity factor
+          - wind capacity factor
+          - solar irradiance forecast
+          - wind resource assessment
+          - photovoltaic module efficiency
+          - inverter clipping loss
+          - wind turbine wake
+          - wind farm layout
+          - renewable generation forecast
+          - renewable curtailment risk
+          - interconnection queue process
+          - grid connection agreement
+          - renewable project yield
+          - levelized energy cost
+          - renewable portfolio standard
+          - green certificate trading
+          - energy storage duration
+          - battery degradation model
+          - state of charge
+          - state of health
+          - storage arbitrage strategy
+          - hybrid renewable plant
+          - virtual power plant
+          - renewable forecasting error
+          - grid forming inverter
