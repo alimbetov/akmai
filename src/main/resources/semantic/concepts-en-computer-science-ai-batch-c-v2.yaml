@@ -1,0 +1,112 @@
+version: semantic-concepts-en-computer-science-ai-batch-c-v2
+domains:
+  - domainId: computer_science_ai
+    subdomains:
+      - id: algorithms_data_structures
+        phrases:
+          - dynamic shortest path
+          - approximate string matching
+          - edit distance algorithm
+          - suffix array construction
+          - compressed suffix index
+          - rolling hash technique
+          - radix tree structure
+          - B tree indexing
+          - Fibonacci heap structure
+          - union find optimization
+          - heavy light decomposition
+          - centroid decomposition method
+          - offline query algorithm
+          - Mo algorithm technique
+          - meet in middle
+          - branch and price
+          - column generation method
+          - primal dual algorithm
+          - approximation ratio analysis
+          - competitive ratio analysis
+          - randomized rounding method
+          - graph sparsification method
+          - spectral graph partitioning
+          - streaming sketch structure
+          - reservoir sampling algorithm
+      - id: software_systems
+        phrases:
+          - distributed snapshot algorithm
+          - vector clock ordering
+          - logical clock synchronization
+          - causal consistency model
+          - session consistency guarantee
+          - leader lease protocol
+          - distributed lock service
+          - consensus membership change
+          - log compaction process
+          - replica lag monitoring
+          - change data capture
+          - event sourcing pattern
+          - saga coordination pattern
+          - outbox delivery pattern
+          - inbox deduplication pattern
+          - request idempotency key
+          - load shedding threshold
+          - admission control policy
+          - overload protection mechanism
+          - tail latency mitigation
+          - connection pool saturation
+          - thread pool saturation
+          - graceful shutdown sequence
+          - deployment rollback strategy
+          - schema compatibility policy
+      - id: machine_learning
+        phrases:
+          - attention head pruning
+          - low rank adaptation
+          - parameter efficient tuning
+          - prompt tuning method
+          - prefix tuning method
+          - reward model training
+          - preference optimization method
+          - reinforcement learning feedback
+          - direct preference optimization
+          - supervised fine tuning
+          - chain of thought prompting
+          - tool use policy
+          - model routing strategy
+          - mixture routing mechanism
+          - token sparsity mechanism
+          - quantization aware training
+          - post training quantization
+          - structured model pruning
+          - unstructured model pruning
+          - calibration error metric
+          - expected calibration error
+          - aleatoric uncertainty estimate
+          - epistemic uncertainty estimate
+          - data leakage detection
+          - label noise estimation
+      - id: data_nlp
+        phrases:
+          - query intent classification
+          - semantic query rewriting
+          - lexical query expansion
+          - document passage retrieval
+          - late interaction retrieval
+          - maximum marginal relevance
+          - retrieval diversity control
+          - hard negative mining
+          - in batch negatives
+          - dense passage indexing
+          - sparse vector indexing
+          - embedding drift monitoring
+          - embedding space alignment
+          - semantic deduplication process
+          - chunk overlap strategy
+          - context packing algorithm
+          - context compression method
+          - context attribution scoring
+          - claim evidence alignment
+          - contradiction detection model
+          - entailment scoring model
+          - answer citation coverage
+          - retrieval latency budget
+          - retrieval saturation point
+          - retrieval fallback policy
