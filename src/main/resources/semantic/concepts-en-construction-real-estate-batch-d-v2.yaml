@@ -1,0 +1,112 @@
+version: semantic-concepts-en-construction-real-estate-batch-d-v2
+domains:
+  - domainId: construction_real_estate
+    subdomains:
+      - id: design_construction
+        phrases:
+          - design basis memorandum
+          - structural design criteria
+          - geotechnical design parameter
+          - earth retaining system
+          - temporary shoring design
+          - pile integrity testing
+          - concrete durability design
+          - reinforcement congestion review
+          - structural connection inspection
+          - facade anchor testing
+          - roofing water test
+          - envelope moisture analysis
+          - mechanical balancing test
+          - electrical protection testing
+          - plumbing flow verification
+          - sprinkler acceptance testing
+          - smoke control testing
+          - life safety commissioning
+          - acoustic field testing
+          - vibration serviceability assessment
+          - accessibility field verification
+          - construction tolerance control
+          - defect rectification workflow
+          - handover documentation package
+          - occupancy readiness assessment
+      - id: real_estate_market
+        phrases:
+          - property cash yield
+          - unlevered property return
+          - levered property return
+          - property risk adjustment
+          - cap rate compression
+          - cap rate expansion
+          - rental reversion analysis
+          - mark to market rent
+          - lease incentive amortization
+          - tenant improvement recovery
+          - lease renewal economics
+          - tenant rollover exposure
+          - lease concentration analysis
+          - occupancy breakeven level
+          - property expense recovery
+          - net effective income
+          - acquisition yield analysis
+          - transaction cost burden
+          - property financing spread
+          - development cost escalation
+          - development absorption forecast
+          - development phasing strategy
+          - residual land sensitivity
+          - property disposal strategy
+          - portfolio concentration analysis
+      - id: facilities_management
+        phrases:
+          - asset criticality register
+          - maintenance risk ranking
+          - condition based renewal
+          - deferred renewal liability
+          - facility service performance
+          - work request triage
+          - work order prioritization
+          - maintenance labor utilization
+          - maintenance vendor scorecard
+          - lifecycle replacement reserve
+          - energy use intensity
+          - water use intensity
+          - indoor comfort index
+          - thermal comfort assessment
+          - ventilation effectiveness review
+          - occupancy utilization trend
+          - workplace density metric
+          - space chargeback model
+          - service contract compliance
+          - statutory inspection register
+          - emergency system readiness
+          - facility resilience assessment
+          - facility continuity planning
+          - accessibility remediation plan
+          - capital renewal prioritization
+      - id: project_controls
+        phrases:
+          - schedule quality index
+          - logic density analysis
+          - open end activity
+          - negative float analysis
+          - float path analysis
+          - criticality index analysis
+          - schedule sensitivity analysis
+          - resource constrained schedule
+          - progress measurement rule
+          - earned progress validation
+          - installed quantity tracking
+          - commitment forecast analysis
+          - accrual cost estimate
+          - cash flow forecast
+          - forecast variance decomposition
+          - contingency adequacy assessment
+          - risk contingency drawdown
+          - trend impact forecast
+          - change exposure analysis
+          - commercial change log
+          - delay entitlement analysis
+          - extension entitlement review
+          - completion probability estimate
+          - cost at completion
+          - schedule at completion
