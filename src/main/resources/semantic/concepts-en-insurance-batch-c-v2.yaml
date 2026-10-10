@@ -1,0 +1,112 @@
+version: semantic-concepts-en-insurance-batch-c-v2
+domains:
+  - domainId: insurance
+    subdomains:
+      - id: underwriting_pricing
+        phrases:
+          - loss ratio projection
+          - expense ratio projection
+          - combined ratio target
+          - rate adequacy indication
+          - rate level monitoring
+          - premium trend assumption
+          - exposure trend assumption
+          - claim trend assumption
+          - frequency severity model
+          - generalized linear pricing
+          - multivariate pricing model
+          - predictive underwriting model
+          - underwriting rule engine
+          - referral rule threshold
+          - risk tier migration
+          - portfolio mix analysis
+          - adverse selection monitoring
+          - anti selection control
+          - quote conversion rate
+          - bind rate analysis
+          - renewal retention analysis
+          - new business hit ratio
+          - pricing elasticity estimate
+          - premium optimization model
+          - underwriting profitability analysis
+      - id: claims_management
+        phrases:
+          - claims reserve strengthening
+          - claims reserve release
+          - outstanding claims provision
+          - paid loss development
+          - incurred loss development
+          - ultimate loss estimate
+          - claims maturity profile
+          - large loss review
+          - complex claim management
+          - catastrophic loss adjustment
+          - field adjuster assignment
+          - desktop claim adjustment
+          - claims vendor management
+          - repair network management
+          - medical provider audit
+          - claims payment leakage
+          - claims overpayment recovery
+          - settlement offer evaluation
+          - litigation propensity model
+          - legal expense management
+          - claims customer communication
+          - claimant satisfaction monitoring
+          - claim reopen trigger
+          - claim closure criteria
+          - claims control self assessment
+      - id: life_health
+        phrases:
+          - mortality table selection
+          - mortality improvement assumption
+          - longevity risk assumption
+          - lapse rate assumption
+          - surrender rate assumption
+          - expense assumption basis
+          - discount rate assumption
+          - reserve valuation basis
+          - statutory reserve calculation
+          - policy liability valuation
+          - embedded value analysis
+          - value of new business
+          - actuarial present value
+          - benefit reserve adequacy
+          - premium deficiency reserve
+          - health claim frequency
+          - health claim severity
+          - disease management program
+          - wellness incentive program
+          - pharmacy benefit management
+          - network adequacy assessment
+          - provider credentialing process
+          - medical necessity review
+          - risk corridor mechanism
+          - stop loss coverage
+      - id: property_casualty
+        phrases:
+          - catastrophe exceedance probability
+          - aggregate exceedance probability
+          - occurrence exceedance probability
+          - event loss table
+          - catastrophe return period
+          - modeled loss distribution
+          - secondary uncertainty model
+          - demand surge factor
+          - storm surge exposure
+          - wildfire exposure assessment
+          - flood zone classification
+          - seismic hazard assessment
+          - wind vulnerability model
+          - building occupancy factor
+          - construction quality factor
+          - business interruption period
+          - contingent business interruption
+          - extra expense limit
+          - liability attachment point
+          - liability exhaustion point
+          - umbrella attachment limit
+          - aggregate loss accumulation
+          - geographic exposure concentration
+          - insured value aggregation
+          - catastrophe portfolio diversification
