@@ -1,0 +1,112 @@
+version: semantic-concepts-en-physics-astronomy-batch-a-v2
+domains:
+  - domainId: physics_astronomy
+    subdomains:
+      - id: classical_mechanics
+        phrases:
+          - Lagrangian mechanics formulation
+          - Hamiltonian mechanics formulation
+          - action principle method
+          - generalized coordinate system
+          - canonical momentum variable
+          - phase space trajectory
+          - central force motion
+          - two body problem
+          - three body dynamics
+          - orbital perturbation analysis
+          - angular momentum conservation
+          - moment inertia tensor
+          - gyroscopic precession motion
+          - damped oscillator response
+          - forced oscillator resonance
+          - coupled oscillator system
+          - nonlinear pendulum dynamics
+          - elastic collision analysis
+          - inelastic collision analysis
+          - center mass motion
+          - continuum mechanics equation
+          - stress strain tensor
+          - fluid momentum equation
+          - projectile trajectory analysis
+          - celestial mechanics orbit
+      - id: thermodynamics
+        phrases:
+          - first law thermodynamics
+          - second law thermodynamics
+          - Gibbs free energy change
+          - Helmholtz free energy
+          - chemical potential equilibrium
+          - reversible process efficiency
+          - irreversible process entropy
+          - Carnot cycle efficiency
+          - heat engine performance
+          - refrigeration cycle coefficient
+          - specific heat capacity
+          - thermal conductivity coefficient
+          - convective heat transfer
+          - radiative heat transfer
+          - thermal boundary layer
+          - phase transition temperature
+          - latent heat measurement
+          - Clausius Clapeyron relation
+          - Maxwell thermodynamic relation
+          - partition function calculation
+          - canonical ensemble distribution
+          - microcanonical ensemble description
+          - grand canonical ensemble
+          - fluctuation dissipation relation
+          - nonequilibrium thermodynamics process
+      - id: electromagnetism
+        phrases:
+          - Gauss law electric
+          - Gauss law magnetic
+          - Faraday induction law
+          - Ampere Maxwell law
+          - Lorentz force equation
+          - electromagnetic boundary condition
+          - electric dipole moment
+          - magnetic dipole moment
+          - electrostatic potential field
+          - capacitance matrix calculation
+          - inductance matrix calculation
+          - transmission line impedance
+          - waveguide propagation mode
+          - electromagnetic cavity resonance
+          - dielectric polarization response
+          - magnetic susceptibility tensor
+          - skin depth calculation
+          - Poynting vector flux
+          - electromagnetic energy density
+          - antenna radiation pattern
+          - electromagnetic scattering cross section
+          - polarization wave state
+          - dispersion relation medium
+          - plasma oscillation frequency
+          - magnetohydrodynamic wave
+      - id: astrophysics
+        phrases:
+          - stellar mass luminosity
+          - Hertzsprung Russell diagram
+          - stellar nucleosynthesis process
+          - supernova explosion mechanism
+          - neutron star equation
+          - white dwarf cooling
+          - black hole horizon
+          - accretion disk spectrum
+          - galaxy formation model
+          - dark matter halo
+          - gravitational lensing analysis
+          - cosmic expansion rate
+          - Hubble parameter estimate
+          - baryon acoustic oscillation
+          - large scale structure
+          - primordial nucleosynthesis model
+          - cosmic inflation scenario
+          - exoplanet transit method
+          - radial velocity method
+          - stellar activity cycle
+          - pulsar timing analysis
+          - fast radio burst
+          - gamma ray burst
+          - active galactic nucleus
+          - interstellar medium dynamics
