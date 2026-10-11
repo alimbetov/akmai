@@ -1,0 +1,304 @@
+version: semantic-surfaces-kk-construction-real-estate-batch-b-v2
+languages:
+  - language: kk
+    surfaces:
+      - conceptId: construction_real_estate.design_construction.schematic_design_review
+        preferredPhrase: эскиздік жобаны тексеру
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.design_development_package
+        preferredPhrase: жобаны дамыту пакеті
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.structural_framing_plan
+        preferredPhrase: құрылымдық қаңқа жоспары
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.foundation_settlement_analysis
+        preferredPhrase: іргетас шөгуін талдау
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.wind_load_analysis
+        preferredPhrase: жел жүктемесін талдау
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.seismic_load_analysis
+        preferredPhrase: сейсмикалық жүктемені талдау
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.lateral_stability_system
+        preferredPhrase: көлденең тұрақтылық жүйесі
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.facade_performance_testing
+        preferredPhrase: қасбет өнімділігін сынау
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.waterproofing_system_design
+        preferredPhrase: гидрооқшаулау жүйесін жобалау
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.roof_drainage_design
+        preferredPhrase: шатыр дренажын жобалау
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.mechanical_load_calculation
+        preferredPhrase: механикалық жүктемені есептеу
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.electrical_load_schedule
+        preferredPhrase: электр жүктемесі кестесі
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.lighting_design_calculation
+        preferredPhrase: жарықтандыру есебі
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.fire_alarm_design
+        preferredPhrase: өрт дабылын жобалау
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.sprinkler_hydraulic_calculation
+        preferredPhrase: спринклер гидравликасын есептеу
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.construction_logistics_study
+        preferredPhrase: құрылыс логистикасын зерттеу
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.temporary_access_planning
+        preferredPhrase: уақытша қолжетімділікті жоспарлау
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.crane_lifting_plan
+        preferredPhrase: кранмен көтеру жоспары
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.site_safety_coordination
+        preferredPhrase: алаң қауіпсіздігін үйлестіру
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.inspection_test_plan
+        preferredPhrase: инспекция сынақ жоспары
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.material_approval_process
+        preferredPhrase: материалды келісу процесі
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.mockup_approval_process
+        preferredPhrase: макетті келісу процесі
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.commissioning_readiness_review
+        preferredPhrase: іске қосуға дайындық тексеруі
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.practical_completion_inspection
+        preferredPhrase: практикалық аяқталуды инспекциялау
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.defect_liability_period
+        preferredPhrase: ақау жауапкершілік мерзімі
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.property_income_capitalization
+        preferredPhrase: мүлік табысын капиталдандыру
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.property_terminal_value
+        preferredPhrase: мүліктің терминалдық құны
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.stabilized_occupancy_rate
+        preferredPhrase: тұрақтанған толымдылық деңгейі
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.lease_event_schedule
+        preferredPhrase: жалдау оқиғалары кестесі
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.weighted_average_lease
+        preferredPhrase: орташа өлшенген жалдау мерзімі
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.tenant_credit_quality
+        preferredPhrase: жалға алушының кредит сапасы
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.rental_growth_assumption
+        preferredPhrase: жалдау өсімі болжамы
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.operating_expense_ratio
+        preferredPhrase: операциялық шығын коэффициенті
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.property_tax_burden
+        preferredPhrase: мүлік салығы жүктемесі
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.service_charge_recovery
+        preferredPhrase: сервистік төлемді өтеу
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.capital_expenditure_reserve
+        preferredPhrase: күрделі шығын резерві
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.tenant_rollover_risk
+        preferredPhrase: жалға алушы ауысу тәуекелі
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.leasing_velocity_analysis
+        preferredPhrase: жалдау қарқынын талдау
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.rent_free_period
+        preferredPhrase: тегін жалдау кезеңі
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.lease_break_option
+        preferredPhrase: жалдауды бұзу опционы
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.renewal_option_value
+        preferredPhrase: ұзарту опционы құны
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.property_market_liquidity
+        preferredPhrase: мүлік нарығы өтімділігі
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.transaction_comparables_analysis
+        preferredPhrase: ұқсас мәмілелерді талдау
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.development_profit_margin
+        preferredPhrase: девелопмент пайда маржасы
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.development_yield_analysis
+        preferredPhrase: девелопмент кірістілігін талдау
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.land_acquisition_basis
+        preferredPhrase: жерді сатып алу базасы
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.residual_land_value
+        preferredPhrase: жердің қалдық құны
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.property_hold_period
+        preferredPhrase: мүлікті ұстау мерзімі
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.exit_capitalization_rate
+        preferredPhrase: шығу капиталдандыру мөлшерлемесі
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.portfolio_diversification_strategy
+        preferredPhrase: портфельді әртараптандыру стратегиясы
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.facilities_asset_register
+        preferredPhrase: нысан активтерінің тізілімі
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.facility_performance_indicator
+        preferredPhrase: нысан тиімділігі көрсеткіші
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.building_condition_index
+        preferredPhrase: ғимарат жағдайының индексі
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.maintenance_response_time
+        preferredPhrase: қызмет көрсету жауап уақыты
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.maintenance_completion_rate
+        preferredPhrase: қызмет аяқталу коэффициенті
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.facility_service_request
+        preferredPhrase: нысан қызметіне сұрау
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.asset_replacement_planning
+        preferredPhrase: актив ауыстыруды жоспарлау
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.lifecycle_cost_analysis
+        preferredPhrase: өмірлік цикл құнын талдау
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.building_system_inspection
+        preferredPhrase: ғимарат жүйесін инспекциялау
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.mechanical_equipment_servicing
+        preferredPhrase: механикалық жабдықты қызметтеу
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.electrical_maintenance_program
+        preferredPhrase: электр қызмет көрсету бағдарламасы
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.plumbing_maintenance_program
+        preferredPhrase: су жүйесін қызметтеу бағдарламасы
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.fire_protection_maintenance
+        preferredPhrase: өрт қорғауын қызметтеу
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.vertical_transport_maintenance
+        preferredPhrase: тік көлікті қызметтеу
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.space_allocation_planning
+        preferredPhrase: кеңістікті бөлуді жоспарлау
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.occupancy_cost_analysis
+        preferredPhrase: толымдылық шығынын талдау
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.utility_cost_benchmarking
+        preferredPhrase: коммуналдық шығын бенчмаркингі
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.water_consumption_monitoring
+        preferredPhrase: су тұтынуын бақылау
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.indoor_comfort_monitoring
+        preferredPhrase: ішкі жайлылықты бақылау
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.cleaning_performance_audit
+        preferredPhrase: тазалау сапасын аудиттеу
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.security_incident_monitoring
+        preferredPhrase: қауіпсіздік оқиғаларын бақылау
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.vendor_performance_management
+        preferredPhrase: жеткізуші тиімділігін басқару
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.facilities_contract_renewal
+        preferredPhrase: нысан шартын ұзарту
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.facility_compliance_register
+        preferredPhrase: нысан сәйкестік тізілімі
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.building_resilience_planning
+        preferredPhrase: ғимарат тұрақтылығын жоспарлау
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.baseline_change_control
+        preferredPhrase: базалық жоспар өзгерісін басқару
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.schedule_risk_analysis
+        preferredPhrase: кесте тәуекелін талдау
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.cost_risk_analysis
+        preferredPhrase: құн тәуекелін талдау
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.quantitative_risk_analysis
+        preferredPhrase: сандық тәуекел талдауы
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.probabilistic_cost_forecast
+        preferredPhrase: ықтималдық құн болжамы
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.probabilistic_schedule_forecast
+        preferredPhrase: ықтималдық кесте болжамы
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.earned_schedule_analysis
+        preferredPhrase: игерілген кестені талдау
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.progress_curve_analysis
+        preferredPhrase: прогресс қисығын талдау
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.resource_loading_analysis
+        preferredPhrase: ресурс жүктемесін талдау
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.resource_leveling_plan
+        preferredPhrase: ресурсты теңестіру жоспары
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.procurement_schedule_integration
+        preferredPhrase: сатып алу кестесін интеграциялау
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.contractor_schedule_review
+        preferredPhrase: мердігер кестесін тексеру
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.delay_analysis_method
+        preferredPhrase: кешігуді талдау әдісі
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.time_impact_analysis
+        preferredPhrase: уақыт әсерін талдау
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.extension_time_assessment
+        preferredPhrase: мерзімді ұзартуды бағалау
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.change_order_valuation
+        preferredPhrase: өзгеріс тапсырысын бағалау
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.claims_schedule_analysis
+        preferredPhrase: талаптар кестесін талдау
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.forecast_accuracy_review
+        preferredPhrase: болжам дәлдігін тексеру
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.contingency_drawdown_analysis
+        preferredPhrase: резерв жұмсалуын талдау
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.trend_management_process
+        preferredPhrase: трендтерді басқару процесі
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.project_controls_assurance
+        preferredPhrase: жоба бақылауын қамтамасыз ету
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.cost_code_structure
+        preferredPhrase: құн кодтарының құрылымы
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.work_breakdown_structure
+        preferredPhrase: жұмыс декомпозиция құрылымы
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.schedule_coding_structure
+        preferredPhrase: кесте кодтау құрылымы
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.project_reporting_calendar
+        preferredPhrase: жоба есептілік күнтізбесі
+        aliases: []
