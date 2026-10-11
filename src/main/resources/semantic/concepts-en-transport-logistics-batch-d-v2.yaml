@@ -31,7 +31,7 @@ domains:
           - freight service recovery
       - id: warehousing_distribution
         phrases:
-          - dynamic slotting policy
+          - adaptive slotting policy
           - location utilization index
           - reserve storage strategy
           - forward pick replenishment
