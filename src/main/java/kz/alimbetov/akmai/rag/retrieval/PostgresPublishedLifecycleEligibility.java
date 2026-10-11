@@ -3,8 +3,12 @@ package kz.alimbetov.akmai.rag.retrieval;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Component
 public class PostgresPublishedLifecycleEligibility
@@ -13,9 +17,20 @@ public class PostgresPublishedLifecycleEligibility
     private static final int MAX_IDENTITIES_PER_QUERY = 256;
 
     private final JdbcTemplate jdbcTemplate;
+    private final TransactionTemplate transactionTemplate;
 
-    public PostgresPublishedLifecycleEligibility(JdbcTemplate jdbcTemplate) {
+    PostgresPublishedLifecycleEligibility(JdbcTemplate jdbcTemplate) {
+        this(jdbcTemplate, null);
+    }
+
+    @Autowired
+    public PostgresPublishedLifecycleEligibility(
+            JdbcTemplate jdbcTemplate,
+            @Qualifier("retrievalTransactionTemplate")
+            TransactionTemplate transactionTemplate
+    ) {
         this.jdbcTemplate = jdbcTemplate;
+        this.transactionTemplate = transactionTemplate;
     }
 
     @Override
@@ -38,11 +53,14 @@ public class PostgresPublishedLifecycleEligibility
             return List.of();
         }
 
-        LinkedHashSet<GenerationKey> eligible = new LinkedHashSet<>();
-        for (int from = 0; from < requested.size(); from += MAX_IDENTITIES_PER_QUERY) {
-            int to = Math.min(requested.size(), from + MAX_IDENTITIES_PER_QUERY);
-            eligible.addAll(findEligible(requested.subList(from, to)));
-        }
+        LinkedHashSet<GenerationKey> eligible = read(() -> {
+            LinkedHashSet<GenerationKey> values = new LinkedHashSet<>();
+            for (int from = 0; from < requested.size(); from += MAX_IDENTITIES_PER_QUERY) {
+                int to = Math.min(requested.size(), from + MAX_IDENTITIES_PER_QUERY);
+                values.addAll(findEligible(requested.subList(from, to)));
+            }
+            return values;
+        });
 
         return hits.stream()
                 .filter(RetrievalHit::hasRoutingIdentity)
@@ -62,7 +80,8 @@ public class PostgresPublishedLifecycleEligibility
                        l.document_id,
                        l.published_generation
                 FROM knowledge_document_lifecycle l
-                WHERE l.retention_status = 'ACTIVE'
+                WHERE l.lifecycle_status = 'READY'
+                  AND l.retention_status = 'ACTIVE'
                   AND (l.expires_at IS NULL
                        OR l.expires_at > clock_timestamp())
                   AND (l.access_level,
@@ -86,6 +105,19 @@ public class PostgresPublishedLifecycleEligibility
                         rs.getLong("published_generation")
                 )
         );
+    }
+
+    private <T> T read(Supplier<T> action) {
+        if (transactionTemplate == null) {
+            return action.get();
+        }
+        T value = transactionTemplate.execute(status -> action.get());
+        if (value == null) {
+            throw new IllegalStateException(
+                    "retrieval lifecycle transaction returned no result"
+            );
+        }
+        return value;
     }
 
     private void requireAccessLevels(Set<Long> accessLevels) {
