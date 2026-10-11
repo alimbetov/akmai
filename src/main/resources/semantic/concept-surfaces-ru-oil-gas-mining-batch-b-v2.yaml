@@ -94,7 +94,7 @@ languages:
         preferredPhrase: процесс балансировки грузоотправителя
         aliases: []
       - conceptId: oil_gas_mining.midstream_operations.pipeline_pressure_management
-        preferredPhrase: управление давлением трубопровода
+        preferredPhrase: управление режимом давления трубопровода
         aliases: []
       - conceptId: oil_gas_mining.midstream_operations.compressor_performance_monitoring
         preferredPhrase: мониторинг производительности компрессора
@@ -237,7 +237,7 @@ languages:
         preferredPhrase: исследование оптимизации карьера
         aliases: []
       - conceptId: oil_gas_mining.mining_operations.stripping_ratio_analysis
-        preferredPhrase: анализ коэффициента вскрыши
+        preferredPhrase: оценка коэффициента вскрыши
         aliases: []
       - conceptId: oil_gas_mining.mining_operations.cutoff_grade_optimization
         preferredPhrase: оптимизация бортового содержания
@@ -273,7 +273,7 @@ languages:
         preferredPhrase: анализ загрузки дробилки
         aliases: []
       - conceptId: oil_gas_mining.mining_operations.grinding_circuit_efficiency
-        preferredPhrase: эффективность контура измельчения
+        preferredPhrase: оценка эффективности контура измельчения
         aliases: []
       - conceptId: oil_gas_mining.mining_operations.flotation_recovery_analysis
         preferredPhrase: анализ извлечения при флотации
