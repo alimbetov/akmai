@@ -6,19 +6,29 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 class SemanticConceptSurfaceRegistryTest {
 
     private static final int MULTILINGUAL_V1_BASELINE = 384;
-    private static final int RU_FINANCE_BATCH_A_ADDITIONS = 100;
-    private static final int RU_FINANCE_BATCH_B_ADDITIONS = 100;
-    private static final int RU_FINANCE_BATCH_C_ADDITIONS = 100;
-    private static final int RU_FINANCE_BATCH_D_ADDITIONS = 100;
-    private static final int RU_INSURANCE_BATCH_A_ADDITIONS = 100;
-    private static final int RU_INSURANCE_BATCH_B_ADDITIONS = 100;
-    private static final int RU_INSURANCE_BATCH_C_ADDITIONS = 100;
-    private static final int RU_INSURANCE_BATCH_D_ADDITIONS = 100;
+    private static final int ROLLOUT_DOMAIN_COUNT = 7;
+    private static final int ROLLOUT_BATCH_COUNT = 4;
+    private static final int SURFACES_PER_BATCH = 100;
+    private static final int ROLLOUT_SURFACE_COUNT =
+            MULTILINGUAL_V1_BASELINE
+                    + ROLLOUT_DOMAIN_COUNT
+                    * ROLLOUT_BATCH_COUNT
+                    * SURFACES_PER_BATCH;
+    private static final List<String> ROLLOUT_RESOURCE_DOMAINS = List.of(
+            "finance",
+            "insurance",
+            "energy-utilities",
+            "oil-gas-mining",
+            "manufacturing",
+            "construction-real-estate",
+            "transport-logistics"
+    );
 
     private final SemanticDomainCatalog domainCatalog =
             new SemanticDomainCatalog();
@@ -41,24 +51,17 @@ class SemanticConceptSurfaceRegistryTest {
                 .map(SemanticConcept::id)
                 .collect(Collectors.toSet());
 
-        assertThat(registry.surfaces("ru"))
-                .hasSize(
-                        MULTILINGUAL_V1_BASELINE
-                                + RU_FINANCE_BATCH_A_ADDITIONS
-                                + RU_FINANCE_BATCH_B_ADDITIONS
-                                + RU_FINANCE_BATCH_C_ADDITIONS
-                                + RU_FINANCE_BATCH_D_ADDITIONS
-                                + RU_INSURANCE_BATCH_A_ADDITIONS
-                                + RU_INSURANCE_BATCH_B_ADDITIONS
-                                + RU_INSURANCE_BATCH_C_ADDITIONS
-                                + RU_INSURANCE_BATCH_D_ADDITIONS
-                )
-                .allSatisfy(surface ->
-                        assertThat(canonicalIds)
-                                .contains(surface.conceptId())
-                );
+        for (String language : List.of("ru", "kk")) {
+            assertThat(registry.surfaces(language))
+                    .as(language)
+                    .hasSize(ROLLOUT_SURFACE_COUNT)
+                    .allSatisfy(surface ->
+                            assertThat(canonicalIds)
+                                    .contains(surface.conceptId())
+                    );
+        }
 
-        for (String language : List.of("kk", "zh", "de", "fr", "es", "pt", "it", "tr", "el")) {
+        for (String language : List.of("zh", "de", "fr", "es", "pt", "it", "tr", "el")) {
             assertThat(registry.surfaces(language))
                     .as(language)
                     .hasSize(MULTILINGUAL_V1_BASELINE)
@@ -196,11 +199,9 @@ class SemanticConceptSurfaceRegistryTest {
         assertThat(registry.version("en"))
                 .isEqualTo("semantic-concepts-en-v2");
         assertThat(registry.version("ru"))
-                .isEqualTo(
-                        "semantic-surfaces-ru-v1+semantic-surfaces-ru-finance-batch-a-v2+semantic-surfaces-ru-finance-batch-b-v2+semantic-surfaces-ru-finance-batch-c-v2+semantic-surfaces-ru-finance-batch-d-v2+semantic-surfaces-ru-insurance-batch-a-v2+semantic-surfaces-ru-insurance-batch-b-v2+semantic-surfaces-ru-insurance-batch-c-v2+semantic-surfaces-ru-insurance-batch-d-v2"
-                );
+                .isEqualTo(expectedRolloutVersion("ru"));
         assertThat(registry.version("kk"))
-                .isEqualTo("semantic-surfaces-kk-v1");
+                .isEqualTo(expectedRolloutVersion("kk"));
         assertThat(registry.version("zh"))
                 .isEqualTo("semantic-surfaces-zh-v1");
         assertThat(registry.version("de"))
@@ -240,6 +241,24 @@ class SemanticConceptSurfaceRegistryTest {
     void unknownLanguageWithoutPackStaysUnsupported() {
         assertThat(registry.surfaces("ja")).isEmpty();
         assertThat(registry.version("ja")).isNull();
+    }
+
+    private static String expectedRolloutVersion(String language) {
+        StringBuilder version = new StringBuilder(
+                "semantic-surfaces-" + language + "-v1"
+        );
+        for (String domain : ROLLOUT_RESOURCE_DOMAINS) {
+            for (char batch = 'a'; batch <= 'd'; batch++) {
+                version.append("+semantic-surfaces-")
+                        .append(language)
+                        .append('-')
+                        .append(domain)
+                        .append("-batch-")
+                        .append(batch)
+                        .append("-v2");
+            }
+        }
+        return version.toString();
     }
 
     private static MultilingualConceptSurfaceDefinition definition(
