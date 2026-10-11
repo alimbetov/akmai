@@ -31,7 +31,7 @@ domains:
           - aeroelastic flutter boundary
       - id: thermodynamics
         phrases:
-          - thermodynamic integration method
+          - adiabatic switching method
           - Jarzynski equality relation
           - Crooks fluctuation relation
           - free energy landscape
