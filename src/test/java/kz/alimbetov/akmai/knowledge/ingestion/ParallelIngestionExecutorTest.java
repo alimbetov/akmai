@@ -1,12 +1,18 @@
 package kz.alimbetov.akmai.knowledge.ingestion;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import kz.alimbetov.akmai.config.BoundedExecutorFactory;
 import kz.alimbetov.akmai.knowledge.identifier.IdentifierExtractor;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeChunk;
@@ -45,6 +51,93 @@ class ParallelIngestionExecutorTest {
                     );
         } finally {
             executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void inFlightEnrichmentIsBoundedBySharedExecutorCapacity() throws Exception {
+        ExecutorService ingestionExecutor = BoundedExecutorFactory.create(3, 3);
+        ExecutorService caller = Executors.newSingleThreadExecutor();
+        IdentifierExtractor identifiers = mock(IdentifierExtractor.class);
+        AtomicInteger active = new AtomicInteger();
+        AtomicInteger maxActive = new AtomicInteger();
+        CountDownLatch firstWaveEntered = new CountDownLatch(3);
+        CountDownLatch releaseFirstWave = new CountDownLatch(1);
+
+        when(identifiers.extract(anyString())).thenAnswer(invocation -> {
+            int current = active.incrementAndGet();
+            maxActive.accumulateAndGet(current, Math::max);
+            firstWaveEntered.countDown();
+            try {
+                releaseFirstWave.await();
+                return List.of();
+            } finally {
+                active.decrementAndGet();
+            }
+        });
+
+        ParallelIngestionExecutor service =
+                new ParallelIngestionExecutor(identifiers, ingestionExecutor);
+        List<KnowledgeChunk> chunks = java.util.stream.IntStream
+                .range(0, 30)
+                .mapToObj(this::chunk)
+                .toList();
+
+        try {
+            Future<List<EnrichedKnowledgeChunk>> result =
+                    caller.submit(() -> service.execute(chunks));
+
+            assertThat(firstWaveEntered.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(active.get()).isEqualTo(3);
+            assertThat(maxActive.get()).isEqualTo(3);
+
+            releaseFirstWave.countDown();
+
+            assertThat(result.get(10, TimeUnit.SECONDS)).hasSize(30);
+            assertThat(maxActive.get()).isLessThanOrEqualTo(3);
+        } finally {
+            releaseFirstWave.countDown();
+            caller.shutdownNow();
+            ingestionExecutor.shutdownNow();
+        }
+    }
+
+    @Test
+    void exceptionalCompletionCancelsOtherInFlightEnrichment() throws Exception {
+        ExecutorService ingestionExecutor = BoundedExecutorFactory.create(2, 2);
+        IdentifierExtractor identifiers = mock(IdentifierExtractor.class);
+        CountDownLatch blockerEntered = new CountDownLatch(1);
+        CountDownLatch blockerInterrupted = new CountDownLatch(1);
+        IllegalStateException failure = new IllegalStateException("identifier failure");
+
+        when(identifiers.extract(anyString())).thenAnswer(invocation -> {
+            String text = invocation.getArgument(0);
+            if ("raw 0".equals(text)) {
+                blockerEntered.countDown();
+                try {
+                    new CountDownLatch(1).await();
+                } catch (InterruptedException exception) {
+                    blockerInterrupted.countDown();
+                    Thread.currentThread().interrupt();
+                }
+                return List.of();
+            }
+
+            if (!blockerEntered.await(5, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("blocking chunk did not start");
+            }
+            throw failure;
+        });
+
+        ParallelIngestionExecutor service =
+                new ParallelIngestionExecutor(identifiers, ingestionExecutor);
+
+        try {
+            assertThatThrownBy(() -> service.execute(List.of(chunk(0), chunk(1))))
+                    .isSameAs(failure);
+            assertThat(blockerInterrupted.await(2, TimeUnit.SECONDS)).isTrue();
+        } finally {
+            ingestionExecutor.shutdownNow();
         }
     }
 
