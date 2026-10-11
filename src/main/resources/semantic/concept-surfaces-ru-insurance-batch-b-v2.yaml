@@ -267,7 +267,7 @@ languages:
         preferredPhrase: покрытие требований строительных норм
         aliases: []
       - conceptId: insurance.property_casualty.builders_risk_coverage
-        preferredPhrase: страхование строительных рисков
+        preferredPhrase: покрытие строительно монтажных рисков
         aliases: []
       - conceptId: insurance.property_casualty.terrorism_insurance_coverage
         preferredPhrase: страховое покрытие терроризма
