@@ -72,15 +72,19 @@ public class EnglishSemanticConceptCatalog {
             "semantic/concepts-en-mathematics-statistics-batch-a-v2.yaml",
             "semantic/concepts-en-mathematics-statistics-batch-b-v2.yaml",
             "semantic/concepts-en-mathematics-statistics-batch-c-v2.yaml",
+            "semantic/concepts-en-mathematics-statistics-batch-d-v2.yaml",
             "semantic/concepts-en-physics-astronomy-batch-a-v2.yaml",
             "semantic/concepts-en-physics-astronomy-batch-b-v2.yaml",
             "semantic/concepts-en-physics-astronomy-batch-c-v2.yaml",
+            "semantic/concepts-en-physics-astronomy-batch-d-v2.yaml",
             "semantic/concepts-en-earth-environmental-science-batch-a-v2.yaml",
             "semantic/concepts-en-earth-environmental-science-batch-b-v2.yaml",
             "semantic/concepts-en-earth-environmental-science-batch-c-v2.yaml",
+            "semantic/concepts-en-earth-environmental-science-batch-d-v2.yaml",
             "semantic/concepts-en-psychology-sociology-batch-a-v2.yaml",
             "semantic/concepts-en-psychology-sociology-batch-b-v2.yaml",
-            "semantic/concepts-en-psychology-sociology-batch-c-v2.yaml"
+            "semantic/concepts-en-psychology-sociology-batch-c-v2.yaml",
+            "semantic/concepts-en-psychology-sociology-batch-d-v2.yaml"
     );
     private static final String COMBINED_VERSION = "semantic-concepts-en-v2";
 
