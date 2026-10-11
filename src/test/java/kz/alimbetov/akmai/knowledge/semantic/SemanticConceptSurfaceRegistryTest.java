@@ -17,6 +17,8 @@ class SemanticConceptSurfaceRegistryTest {
     private static final int RU_FINANCE_BATCH_D_ADDITIONS = 100;
     private static final int RU_INSURANCE_BATCH_A_ADDITIONS = 100;
     private static final int RU_INSURANCE_BATCH_B_ADDITIONS = 100;
+    private static final int RU_INSURANCE_BATCH_C_ADDITIONS = 100;
+    private static final int RU_INSURANCE_BATCH_D_ADDITIONS = 100;
 
     private final SemanticDomainCatalog domainCatalog =
             new SemanticDomainCatalog();
@@ -48,6 +50,8 @@ class SemanticConceptSurfaceRegistryTest {
                                 + RU_FINANCE_BATCH_D_ADDITIONS
                                 + RU_INSURANCE_BATCH_A_ADDITIONS
                                 + RU_INSURANCE_BATCH_B_ADDITIONS
+                                + RU_INSURANCE_BATCH_C_ADDITIONS
+                                + RU_INSURANCE_BATCH_D_ADDITIONS
                 )
                 .allSatisfy(surface ->
                         assertThat(canonicalIds)
@@ -67,49 +71,56 @@ class SemanticConceptSurfaceRegistryTest {
 
     @Test
     void russianFinanceBatchesReachFullCanonicalDomainParity() {
-        List<SemanticConceptSurface> financeSurfaces = registry.surfaces("ru").stream()
-                .filter(surface -> surface.domainId().equals("finance_banking"))
-                .toList();
-
-        assertThat(financeSurfaces).hasSize(424);
-
-        assertThat(financeSurfaces.stream()
-                .collect(Collectors.groupingBy(
-                        SemanticConceptSurface::subdomainId,
-                        Collectors.counting()
-                )))
-                .containsEntry("lending_credit", 106L)
-                .containsEntry("deposits_liquidity", 106L)
-                .containsEntry("risk_capital", 106L)
-                .containsEntry("payments_compliance", 106L);
+        assertFullDomainParity(
+                "finance_banking",
+                List.of(
+                        "finance_banking.lending_credit.borrower_repayment_capacity",
+                        "finance_banking.deposits_liquidity.insured_deposit_protection",
+                        "finance_banking.risk_capital.capital_adequacy_planning",
+                        "finance_banking.payments_compliance.customer_onboarding_screening"
+                )
+        );
     }
 
     @Test
-    void russianInsuranceBatchesAddExactlyTwoHundredCanonicalSurfaces() {
+    void russianInsuranceBatchesReachFullCanonicalDomainParity() {
         List<SemanticConceptSurface> insuranceSurfaces = registry.surfaces("ru").stream()
                 .filter(surface -> surface.domainId().equals("insurance"))
                 .toList();
 
-        assertThat(insuranceSurfaces).hasSize(224);
+        assertThat(insuranceSurfaces).hasSize(424);
 
         assertThat(insuranceSurfaces.stream()
                 .collect(Collectors.groupingBy(
                         SemanticConceptSurface::subdomainId,
                         Collectors.counting()
                 )))
-                .containsEntry("underwriting_pricing", 56L)
-                .containsEntry("claims_management", 56L)
-                .containsEntry("life_health", 56L)
-                .containsEntry("property_casualty", 56L);
+                .containsEntry("underwriting_pricing", 106L)
+                .containsEntry("claims_management", 106L)
+                .containsEntry("life_health", 106L)
+                .containsEntry("property_casualty", 106L);
 
         assertThat(insuranceSurfaces)
                 .extracting(SemanticConceptSurface::conceptId)
                 .contains(
-                        "insurance.underwriting_pricing.technical_premium_calculation",
-                        "insurance.claims_management.claim_frequency_analysis",
-                        "insurance.life_health.guaranteed_issue_coverage",
-                        "insurance.property_casualty.dwelling_property_coverage"
+                        "insurance.underwriting_pricing.risk_appetite_calibration",
+                        "insurance.claims_management.claim_intake_automation",
+                        "insurance.life_health.life_underwriting_evidence",
+                        "insurance.property_casualty.property_exposure_schedule"
                 );
+    }
+
+    private void assertFullDomainParity(
+            String domainId,
+            List<String> representativeConceptIds
+    ) {
+        List<SemanticConceptSurface> surfaces = registry.surfaces("ru").stream()
+                .filter(surface -> surface.domainId().equals(domainId))
+                .toList();
+        assertThat(surfaces).hasSize(424);
+        assertThat(surfaces)
+                .extracting(SemanticConceptSurface::conceptId)
+                .containsAll(representativeConceptIds);
     }
 
     @Test
@@ -186,7 +197,7 @@ class SemanticConceptSurfaceRegistryTest {
                 .isEqualTo("semantic-concepts-en-v2");
         assertThat(registry.version("ru"))
                 .isEqualTo(
-                        "semantic-surfaces-ru-v1+semantic-surfaces-ru-finance-batch-a-v2+semantic-surfaces-ru-finance-batch-b-v2+semantic-surfaces-ru-finance-batch-c-v2+semantic-surfaces-ru-finance-batch-d-v2+semantic-surfaces-ru-insurance-batch-a-v2+semantic-surfaces-ru-insurance-batch-b-v2"
+                        "semantic-surfaces-ru-v1+semantic-surfaces-ru-finance-batch-a-v2+semantic-surfaces-ru-finance-batch-b-v2+semantic-surfaces-ru-finance-batch-c-v2+semantic-surfaces-ru-finance-batch-d-v2+semantic-surfaces-ru-insurance-batch-a-v2+semantic-surfaces-ru-insurance-batch-b-v2+semantic-surfaces-ru-insurance-batch-c-v2+semantic-surfaces-ru-insurance-batch-d-v2"
                 );
         assertThat(registry.version("kk"))
                 .isEqualTo("semantic-surfaces-kk-v1");
