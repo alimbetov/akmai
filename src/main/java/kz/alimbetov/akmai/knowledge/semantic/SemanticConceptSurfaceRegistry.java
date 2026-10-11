@@ -25,6 +25,8 @@ public class SemanticConceptSurfaceRegistry {
             "semantic/concept-surfaces-ru-finance-batch-d-v2.yaml",
             "semantic/concept-surfaces-ru-insurance-batch-a-v2.yaml",
             "semantic/concept-surfaces-ru-insurance-batch-b-v2.yaml",
+            "semantic/concept-surfaces-ru-insurance-batch-c-v2.yaml",
+            "semantic/concept-surfaces-ru-insurance-batch-d-v2.yaml",
             "semantic/concept-surfaces-kk-v1.yaml",
             "semantic/concept-surfaces-zh-v1.yaml",
             "semantic/concept-surfaces-de-v1.yaml",
