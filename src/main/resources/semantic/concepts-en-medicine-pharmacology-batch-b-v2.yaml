@@ -96,7 +96,7 @@ domains:
           - propensity score matching
           - case crossover design
           - instrumental variable analysis
-          - difference in differences
+          - nested case control design
           - self controlled case series
           - regression discontinuity design
           - target trial emulation
