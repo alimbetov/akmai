@@ -1,0 +1,307 @@
+version: semantic-surfaces-kk-insurance-batch-a-v2
+languages:
+  - language: kk
+    surfaces:
+      - conceptId: insurance.underwriting_pricing.risk_selection_criteria
+        preferredPhrase: тәуекелді іріктеу критерийлері
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.underwriting_authority_limit
+        preferredPhrase: андеррайтинг өкілеттігінің лимиті
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.underwriting_referral_process
+        preferredPhrase: андеррайтингке жолдау процесі
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.premium_rate_adequacy
+        preferredPhrase: сақтандыру тарифінің жеткіліктілігі
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.rate_filing_process
+        preferredPhrase: сақтандыру тарифін тіркеу процесі
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.experience_rating_methodology
+        preferredPhrase: тәжірибе бойынша тарификация әдістемесі
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.credibility_weighting_method
+        preferredPhrase: сенімділікті салмақтау әдісі
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.exposure_rating_method
+        preferredPhrase: экспозиция бойынша тарификация әдісі
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.schedule_rating_adjustment
+        preferredPhrase: тарифтік кестені түзету
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.manual_rate_calculation
+        preferredPhrase: тарифті қолмен есептеу
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.policy_risk_classification
+        preferredPhrase: полис тәуекелін жіктеу
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.hazard_risk_assessment
+        preferredPhrase: қауіптілік тәуекелін бағалау
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.occupancy_risk_classification
+        preferredPhrase: нысанды пайдалану тәуекелін жіктеу
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.geographic_risk_factor
+        preferredPhrase: географиялық тәуекел факторы
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.catastrophe_load_factor
+        preferredPhrase: катастрофалық жүктеме коэффициенті
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.expense_loading_factor
+        preferredPhrase: шығындар жүктемесінің коэффициенті
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.profit_loading_factor
+        preferredPhrase: пайда жүктемесінің коэффициенті
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.loss_cost_projection
+        preferredPhrase: залал құнын болжау
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.premium_adequacy_review
+        preferredPhrase: сақтандыру сыйлықақысының жеткіліктілігін тексеру
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.renewal_underwriting_review
+        preferredPhrase: ұзарту кезіндегі андеррайтингтік тексеру
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.new_business_underwriting
+        preferredPhrase: жаңа бизнес андеррайтингі
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.portfolio_underwriting_strategy
+        preferredPhrase: портфель андеррайтингі стратегиясы
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.underwriting_guideline_exception
+        preferredPhrase: андеррайтинг қағидаларынан ауытқу
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.policy_deductible_structure
+        preferredPhrase: полис франшизасының құрылымы
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.coverage_attachment_point
+        preferredPhrase: сақтандыру жабуының басталу нүктесі
+        aliases: []
+
+      - conceptId: insurance.claims_management.first_notice_of_loss
+        preferredPhrase: залал туралы алғашқы хабарлама
+        aliases: []
+      - conceptId: insurance.claims_management.claims_triage_process
+        preferredPhrase: сақтандыру талаптарын триаждау процесі
+        aliases: []
+      - conceptId: insurance.claims_management.claim_severity_assessment
+        preferredPhrase: сақтандыру оқиғасының ауырлығын бағалау
+        aliases: []
+      - conceptId: insurance.claims_management.claim_liability_evaluation
+        preferredPhrase: талап бойынша жауапкершілікті бағалау
+        aliases: []
+      - conceptId: insurance.claims_management.coverage_verification_process
+        preferredPhrase: сақтандыру жабуын тексеру процесі
+        aliases: []
+      - conceptId: insurance.claims_management.claim_investigation_procedure
+        preferredPhrase: сақтандыру талабын тергеу рәсімі
+        aliases: []
+      - conceptId: insurance.claims_management.claim_documentation_review
+        preferredPhrase: сақтандыру талабы құжаттарын тексеру
+        aliases: []
+      - conceptId: insurance.claims_management.claim_payment_authorization
+        preferredPhrase: талап бойынша төлемді авторизациялау
+        aliases: []
+      - conceptId: insurance.claims_management.claim_settlement_negotiation
+        preferredPhrase: талапты реттеу жөніндегі келіссөздер
+        aliases: []
+      - conceptId: insurance.claims_management.claim_litigation_management
+        preferredPhrase: талаптар бойынша сот дауларын басқару
+        aliases: []
+      - conceptId: insurance.claims_management.claims_leakage_analysis
+        preferredPhrase: сақтандыру төлемдері шығынын талдау
+        aliases: []
+      - conceptId: insurance.claims_management.claims_fraud_investigation
+        preferredPhrase: талаптар бойынша алаяқтықты тергеу
+        aliases: []
+      - conceptId: insurance.claims_management.subrogation_recovery_process
+        preferredPhrase: суброгациялық өндіріп алу процесі
+        aliases: []
+      - conceptId: insurance.claims_management.salvage_recovery_process
+        preferredPhrase: қалдық құнын өндіріп алу процесі
+        aliases: []
+      - conceptId: insurance.claims_management.reinsurance_claim_recovery
+        preferredPhrase: қайта сақтандыру талабы бойынша өтем алу
+        aliases: []
+      - conceptId: insurance.claims_management.claim_reserve_adequacy
+        preferredPhrase: талап резервінің жеткіліктілігі
+        aliases: []
+      - conceptId: insurance.claims_management.case_reserve_estimation
+        preferredPhrase: іс бойынша резервті бағалау
+        aliases: []
+      - conceptId: insurance.claims_management.incurred_but_not_reported
+        preferredPhrase: болған бірақ хабарланбаған залалдар
+        aliases: []
+      - conceptId: insurance.claims_management.claims_development_pattern
+        preferredPhrase: сақтандыру талаптарының даму үлгісі
+        aliases: []
+      - conceptId: insurance.claims_management.loss_development_factor
+        preferredPhrase: залал дамуының коэффициенті
+        aliases: []
+      - conceptId: insurance.claims_management.claims_closure_rate
+        preferredPhrase: сақтандыру талаптарын жабу коэффициенті
+        aliases: []
+      - conceptId: insurance.claims_management.claims_reopening_analysis
+        preferredPhrase: талаптарды қайта ашуды талдау
+        aliases: []
+      - conceptId: insurance.claims_management.claims_expense_allocation
+        preferredPhrase: талаптар шығындарын бөлу
+        aliases: []
+      - conceptId: insurance.claims_management.claims_quality_assurance
+        preferredPhrase: талаптарды реттеу сапасын қамтамасыз ету
+        aliases: []
+      - conceptId: insurance.claims_management.catastrophe_claims_response
+        preferredPhrase: катастрофалық талаптарға ден қою
+        aliases: []
+
+      - conceptId: insurance.life_health.term_life_insurance
+        preferredPhrase: мерзімді өмірді сақтандыру
+        aliases: []
+      - conceptId: insurance.life_health.whole_life_insurance
+        preferredPhrase: өмір бойғы өмірді сақтандыру
+        aliases: []
+      - conceptId: insurance.life_health.universal_life_insurance
+        preferredPhrase: әмбебап өмірді сақтандыру
+        aliases: []
+      - conceptId: insurance.life_health.group_life_insurance
+        preferredPhrase: топтық өмірді сақтандыру
+        aliases: []
+      - conceptId: insurance.life_health.individual_health_insurance
+        preferredPhrase: жеке медициналық сақтандыру
+        aliases: []
+      - conceptId: insurance.life_health.group_health_insurance
+        preferredPhrase: топтық медициналық сақтандыру
+        aliases: []
+      - conceptId: insurance.life_health.critical_illness_coverage
+        preferredPhrase: ауыр ауруларды сақтандыру жабуы
+        aliases: []
+      - conceptId: insurance.life_health.disability_income_coverage
+        preferredPhrase: еңбекке жарамсыздық табысын жабу
+        aliases: []
+      - conceptId: insurance.life_health.long_term_care_insurance
+        preferredPhrase: ұзақ мерзімді күтімді сақтандыру
+        aliases: []
+      - conceptId: insurance.life_health.deferred_annuity_contract
+        preferredPhrase: кейінге қалдырылған аннуитет шарты
+        aliases: []
+      - conceptId: insurance.life_health.immediate_annuity_contract
+        preferredPhrase: дереу аннуитет шарты
+        aliases: []
+      - conceptId: insurance.life_health.policy_surrender_value
+        preferredPhrase: полистің сатып алу құны
+        aliases: []
+      - conceptId: insurance.life_health.cash_value_accumulation
+        preferredPhrase: ақшалай құнның жинақталуы
+        aliases: []
+      - conceptId: insurance.life_health.beneficiary_designation
+        preferredPhrase: пайда алушыны тағайындау
+        aliases: []
+      - conceptId: insurance.life_health.policy_lapse_risk
+        preferredPhrase: полистің тоқтау тәуекелі
+        aliases: []
+      - conceptId: insurance.life_health.mortality_assumption_basis
+        preferredPhrase: өлім-жітім болжамдарының негізі
+        aliases: []
+      - conceptId: insurance.life_health.morbidity_assumption_basis
+        preferredPhrase: сырқаттанушылық болжамдарының негізі
+        aliases: []
+      - conceptId: insurance.life_health.policyholder_persistency_rate
+        preferredPhrase: сақтанушыларды сақтау коэффициенті
+        aliases: []
+      - conceptId: insurance.life_health.premium_waiver_benefit
+        preferredPhrase: сыйлықақыдан босату жеңілдігі
+        aliases: []
+      - conceptId: insurance.life_health.conversion_privilege_provision
+        preferredPhrase: конвертация құқығы туралы шарт
+        aliases: []
+      - conceptId: insurance.life_health.medical_underwriting_assessment
+        preferredPhrase: медициналық андеррайтингті бағалау
+        aliases: []
+      - conceptId: insurance.life_health.health_claims_utilization
+        preferredPhrase: медициналық талаптарды пайдалану
+        aliases: []
+      - conceptId: insurance.life_health.provider_network_management
+        preferredPhrase: медициналық қызмет көрсетушілер желісін басқару
+        aliases: []
+      - conceptId: insurance.life_health.medical_loss_ratio
+        preferredPhrase: медициналық залал коэффициенті
+        aliases: []
+      - conceptId: insurance.life_health.benefit_eligibility_determination
+        preferredPhrase: сақтандыру төлеміне құқықты анықтау
+        aliases: []
+
+      - conceptId: insurance.property_casualty.commercial_property_coverage
+        preferredPhrase: коммерциялық мүлікті сақтандыру жабуы
+        aliases: []
+      - conceptId: insurance.property_casualty.homeowners_insurance_coverage
+        preferredPhrase: тұрғын үй иелерінің сақтандыру жабуы
+        aliases: []
+      - conceptId: insurance.property_casualty.motor_insurance_coverage
+        preferredPhrase: автокөлікті сақтандыру жабуы
+        aliases: []
+      - conceptId: insurance.property_casualty.general_liability_coverage
+        preferredPhrase: жалпы жауапкершілікті сақтандыру жабуы
+        aliases: []
+      - conceptId: insurance.property_casualty.professional_liability_coverage
+        preferredPhrase: кәсіби жауапкершілікті сақтандыру жабуы
+        aliases: []
+      - conceptId: insurance.property_casualty.product_liability_coverage
+        preferredPhrase: өнім жауапкершілігін сақтандыру жабуы
+        aliases: []
+      - conceptId: insurance.property_casualty.workers_compensation_coverage
+        preferredPhrase: қызметкерлер өтемін сақтандыру жабуы
+        aliases: []
+      - conceptId: insurance.property_casualty.marine_cargo_insurance
+        preferredPhrase: теңіз жүктерін сақтандыру
+        aliases: []
+      - conceptId: insurance.property_casualty.aviation_hull_insurance
+        preferredPhrase: әуе кемесі корпусын сақтандыру
+        aliases: []
+      - conceptId: insurance.property_casualty.cyber_insurance_coverage
+        preferredPhrase: киберсақтандыру жабуы
+        aliases: []
+      - conceptId: insurance.property_casualty.construction_all_risk
+        preferredPhrase: құрылыс тәуекелдерін кешенді сақтандыру
+        aliases: []
+      - conceptId: insurance.property_casualty.equipment_breakdown_coverage
+        preferredPhrase: жабдықтың бұзылуын сақтандыру жабуы
+        aliases: []
+      - conceptId: insurance.property_casualty.natural_catastrophe_exposure
+        preferredPhrase: табиғи апаттарға ұшырау тәуекелі
+        aliases: []
+      - conceptId: insurance.property_casualty.probable_maximum_loss
+        preferredPhrase: ықтимал ең жоғары залал
+        aliases: []
+      - conceptId: insurance.property_casualty.maximum_foreseeable_loss
+        preferredPhrase: болжамды ең жоғары залал
+        aliases: []
+      - conceptId: insurance.property_casualty.property_replacement_cost
+        preferredPhrase: мүлікті қалпына келтіру құны
+        aliases: []
+      - conceptId: insurance.property_casualty.actual_cash_value
+        preferredPhrase: нақты ақшалай құн
+        aliases: []
+      - conceptId: insurance.property_casualty.business_income_loss
+        preferredPhrase: бизнес табысының жоғалуы
+        aliases: []
+      - conceptId: insurance.property_casualty.extra_expense_coverage
+        preferredPhrase: қосымша шығындарды сақтандыру жабуы
+        aliases: []
+      - conceptId: insurance.property_casualty.policy_aggregate_limit
+        preferredPhrase: полистің жиынтық лимиті
+        aliases: []
+      - conceptId: insurance.property_casualty.occurrence_coverage_trigger
+        preferredPhrase: оқиға бойынша жабу триггері
+        aliases: []
+      - conceptId: insurance.property_casualty.claims_made_coverage
+        preferredPhrase: мәлімделген талаптар бойынша жабу
+        aliases: []
+      - conceptId: insurance.property_casualty.coinsurance_clause_application
+        preferredPhrase: бірлескен сақтандыру шартын қолдану
+        aliases: []
+      - conceptId: insurance.property_casualty.deductible_retention_amount
+        preferredPhrase: франшиза бойынша ұсталым сомасы
+        aliases: []
+      - conceptId: insurance.property_casualty.catastrophe_exposure_accumulation
+        preferredPhrase: катастрофалық экспозицияның жинақталуы
+        aliases: []
