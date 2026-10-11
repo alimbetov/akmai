@@ -102,7 +102,7 @@ domains:
           - Oaxaca Blinder decomposition
           - regression decomposition analysis
           - causal mediation analysis
-          - marginal structural model
+          - cross lagged panel model
           - inverse probability treatment
           - network autocorrelation model
           - spatial social analysis
