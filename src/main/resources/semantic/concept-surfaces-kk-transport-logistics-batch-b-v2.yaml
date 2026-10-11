@@ -1,0 +1,307 @@
+version: semantic-surfaces-kk-transport-logistics-batch-b-v2
+languages:
+  - language: kk
+    surfaces:
+      - conceptId: transport_logistics.freight_transport.lane_profitability_analysis
+        preferredPhrase: жүк бағыты табыстылығын талдау
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.transport_mode_selection
+        preferredPhrase: көлік түрін таңдау
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.intermodal_route_planning
+        preferredPhrase: интермодальдық бағытты жоспарлау
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.freight_capacity_planning
+        preferredPhrase: жүк өткізу қуатын жоспарлау
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.carrier_tender_process
+        preferredPhrase: тасымалдаушы тендері процесі
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.freight_rate_negotiation
+        preferredPhrase: жүк тарифін келісу
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.line_haul_operation
+        preferredPhrase: магистральдық тасымал операциясы
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.drayage_transport_service
+        preferredPhrase: қысқа қашықтық тасымал қызметі
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.rail_wagon_turnaround
+        preferredPhrase: теміржол вагоны айналымы
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.port_terminal_dwell
+        preferredPhrase: порт терминалында тұру уақыты
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.cargo_consolidation_strategy
+        preferredPhrase: жүкті шоғырландыру стратегиясы
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.consolidation_center_unloading
+        preferredPhrase: шоғырландыру орталығында түсіру
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.load_factor_optimization
+        preferredPhrase: жүктеме коэффициентін оңтайландыру
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.vehicle_cube_utilization
+        preferredPhrase: көлік көлемін пайдалану
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.shipment_density_analysis
+        preferredPhrase: жөнелту тығыздығын талдау
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.freight_cost_allocation
+        preferredPhrase: жүк шығындарын бөлу
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.transit_time_reliability
+        preferredPhrase: транзит уақытының сенімділігі
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.delivery_time_variance
+        preferredPhrase: жеткізу уақытының ауытқуы
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.freight_damage_rate
+        preferredPhrase: жүк зақымдануы көрсеткіші
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.cargo_claims_management
+        preferredPhrase: жүк талаптарын басқару
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.hazardous_cargo_compliance
+        preferredPhrase: қауіпті жүк талаптарына сәйкестік
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.customs_transit_procedure
+        preferredPhrase: кедендік транзит рәсімі
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.freight_documentation_control
+        preferredPhrase: жүк құжаттамасын бақылау
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.multimodal_transport_contract
+        preferredPhrase: мультимодальдық тасымал шарты
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.transport_capacity_reservation
+        preferredPhrase: тасымал қуатын резервтеу
+        aliases: []
+
+      - conceptId: transport_logistics.warehousing_distribution.dynamic_slotting_policy
+        preferredPhrase: динамикалық ұяшықтау саясаты
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.storage_location_assignment
+        preferredPhrase: сақтау орнын тағайындау
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_capacity_planning
+        preferredPhrase: қойма қуатын жоспарлау
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.dock_appointment_optimization
+        preferredPhrase: док уақытын оңтайландыру
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.inbound_appointment_scheduling
+        preferredPhrase: кіріс қабылдау уақытын жоспарлау
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.receiving_process_control
+        preferredPhrase: қабылдау процесін бақылау
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.putaway_strategy_optimization
+        preferredPhrase: орналастыру стратегиясын оңтайландыру
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.forward_pick_replenishment
+        preferredPhrase: жинау аймағын толықтыру
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.picking_productivity_analysis
+        preferredPhrase: жинау өнімділігін талдау
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.packing_productivity_analysis
+        preferredPhrase: орау өнімділігін талдау
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.wave_release_planning
+        preferredPhrase: толқындық шығаруды жоспарлау
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.batch_picking_strategy
+        preferredPhrase: топтамалық жинау стратегиясы
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.zone_picking_strategy
+        preferredPhrase: аймақтық жинау стратегиясы
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.flow_through_distribution
+        preferredPhrase: ағындық тарату процесі
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.labor_standards_engineering
+        preferredPhrase: еңбек нормативтерін әзірлеу
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_congestion_analysis
+        preferredPhrase: қойма тығыздығын талдау
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.order_accuracy_rate
+        preferredPhrase: тапсырыс дәлдігі көрсеткіші
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.inventory_record_accuracy
+        preferredPhrase: қор есебінің дәлдігі
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.cycle_counting_program
+        preferredPhrase: циклдік санау бағдарламасы
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.shrinkage_loss_monitoring
+        preferredPhrase: қор жоғалуын мониторингтеу
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.distribution_route_staging
+        preferredPhrase: тарату бағыттарын дайындау
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.parcel_sortation_process
+        preferredPhrase: сәлемдемелерді сұрыптау процесі
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.distribution_throughput_analysis
+        preferredPhrase: тарату өткізу қабілетін талдау
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.material_handling_safety
+        preferredPhrase: материалдарды өңдеу қауіпсіздігі
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_automation_strategy
+        preferredPhrase: қойманы автоматтандыру стратегиясы
+        aliases: []
+
+      - conceptId: transport_logistics.fleet_operations.fleet_replacement_planning
+        preferredPhrase: автопаркті ауыстыруды жоспарлау
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_economic_life
+        preferredPhrase: көліктің экономикалық қызмет мерзімі
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_capacity_planning
+        preferredPhrase: автопарк қуатын жоспарлау
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_assignment_strategy
+        preferredPhrase: көлікті тағайындау стратегиясы
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.route_adherence_monitoring
+        preferredPhrase: бағытты сақтауды мониторингтеу
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.hours_of_service_audit
+        preferredPhrase: жұмыс сағатын аудиттеу
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.driver_risk_profiling
+        preferredPhrase: жүргізуші тәуекелін бейіндеу
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_idling_analysis
+        preferredPhrase: көлік бос жүрісін талдау
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fuel_consumption_benchmarking
+        preferredPhrase: отын шығынын салыстырмалы бағалау
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_carbon_intensity
+        preferredPhrase: автопарк көміртек қарқындылығы
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.preventive_fleet_servicing
+        preferredPhrase: автопарктің профилактикалық қызметі
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.inspection_defect_management
+        preferredPhrase: инспекциялық ақауларды басқару
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.tire_management_program
+        preferredPhrase: шиналарды басқару бағдарламасы
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_downtime_analysis
+        preferredPhrase: автопарк тұрып қалуын талдау
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.breakdown_response_process
+        preferredPhrase: бұзылуға әрекет ету процесі
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.roadside_assistance_program
+        preferredPhrase: жол бойы көмек бағдарламасы
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_spare_vehicle
+        preferredPhrase: автопарк резервтік көлігі
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.telematics_alert_management
+        preferredPhrase: телематика ескертулерін басқару
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.geofence_compliance_monitoring
+        preferredPhrase: геоаймақ сәйкестігін мониторингтеу
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_accident_analysis
+        preferredPhrase: автопарк апаттарын талдау
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.driver_training_program
+        preferredPhrase: жүргізушілерді оқыту бағдарламасы
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_residual_value
+        preferredPhrase: көліктің қалдық құны
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_leasing_strategy
+        preferredPhrase: автопарк лизингі стратегиясы
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_claims_administration
+        preferredPhrase: автопарк талаптарын әкімшілендіру
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.total_fleet_cost
+        preferredPhrase: автопарктің жалпы құны
+        aliases: []
+
+      - conceptId: transport_logistics.supply_chain.supply_chain_segmentation
+        preferredPhrase: жеткізу тізбегін сегменттеу
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.network_design_optimization
+        preferredPhrase: желі дизайнын оңтайландыру
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.distribution_network_design
+        preferredPhrase: тарату желісін жобалау
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supply_demand_balancing
+        preferredPhrase: сұраныс пен ұсынысты теңгеру
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.sales_inventory_planning
+        preferredPhrase: сату мен қорды жоспарлау
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.inventory_deployment_policy
+        preferredPhrase: қорды орналастыру саясаты
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.safety_stock_segmentation
+        preferredPhrase: сақтандыру қорын сегменттеу
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.reorder_point_calculation
+        preferredPhrase: қайта тапсырыс нүктесін есептеу
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supplier_capacity_assessment
+        preferredPhrase: жеткізуші қуатын бағалау
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supplier_risk_monitoring
+        preferredPhrase: жеткізуші тәуекелін мониторингтеу
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supplier_concentration_reduction
+        preferredPhrase: жеткізуші шоғырлануын азайту
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.sourcing_lead_time
+        preferredPhrase: сатып алу жеткізу мерзімі
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.order_cycle_time
+        preferredPhrase: тапсырыс циклының уақыты
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.perfect_order_rate
+        preferredPhrase: мінсіз тапсырыс көрсеткіші
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.fill_rate_analysis
+        preferredPhrase: тапсырысты толтыру деңгейін талдау
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.service_level_optimization
+        preferredPhrase: қызмет деңгейін оңтайландыру
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.demand_variability_analysis
+        preferredPhrase: сұраныс құбылмалылығын талдау
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.bullwhip_effect_analysis
+        preferredPhrase: қамшы әсерін талдау
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supply_planning_horizon
+        preferredPhrase: жеткізуді жоспарлау көкжиегі
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.logistics_scenario_modeling
+        preferredPhrase: логистикалық сценарийді модельдеу
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.disruption_response_planning
+        preferredPhrase: үзіліске әрекет етуді жоспарлау
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.alternate_sourcing_strategy
+        preferredPhrase: балама сатып алу стратегиясы
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.contingency_transport_plan
+        preferredPhrase: резервтік тасымал жоспары
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.shipment_milestone_visibility
+        preferredPhrase: жөнелту кезеңдерінің көрінуі
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.control_tower_operation
+        preferredPhrase: басқару орталығы операциясы
+        aliases: []
