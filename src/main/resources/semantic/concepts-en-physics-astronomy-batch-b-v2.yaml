@@ -35,7 +35,7 @@ domains:
           - Legendre transform thermodynamics
           - Gibbs Duhem relation
           - fugacity coefficient calculation
-          - activity coefficient model
+          - thermodynamic stability matrix
           - phase diagram construction
           - critical point behavior
           - spinodal decomposition thermodynamics
