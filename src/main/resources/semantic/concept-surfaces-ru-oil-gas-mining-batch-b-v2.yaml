@@ -1,0 +1,307 @@
+version: semantic-surfaces-ru-oil-gas-mining-batch-b-v2
+languages:
+  - language: ru
+    surfaces:
+      - conceptId: oil_gas_mining.upstream_operations.seismic_inversion_analysis
+        preferredPhrase: анализ сейсмической инверсии
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.well_log_interpretation
+        preferredPhrase: интерпретация каротажных диаграмм
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.petrophysical_property_model
+        preferredPhrase: модель петрофизических свойств
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.reservoir_simulation_model
+        preferredPhrase: гидродинамическая модель пласта
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.static_reservoir_model
+        preferredPhrase: статическая модель пласта
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.dynamic_reservoir_model
+        preferredPhrase: динамическая модель пласта
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.well_test_analysis
+        preferredPhrase: анализ испытания скважины
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.pressure_transient_analysis
+        preferredPhrase: анализ переходных процессов давления
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.decline_curve_analysis
+        preferredPhrase: анализ кривой падения добычи
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.production_allocation_model
+        preferredPhrase: модель распределения добычи
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.artificial_lift_optimization
+        preferredPhrase: оптимизация механизированной добычи
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.water_injection_strategy
+        preferredPhrase: стратегия закачки воды
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.gas_injection_strategy
+        preferredPhrase: стратегия закачки газа
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.well_integrity_surveillance
+        preferredPhrase: наблюдение за целостностью скважины
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.casing_integrity_assessment
+        preferredPhrase: оценка целостности обсадной колонны
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.cement_bond_evaluation
+        preferredPhrase: оценка качества цементирования
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.drilling_fluid_performance
+        preferredPhrase: эффективность бурового раствора
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.directional_drilling_plan
+        preferredPhrase: план направленного бурения
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.geosteering_decision_process
+        preferredPhrase: процесс принятия решений геонавигации
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.drilling_performance_monitoring
+        preferredPhrase: мониторинг эффективности бурения
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.rate_of_penetration
+        preferredPhrase: механическая скорость проходки
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.lost_circulation_management
+        preferredPhrase: управление поглощением бурового раствора
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.formation_damage_mitigation
+        preferredPhrase: снижение повреждения пласта
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.well_stimulation_program
+        preferredPhrase: программа интенсификации скважины
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.abandonment_liability_estimate
+        preferredPhrase: оценка обязательств по ликвидации скважины
+        aliases: []
+
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_hydraulic_simulation
+        preferredPhrase: гидравлическое моделирование трубопровода
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_throughput_capacity
+        preferredPhrase: пропускная способность трубопровода
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.line_pack_optimization
+        preferredPhrase: оптимизация запаса газа в трубопроводе
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.gas_nomination_process
+        preferredPhrase: процесс номинации газа
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.shipper_balancing_process
+        preferredPhrase: процесс балансировки грузоотправителя
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_pressure_management
+        preferredPhrase: управление давлением трубопровода
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.compressor_performance_monitoring
+        preferredPhrase: мониторинг производительности компрессора
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.compressor_station_optimization
+        preferredPhrase: оптимизация компрессорной станции
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.leak_detection_performance
+        preferredPhrase: эффективность системы обнаружения утечек
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.corrosion_rate_monitoring
+        preferredPhrase: мониторинг скорости коррозии
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.inline_inspection_program
+        preferredPhrase: программа внутритрубной диагностики
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.cathodic_protection_monitoring
+        preferredPhrase: мониторинг катодной защиты
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_right_of_way
+        preferredPhrase: полоса отвода трубопровода
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_pigging_program
+        preferredPhrase: программа очистки трубопровода скребками
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.tank_farm_operations
+        preferredPhrase: эксплуатация резервуарного парка
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.terminal_inventory_balance
+        preferredPhrase: баланс запасов терминала
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.vapor_recovery_system
+        preferredPhrase: система улавливания паров
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.custody_transfer_metering
+        preferredPhrase: коммерческий учет передачи продукта
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.metering_uncertainty_analysis
+        preferredPhrase: анализ неопределенности измерений
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.gas_quality_compliance
+        preferredPhrase: соответствие качества газа требованиям
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.crude_quality_specification
+        preferredPhrase: спецификация качества нефти
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.terminal_throughput_analysis
+        preferredPhrase: анализ пропускной способности терминала
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.storage_capacity_planning
+        preferredPhrase: планирование емкости хранилища
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_outage_planning
+        preferredPhrase: планирование остановки трубопровода
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.midstream_asset_integrity
+        preferredPhrase: целостность активов транспортировки
+        aliases: []
+
+      - conceptId: oil_gas_mining.downstream_operations.refinery_feedstock_slate
+        preferredPhrase: структура сырья НПЗ
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_contribution_margin
+        preferredPhrase: маржинальный доход нефтепереработки
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.linear_programming_refinery
+        preferredPhrase: линейное программирование НПЗ
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.distillation_column_operation
+        preferredPhrase: эксплуатация ректификационной колонны
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.catalytic_cracking_unit
+        preferredPhrase: установка каталитического крекинга
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.hydrocracking_unit_operation
+        preferredPhrase: эксплуатация установки гидрокрекинга
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.hydrotreating_unit_operation
+        preferredPhrase: эксплуатация установки гидроочистки
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.reformer_severity_control
+        preferredPhrase: управление жесткостью режима риформинга
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.sulfur_recovery_performance
+        preferredPhrase: эффективность извлечения серы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.hydrogen_balance_management
+        preferredPhrase: управление водородным балансом
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_fuel_network
+        preferredPhrase: топливная сеть НПЗ
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.flare_system_management
+        preferredPhrase: управление факельной системой
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.energy_intensity_benchmark
+        preferredPhrase: эталон энергоемкости нефтепереработки
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_yield_optimization
+        preferredPhrase: оптимизация выхода продуктов НПЗ
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.product_blending_optimization
+        preferredPhrase: оптимизация смешения продуктов
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.octane_pool_management
+        preferredPhrase: управление октановым пулом
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.sulfur_specification_control
+        preferredPhrase: контроль спецификации по сере
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_inventory_management
+        preferredPhrase: управление запасами НПЗ
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.process_unit_utilization
+        preferredPhrase: загрузка технологической установки
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_reliability_program
+        preferredPhrase: программа надежности НПЗ
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.turnaround_workpack_planning
+        preferredPhrase: планирование пакетов работ капитального ремонта
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.turnaround_critical_path
+        preferredPhrase: критический путь капитального ремонта
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_fouling_monitoring
+        preferredPhrase: мониторинг загрязнения оборудования НПЗ
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.catalyst_deactivation_monitoring
+        preferredPhrase: мониторинг деактивации катализатора
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.downstream_margin_optimization
+        preferredPhrase: оптимизация маржи переработки и сбыта
+        aliases: []
+
+      - conceptId: oil_gas_mining.mining_operations.mine_planning_model
+        preferredPhrase: модель планирования горных работ
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.pit_optimization_study
+        preferredPhrase: исследование оптимизации карьера
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.stripping_ratio_analysis
+        preferredPhrase: анализ коэффициента вскрыши
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.cutoff_grade_optimization
+        preferredPhrase: оптимизация бортового содержания
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.grade_control_drilling
+        preferredPhrase: бурение для контроля содержания
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.blast_design_optimization
+        preferredPhrase: оптимизация проекта взрыва
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.fragmentation_size_analysis
+        preferredPhrase: анализ крупности взорванной массы
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.haul_road_design
+        preferredPhrase: проектирование карьерных дорог
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.truck_shovel_optimization
+        preferredPhrase: оптимизация комплекса экскаватор самосвал
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mine_fleet_dispatch
+        preferredPhrase: диспетчеризация горнотранспортного парка
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.ore_grade_reconciliation
+        preferredPhrase: сверка содержания руды
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mine_production_reconciliation
+        preferredPhrase: сверка фактической добычи рудника
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.stockpile_blending_strategy
+        preferredPhrase: стратегия смешения складских запасов руды
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.crusher_utilization_analysis
+        preferredPhrase: анализ загрузки дробилки
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.grinding_circuit_efficiency
+        preferredPhrase: эффективность контура измельчения
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.flotation_recovery_analysis
+        preferredPhrase: анализ извлечения при флотации
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.leaching_recovery_analysis
+        preferredPhrase: анализ извлечения при выщелачивании
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mineral_processing_recovery
+        preferredPhrase: извлечение при обогащении полезных ископаемых
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.tailings_facility_operations
+        preferredPhrase: эксплуатация хвостохранилища
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.tailings_dam_monitoring
+        preferredPhrase: мониторинг дамбы хвостохранилища
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mine_water_management
+        preferredPhrase: управление водами рудника
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.slope_stability_monitoring
+        preferredPhrase: мониторинг устойчивости бортов карьера
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.ground_control_management
+        preferredPhrase: управление горным давлением
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mine_ventilation_planning
+        preferredPhrase: планирование вентиляции рудника
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mine_closure_liability
+        preferredPhrase: обязательства по закрытию рудника
+        aliases: []
