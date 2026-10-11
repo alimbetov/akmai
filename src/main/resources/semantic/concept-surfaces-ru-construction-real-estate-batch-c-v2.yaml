@@ -1,0 +1,304 @@
+version: semantic-surfaces-ru-construction-real-estate-batch-c-v2
+languages:
+  - language: ru
+    surfaces:
+      - conceptId: construction_real_estate.design_construction.geotechnical_investigation_report
+        preferredPhrase: отчет инженерно геологических изысканий
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.soil_bearing_capacity
+        preferredPhrase: несущая способность грунта
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.settlement_monitoring_plan
+        preferredPhrase: план мониторинга осадки
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.retaining_wall_design
+        preferredPhrase: проектирование подпорной стены
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.excavation_support_design
+        preferredPhrase: проектирование крепления котлована
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.dewatering_system_design
+        preferredPhrase: проектирование системы водопонижения
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.pile_load_testing
+        preferredPhrase: испытание свай нагрузкой
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.concrete_strength_testing
+        preferredPhrase: испытание прочности бетона
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.reinforcement_inspection_process
+        preferredPhrase: процесс инспекции армирования
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.structural_steel_inspection
+        preferredPhrase: инспекция металлоконструкций
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.facade_installation_sequence
+        preferredPhrase: последовательность монтажа фасада
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.waterproofing_inspection_plan
+        preferredPhrase: план инспекции гидроизоляции
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.roofing_inspection_process
+        preferredPhrase: процесс инспекции кровли
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.mechanical_commissioning_test
+        preferredPhrase: пусконаладочные испытания механических систем
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.electrical_commissioning_test
+        preferredPhrase: пусконаладочные испытания электрических систем
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.plumbing_pressure_test
+        preferredPhrase: испытание водопровода давлением
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.fire_protection_testing
+        preferredPhrase: испытание противопожарных систем
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.building_envelope_testing
+        preferredPhrase: испытание ограждающих конструкций здания
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.air_tightness_testing
+        preferredPhrase: испытание воздухонепроницаемости
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.thermal_bridging_analysis
+        preferredPhrase: анализ мостиков холода
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.acoustic_performance_assessment
+        preferredPhrase: оценка акустических характеристик
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.accessibility_compliance_review
+        preferredPhrase: проверка требований доступности
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.construction_defect_tracking
+        preferredPhrase: отслеживание строительных дефектов
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.punch_list_management
+        preferredPhrase: управление перечнем замечаний
+        aliases: []
+      - conceptId: construction_real_estate.design_construction.occupancy_permit_process
+        preferredPhrase: процесс получения разрешения на эксплуатацию
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.rental_comparables_analysis
+        preferredPhrase: анализ сопоставимых арендных ставок
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.sales_comparables_analysis
+        preferredPhrase: анализ сопоставимых продаж
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.gross_income_multiplier
+        preferredPhrase: мультипликатор валового дохода
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.capitalization_yield_spread
+        preferredPhrase: спред доходности капитализации
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.property_risk_premium
+        preferredPhrase: премия за риск недвижимости
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.vacancy_allowance_estimate
+        preferredPhrase: оценка потерь от вакантности
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.rent_collection_rate
+        preferredPhrase: коэффициент сбора арендной платы
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.tenant_default_risk
+        preferredPhrase: риск дефолта арендатора
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.lease_rollover_schedule
+        preferredPhrase: график ротации договоров аренды
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.weighted_lease_maturity
+        preferredPhrase: средневзвешенный срок аренды
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.tenant_concentration_risk
+        preferredPhrase: риск концентрации арендаторов
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.anchor_tenant_exposure
+        preferredPhrase: экспозиция якорного арендатора
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.rental_incentive_analysis
+        preferredPhrase: анализ арендных стимулов
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.leasing_commission_structure
+        preferredPhrase: структура комиссии за аренду
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.property_operating_margin
+        preferredPhrase: операционная маржа недвижимости
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.net_effective_rent
+        preferredPhrase: чистая эффективная арендная ставка
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.property_liquidity_discount
+        preferredPhrase: дисконт за неликвидность недвижимости
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.transaction_closing_cost
+        preferredPhrase: расходы на закрытие сделки
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.acquisition_due_diligence
+        preferredPhrase: комплексная проверка приобретения
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.property_title_review
+        preferredPhrase: проверка правового титула недвижимости
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.zoning_compliance_review
+        preferredPhrase: проверка соответствия зонированию
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.development_density_analysis
+        preferredPhrase: анализ плотности застройки
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.development_cost_benchmark
+        preferredPhrase: бенчмарк стоимости девелопмента
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.residual_development_value
+        preferredPhrase: остаточная стоимость девелопмента
+        aliases: []
+      - conceptId: construction_real_estate.real_estate_market.property_portfolio_rotation
+        preferredPhrase: ротация портфеля недвижимости
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.asset_condition_index
+        preferredPhrase: индекс состояния актива
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.preventive_task_library
+        preferredPhrase: библиотека профилактических работ
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.maintenance_priority_matrix
+        preferredPhrase: матрица приоритетов обслуживания
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.service_request_backlog
+        preferredPhrase: очередь сервисных заявок
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.work_order_aging
+        preferredPhrase: возраст незакрытых заявок на работы
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.maintenance_response_priority
+        preferredPhrase: приоритет реагирования обслуживания
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.asset_failure_history
+        preferredPhrase: история отказов актива
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.asset_replacement_forecast
+        preferredPhrase: прогноз замены активов
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.lifecycle_renewal_program
+        preferredPhrase: программа обновления жизненного цикла
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.facility_energy_audit
+        preferredPhrase: энергетический аудит объекта
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.utility_demand_management
+        preferredPhrase: управление спросом на коммунальные ресурсы
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.building_water_efficiency
+        preferredPhrase: эффективность водопотребления здания
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.indoor_environmental_quality
+        preferredPhrase: качество внутренней среды помещений
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.indoor_temperature_monitoring
+        preferredPhrase: мониторинг температуры помещений
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.indoor_humidity_monitoring
+        preferredPhrase: мониторинг влажности помещений
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.indoor_air_monitoring
+        preferredPhrase: мониторинг воздуха внутри помещений
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.space_demand_forecast
+        preferredPhrase: прогноз спроса на помещения
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.occupancy_density_analysis
+        preferredPhrase: анализ плотности размещения пользователей
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.workplace_utilization_rate
+        preferredPhrase: коэффициент использования рабочих пространств
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.service_contractor_performance
+        preferredPhrase: эффективность сервисного подрядчика
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.contract_compliance_monitoring
+        preferredPhrase: мониторинг исполнения сервисного договора
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.facility_risk_register
+        preferredPhrase: реестр рисков объекта
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.emergency_preparedness_plan
+        preferredPhrase: план готовности к чрезвычайным ситуациям
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.business_continuity_facility
+        preferredPhrase: обеспечение непрерывности работы объекта
+        aliases: []
+      - conceptId: construction_real_estate.facilities_management.accessibility_facility_audit
+        preferredPhrase: аудит доступности объекта
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.integrated_master_schedule
+        preferredPhrase: интегрированный сводный график
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.schedule_logic_review
+        preferredPhrase: проверка логики графика
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.schedule_health_assessment
+        preferredPhrase: оценка качества графика
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.critical_path_sensitivity
+        preferredPhrase: чувствительность критического пути
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.near_critical_path
+        preferredPhrase: околокритический путь
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.total_float_analysis
+        preferredPhrase: анализ полного резерва времени
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.free_float_analysis
+        preferredPhrase: анализ свободного резерва времени
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.schedule_compression_strategy
+        preferredPhrase: стратегия сжатия графика
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.acceleration_cost_analysis
+        preferredPhrase: анализ стоимости ускорения работ
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.delay_event_register
+        preferredPhrase: реестр событий задержки
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.contemporaneous_delay_analysis
+        preferredPhrase: анализ задержек по текущим данным
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.window_delay_analysis
+        preferredPhrase: оконный анализ задержек
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.as_planned_analysis
+        preferredPhrase: анализ по плановому графику
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.as_built_analysis
+        preferredPhrase: анализ по фактическому графику
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.earned_value_forecast
+        preferredPhrase: прогноз освоенного объема
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.estimate_confidence_level
+        preferredPhrase: уровень доверия к оценке
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.cost_contingency_model
+        preferredPhrase: модель стоимостного резерва
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.schedule_contingency_model
+        preferredPhrase: модель временного резерва графика
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.risk_adjusted_forecast
+        preferredPhrase: прогноз с учетом риска
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.trend_register_management
+        preferredPhrase: управление реестром трендов проекта
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.change_log_governance
+        preferredPhrase: управление журналом изменений
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.commitment_cost_tracking
+        preferredPhrase: отслеживание контрактных обязательств
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.actual_cost_reconciliation
+        preferredPhrase: сверка фактических затрат
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.forecast_completion_date
+        preferredPhrase: прогнозная дата завершения
+        aliases: []
+      - conceptId: construction_real_estate.project_controls.project_performance_baseline
+        preferredPhrase: базовый уровень эффективности проекта
+        aliases: []
