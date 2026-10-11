@@ -19,6 +19,7 @@ public class SemanticConceptSurfaceRegistry {
 
     private static final List<String> MULTILINGUAL_RESOURCES = List.of(
             "semantic/concept-surfaces-ru-v1.yaml",
+            "semantic/concept-surfaces-ru-finance-batch-a-v2.yaml",
             "semantic/concept-surfaces-kk-v1.yaml",
             "semantic/concept-surfaces-zh-v1.yaml",
             "semantic/concept-surfaces-de-v1.yaml",
@@ -120,9 +121,9 @@ public class SemanticConceptSurfaceRegistry {
                             "Semantic surface language is required"
                     );
                 }
-                if (surfaces.containsKey(language)) {
+                if (languagePack.surfaces().isEmpty()) {
                     throw new IllegalArgumentException(
-                            "Duplicate semantic surface language: "
+                            "Semantic surface pack is empty for "
                                     + language
                     );
                 }
@@ -131,6 +132,10 @@ public class SemanticConceptSurfaceRegistry {
                         morphologyRegistry.require(language);
                 LinkedHashMap<String, SemanticConceptSurface> unique =
                         new LinkedHashMap<>();
+                for (SemanticConceptSurface existing :
+                        surfaces.getOrDefault(language, List.of())) {
+                    unique.put(existing.conceptId(), existing);
+                }
 
                 for (var definitionSurface :
                         languagePack.surfaces()) {
@@ -158,18 +163,15 @@ public class SemanticConceptSurfaceRegistry {
                     }
                 }
 
-                if (unique.isEmpty()) {
-                    throw new IllegalArgumentException(
-                            "Semantic surface pack is empty for "
-                                    + language
-                    );
-                }
-
                 surfaces.put(
                         language,
                         List.copyOf(unique.values())
                 );
-                versions.put(language, definition.version());
+                versions.merge(
+                        language,
+                        definition.version(),
+                        (current, addition) -> current + "+" + addition
+                );
             }
         }
 
