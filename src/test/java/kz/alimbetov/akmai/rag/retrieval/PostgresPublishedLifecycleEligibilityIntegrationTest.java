@@ -112,6 +112,39 @@ class PostgresPublishedLifecycleEligibilityIntegrationTest {
     }
 
     @Test
+    void finalContextRevalidationRejectsPublishedGenerationWhileLifecycleIsIngesting() {
+        insertLifecycle("ingesting-doc", "PERMANENT", null, 7L, 1L);
+        RetrievalHit retrieved = hit(
+                RetrievalType.VECTOR,
+                1L,
+                "ingesting-doc",
+                7L
+        );
+
+        PublishedSearchProjectionReader projectionReader =
+                mock(PublishedSearchProjectionReader.class);
+        when(projectionReader.findPublishedByKeys(anyList(), anySet()))
+                .thenReturn(List.of(projection(
+                        "ingesting-doc",
+                        retrieved.chunkId(),
+                        7L,
+                        1L
+                )));
+        PublishedContextRevalidator revalidator = new PublishedContextRevalidator(
+                projectionReader,
+                eligibility
+        );
+
+        jdbc.update(
+                "UPDATE knowledge_document_lifecycle SET lifecycle_status = 'INGESTING', generation = 8, next_generation = 9 WHERE document_id = ?",
+                "ingesting-doc"
+        );
+
+        assertThat(revalidator.revalidate(List.of(retrieved), Set.of(1L)))
+                .isEmpty();
+    }
+
+    @Test
     void nonExpiredRowsRemainEligible() {
         OffsetDateTime future = OffsetDateTime.now(ZoneOffset.UTC).plusHours(1);
         insertLifecycle("future-ttl", "TTL", future, 1L, 1L);
