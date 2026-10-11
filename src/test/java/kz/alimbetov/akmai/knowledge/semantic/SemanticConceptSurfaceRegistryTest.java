@@ -13,6 +13,7 @@ class SemanticConceptSurfaceRegistryTest {
     private static final int MULTILINGUAL_V1_BASELINE = 384;
     private static final int RU_FINANCE_BATCH_A_ADDITIONS = 100;
     private static final int RU_FINANCE_BATCH_B_ADDITIONS = 100;
+    private static final int RU_FINANCE_BATCH_C_ADDITIONS = 100;
 
     private final SemanticDomainCatalog domainCatalog =
             new SemanticDomainCatalog();
@@ -40,6 +41,7 @@ class SemanticConceptSurfaceRegistryTest {
                         MULTILINGUAL_V1_BASELINE
                                 + RU_FINANCE_BATCH_A_ADDITIONS
                                 + RU_FINANCE_BATCH_B_ADDITIONS
+                                + RU_FINANCE_BATCH_C_ADDITIONS
                 )
                 .allSatisfy(surface ->
                         assertThat(canonicalIds)
@@ -58,30 +60,30 @@ class SemanticConceptSurfaceRegistryTest {
     }
 
     @Test
-    void russianFinanceBatchesAddExactlyTwoHundredCanonicalSurfaces() {
+    void russianFinanceBatchesAddExactlyThreeHundredCanonicalSurfaces() {
         List<SemanticConceptSurface> financeSurfaces = registry.surfaces("ru").stream()
                 .filter(surface -> surface.domainId().equals("finance_banking"))
                 .toList();
 
-        assertThat(financeSurfaces).hasSize(224);
+        assertThat(financeSurfaces).hasSize(324);
 
         assertThat(financeSurfaces.stream()
                 .collect(Collectors.groupingBy(
                         SemanticConceptSurface::subdomainId,
                         Collectors.counting()
                 )))
-                .containsEntry("lending_credit", 56L)
-                .containsEntry("deposits_liquidity", 56L)
-                .containsEntry("risk_capital", 56L)
-                .containsEntry("payments_compliance", 56L);
+                .containsEntry("lending_credit", 81L)
+                .containsEntry("deposits_liquidity", 81L)
+                .containsEntry("risk_capital", 81L)
+                .containsEntry("payments_compliance", 81L);
 
         assertThat(financeSurfaces)
                 .extracting(SemanticConceptSurface::conceptId)
                 .contains(
-                        "finance_banking.lending_credit.commercial_real_estate_lending",
-                        "finance_banking.deposits_liquidity.current_account_balance",
-                        "finance_banking.risk_capital.risk_weighted_asset_density",
-                        "finance_banking.payments_compliance.customer_onboarding_controls"
+                        "finance_banking.lending_credit.credit_portfolio_migration",
+                        "finance_banking.deposits_liquidity.stable_funding_requirement",
+                        "finance_banking.risk_capital.risk_asset_intensity",
+                        "finance_banking.payments_compliance.sanctions_screening_governance"
                 );
     }
 
@@ -159,7 +161,7 @@ class SemanticConceptSurfaceRegistryTest {
                 .isEqualTo("semantic-concepts-en-v2");
         assertThat(registry.version("ru"))
                 .isEqualTo(
-                        "semantic-surfaces-ru-v1+semantic-surfaces-ru-finance-batch-a-v2+semantic-surfaces-ru-finance-batch-b-v2"
+                        "semantic-surfaces-ru-v1+semantic-surfaces-ru-finance-batch-a-v2+semantic-surfaces-ru-finance-batch-b-v2+semantic-surfaces-ru-finance-batch-c-v2"
                 );
         assertThat(registry.version("kk"))
                 .isEqualTo("semantic-surfaces-kk-v1");
