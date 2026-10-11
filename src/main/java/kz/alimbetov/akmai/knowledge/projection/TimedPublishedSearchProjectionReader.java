@@ -47,7 +47,7 @@ public class TimedPublishedSearchProjectionReader
             List<String> chunkIds,
             Set<Long> accessLevels
     ) {
-        return eligible(read(() -> delegate.findByDocumentAndChunkIds(
+        return read(() -> eligible(delegate.findByDocumentAndChunkIds(
                 documentId,
                 chunkIds,
                 accessLevels
@@ -61,7 +61,7 @@ public class TimedPublishedSearchProjectionReader
             List<String> chunkIds,
             Set<Long> accessLevels
     ) {
-        return eligible(read(() -> delegate.findByDocumentGenerationAndChunkIds(
+        return read(() -> eligible(delegate.findByDocumentGenerationAndChunkIds(
                 documentId,
                 generation,
                 chunkIds,
@@ -74,7 +74,7 @@ public class TimedPublishedSearchProjectionReader
             List<ProjectionKey> keys,
             Set<Long> accessLevels
     ) {
-        return eligible(read(() -> delegate.findPublishedByKeys(
+        return read(() -> eligible(delegate.findPublishedByKeys(
                 keys,
                 accessLevels
         )));
@@ -88,13 +88,13 @@ public class TimedPublishedSearchProjectionReader
             int radius,
             Set<Long> accessLevels
     ) {
-        return searchable(eligible(read(() -> delegate.findAdjacent(
+        return read(() -> searchable(eligible(delegate.findAdjacent(
                 documentId,
                 generation,
                 chunkIndex,
                 radius,
                 accessLevels
-        ))), Integer.MAX_VALUE);
+        )), Integer.MAX_VALUE));
     }
 
     @Override
@@ -109,13 +109,13 @@ public class TimedPublishedSearchProjectionReader
             return List.of();
         }
         int oversampled = oversampledLimit(limit);
-        return searchable(eligible(read(() -> delegate.searchLexical(
+        return read(() -> searchable(eligible(delegate.searchLexical(
                 query,
                 language,
                 documentIds,
                 accessLevels,
                 oversampled
-        ))), limit);
+        )), limit));
     }
 
     @Override
@@ -129,12 +129,12 @@ public class TimedPublishedSearchProjectionReader
             return List.of();
         }
         int oversampled = oversampledLimit(limit);
-        return searchable(eligible(read(() -> delegate.searchSemanticConcepts(
+        return read(() -> searchable(eligible(delegate.searchSemanticConcepts(
                 conceptIds,
                 documentIds,
                 accessLevels,
                 oversampled
-        ))), limit);
+        )), limit));
     }
 
     private List<SearchProjection> eligible(List<SearchProjection> values) {

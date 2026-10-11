@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -11,6 +12,8 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import kz.alimbetov.akmai.config.AsyncIngestionProperties;
 import org.junit.jupiter.api.Test;
 
@@ -89,6 +92,47 @@ class AsyncIngestionHeartbeatTest {
         invokeHeartbeat(heartbeat);
 
         verify(repository, never()).renew(claim, properties.leaseDuration());
+    }
+
+    @Test
+    void slowRenewalDoesNotDelayIndependentClaim() throws Exception {
+        AsyncIngestionJobRepository repository = mock(AsyncIngestionJobRepository.class);
+        AsyncIngestionProperties properties = properties();
+        AsyncIngestionClaim slow = claim();
+        AsyncIngestionClaim fast = claim();
+        CountDownLatch slowStarted = new CountDownLatch(1);
+        CountDownLatch releaseSlow = new CountDownLatch(1);
+
+        when(repository.renew(slow, properties.leaseDuration()))
+                .thenAnswer(invocation -> {
+                    slowStarted.countDown();
+                    if (!releaseSlow.await(2, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("test renewal was not released");
+                    }
+                    return true;
+                });
+        when(repository.renew(fast, properties.leaseDuration())).thenReturn(true);
+
+        AsyncIngestionHeartbeat heartbeat = new AsyncIngestionHeartbeat(
+                repository,
+                properties
+        );
+        AsyncIngestionHeartbeat.Handle slowHandle = heartbeat.register(slow);
+        AsyncIngestionHeartbeat.Handle fastHandle = heartbeat.register(fast);
+        heartbeat.start();
+        try {
+            invokeHeartbeat(heartbeat);
+
+            assertThat(slowStarted.await(1, TimeUnit.SECONDS)).isTrue();
+            verify(repository, timeout(1000))
+                    .renew(fast, properties.leaseDuration());
+            assertThat(fastHandle.ownershipLost()).isFalse();
+        } finally {
+            releaseSlow.countDown();
+            slowHandle.close();
+            fastHandle.close();
+            heartbeat.stop();
+        }
     }
 
     @Test

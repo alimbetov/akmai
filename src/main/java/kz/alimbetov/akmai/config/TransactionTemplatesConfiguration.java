@@ -88,6 +88,22 @@ public class TransactionTemplatesConfiguration {
         return bounded(manager, vectorProperties.dbTransactionTimeout());
     }
 
+    @Bean(name = "asyncIngestionHeartbeatTransactionTemplate")
+    public TransactionTemplate asyncIngestionHeartbeatTransactionTemplate(
+            PlatformTransactionManager manager,
+            AsyncIngestionProperties properties
+    ) {
+        Duration halfHeartbeat = properties.heartbeatInterval().dividedBy(2);
+        Duration quarterLease = properties.leaseDuration().dividedBy(4);
+        Duration timeout = halfHeartbeat.compareTo(quarterLease) <= 0
+                ? halfHeartbeat
+                : quarterLease;
+        if (timeout.isZero() || timeout.isNegative()) {
+            timeout = Duration.ofSeconds(1);
+        }
+        return bounded(manager, timeout);
+    }
+
     private TransactionTemplate bounded(
             PlatformTransactionManager manager,
             Duration timeout
