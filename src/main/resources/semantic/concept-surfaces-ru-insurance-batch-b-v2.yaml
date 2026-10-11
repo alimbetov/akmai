@@ -1,0 +1,307 @@
+version: semantic-surfaces-ru-insurance-batch-b-v2
+languages:
+  - language: ru
+    surfaces:
+      - conceptId: insurance.underwriting_pricing.technical_premium_calculation
+        preferredPhrase: расчет технической премии
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.pure_premium_estimate
+        preferredPhrase: оценка чистой премии
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.indicated_rate_change
+        preferredPhrase: расчетное изменение тарифа
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.rate_relativities_analysis
+        preferredPhrase: анализ тарифных соотношений
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.rating_factor_selection
+        preferredPhrase: выбор тарифного фактора
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.underwriting_score_model
+        preferredPhrase: модель андеррайтингового скоринга
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.policy_tier_assignment
+        preferredPhrase: присвоение тарифного уровня полису
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.preferred_risk_classification
+        preferredPhrase: классификация предпочтительного риска
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.substandard_risk_classification
+        preferredPhrase: классификация повышенного риска
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.underwriting_appetite_matrix
+        preferredPhrase: матрица андеррайтингового аппетита
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.risk_acceptance_threshold
+        preferredPhrase: порог принятия риска
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.policy_issuance_criteria
+        preferredPhrase: критерии выпуска полиса
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.renewal_pricing_strategy
+        preferredPhrase: стратегия тарификации продления
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.new_business_pricing
+        preferredPhrase: тарификация нового бизнеса
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.premium_discount_structure
+        preferredPhrase: структура скидок страховой премии
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.premium_surcharge_structure
+        preferredPhrase: структура надбавок страховой премии
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.deductible_pricing_factor
+        preferredPhrase: тарифный фактор франшизы
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.coverage_pricing_factor
+        preferredPhrase: тарифный фактор страхового покрытия
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.territory_rating_factor
+        preferredPhrase: территориальный тарифный фактор
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.occupation_rating_factor
+        preferredPhrase: профессиональный тарифный фактор
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.vehicle_rating_factor
+        preferredPhrase: тарифный фактор транспортного средства
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.property_rating_factor
+        preferredPhrase: тарифный фактор имущества
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.pricing_model_validation
+        preferredPhrase: валидация модели тарификации
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.pricing_governance_framework
+        preferredPhrase: система управления тарификацией
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.underwriting_performance_monitoring
+        preferredPhrase: мониторинг результатов андеррайтинга
+        aliases: []
+
+      - conceptId: insurance.claims_management.claim_frequency_analysis
+        preferredPhrase: анализ частоты страховых случаев
+        aliases: []
+      - conceptId: insurance.claims_management.claim_severity_trend
+        preferredPhrase: тренд тяжести страховых случаев
+        aliases: []
+      - conceptId: insurance.claims_management.claims_inventory_management
+        preferredPhrase: управление портфелем страховых требований
+        aliases: []
+      - conceptId: insurance.claims_management.claims_backlog_monitoring
+        preferredPhrase: мониторинг очереди страховых требований
+        aliases: []
+      - conceptId: insurance.claims_management.claims_cycle_time
+        preferredPhrase: длительность цикла урегулирования требований
+        aliases: []
+      - conceptId: insurance.claims_management.straight_through_claims
+        preferredPhrase: сквозная обработка страховых требований
+        aliases: []
+      - conceptId: insurance.claims_management.automated_claims_adjudication
+        preferredPhrase: автоматизированное урегулирование страховых требований
+        aliases: []
+      - conceptId: insurance.claims_management.claims_settlement_authority
+        preferredPhrase: полномочия по урегулированию требований
+        aliases: []
+      - conceptId: insurance.claims_management.claims_escalation_process
+        preferredPhrase: процесс эскалации страховых требований
+        aliases: []
+      - conceptId: insurance.claims_management.claims_dispute_resolution
+        preferredPhrase: разрешение споров по страховым требованиям
+        aliases: []
+      - conceptId: insurance.claims_management.claims_litigation_reserve
+        preferredPhrase: резерв по судебным страховым требованиям
+        aliases: []
+      - conceptId: insurance.claims_management.bodily_injury_assessment
+        preferredPhrase: оценка телесного ущерба
+        aliases: []
+      - conceptId: insurance.claims_management.property_damage_assessment
+        preferredPhrase: оценка имущественного ущерба
+        aliases: []
+      - conceptId: insurance.claims_management.total_loss_valuation
+        preferredPhrase: оценка полной гибели имущества
+        aliases: []
+      - conceptId: insurance.claims_management.repair_cost_estimate
+        preferredPhrase: оценка стоимости ремонта
+        aliases: []
+      - conceptId: insurance.claims_management.medical_claim_review
+        preferredPhrase: проверка медицинского страхового требования
+        aliases: []
+      - conceptId: insurance.claims_management.disability_claim_assessment
+        preferredPhrase: оценка требования по инвалидности
+        aliases: []
+      - conceptId: insurance.claims_management.death_claim_verification
+        preferredPhrase: проверка требования по случаю смерти
+        aliases: []
+      - conceptId: insurance.claims_management.claims_recovery_strategy
+        preferredPhrase: стратегия возврата по страховым требованиям
+        aliases: []
+      - conceptId: insurance.claims_management.subrogation_potential_assessment
+        preferredPhrase: оценка потенциала суброгации
+        aliases: []
+      - conceptId: insurance.claims_management.salvage_value_estimate
+        preferredPhrase: оценка стоимости годных остатков
+        aliases: []
+      - conceptId: insurance.claims_management.claims_fraud_scoring
+        preferredPhrase: скоринг мошенничества по страховым требованиям
+        aliases: []
+      - conceptId: insurance.claims_management.duplicate_claim_detection
+        preferredPhrase: выявление дублирующих страховых требований
+        aliases: []
+      - conceptId: insurance.claims_management.claims_reserve_review
+        preferredPhrase: проверка резервов страховых требований
+        aliases: []
+      - conceptId: insurance.claims_management.claims_operational_controls
+        preferredPhrase: операционные контроли страховых требований
+        aliases: []
+
+      - conceptId: insurance.life_health.guaranteed_issue_coverage
+        preferredPhrase: страховое покрытие с гарантированным принятием
+        aliases: []
+      - conceptId: insurance.life_health.simplified_issue_coverage
+        preferredPhrase: страховое покрытие с упрощенным принятием
+        aliases: []
+      - conceptId: insurance.life_health.survivorship_life_insurance
+        preferredPhrase: страхование жизни последнего пережившего
+        aliases: []
+      - conceptId: insurance.life_health.variable_life_insurance
+        preferredPhrase: переменное страхование жизни
+        aliases: []
+      - conceptId: insurance.life_health.variable_annuity_contract
+        preferredPhrase: договор переменного аннуитета
+        aliases: []
+      - conceptId: insurance.life_health.fixed_annuity_contract
+        preferredPhrase: договор фиксированного аннуитета
+        aliases: []
+      - conceptId: insurance.life_health.annuity_payout_option
+        preferredPhrase: вариант аннуитетной выплаты
+        aliases: []
+      - conceptId: insurance.life_health.annuity_surrender_charge
+        preferredPhrase: комиссия за выкуп аннуитета
+        aliases: []
+      - conceptId: insurance.life_health.policy_loan_provision
+        preferredPhrase: условие займа по полису
+        aliases: []
+      - conceptId: insurance.life_health.premium_payment_period
+        preferredPhrase: период уплаты страховой премии
+        aliases: []
+      - conceptId: insurance.life_health.guaranteed_cash_value
+        preferredPhrase: гарантированная выкупная стоимость
+        aliases: []
+      - conceptId: insurance.life_health.nonforfeiture_benefit_option
+        preferredPhrase: вариант сохранения страховой выплаты
+        aliases: []
+      - conceptId: insurance.life_health.accelerated_death_benefit
+        preferredPhrase: ускоренная выплата на случай смерти
+        aliases: []
+      - conceptId: insurance.life_health.accidental_death_benefit
+        preferredPhrase: выплата при смерти от несчастного случая
+        aliases: []
+      - conceptId: insurance.life_health.waiver_of_premium_rider
+        preferredPhrase: дополнительное условие освобождения от премии
+        aliases: []
+      - conceptId: insurance.life_health.living_benefit_rider
+        preferredPhrase: дополнительное условие выплаты при жизни
+        aliases: []
+      - conceptId: insurance.life_health.health_benefit_limit
+        preferredPhrase: лимит медицинской страховой выплаты
+        aliases: []
+      - conceptId: insurance.life_health.health_plan_deductible
+        preferredPhrase: франшиза медицинского страхового плана
+        aliases: []
+      - conceptId: insurance.life_health.coinsurance_benefit_structure
+        preferredPhrase: структура сострахования медицинских расходов
+        aliases: []
+      - conceptId: insurance.life_health.copayment_benefit_structure
+        preferredPhrase: структура соплатежей медицинских расходов
+        aliases: []
+      - conceptId: insurance.life_health.provider_reimbursement_rate
+        preferredPhrase: ставка возмещения медицинскому поставщику
+        aliases: []
+      - conceptId: insurance.life_health.utilization_management_program
+        preferredPhrase: программа управления использованием медицинских услуг
+        aliases: []
+      - conceptId: insurance.life_health.prior_authorization_process
+        preferredPhrase: процесс предварительного согласования медицинских услуг
+        aliases: []
+      - conceptId: insurance.life_health.care_management_program
+        preferredPhrase: программа управления медицинской помощью
+        aliases: []
+      - conceptId: insurance.life_health.health_risk_adjustment
+        preferredPhrase: корректировка медицинского риска
+        aliases: []
+
+      - conceptId: insurance.property_casualty.dwelling_property_coverage
+        preferredPhrase: страховое покрытие жилой недвижимости
+        aliases: []
+      - conceptId: insurance.property_casualty.commercial_auto_coverage
+        preferredPhrase: страховое покрытие коммерческого транспорта
+        aliases: []
+      - conceptId: insurance.property_casualty.fleet_insurance_coverage
+        preferredPhrase: страховое покрытие автопарка
+        aliases: []
+      - conceptId: insurance.property_casualty.umbrella_liability_coverage
+        preferredPhrase: зонтичное покрытие ответственности
+        aliases: []
+      - conceptId: insurance.property_casualty.directors_officers_liability
+        preferredPhrase: ответственность директоров и должностных лиц
+        aliases: []
+      - conceptId: insurance.property_casualty.media_liability_coverage
+        preferredPhrase: страховое покрытие медийной ответственности
+        aliases: []
+      - conceptId: insurance.property_casualty.environmental_liability_coverage
+        preferredPhrase: страховое покрытие экологической ответственности
+        aliases: []
+      - conceptId: insurance.property_casualty.employment_practices_liability
+        preferredPhrase: ответственность за трудовые практики
+        aliases: []
+      - conceptId: insurance.property_casualty.inland_marine_coverage
+        preferredPhrase: страховое покрытие внутренних перевозок
+        aliases: []
+      - conceptId: insurance.property_casualty.ocean_marine_coverage
+        preferredPhrase: морское страховое покрытие
+        aliases: []
+      - conceptId: insurance.property_casualty.cargo_transit_coverage
+        preferredPhrase: страховое покрытие грузов в пути
+        aliases: []
+      - conceptId: insurance.property_casualty.ordinance_law_coverage
+        preferredPhrase: покрытие требований строительных норм
+        aliases: []
+      - conceptId: insurance.property_casualty.builders_risk_coverage
+        preferredPhrase: страхование строительных рисков
+        aliases: []
+      - conceptId: insurance.property_casualty.terrorism_insurance_coverage
+        preferredPhrase: страховое покрытие терроризма
+        aliases: []
+      - conceptId: insurance.property_casualty.flood_insurance_coverage
+        preferredPhrase: страховое покрытие наводнения
+        aliases: []
+      - conceptId: insurance.property_casualty.earthquake_insurance_coverage
+        preferredPhrase: страховое покрытие землетрясения
+        aliases: []
+      - conceptId: insurance.property_casualty.windstorm_insurance_coverage
+        preferredPhrase: страховое покрытие ураганного ветра
+        aliases: []
+      - conceptId: insurance.property_casualty.hail_damage_coverage
+        preferredPhrase: страховое покрытие ущерба от града
+        aliases: []
+      - conceptId: insurance.property_casualty.actual_loss_sustained
+        preferredPhrase: фактически понесенный убыток
+        aliases: []
+      - conceptId: insurance.property_casualty.agreed_value_coverage
+        preferredPhrase: покрытие по согласованной стоимости
+        aliases: []
+      - conceptId: insurance.property_casualty.functional_replacement_cost
+        preferredPhrase: стоимость функционального замещения
+        aliases: []
+      - conceptId: insurance.property_casualty.policy_per_occurrence_limit
+        preferredPhrase: лимит полиса на одно событие
+        aliases: []
+      - conceptId: insurance.property_casualty.aggregate_deductible_structure
+        preferredPhrase: структура агрегатной франшизы
+        aliases: []
+      - conceptId: insurance.property_casualty.catastrophe_deductible_provision
+        preferredPhrase: условие катастрофической франшизы
+        aliases: []
+      - conceptId: insurance.property_casualty.property_coinsurance_requirement
+        preferredPhrase: требование сострахования имущества
+        aliases: []
