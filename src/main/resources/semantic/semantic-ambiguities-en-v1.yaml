@@ -29,7 +29,7 @@ entries:
   - surface: capacity planning
     conceptIds:
       - energy_utilities.power_grid.transmission_capacity_planning
-      - transport_logistics.warehousing_distribution.distribution_capacity_planning
+      - transport_logistics.warehousing_distribution.distribution_center_capacity_planning
       - transport_logistics.supply_chain.supplier_capacity_planning
       - manufacturing.production_systems.capacity_requirements_planning
     rationale: Capacity planning is domain-specific across grid transmission, distribution operations, suppliers, and manufacturing resources.
