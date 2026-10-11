@@ -133,7 +133,7 @@ languages:
         preferredPhrase: коммерческий учет передачи продукта
         aliases: []
       - conceptId: oil_gas_mining.midstream_operations.metering_uncertainty_analysis
-        preferredPhrase: анализ неопределенности измерений
+        preferredPhrase: анализ неопределенности коммерческого учета
         aliases: []
       - conceptId: oil_gas_mining.midstream_operations.gas_quality_compliance
         preferredPhrase: соответствие качества газа требованиям
