@@ -94,10 +94,10 @@ domains:
           - number needed harm
           - causal inference framework
           - propensity score matching
-          - inverse probability weighting
+          - case crossover design
           - instrumental variable analysis
           - difference in differences
-          - interrupted time series
+          - self controlled case series
           - regression discontinuity design
           - target trial emulation
           - immortal time bias
