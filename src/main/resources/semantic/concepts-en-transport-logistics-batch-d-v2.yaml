@@ -34,7 +34,7 @@ domains:
           - adaptive slotting policy
           - location utilization index
           - reserve storage strategy
-          - forward pick replenishment
+          - forward pick face replenishment
           - dock appointment compliance
           - yard trailer utilization
           - receiving accuracy rate
