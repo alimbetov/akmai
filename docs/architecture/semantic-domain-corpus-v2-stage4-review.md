@@ -1,99 +1,105 @@
 # Semantic Domain Corpus v2 — Stage 4 review
 
-Status: TARGET / review record for `feature/semantic-domain-corpus-v2`.
+Status: TARGET / final English expansion review record for `feature/semantic-domain-corpus-v2`.
 
 ## Scope
 
-Stage 4 now contains three balanced +100 rounds for each of the four final English-first domains:
+Stage 4 is implemented with four balanced +100 rounds for each of the four final English-first domains:
 
-- `mathematics_statistics`: 24 baseline + 300 = 324;
-- `physics_astronomy`: 24 baseline + 300 = 324;
-- `earth_environmental_science`: 24 baseline + 300 = 324;
-- `psychology_sociology`: 24 baseline + 300 = 324.
+- `mathematics_statistics`: 24 baseline + 400 = 424;
+- `physics_astronomy`: 24 baseline + 400 = 424;
+- `earth_environmental_science`: 24 baseline + 400 = 424;
+- `psychology_sociology`: 24 baseline + 400 = 424.
 
-The branch target is now 6,384 English concepts: 384 baseline concepts plus 6,000 additions.
+All sixteen English domains now target the same completed level: **424 concepts per domain**. The combined English corpus target is **6,784 concepts**: 384 baseline concepts plus 6,400 v2 additions.
 
 ## Distribution
 
-Each Stage 4 domain keeps its existing four-subdomain taxonomy. Batch A, Batch B and Batch C each contribute 25 new canonical multi-word concepts to every existing subdomain. Each Stage 4 subdomain therefore contains 81 concepts total: 6 baseline + 75 v2 additions.
+Every domain retains its existing four-subdomain taxonomy. Across the complete English v2 corpus:
+
+- 16 domains × 424 concepts = 6,784 concepts;
+- 64 subdomains × 106 concepts = 6,784 concepts;
+- each subdomain contains 6 baseline concepts + 100 v2 concepts;
+- every A/B/C/D batch contributes exactly 25 new canonical concepts per subdomain in its domain.
 
 No parallel taxonomy is introduced.
 
-## Coverage emphasis
+## Batch D coverage
 
 ### Mathematics / statistics
 
-Batch C adds asymptotic and missing-data statistics, deeper algebra/geometry, duality/decomposition/stochastic optimization and advanced integration/eigensolver/error-estimation methods.
+Batch D deepens probability/statistical inference, algebraic structures, constrained/variational optimization and numerical discretization/verification.
 
-Representative additions include `martingale convergence theorem`, `restricted maximum likelihood`, `Ricci curvature tensor`, `Wasserstein ambiguity set`, `Arnoldi iteration method`, and `a posteriori error estimate`.
+Representative additions include `Bayesian model averaging`, `semiparametric efficiency bound`, `Smith normal form`, `duality gap certificate`, `discontinuous Galerkin method`, and `manufactured solution verification`.
 
 ### Physics / astronomy
 
-Batch C adds nonlinear and continuum mechanics, critical/statistical thermodynamics, advanced electromagnetic materials/wave phenomena and observational/relativistic astrophysics.
+Batch D deepens nonlinear mechanics, nonequilibrium/statistical thermodynamics, wave/scattering electromagnetics and observational/multimessenger astrophysics.
 
-Representative additions include `Kolmogorov Arnold Moser theory`, `Green Kubo relation`, `Maxwell stress tensor`, `surface plasmon resonance`, `weak lensing tomography`, and `standard siren distance`.
+Representative additions include `Hamiltonian chaos indicator`, `Jarzynski equality relation`, `Mie scattering solution`, `neutron star tidal deformability`, `binary inspiral waveform`, and `exoplanet atmospheric retrieval`.
 
 ### Earth / environmental science
 
-Batch C adds geodynamics and seismic imaging, climate diagnostics and feedbacks, surface-groundwater process modeling and quantitative exposure/remediation assessment.
+Batch D expands tectonics/petrology, climate feedback and attribution, groundwater/surface-water process analysis and quantitative remediation/ecological assessment.
 
-Representative additions include `seismic tomography model`, `ice sheet mass balance`, `hydrologic forecast uncertainty`, `environmental risk characterization`, and `monitored natural attenuation`.
+Representative additions include `induced seismicity assessment`, `remaining carbon budget`, `managed aquifer recharge`, `species sensitivity distribution`, and `natural capital accounting`.
 
 ### Psychology / sociology
 
-Batch C adds memory and judgment mechanisms, functional/learning interventions, intergroup and persuasion mechanisms and advanced survey/network/longitudinal methodology.
+Batch D adds attention/memory mechanisms, applied behavioral procedures, social identity/justice mechanisms and advanced survey/panel/causal methodology.
 
-Representative additions include `encoding specificity principle`, `functional behavior assessment`, `ingroup favoritism effect`, `multilevel regression poststratification`, and `peer influence estimation`.
+Representative additions include `retrieval induced forgetting`, `functional communication training`, `stereotype content model`, `small area estimation`, and `marginal structural model`.
 
 ## Gate-driven corpus remediation
 
-The uniqueness gate remains fail-fast and was not weakened.
+The global normalized uniqueness gate remains fail-fast and was not weakened.
 
-Before and during Stage 4, CI/retrieval-quality diagnostics exposed historical canonical collisions that had accumulated across earlier supplements. These are treated as corpus defects, not as reasons to relax validation.
+The pre-Batch-D Stage 4 run exposed an Energy canonical collision around `equivalent forced outage`. The retained Energy Batch B canonical was made more precise as `equivalent forced outage factor`; this preserves the professional concept and removes the ambiguous duplicate surface without reducing quota.
 
-Resolved examples include:
+Earlier remediation remains part of the quality record, including Finance exact repeats, Medicine baseline/D collision repair, Stage 2 cross-batch duplicates and cross-domain canonical collisions discovered while expanding Stage 3/4.
 
-- Finance Batch B/C exact repeats, beginning with `loan amortization schedule`;
-- Medicine baseline/D collision `therapeutic drug monitoring` → `therapeutic concentration monitoring`;
-- Energy B/D collision `startup fuel consumption` → `startup energy requirement` in Batch D;
-- Energy B/D collision `equivalent forced outage` → `forced outage performance metric` in Batch D;
-- Mathematics/Manufacturing collision `model predictive control` → `receding horizon optimization` in Mathematics Batch B;
-- Physics/Chemistry collision `free energy perturbation` → `Zwanzig free energy relation` in Physics Batch B.
-
-The policy remains: repair canonical data while preserving quota and semantic intent; never bypass global uniqueness.
+Policy: repair canonical data while preserving semantic intent and batch balance; never bypass global uniqueness.
 
 ## Quality rules
 
-Stage 4 uses the existing production guardrails unchanged:
+Stage 4 uses the production guardrails unchanged:
 
 1. canonical phrases contain 2–6 words;
 2. normalized canonical phrases are globally unique;
 3. IDs remain language-independent and domain/subdomain-derived;
 4. domain/subdomain ownership must exist in the authoritative taxonomy;
 5. English preferred and alias surfaces retain single ownership;
-6. ambiguity entries must reference real canonical IDs;
-7. near-duplicate review remains advisory, while merge-class duplicates require explicit remediation.
+6. ambiguity entries reference real canonical IDs;
+7. near-duplicate review remains advisory and never auto-merges concepts;
+8. exact or merge-class duplicates are release blockers and require explicit remediation.
 
-Batch C is intentionally biased toward deeper methods, mechanisms and specialist terminology rather than lexical variants of Batch A/B. Count growth alone is not treated as acceptance.
+The ambiguity registry remains a corpus-quality metadata mechanism; it does not imply query-time contextual disambiguation in `SemanticConceptMatcher`.
 
-## Release gates
+## Final English expansion gates
 
-Stage 4 Batch A+B+C is admissible only when the current branch head passes:
+The 6,784-concept state is considered accepted only when the current branch head passes:
 
-1. expected 6,384 total concepts;
-2. 324 concepts per Stage 4 domain and 81 per Stage 4 subdomain;
-3. canonical normalized uniqueness;
-4. multi-word phrase constraints;
-5. ambiguity registry referential integrity;
-6. English surface ownership checks;
-7. near-duplicate review;
-8. repository CI;
-9. Retrieval Quality Gate;
-10. Retrieval Storage Final Benchmark;
-11. Production Image Build.
+1. expected 6,784 total concepts;
+2. exactly 424 concepts in each of 16 domains;
+3. exactly 106 concepts in each of 64 subdomains;
+4. canonical normalized uniqueness;
+5. 2–6 word canonical phrase constraints;
+6. ambiguity registry referential integrity;
+7. English surface ownership checks;
+8. near-duplicate review with no unresolved merge-class defect;
+9. repository CI;
+10. Retrieval Quality Gate;
+11. Retrieval Storage Final Benchmark;
+12. Production Image Build.
 
-Until those gates complete successfully, the 6,384-concept state is implemented but provisional.
+Until these gates complete successfully on the final Batch D head, the corpus is **implemented at 6,784 but provisional**.
 
-## Next expansion
+## Next phase
 
-After Batch C is green and consolidated, complete Stage 4 with Batch D (+100 each), taking all sixteen domains to the +400 target and the English corpus to 6,784 total concepts. After that, stop phrase expansion and perform English consolidation before RU → KK language transfer.
+Do not add Batch E or increase per-domain quota. After final gates are green, move to **Stage 5 — English consolidation**:
+
+- disposition remaining near-duplicate candidates;
+- remove weak/synthetic concepts if any and replace them one-for-one where necessary;
+- freeze stable English canonical IDs;
+- capture retrieval-quality evidence;
+- then begin Stage 6 language transfer in order **RU → KK → remaining supported languages**.
