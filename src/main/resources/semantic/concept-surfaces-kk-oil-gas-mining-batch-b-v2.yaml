@@ -94,7 +94,7 @@ languages:
         preferredPhrase: жөнелтушіні теңгерімдеу үдерісі
         aliases: []
       - conceptId: oil_gas_mining.midstream_operations.pipeline_pressure_management
-        preferredPhrase: құбыр қысымын басқару
+        preferredPhrase: құбыр қысымы режимін басқару
         aliases: []
       - conceptId: oil_gas_mining.midstream_operations.compressor_performance_monitoring
         preferredPhrase: компрессор өнімділігін бақылау
@@ -133,7 +133,7 @@ languages:
         preferredPhrase: коммерциялық есепке алу өлшеуі
         aliases: []
       - conceptId: oil_gas_mining.midstream_operations.metering_uncertainty_analysis
-        preferredPhrase: өлшеу белгісіздігін талдау
+        preferredPhrase: коммерциялық өлшеу белгісіздігін талдау
         aliases: []
       - conceptId: oil_gas_mining.midstream_operations.gas_quality_compliance
         preferredPhrase: газ сапасына сәйкестік
@@ -224,7 +224,7 @@ languages:
         preferredPhrase: зауыт ластануын бақылау
         aliases: []
       - conceptId: oil_gas_mining.downstream_operations.catalyst_deactivation_monitoring
-        preferredPhrase: катализатор белсенділігін бақылау
+        preferredPhrase: катализатор белсенділігінің төмендеуін бақылау
         aliases: []
       - conceptId: oil_gas_mining.downstream_operations.downstream_margin_optimization
         preferredPhrase: даунстрим маржасын оңтайландыру
@@ -237,7 +237,7 @@ languages:
         preferredPhrase: карьерді оңтайландыру зерттеуі
         aliases: []
       - conceptId: oil_gas_mining.mining_operations.stripping_ratio_analysis
-        preferredPhrase: аршу коэффициентін талдау
+        preferredPhrase: аршу коэффициентін бағалау
         aliases: []
       - conceptId: oil_gas_mining.mining_operations.cutoff_grade_optimization
         preferredPhrase: шектік құрамды оңтайландыру
