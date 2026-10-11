@@ -34,7 +34,7 @@ domains:
           - virial equation expansion
           - compressibility factor relation
           - residual thermodynamic property
-          - chemical potential gradient
+          - thermodynamic force flux relation
           - Gibbs phase rule
           - Clapeyron slope relation
           - critical exponent scaling
