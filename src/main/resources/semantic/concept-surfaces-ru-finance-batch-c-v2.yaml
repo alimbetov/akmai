@@ -1,0 +1,307 @@
+version: semantic-surfaces-ru-finance-batch-c-v2
+languages:
+  - language: ru
+    surfaces:
+      - conceptId: finance_banking.lending_credit.credit_portfolio_migration
+        preferredPhrase: миграция кредитного портфеля
+        aliases: []
+      - conceptId: finance_banking.lending_credit.obligor_risk_rating
+        preferredPhrase: рейтинг риска должника
+        aliases: []
+      - conceptId: finance_banking.lending_credit.borrower_risk_classification
+        preferredPhrase: классификация риска заемщика
+        aliases: []
+      - conceptId: finance_banking.lending_credit.credit_risk_segmentation
+        preferredPhrase: сегментация кредитного риска
+        aliases: []
+      - conceptId: finance_banking.lending_credit.lending_policy_exception
+        preferredPhrase: исключение из политики кредитования
+        aliases: []
+      - conceptId: finance_banking.lending_credit.collateral_eligibility_criteria
+        preferredPhrase: критерии приемлемости обеспечения
+        aliases: []
+      - conceptId: finance_banking.lending_credit.collateral_haircut_methodology
+        preferredPhrase: методология дисконта обеспечения
+        aliases: []
+      - conceptId: finance_banking.lending_credit.scheduled_principal_repayment_profile
+        preferredPhrase: профиль планового погашения основного долга
+        aliases: []
+      - conceptId: finance_banking.lending_credit.balloon_payment_structure
+        preferredPhrase: структура крупного финального платежа
+        aliases: []
+      - conceptId: finance_banking.lending_credit.covenant_breach_remediation
+        preferredPhrase: устранение нарушения ковенанта
+        aliases: []
+      - conceptId: finance_banking.lending_credit.distressed_debt_restructuring
+        preferredPhrase: реструктуризация проблемной задолженности
+        aliases: []
+      - conceptId: finance_banking.lending_credit.debt_refinancing_transaction
+        preferredPhrase: операция рефинансирования долга
+        aliases: []
+      - conceptId: finance_banking.lending_credit.credit_exposure_aggregation
+        preferredPhrase: агрегирование кредитных экспозиций
+        aliases: []
+      - conceptId: finance_banking.lending_credit.single_borrower_limit
+        preferredPhrase: лимит кредитования одного заемщика
+        aliases: []
+      - conceptId: finance_banking.lending_credit.connected_counterparty_exposure
+        preferredPhrase: экспозиция связанных контрагентов
+        aliases: []
+      - conceptId: finance_banking.lending_credit.credit_concentration_threshold
+        preferredPhrase: порог кредитной концентрации
+        aliases: []
+      - conceptId: finance_banking.lending_credit.watchlist_account_management
+        preferredPhrase: управление счетами наблюдаемого списка
+        aliases: []
+      - conceptId: finance_banking.lending_credit.special_mention_loan
+        preferredPhrase: кредит особого наблюдения
+        aliases: []
+      - conceptId: finance_banking.lending_credit.past_due_classification
+        preferredPhrase: классификация просроченной задолженности
+        aliases: []
+      - conceptId: finance_banking.lending_credit.impaired_loan_assessment
+        preferredPhrase: оценка обесцененного кредита
+        aliases: []
+      - conceptId: finance_banking.lending_credit.expected_credit_loss
+        preferredPhrase: ожидаемый кредитный убыток
+        aliases: []
+      - conceptId: finance_banking.lending_credit.lifetime_credit_loss
+        preferredPhrase: кредитный убыток за весь срок
+        aliases: []
+      - conceptId: finance_banking.lending_credit.twelve_month_credit_loss
+        preferredPhrase: двенадцатимесячный кредитный убыток
+        aliases: []
+      - conceptId: finance_banking.lending_credit.cure_rate_analysis
+        preferredPhrase: анализ коэффициента восстановления платежей
+        aliases: []
+      - conceptId: finance_banking.lending_credit.recovery_rate_estimation
+        preferredPhrase: оценка коэффициента возврата задолженности
+        aliases: []
+
+      - conceptId: finance_banking.deposits_liquidity.stable_funding_requirement
+        preferredPhrase: требование стабильного фондирования
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.wholesale_funding_profile
+        preferredPhrase: профиль оптового фондирования
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.retail_deposit_stickiness
+        preferredPhrase: устойчивость розничных депозитов
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.nonoperational_deposit_balance
+        preferredPhrase: остаток неоперационных депозитов
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.operational_deposit_balance
+        preferredPhrase: остаток операционных депозитов
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.liquidity_coverage_buffer
+        preferredPhrase: буфер покрытия ликвидности
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.contingency_funding_capacity
+        preferredPhrase: резервная способность фондирования
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.secured_funding_capacity
+        preferredPhrase: способность обеспеченного фондирования
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.unsecured_funding_capacity
+        preferredPhrase: способность необеспеченного фондирования
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.funding_rollover_risk
+        preferredPhrase: риск пролонгации фондирования
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.short_term_funding_ratio
+        preferredPhrase: коэффициент краткосрочного фондирования
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.long_term_funding_ratio
+        preferredPhrase: коэффициент долгосрочного фондирования
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.liquidity_asset_haircut
+        preferredPhrase: дисконт ликвидных активов
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.central_bank_liquidity_access
+        preferredPhrase: доступ к ликвидности центрального банка
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.emergency_central_bank_support
+        preferredPhrase: экстренная поддержка центрального банка
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.deposit_concentration_threshold
+        preferredPhrase: порог концентрации депозитов
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.contractual_cash_inflow
+        preferredPhrase: договорный приток денежных средств
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.contractual_cash_outflow
+        preferredPhrase: договорный отток денежных средств
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.behavioral_cash_flow
+        preferredPhrase: поведенческий денежный поток
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.liquidity_limit_utilization
+        preferredPhrase: использование лимита ликвидности
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.liquidity_early_warning
+        preferredPhrase: раннее предупреждение риска ликвидности
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.funding_plan_execution
+        preferredPhrase: исполнение плана фондирования
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.treasury_liquidity_position
+        preferredPhrase: позиция казначейской ликвидности
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.collateral_funding_requirement
+        preferredPhrase: потребность фондирования под обеспечение
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.settlement_liquidity_requirement
+        preferredPhrase: потребность расчетной ликвидности
+        aliases: []
+
+      - conceptId: finance_banking.risk_capital.risk_asset_intensity
+        preferredPhrase: интенсивность рисковых активов
+        aliases: []
+      - conceptId: finance_banking.risk_capital.regulatory_credit_risk_method
+        preferredPhrase: регуляторный метод кредитного риска
+        aliases: []
+      - conceptId: finance_banking.risk_capital.standardized_market_risk_approach
+        preferredPhrase: стандартизированный подход к рыночному риску
+        aliases: []
+      - conceptId: finance_banking.risk_capital.standardized_operational_risk_approach
+        preferredPhrase: стандартизированный подход к операционному риску
+        aliases: []
+      - conceptId: finance_banking.risk_capital.advanced_measurement_approach
+        preferredPhrase: продвинутый подход к измерению риска
+        aliases: []
+      - conceptId: finance_banking.risk_capital.internal_model_approval
+        preferredPhrase: одобрение внутренней модели
+        aliases: []
+      - conceptId: finance_banking.risk_capital.model_validation_framework
+        preferredPhrase: система валидации моделей
+        aliases: []
+      - conceptId: finance_banking.risk_capital.stress_capital_requirement
+        preferredPhrase: стрессовое требование к капиталу
+        aliases: []
+      - conceptId: finance_banking.risk_capital.systemic_risk_buffer
+        preferredPhrase: буфер системного риска
+        aliases: []
+      - conceptId: finance_banking.risk_capital.capital_surcharge_requirement
+        preferredPhrase: требование дополнительного капитала
+        aliases: []
+      - conceptId: finance_banking.risk_capital.minimum_regulatory_capital
+        preferredPhrase: минимальный регуляторный капитал
+        aliases: []
+      - conceptId: finance_banking.risk_capital.capital_distribution_restriction
+        preferredPhrase: ограничение распределения капитала
+        aliases: []
+      - conceptId: finance_banking.risk_capital.dividend_payout_restriction
+        preferredPhrase: ограничение выплаты дивидендов
+        aliases: []
+      - conceptId: finance_banking.risk_capital.capital_recovery_plan
+        preferredPhrase: план восстановления капитала
+        aliases: []
+      - conceptId: finance_banking.risk_capital.capital_contingency_action
+        preferredPhrase: резервное действие по капиталу
+        aliases: []
+      - conceptId: finance_banking.risk_capital.risk_aggregation_framework
+        preferredPhrase: система агрегирования рисков
+        aliases: []
+      - conceptId: finance_banking.risk_capital.enterprise_risk_taxonomy
+        preferredPhrase: корпоративная таксономия рисков
+        aliases: []
+      - conceptId: finance_banking.risk_capital.enterprise_risk_limit_structure
+        preferredPhrase: структура корпоративных лимитов риска
+        aliases: []
+      - conceptId: finance_banking.risk_capital.risk_escalation_process
+        preferredPhrase: процесс эскалации риска
+        aliases: []
+      - conceptId: finance_banking.risk_capital.risk_acceptance_criteria
+        preferredPhrase: критерии принятия риска
+        aliases: []
+      - conceptId: finance_banking.risk_capital.interest_rate_shock
+        preferredPhrase: шок процентной ставки
+        aliases: []
+      - conceptId: finance_banking.risk_capital.basis_risk_exposure
+        preferredPhrase: подверженность базисному риску
+        aliases: []
+      - conceptId: finance_banking.risk_capital.spread_risk_exposure
+        preferredPhrase: подверженность риску спреда
+        aliases: []
+      - conceptId: finance_banking.risk_capital.foreign_exchange_risk
+        preferredPhrase: валютный риск
+        aliases: []
+      - conceptId: finance_banking.risk_capital.equity_price_risk
+        preferredPhrase: риск цены акций
+        aliases: []
+
+      - conceptId: finance_banking.payments_compliance.sanctions_screening_governance
+        preferredPhrase: управление санкционным скринингом
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.name_screening_process
+        preferredPhrase: процесс проверки имен
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.payment_beneficiary_screening
+        preferredPhrase: проверка получателя платежа
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.originator_information_verification
+        preferredPhrase: проверка данных отправителя
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.funds_transfer_regulation
+        preferredPhrase: регулирование перевода денежных средств
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.suspicious_transaction_report
+        preferredPhrase: отчет о подозрительной транзакции
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.transaction_monitoring_risk_score
+        preferredPhrase: риск оценка мониторинга транзакций
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.customer_due_diligence_rating
+        preferredPhrase: рейтинг надлежащей проверки клиента
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.geographic_risk_assessment
+        preferredPhrase: оценка географического риска
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.product_risk_assessment
+        preferredPhrase: оценка продуктового риска
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.channel_risk_assessment
+        preferredPhrase: оценка риска канала
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.money_laundering_risk
+        preferredPhrase: риск отмывания денег
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.terrorist_financing_risk
+        preferredPhrase: риск финансирования терроризма
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.proliferation_financing_risk
+        preferredPhrase: риск финансирования распространения оружия
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.correspondent_banking_screening
+        preferredPhrase: скрининг корреспондентского банкинга
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.nested_correspondent_relationship
+        preferredPhrase: вложенные корреспондентские отношения
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.shell_bank_prohibition
+        preferredPhrase: запрет банков оболочек
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.payment_transparency_requirement
+        preferredPhrase: требование прозрачности платежей
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.wire_transfer_traceability
+        preferredPhrase: прослеживаемость банковского перевода
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.fraud_case_management
+        preferredPhrase: управление случаями мошенничества
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.card_fraud_investigation
+        preferredPhrase: расследование карточного мошенничества
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.account_takeover_detection
+        preferredPhrase: выявление захвата счета
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.mule_account_detection
+        preferredPhrase: выявление счетов денежных мулов
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.payment_velocity_control
+        preferredPhrase: контроль скорости платежей
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.transaction_limit_control
+        preferredPhrase: контроль лимитов транзакций
+        aliases: []
