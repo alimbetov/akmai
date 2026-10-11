@@ -4,13 +4,17 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import kz.alimbetov.akmai.config.AsyncIngestionProperties;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Component
 @ConditionalOnProperty(
@@ -22,26 +26,50 @@ public class AsyncIngestionHeartbeat {
 
     private final AsyncIngestionJobRepository repository;
     private final AsyncIngestionProperties properties;
+    private final TransactionTemplate transactionTemplate;
     private final Map<java.util.UUID, Handle> active = new ConcurrentHashMap<>();
-    private ScheduledExecutorService executor;
+    private ScheduledExecutorService scheduler;
+    private ExecutorService renewalExecutor;
 
-    public AsyncIngestionHeartbeat(
+    AsyncIngestionHeartbeat(
             AsyncIngestionJobRepository repository,
             AsyncIngestionProperties properties
     ) {
+        this(repository, properties, null);
+    }
+
+    @Autowired
+    public AsyncIngestionHeartbeat(
+            AsyncIngestionJobRepository repository,
+            AsyncIngestionProperties properties,
+            @Qualifier("asyncIngestionHeartbeatTransactionTemplate")
+            TransactionTemplate transactionTemplate
+    ) {
         this.repository = repository;
         this.properties = properties;
+        this.transactionTemplate = transactionTemplate;
     }
 
     @PostConstruct
     void start() {
-        executor = Executors.newSingleThreadScheduledExecutor(runnable -> {
+        renewalExecutor = Executors.newFixedThreadPool(
+                properties.maxConcurrentIngestions(),
+                runnable -> {
+                    Thread thread = new Thread(
+                            runnable,
+                            "async-ingestion-heartbeat-renew"
+                    );
+                    thread.setDaemon(true);
+                    return thread;
+                }
+        );
+        scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
             Thread thread = new Thread(runnable, "async-ingestion-heartbeat");
             thread.setDaemon(true);
             return thread;
         });
         long intervalMillis = properties.heartbeatInterval().toMillis();
-        executor.scheduleWithFixedDelay(
+        scheduler.scheduleWithFixedDelay(
                 this::heartbeatSafely,
                 intervalMillis,
                 intervalMillis,
@@ -51,8 +79,11 @@ public class AsyncIngestionHeartbeat {
 
     @PreDestroy
     void stop() {
-        if (executor != null) {
-            executor.shutdownNow();
+        if (scheduler != null) {
+            scheduler.shutdownNow();
+        }
+        if (renewalExecutor != null) {
+            renewalExecutor.shutdownNow();
         }
     }
 
@@ -73,20 +104,56 @@ public class AsyncIngestionHeartbeat {
             if (handle.closed.get() || handle.ownershipLost.get()) {
                 continue;
             }
+            if (renewalExecutor == null) {
+                renewSafely(handle);
+                continue;
+            }
+            if (!handle.renewalInFlight.compareAndSet(false, true)) {
+                continue;
+            }
             try {
-                if (!repository.renew(handle.claim, properties.leaseDuration())) {
-                    handle.ownershipLost.set(true);
-                }
+                renewalExecutor.execute(() -> {
+                    try {
+                        renewSafely(handle);
+                    } finally {
+                        handle.renewalInFlight.set(false);
+                    }
+                });
             } catch (RuntimeException exception) {
+                handle.renewalInFlight.set(false);
                 handle.ownershipLost.set(true);
             }
         }
+    }
+
+    private void renewSafely(Handle handle) {
+        if (handle.closed.get() || handle.ownershipLost.get()) {
+            return;
+        }
+        try {
+            if (!renewWithDeadline(handle.claim)) {
+                handle.ownershipLost.set(true);
+            }
+        } catch (RuntimeException exception) {
+            handle.ownershipLost.set(true);
+        }
+    }
+
+    private boolean renewWithDeadline(AsyncIngestionClaim claim) {
+        if (transactionTemplate == null) {
+            return repository.renew(claim, properties.leaseDuration());
+        }
+        Boolean renewed = transactionTemplate.execute(status ->
+                repository.renew(claim, properties.leaseDuration())
+        );
+        return Boolean.TRUE.equals(renewed);
     }
 
     public final class Handle implements AutoCloseable {
         private final AsyncIngestionClaim claim;
         private final AtomicBoolean ownershipLost = new AtomicBoolean();
         private final AtomicBoolean closed = new AtomicBoolean();
+        private final AtomicBoolean renewalInFlight = new AtomicBoolean();
 
         private Handle(AsyncIngestionClaim claim) {
             this.claim = claim;
