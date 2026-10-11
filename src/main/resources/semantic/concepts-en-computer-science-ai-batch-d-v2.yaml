@@ -25,7 +25,7 @@ domains:
           - integer programming relaxation
           - maximum flow scaling algorithm
           - branch and cut
-          - cutting plane method
+          - push relabel algorithm
           - randomized contraction algorithm
           - sketching dimensionality reduction
           - external sorting algorithm
