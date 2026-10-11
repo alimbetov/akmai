@@ -105,7 +105,7 @@ languages:
         preferredPhrase: график ротации договоров аренды
         aliases: []
       - conceptId: construction_real_estate.real_estate_market.weighted_lease_maturity
-        preferredPhrase: средневзвешенный срок аренды
+        preferredPhrase: средневзвешенный остаточный срок аренды
         aliases: []
       - conceptId: construction_real_estate.real_estate_market.tenant_concentration_risk
         preferredPhrase: риск концентрации арендаторов
