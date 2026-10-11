@@ -1,0 +1,307 @@
+version: semantic-surfaces-ru-energy-utilities-batch-a-v2
+languages:
+  - language: ru
+    surfaces:
+      - conceptId: energy_utilities.power_generation.unit_commitment_schedule
+        preferredPhrase: график состава генерирующих агрегатов
+        aliases: []
+      - conceptId: energy_utilities.power_generation.economic_dispatch_optimization
+        preferredPhrase: оптимизация экономической диспетчеризации
+        aliases: []
+      - conceptId: energy_utilities.power_generation.heat_rate_curve
+        preferredPhrase: кривая удельного расхода тепла
+        aliases: []
+      - conceptId: energy_utilities.power_generation.generator_availability_factor
+        preferredPhrase: коэффициент готовности генератора
+        aliases: []
+      - conceptId: energy_utilities.power_generation.forced_outage_rate
+        preferredPhrase: коэффициент вынужденных отключений
+        aliases: []
+      - conceptId: energy_utilities.power_generation.planned_outage_schedule
+        preferredPhrase: график плановых отключений
+        aliases: []
+      - conceptId: energy_utilities.power_generation.capacity_factor_analysis
+        preferredPhrase: анализ коэффициента использования мощности
+        aliases: []
+      - conceptId: energy_utilities.power_generation.generation_reserve_requirement
+        preferredPhrase: требование к резерву генерации
+        aliases: []
+      - conceptId: energy_utilities.power_generation.ramp_rate_constraint
+        preferredPhrase: ограничение скорости изменения мощности
+        aliases: []
+      - conceptId: energy_utilities.power_generation.minimum_stable_generation
+        preferredPhrase: минимальная устойчивая генерация
+        aliases: []
+      - conceptId: energy_utilities.power_generation.startup_cost_model
+        preferredPhrase: модель затрат на пуск
+        aliases: []
+      - conceptId: energy_utilities.power_generation.shutdown_cost_model
+        preferredPhrase: модель затрат на останов
+        aliases: []
+      - conceptId: energy_utilities.power_generation.fuel_consumption_forecast
+        preferredPhrase: прогноз расхода топлива
+        aliases: []
+      - conceptId: energy_utilities.power_generation.fuel_supply_constraint
+        preferredPhrase: ограничение поставки топлива
+        aliases: []
+      - conceptId: energy_utilities.power_generation.boiler_efficiency_monitoring
+        preferredPhrase: мониторинг эффективности котла
+        aliases: []
+      - conceptId: energy_utilities.power_generation.turbine_performance_curve
+        preferredPhrase: характеристика производительности турбины
+        aliases: []
+      - conceptId: energy_utilities.power_generation.auxiliary_power_consumption
+        preferredPhrase: потребление электроэнергии собственными нуждами
+        aliases: []
+      - conceptId: energy_utilities.power_generation.generator_excitation_system
+        preferredPhrase: система возбуждения генератора
+        aliases: []
+      - conceptId: energy_utilities.power_generation.automatic_generation_control
+        preferredPhrase: автоматическое регулирование генерации
+        aliases: []
+      - conceptId: energy_utilities.power_generation.black_start_capability
+        preferredPhrase: возможность запуска без внешнего питания
+        aliases: []
+      - conceptId: energy_utilities.power_generation.plant_load_factor
+        preferredPhrase: коэффициент загрузки электростанции
+        aliases: []
+      - conceptId: energy_utilities.power_generation.generation_maintenance_outage
+        preferredPhrase: ремонтное отключение генерации
+        aliases: []
+      - conceptId: energy_utilities.power_generation.emissions_dispatch_constraint
+        preferredPhrase: диспетчерское ограничение по выбросам
+        aliases: []
+      - conceptId: energy_utilities.power_generation.combined_heat_power
+        preferredPhrase: комбинированное производство тепла и электроэнергии
+        aliases: []
+      - conceptId: energy_utilities.power_generation.cogeneration_efficiency_analysis
+        preferredPhrase: анализ эффективности когенерации
+        aliases: []
+
+      - conceptId: energy_utilities.power_grid.transmission_capacity_planning
+        preferredPhrase: планирование пропускной способности передачи
+        aliases: []
+      - conceptId: energy_utilities.power_grid.distribution_load_forecast
+        preferredPhrase: прогноз нагрузки распределительной сети
+        aliases: []
+      - conceptId: energy_utilities.power_grid.grid_contingency_analysis
+        preferredPhrase: анализ аварийных режимов сети
+        aliases: []
+      - conceptId: energy_utilities.power_grid.n_minus_one_criterion
+        preferredPhrase: критерий эн минус один
+        aliases: []
+      - conceptId: energy_utilities.power_grid.voltage_stability_assessment
+        preferredPhrase: оценка устойчивости напряжения
+        aliases: []
+      - conceptId: energy_utilities.power_grid.reactive_power_compensation
+        preferredPhrase: компенсация реактивной мощности
+        aliases: []
+      - conceptId: energy_utilities.power_grid.power_factor_correction
+        preferredPhrase: коррекция коэффициента мощности
+        aliases: []
+      - conceptId: energy_utilities.power_grid.short_circuit_analysis
+        preferredPhrase: анализ короткого замыкания
+        aliases: []
+      - conceptId: energy_utilities.power_grid.protection_coordination_study
+        preferredPhrase: исследование координации релейной защиты
+        aliases: []
+      - conceptId: energy_utilities.power_grid.relay_setting_calculation
+        preferredPhrase: расчет уставок релейной защиты
+        aliases: []
+      - conceptId: energy_utilities.power_grid.transformer_loading_analysis
+        preferredPhrase: анализ загрузки трансформатора
+        aliases: []
+      - conceptId: energy_utilities.power_grid.substation_asset_management
+        preferredPhrase: управление активами подстанции
+        aliases: []
+      - conceptId: energy_utilities.power_grid.distribution_feeder_automation
+        preferredPhrase: автоматизация распределительного фидера
+        aliases: []
+      - conceptId: energy_utilities.power_grid.outage_management_system
+        preferredPhrase: система управления отключениями
+        aliases: []
+      - conceptId: energy_utilities.power_grid.system_average_interruption
+        preferredPhrase: средняя продолжительность системных отключений
+        aliases: []
+      - conceptId: energy_utilities.power_grid.customer_average_interruption
+        preferredPhrase: средняя продолжительность отключений потребителя
+        aliases: []
+      - conceptId: energy_utilities.power_grid.distribution_loss_analysis
+        preferredPhrase: анализ потерь распределительной сети
+        aliases: []
+      - conceptId: energy_utilities.power_grid.technical_network_losses
+        preferredPhrase: технические потери сети
+        aliases: []
+      - conceptId: energy_utilities.power_grid.nontechnical_network_losses
+        preferredPhrase: нетехнические потери сети
+        aliases: []
+      - conceptId: energy_utilities.power_grid.grid_restoration_plan
+        preferredPhrase: план восстановления сети
+        aliases: []
+      - conceptId: energy_utilities.power_grid.demand_response_integration
+        preferredPhrase: интеграция управления спросом
+        aliases: []
+      - conceptId: energy_utilities.power_grid.distributed_energy_resources
+        preferredPhrase: распределенные энергетические ресурсы
+        aliases: []
+      - conceptId: energy_utilities.power_grid.hosting_capacity_analysis
+        preferredPhrase: анализ доступной сетевой мощности
+        aliases: []
+      - conceptId: energy_utilities.power_grid.grid_congestion_management
+        preferredPhrase: управление перегрузкой сети
+        aliases: []
+      - conceptId: energy_utilities.power_grid.transmission_expansion_planning
+        preferredPhrase: планирование расширения передающей сети
+        aliases: []
+
+      - conceptId: energy_utilities.energy_markets.locational_marginal_pricing
+        preferredPhrase: узловое маржинальное ценообразование
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.market_clearing_price
+        preferredPhrase: равновесная цена рынка
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.system_marginal_price
+        preferredPhrase: системная маржинальная цена
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.energy_imbalance_settlement
+        preferredPhrase: расчеты за небалансы электроэнергии
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.ancillary_services_market
+        preferredPhrase: рынок системных услуг
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.frequency_response_market
+        preferredPhrase: рынок услуг частотного регулирования
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.capacity_auction_design
+        preferredPhrase: модель аукциона мощности
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.congestion_revenue_rights
+        preferredPhrase: права на доход от сетевых ограничений
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.financial_transmission_rights
+        preferredPhrase: финансовые права на передачу
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.power_purchase_agreement
+        preferredPhrase: договор купли продажи электроэнергии
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.bilateral_energy_contract
+        preferredPhrase: двусторонний энергетический договор
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.merchant_power_exposure
+        preferredPhrase: рыночная экспозиция независимой генерации
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.spark_spread_analysis
+        preferredPhrase: анализ спарк спреда
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.dark_spread_analysis
+        preferredPhrase: анализ дарк спреда
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.load_shape_forecast
+        preferredPhrase: прогноз профиля нагрузки
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.peak_demand_pricing
+        preferredPhrase: ценообразование пиковой нагрузки
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.time_of_use_tariff
+        preferredPhrase: тариф по времени использования
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.dynamic_electricity_pricing
+        preferredPhrase: динамическое ценообразование электроэнергии
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.retail_energy_switching
+        preferredPhrase: смена розничного поставщика энергии
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.supplier_balancing_responsibility
+        preferredPhrase: ответственность поставщика за балансирование
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.renewable_curtailment_compensation
+        preferredPhrase: компенсация ограничения возобновляемой генерации
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.market_power_monitoring
+        preferredPhrase: мониторинг рыночной власти
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.electricity_hedging_strategy
+        preferredPhrase: стратегия хеджирования электроэнергии
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.energy_trading_risk
+        preferredPhrase: риск торговли энергией
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.settlement_reconciliation_process
+        preferredPhrase: процесс сверки расчетов
+        aliases: []
+
+      - conceptId: energy_utilities.renewable_energy.solar_capacity_factor
+        preferredPhrase: коэффициент использования солнечной мощности
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.wind_capacity_factor
+        preferredPhrase: коэффициент использования ветровой мощности
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.solar_irradiance_forecast
+        preferredPhrase: прогноз солнечной иррадиации
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.wind_resource_assessment
+        preferredPhrase: оценка ветрового ресурса
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.photovoltaic_module_efficiency
+        preferredPhrase: эффективность фотоэлектрического модуля
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.inverter_clipping_loss
+        preferredPhrase: потери ограничения инвертора
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.wind_turbine_wake
+        preferredPhrase: аэродинамический след ветровой турбины
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.wind_farm_layout
+        preferredPhrase: схема размещения ветровой электростанции
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_generation_forecast
+        preferredPhrase: прогноз возобновляемой генерации
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_curtailment_risk
+        preferredPhrase: риск ограничения возобновляемой генерации
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.interconnection_queue_process
+        preferredPhrase: процесс очереди на технологическое присоединение
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.grid_connection_agreement
+        preferredPhrase: договор технологического присоединения
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_project_yield
+        preferredPhrase: выработка возобновляемого проекта
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.levelized_energy_cost
+        preferredPhrase: приведенная стоимость энергии
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_portfolio_standard
+        preferredPhrase: стандарт портфеля возобновляемой энергетики
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.green_certificate_trading
+        preferredPhrase: торговля зелеными сертификатами
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.energy_storage_duration
+        preferredPhrase: продолжительность накопления энергии
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.battery_degradation_model
+        preferredPhrase: модель деградации аккумулятора
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.state_of_charge
+        preferredPhrase: состояние заряда
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.state_of_health
+        preferredPhrase: состояние технического здоровья аккумулятора
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.storage_arbitrage_strategy
+        preferredPhrase: стратегия арбитража накопителя
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.hybrid_renewable_plant
+        preferredPhrase: гибридная возобновляемая электростанция
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.virtual_power_plant
+        preferredPhrase: виртуальная электростанция
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_forecasting_error
+        preferredPhrase: ошибка прогноза возобновляемой генерации
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.grid_forming_inverter
+        preferredPhrase: сетеведущий инвертор
+        aliases: []
