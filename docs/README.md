@@ -2,7 +2,7 @@
 
 This directory is the documentation entry point for the current AkmAI codebase.
 
-Last synchronized against executable code baseline: `main@2b52dbade51987ddba61e8decacb09f119614c19` on 2026-10-09.
+Last synchronized against executable code baseline: `main@259853a2b97a7bc75429b86f27f6f3d091268a11` on 2026-10-11.
 
 ## Documentation contract
 
@@ -71,7 +71,7 @@ For API and FileService integration use [`services/external-api-contracts.md`](s
 
 Current audit snapshots, defect ledgers and remediation evidence. Start with [`audit/README.md`](audit/README.md).
 
-The open GitHub issues #36-#41 are historical audit trackers. Their GitHub state is still open, while most runtime remediations are already present in `main`; current closure/evidence status is maintained in the post-v1.1 readiness audit. Once an audit document is fully superseded and contains no unique evidence needed for traceability, remove it rather than retaining a stale duplicate.
+GitHub issues #36-#41 are historical audit trackers and are now closed as completed. Their remediation/evidence history remains documented in the post-v1.1 readiness audit; once an audit document is fully superseded and contains no unique evidence needed for traceability, remove it rather than retaining a stale duplicate.
 
 ### `operations/`
 
