@@ -21,7 +21,7 @@ domains:
           - meet in middle
           - branch and price
           - bidirectional search algorithm
-          - primal dual algorithm
+          - A star search algorithm
           - approximation ratio analysis
           - competitive ratio analysis
           - randomized rounding method
