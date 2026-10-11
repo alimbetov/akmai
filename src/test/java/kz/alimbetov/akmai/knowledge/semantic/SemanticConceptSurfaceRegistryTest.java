@@ -3,10 +3,14 @@ package kz.alimbetov.akmai.knowledge.semantic;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 class SemanticConceptSurfaceRegistryTest {
 
@@ -69,6 +73,37 @@ class SemanticConceptSurfaceRegistryTest {
                                     .contains(surface.conceptId())
                     );
         }
+    }
+
+    @Test
+    void everyRuAndKkRolloutResourceIsRegisteredForRuntimeLoading()
+            throws IOException {
+        PathMatchingResourcePatternResolver resolver =
+                new PathMatchingResourcePatternResolver();
+
+        Set<String> discovered = Arrays.stream(resolver.getResources(
+                        "classpath*:semantic/concept-surfaces-*-batch-*-v2.yaml"
+                ))
+                .map(Resource::getFilename)
+                .filter(name -> name != null
+                        && (name.startsWith("concept-surfaces-ru-")
+                        || name.startsWith("concept-surfaces-kk-")))
+                .map(name -> "semantic/" + name)
+                .collect(Collectors.toSet());
+
+        Set<String> configured =
+                SemanticConceptSurfaceRegistry.multilingualResources().stream()
+                        .filter(resource ->
+                                resource.startsWith("semantic/concept-surfaces-ru-")
+                                        || resource.startsWith(
+                                        "semantic/concept-surfaces-kk-"
+                                ))
+                        .filter(resource -> resource.contains("-batch-"))
+                        .collect(Collectors.toSet());
+
+        assertThat(discovered).isNotEmpty();
+        assertThat(configured)
+                .containsExactlyInAnyOrderElementsOf(discovered);
     }
 
     @Test
