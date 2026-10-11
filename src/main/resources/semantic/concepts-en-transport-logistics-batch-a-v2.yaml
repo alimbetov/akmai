@@ -48,7 +48,7 @@ domains:
           - inventory accuracy rate
           - warehouse labor planning
           - warehouse productivity rate
-          - distribution capacity planning
+          - distribution center capacity planning
           - cross dock scheduling
           - returns processing center
           - reverse logistics operation
