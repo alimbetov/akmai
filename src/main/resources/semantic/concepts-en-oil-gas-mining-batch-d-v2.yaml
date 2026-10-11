@@ -31,7 +31,7 @@ domains:
           - souring risk management
       - id: midstream_operations
         phrases:
-          - pipeline throughput capacity
+          - pipeline capacity utilization analysis
           - compressor availability analysis
           - compressor reliability program
           - station operating envelope
