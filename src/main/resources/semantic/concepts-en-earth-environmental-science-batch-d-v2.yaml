@@ -1,0 +1,112 @@
+version: semantic-concepts-en-earth-environmental-science-batch-d-v2
+domains:
+  - domainId: earth_environmental_science
+    subdomains:
+      - id: geology
+        phrases:
+          - crustal thickness inversion
+          - Moho discontinuity mapping
+          - lithosphere thickness estimate
+          - mantle plume hypothesis
+          - slab rollback dynamics
+          - subduction zone coupling
+          - forearc basin evolution
+          - rift basin development
+          - orogenic wedge mechanics
+          - fault damage zone
+          - fracture aperture distribution
+          - rock fabric analysis
+          - mineral thermobarometry method
+          - metamorphic facies transition
+          - melt inclusion analysis
+          - volcanic gas geochemistry
+          - tephra correlation method
+          - magnetostratigraphic correlation
+          - chemostratigraphic correlation
+          - sequence boundary identification
+          - accommodation space analysis
+          - sediment source fingerprinting
+          - burial diagenesis model
+          - geothermal reservoir characterization
+          - induced seismicity assessment
+      - id: climate_science
+        phrases:
+          - aerosol cloud interaction
+          - cloud microphysics feedback
+          - water vapor feedback
+          - lapse rate feedback
+          - Planck feedback parameter
+          - polar amplification mechanism
+          - Arctic amplification index
+          - ocean heat content
+          - deep ocean ventilation
+          - marine carbon cycle
+          - terrestrial carbon turnover
+          - methane climate feedback
+          - nitrous oxide forcing
+          - stratospheric aerosol injection
+          - solar radiation modification
+          - climate overshoot pathway
+          - temperature stabilization target
+          - remaining carbon budget
+          - carbon budget uncertainty
+          - climate response function
+          - emergent constraint method
+          - initialized climate prediction
+          - seasonal forecast skill
+          - compound hazard attribution
+          - event attribution probability
+      - id: hydrology
+        phrases:
+          - precipitation runoff elasticity
+          - catchment storage capacity
+          - hydrologic recession constant
+          - flow duration curve
+          - low flow frequency
+          - peak over threshold
+          - rainfall loss model
+          - infiltration Green Ampt
+          - preferential flow pathway
+          - macropore flow process
+          - groundwater residence time
+          - aquifer parameter inversion
+          - groundwater storage anomaly
+          - land subsidence monitoring
+          - managed aquifer recharge
+          - river groundwater interaction
+          - flood wave celerity
+          - channel routing parameter
+          - sediment transport capacity
+          - reservoir evaporation loss
+          - snow depletion curve
+          - rain snow partitioning
+          - glacier equilibrium altitude
+          - drought propagation mechanism
+          - water scarcity index
+      - id: environmental_assessment
+        phrases:
+          - environmental receptor sensitivity
+          - pollutant source inventory
+          - exposure point concentration
+          - contaminant mass flux
+          - ecological toxicity benchmark
+          - species sensitivity distribution
+          - bioaccumulation factor assessment
+          - biomagnification risk analysis
+          - sediment toxicity testing
+          - groundwater remediation design
+          - pump treat remediation
+          - soil vapor extraction
+          - in situ bioremediation
+          - monitored attenuation remedy
+          - remediation closure criteria
+          - residual risk assessment
+          - environmental liability estimate
+          - natural capital accounting
+          - ecosystem condition metric
+          - biodiversity intactness index
+          - habitat connectivity metric
+          - environmental noise mapping
+          - odor dispersion modeling
+          - waste material flow
+          - resource efficiency assessment
