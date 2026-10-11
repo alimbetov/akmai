@@ -36,7 +36,7 @@ domains:
           - lactation persistency index
           - milk solids yield
           - breeding efficiency metric
-          - insemination success rate
+          - artificial insemination conception rate
           - pregnancy loss monitoring
           - calf survival rate
           - animal mobility score
@@ -62,7 +62,7 @@ domains:
           - dosing system verification
           - batch recipe accuracy
           - mixing energy consumption
-          - thermal lethality calculation
+          - thermal process lethality verification
           - process residence time
           - moisture migration analysis
           - fermentation endpoint control
@@ -97,8 +97,8 @@ domains:
           - traceability data completeness
           - supplier risk classification
           - ingredient vulnerability assessment
-          - authenticity risk assessment
-          - food defense vulnerability
+          - food authenticity vulnerability rating
+          - food defense threat assessment
           - tamper evidence verification
           - intentional contamination response
           - recall scope determination
