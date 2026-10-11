@@ -33,7 +33,7 @@ domains:
         phrases:
           - thermodynamic potential transform
           - Legendre transform thermodynamics
-          - Gibbs Duhem relation
+          - Massieu potential relation
           - fugacity coefficient calculation
           - thermodynamic stability matrix
           - phase diagram construction
