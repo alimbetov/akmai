@@ -176,7 +176,7 @@ languages:
         preferredPhrase: клиринг аукциона мощности
         aliases: []
       - conceptId: energy_utilities.energy_markets.ancillary_service_market
-        preferredPhrase: рынок системных услуг
+        preferredPhrase: рынок вспомогательных услуг энергосистемы
         aliases: []
       - conceptId: energy_utilities.energy_markets.balancing_settlement_mechanism
         preferredPhrase: механизм расчетов за балансирование
