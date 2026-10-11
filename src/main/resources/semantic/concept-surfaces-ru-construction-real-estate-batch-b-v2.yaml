@@ -23,7 +23,7 @@ languages:
       - conceptId: construction_real_estate.design_construction.lateral_stability_system
         preferredPhrase: система поперечной устойчивости
         aliases: []
-      - conceptId: construction_real_estate.design_construction.facade_performance_testing
+      - conceptId: construction_real_estate.design_construction.façade_performance_testing
         preferredPhrase: эксплуатационные испытания фасада
         aliases: []
       - conceptId: construction_real_estate.design_construction.waterproofing_system_design
