@@ -13,7 +13,7 @@ domains:
           - ancillary service provision
           - black start readiness
           - generator outage schedule
-          - equivalent forced outage
+          - equivalent forced outage factor
           - planned outage factor
           - equivalent availability factor
           - unit capacity utilization
