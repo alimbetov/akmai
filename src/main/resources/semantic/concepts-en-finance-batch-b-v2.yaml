@@ -1,0 +1,112 @@
+version: semantic-concepts-en-finance-batch-b-v2
+domains:
+  - domainId: finance_banking
+    subdomains:
+      - id: lending_credit
+        phrases:
+          - commercial real estate lending
+          - project finance lending
+          - trade finance facility
+          - asset based lending
+          - invoice financing arrangement
+          - supply chain finance
+          - working capital facility
+          - bridge loan financing
+          - construction loan financing
+          - equipment finance lease
+          - auto loan financing
+          - student loan portfolio
+          - agricultural credit facility
+          - microfinance lending program
+          - credit risk grading
+          - loan pricing model
+          - risk based loan pricing
+          - credit policy exception
+          - borrower leverage ratio
+          - debt service ratio
+          - loan amortization schedule
+          - grace period arrangement
+          - covenant breach event
+          - forbearance agreement terms
+          - problem loan workout
+      - id: deposits_liquidity
+        phrases:
+          - current account balance
+          - notice deposit account
+          - certificate of deposit
+          - deposit concentration risk
+          - large depositor concentration
+          - deposit insurance coverage
+          - deposit beta analysis
+          - deposit retention rate
+          - deposit renewal rate
+          - deposit pricing strategy
+          - funding diversification plan
+          - wholesale funding market
+          - secured wholesale funding
+          - unsecured wholesale funding
+          - interbank funding exposure
+          - central bank facility
+          - emergency liquidity assistance
+          - liquidity survival horizon
+          - liquidity early warning indicators
+          - contingent funding source
+          - liquidity transfer pricing
+          - asset encumbrance ratio
+          - unencumbered asset pool
+          - cash reserve buffer
+          - liquidity risk limit
+      - id: risk_capital
+        phrases:
+          - risk weighted asset density
+          - standardized credit risk approach
+          - internal ratings based approach
+          - credit valuation adjustment
+          - counterparty exposure measure
+          - large exposure limit
+          - single obligor limit
+          - sector concentration risk
+          - geographic concentration risk
+          - capital adequacy assessment process
+          - supervisory capital requirement
+          - minimum capital requirement
+          - capital buffer requirement
+          - loss absorbing capacity
+          - stress capital buffer
+          - capital management policy
+          - dividend distribution constraint
+          - risk governance framework
+          - risk limit framework
+          - operational risk event
+          - model risk management
+          - interest rate sensitivity
+          - duration gap analysis
+          - value at risk model
+          - expected shortfall measure
+      - id: payments_compliance
+        phrases:
+          - customer onboarding controls
+          - customer risk rating
+          - ongoing customer monitoring
+          - source of funds verification
+          - source of wealth verification
+          - sanctions list screening
+          - adverse media screening
+          - name screening system
+          - transaction risk scoring
+          - suspicious activity report
+          - cash transaction report
+          - financial intelligence reporting
+          - payment fraud prevention
+          - account takeover fraud
+          - authorized push payment fraud
+          - card not present fraud
+          - merchant acquiring risk
+          - payment service provider
+          - payment initiation service
+          - payment account information
+          - settlement liquidity risk
+          - clearing participant default
+          - payment scheme compliance
+          - remittance transfer service
+          - cross border remittance

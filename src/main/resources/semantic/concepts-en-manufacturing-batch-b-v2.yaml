@@ -1,0 +1,112 @@
+version: semantic-concepts-en-manufacturing-batch-b-v2
+domains:
+  - domainId: manufacturing
+    subdomains:
+      - id: production_systems
+        phrases:
+          - aggregate production planning
+          - production capacity model
+          - rough cut capacity
+          - order promising process
+          - finished goods availability
+          - capacity promise calculation
+          - production campaign planning
+          - sequence dependent setup
+          - changeover matrix optimization
+          - bottleneck resource scheduling
+          - constraint based scheduling
+          - production dispatch priority
+          - work center efficiency
+          - labor capacity planning
+          - overtime capacity planning
+          - production variance analysis
+          - manufacturing lead time
+          - queue time reduction
+          - move time reduction
+          - manufacturing cycle efficiency
+          - work order completion
+          - production attainment rate
+          - schedule adherence rate
+          - line utilization analysis
+          - production flow optimization
+      - id: quality_management
+        phrases:
+          - quality risk assessment
+          - supplier defect rate
+          - customer defect rate
+          - defect opportunity analysis
+          - defects per million
+          - process sigma level
+          - capability maturity review
+          - measurement bias analysis
+          - measurement linearity study
+          - measurement stability study
+          - control limit calculation
+          - special cause variation
+          - common cause variation
+          - process drift detection
+          - process centering analysis
+          - tolerance stack analysis
+          - design verification review
+          - process validation protocol
+          - inspection effectiveness review
+          - audit finding closure
+          - quality escape prevention
+          - defect recurrence analysis
+          - warranty failure analysis
+          - field failure analysis
+          - supplier process validation
+      - id: maintenance_reliability
+        phrases:
+          - failure consequence analysis
+          - equipment criticality ranking
+          - reliability growth analysis
+          - reliability demonstration test
+          - Weibull failure analysis
+          - maintenance interval optimization
+          - age replacement policy
+          - risk based maintenance
+          - maintenance task analysis
+          - precision maintenance practice
+          - operator driven maintenance
+          - autonomous maintenance program
+          - maintenance labor planning
+          - maintenance resource leveling
+          - spare parts stocking
+          - critical spare strategy
+          - repairable spare analysis
+          - failure reporting system
+          - bad actor equipment
+          - chronic failure elimination
+          - asset health monitoring
+          - condition alarm threshold
+          - predictive maintenance accuracy
+          - shutdown readiness review
+          - maintenance cost optimization
+      - id: industrial_operations
+        phrases:
+          - process control strategy
+          - control loop performance
+          - advanced process control
+          - model predictive control
+          - process variable monitoring
+          - historian data quality
+          - alarm flood analysis
+          - operator alarm response
+          - process interlock logic
+          - emergency shutdown system
+          - process hazard analysis
+          - bow tie analysis
+          - barrier performance monitoring
+          - process safety indicator
+          - major accident hazard
+          - permit compliance monitoring
+          - contractor safety management
+          - energy isolation verification
+          - plant startup procedure
+          - plant shutdown procedure
+          - operating envelope monitoring
+          - utility balance optimization
+          - compressed air demand
+          - steam trap monitoring
+          - plant loss accounting

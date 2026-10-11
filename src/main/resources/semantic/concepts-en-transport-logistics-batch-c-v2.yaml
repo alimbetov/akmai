@@ -1,0 +1,112 @@
+version: semantic-concepts-en-transport-logistics-batch-c-v2
+domains:
+  - domainId: transport_logistics
+    subdomains:
+      - id: freight_transport
+        phrases:
+          - carrier capacity commitment
+          - carrier allocation strategy
+          - tender acceptance rate
+          - freight bid analysis
+          - contract rate benchmark
+          - spot freight market
+          - backhaul utilization analysis
+          - empty mileage reduction
+          - lane imbalance analysis
+          - shipment consolidation planning
+          - load building optimization
+          - cube utilization analysis
+          - pallet utilization analysis
+          - container utilization rate
+          - intermodal transfer time
+          - terminal throughput capacity
+          - port congestion exposure
+          - rail network congestion
+          - transit buffer planning
+          - shipment visibility monitoring
+          - freight exception management
+          - customs clearance cycle
+          - border crossing delay
+          - cargo security control
+          - carrier claims ratio
+      - id: warehousing_distribution
+        phrases:
+          - warehouse network strategy
+          - fulfillment center design
+          - storage density analysis
+          - rack utilization analysis
+          - dock utilization rate
+          - yard congestion monitoring
+          - receiving dock productivity
+          - putaway cycle time
+          - replenishment cycle time
+          - picking error analysis
+          - packing error analysis
+          - order cut off
+          - order release wave
+          - sorter capacity analysis
+          - conveyor utilization analysis
+          - automation uptime monitoring
+          - robotic picking performance
+          - labor productivity benchmark
+          - labor utilization rate
+          - inventory dwell time
+          - slow moving inventory
+          - obsolete inventory handling
+          - returns disposition process
+          - parcel carrier allocation
+          - distribution cost analysis
+      - id: fleet_operations
+        phrases:
+          - fleet utilization benchmark
+          - vehicle productivity analysis
+          - route productivity analysis
+          - driver productivity analysis
+          - driver turnover rate
+          - driver fatigue management
+          - route risk assessment
+          - vehicle safety inspection
+          - roadside defect rate
+          - preventable accident rate
+          - collision severity analysis
+          - vehicle repair cycle
+          - maintenance vendor performance
+          - tire cost analysis
+          - fuel theft detection
+          - fuel efficiency variance
+          - electric vehicle range
+          - charging session management
+          - charging utilization rate
+          - charging demand forecast
+          - battery state monitoring
+          - telematics data quality
+          - vehicle replacement threshold
+          - fleet lease utilization
+          - fleet cost allocation
+      - id: supply_chain
+        phrases:
+          - demand sensing process
+          - demand consensus planning
+          - supply consensus planning
+          - constrained supply planning
+          - allocation priority rule
+          - inventory risk pooling
+          - postponement strategy design
+          - decoupling point strategy
+          - service inventory segmentation
+          - inventory health analysis
+          - excess inventory exposure
+          - obsolete stock risk
+          - supplier leadtime variability
+          - supplier recovery planning
+          - supplier development program
+          - sourcing resilience assessment
+          - geographic sourcing risk
+          - single source dependency
+          - component shortage management
+          - material substitution process
+          - expedite management process
+          - order backlog prioritization
+          - customer service segmentation
+          - supply chain cost
+          - end to end leadtime

@@ -1,0 +1,112 @@
+version: semantic-concepts-en-agriculture-food-batch-b-v2
+domains:
+  - domainId: agriculture_food
+    subdomains:
+      - id: crop_science
+        phrases:
+          - crop sequence design
+          - row spacing optimization
+          - cultivar suitability analysis
+          - soil water profile
+          - soil organic matter
+          - nutrient deficiency diagnosis
+          - fertilizer application rate
+          - variable rate fertilization
+          - irrigation water efficiency
+          - evapotranspiration estimation
+          - drought response assessment
+          - crop phenology tracking
+          - remote sensing agriculture
+          - vegetation index analysis
+          - yield gap analysis
+          - harvest readiness index
+          - crop loss assessment
+          - pest pressure monitoring
+          - weed management strategy
+          - fungicide application program
+          - insecticide resistance management
+          - disease resistance breeding
+          - seed treatment program
+          - field scouting protocol
+          - precision seeding system
+      - id: livestock_production
+        phrases:
+          - herd disease surveillance
+          - veterinary treatment record
+          - feed efficiency benchmark
+          - ration nutrient balance
+          - forage quality analysis
+          - animal growth monitoring
+          - condition score distribution
+          - reproductive cycle monitoring
+          - insemination success rate
+          - calving pattern monitoring
+          - milk production forecast
+          - bulk milk cell count
+          - mastitis incidence monitoring
+          - herd attrition analysis
+          - biosecurity control plan
+          - vaccination compliance rate
+          - antimicrobial use monitoring
+          - animal identification system
+          - herd replacement planning
+          - housing ventilation management
+          - livestock heat stress
+          - pasture utilization planning
+          - stocking rate adjustment
+          - feed inventory planning
+          - manure management system
+      - id: food_processing
+        phrases:
+          - raw material specification
+          - ingredient formulation control
+          - recipe batch control
+          - process yield analysis
+          - processing loss monitoring
+          - thermal lethality calculation
+          - pasteurization hold time
+          - sterilization lethality target
+          - mixing process uniformity
+          - filling line efficiency
+          - packaging line efficiency
+          - packaging seal integrity
+          - gas composition control
+          - cold storage management
+          - freezer residence time
+          - thawing process control
+          - moisture content control
+          - texture quality measurement
+          - color quality measurement
+          - sensory evaluation program
+          - shelf stability testing
+          - production lot traceability
+          - byproduct recovery program
+          - processing capacity planning
+          - plant sanitation scheduling
+      - id: food_safety
+        phrases:
+          - food hazard register
+          - critical limit verification
+          - preventive control program
+          - sanitation control record
+          - zone sampling strategy
+          - pathogen test verification
+          - microbial trend analysis
+          - allergen zoning control
+          - allergen labeling control
+          - foreign material detection
+          - metal detector challenge
+          - x ray inspection
+          - supplier hazard review
+          - food defense vulnerability
+          - authenticity risk assessment
+          - recall readiness program
+          - recall effectiveness check
+          - traceability verification test
+          - temperature abuse monitoring
+          - cold chain compliance
+          - cleaning validation program
+          - sanitation verification audit
+          - pest control verification
+          - food safety culture
+          - regulatory inspection readiness

@@ -1,0 +1,112 @@
+version: semantic-concepts-en-medicine-pharmacology-batch-a-v2
+domains:
+  - domainId: medicine_pharmacology
+    subdomains:
+      - id: clinical_diagnosis
+        phrases:
+          - clinical history assessment
+          - physical examination finding
+          - diagnostic test sensitivity
+          - diagnostic test specificity
+          - positive predictive value
+          - negative predictive value
+          - clinical risk stratification
+          - symptom onset timeline
+          - disease progression pattern
+          - comorbidity burden assessment
+          - organ function assessment
+          - functional status evaluation
+          - clinical scoring system
+          - imaging differential diagnosis
+          - pathology specimen interpretation
+          - laboratory trend analysis
+          - biomarker interpretation framework
+          - diagnostic uncertainty assessment
+          - provisional diagnosis formulation
+          - final diagnosis confirmation
+          - referral indication assessment
+          - emergency triage decision
+          - clinical deterioration detection
+          - red flag symptom
+          - diagnostic error review
+      - id: pharmacology
+        phrases:
+          - drug absorption profile
+          - drug distribution volume
+          - drug metabolism pathway
+          - drug elimination clearance
+          - elimination half life
+          - bioavailability assessment method
+          - dose response relationship
+          - therapeutic index calculation
+          - receptor binding affinity
+          - receptor occupancy model
+          - enzyme inhibition interaction
+          - enzyme induction interaction
+          - renal dose adjustment
+          - hepatic dose adjustment
+          - loading dose calculation
+          - maintenance dose regimen
+          - steady state concentration
+          - peak plasma concentration
+          - trough plasma concentration
+          - area under curve
+          - medication adherence assessment
+          - medication reconciliation process
+          - contraindication screening process
+          - drug safety signal
+          - pharmacovigilance case review
+      - id: clinical_trials
+        phrases:
+          - trial randomization scheme
+          - allocation concealment method
+          - double blind design
+          - placebo controlled design
+          - active comparator trial
+          - noninferiority trial design
+          - superiority trial design
+          - adaptive trial design
+          - crossover trial design
+          - cluster randomized trial
+          - sample size calculation
+          - statistical analysis plan
+          - primary efficacy endpoint
+          - secondary efficacy endpoint
+          - safety endpoint definition
+          - protocol deviation handling
+          - protocol amendment process
+          - informed consent process
+          - trial site monitoring
+          - data safety committee
+          - interim analysis plan
+          - intention to treat
+          - per protocol analysis
+          - missing data handling
+          - trial stopping rule
+      - id: epidemiology
+        phrases:
+          - incidence density rate
+          - cumulative incidence estimate
+          - point prevalence estimate
+          - period prevalence estimate
+          - relative risk estimate
+          - odds ratio estimate
+          - hazard ratio estimate
+          - attributable risk fraction
+          - confounding factor control
+          - effect modification analysis
+          - selection bias assessment
+          - information bias assessment
+          - surveillance case definition
+          - contact tracing process
+          - epidemic curve analysis
+          - reproductive number estimate
+          - secondary attack rate
+          - vaccination coverage rate
+          - vaccine effectiveness estimate
+          - population attributable fraction
+          - age standardized rate
+          - disease burden estimate
+          - disability adjusted life years
+          - outbreak source investigation
+          - syndromic surveillance system

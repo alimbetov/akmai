@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -16,18 +17,20 @@ import org.springframework.stereotype.Component;
 @Component
 public class SemanticConceptSurfaceRegistry {
 
-    private static final List<String> MULTILINGUAL_RESOURCES = List.of(
-            "semantic/concept-surfaces-ru-v1.yaml",
-            "semantic/concept-surfaces-kk-v1.yaml",
-            "semantic/concept-surfaces-zh-v1.yaml",
-            "semantic/concept-surfaces-de-v1.yaml",
-            "semantic/concept-surfaces-fr-v1.yaml",
-            "semantic/concept-surfaces-es-v1.yaml",
-            "semantic/concept-surfaces-pt-v1.yaml",
-            "semantic/concept-surfaces-it-v1.yaml",
-            "semantic/concept-surfaces-tr-v1.yaml",
-            "semantic/concept-surfaces-el-v1.yaml"
+    private static final List<String> ROLLOUT_SURFACE_DOMAINS = List.of(
+            "finance",
+            "insurance",
+            "energy-utilities",
+            "oil-gas-mining",
+            "manufacturing",
+            "construction-real-estate",
+            "transport-logistics"
     );
+    private static final List<String> ROLLOUT_BATCHES = List.of(
+            "a", "b", "c", "d"
+    );
+    private static final List<String> MULTILINGUAL_RESOURCES =
+            multilingualResources();
     private static final List<String> ALIAS_RESOURCES = List.of(
             "semantic/concept-aliases-core-v1.yaml",
             "semantic/concept-aliases-global-v1.yaml"
@@ -102,7 +105,8 @@ public class SemanticConceptSurfaceRegistry {
         versions.put("en", catalog.version());
 
         for (MultilingualConceptSurfaceDefinition definition :
-                definitions == null ? List.<MultilingualConceptSurfaceDefinition>of()
+                definitions == null
+                        ? List.<MultilingualConceptSurfaceDefinition>of()
                         : definitions) {
             if (definition == null
                     || definition.version() == null
@@ -119,10 +123,9 @@ public class SemanticConceptSurfaceRegistry {
                             "Semantic surface language is required"
                     );
                 }
-                if (surfaces.containsKey(language)) {
+                if (languagePack.surfaces().isEmpty()) {
                     throw new IllegalArgumentException(
-                            "Duplicate semantic surface language: "
-                                    + language
+                            "Semantic surface pack is empty for " + language
                     );
                 }
 
@@ -130,13 +133,14 @@ public class SemanticConceptSurfaceRegistry {
                         morphologyRegistry.require(language);
                 LinkedHashMap<String, SemanticConceptSurface> unique =
                         new LinkedHashMap<>();
+                for (SemanticConceptSurface existing :
+                        surfaces.getOrDefault(language, List.of())) {
+                    unique.put(existing.conceptId(), existing);
+                }
 
-                for (var definitionSurface :
-                        languagePack.surfaces()) {
+                for (var definitionSurface : languagePack.surfaces()) {
                     SemanticConcept concept =
-                            catalog.require(
-                                    definitionSurface.conceptId()
-                            );
+                            catalog.require(definitionSurface.conceptId());
                     SemanticConceptSurface surface = surface(
                             concept,
                             language,
@@ -157,26 +161,16 @@ public class SemanticConceptSurfaceRegistry {
                     }
                 }
 
-                if (unique.isEmpty()) {
-                    throw new IllegalArgumentException(
-                            "Semantic surface pack is empty for "
-                                    + language
-                    );
-                }
-
-                surfaces.put(
+                surfaces.put(language, List.copyOf(unique.values()));
+                versions.merge(
                         language,
-                        List.copyOf(unique.values())
+                        definition.version(),
+                        (current, addition) -> current + "+" + addition
                 );
-                versions.put(language, definition.version());
             }
         }
 
-        applyAliases(
-                surfaces,
-                aliasDefinition,
-                morphologyRegistry
-        );
+        applyAliases(surfaces, aliasDefinition, morphologyRegistry);
 
         this.byLanguage = Map.copyOf(surfaces);
         this.versionByLanguage = Map.copyOf(versions);
@@ -188,6 +182,10 @@ public class SemanticConceptSurfaceRegistry {
 
     public List<SemanticConceptSurface> surfaces(String language) {
         return byLanguage.getOrDefault(language, List.of());
+    }
+
+    public Set<String> languages() {
+        return Set.copyOf(byLanguage.keySet());
     }
 
     public boolean supports(String language) {
@@ -222,8 +220,7 @@ public class SemanticConceptSurfaceRegistry {
 
             for (var languageAliases : entry.aliases().entrySet()) {
                 String language = languageAliases.getKey();
-                List<SemanticConceptSurface> current =
-                        surfaces.get(language);
+                List<SemanticConceptSurface> current = surfaces.get(language);
                 if (current == null) {
                     throw new IllegalArgumentException(
                             "Semantic aliases target unsupported language: "
@@ -233,11 +230,10 @@ public class SemanticConceptSurfaceRegistry {
 
                 SemanticMorphologyNormalizer normalizer =
                         morphologyRegistry.require(language);
-                List<String> normalizedAliases =
-                        normalizeAliases(
-                                languageAliases.getValue(),
-                                normalizer
-                        );
+                List<String> normalizedAliases = normalizeAliases(
+                        languageAliases.getValue(),
+                        normalizer
+                );
                 if (normalizedAliases.isEmpty()) {
                     throw new IllegalArgumentException(
                             "Semantic alias list must not be empty for "
@@ -342,6 +338,43 @@ public class SemanticConceptSurfaceRegistry {
                 normalizedAliases,
                 normalizer.stemTokens(normalizedPreferred)
         );
+    }
+
+    static List<String> multilingualResources() {
+        ArrayList<String> resources = new ArrayList<>();
+        addLanguageResources(resources, "ru");
+        addLanguageResources(resources, "kk");
+        resources.addAll(List.of(
+                "semantic/concept-surfaces-zh-v1.yaml",
+                "semantic/concept-surfaces-de-v1.yaml",
+                "semantic/concept-surfaces-fr-v1.yaml",
+                "semantic/concept-surfaces-es-v1.yaml",
+                "semantic/concept-surfaces-pt-v1.yaml",
+                "semantic/concept-surfaces-it-v1.yaml",
+                "semantic/concept-surfaces-tr-v1.yaml",
+                "semantic/concept-surfaces-el-v1.yaml"
+        ));
+        return List.copyOf(resources);
+    }
+
+    private static void addLanguageResources(
+            List<String> resources,
+            String language
+    ) {
+        resources.add("semantic/concept-surfaces-" + language + "-v1.yaml");
+        for (String domain : ROLLOUT_SURFACE_DOMAINS) {
+            for (String batch : ROLLOUT_BATCHES) {
+                resources.add(
+                        "semantic/concept-surfaces-"
+                                + language
+                                + "-"
+                                + domain
+                                + "-batch-"
+                                + batch
+                                + "-v2.yaml"
+                );
+            }
+        }
     }
 
     private static List<MultilingualConceptSurfaceDefinition>

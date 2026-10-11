@@ -1,0 +1,307 @@
+version: semantic-surfaces-kk-oil-gas-mining-batch-a-v2
+languages:
+  - language: kk
+    surfaces:
+      - conceptId: oil_gas_mining.upstream_operations.seismic_interpretation_workflow
+        preferredPhrase: сейсмикалық интерпретация үдерісі
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.prospect_risk_assessment
+        preferredPhrase: перспектива тәуекелін бағалау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.exploration_well_design
+        preferredPhrase: барлау ұңғымасын жобалау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.appraisal_drilling_program
+        preferredPhrase: бағалау бұрғылау бағдарламасы
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.development_well_planning
+        preferredPhrase: өндіру ұңғымасын жоспарлау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.well_trajectory_design
+        preferredPhrase: ұңғыма траекториясын жобалау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.drilling_mud_program
+        preferredPhrase: бұрғылау ерітіндісі бағдарламасы
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.casing_design_program
+        preferredPhrase: шегендеу тізбегін жобалау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.cementing_job_design
+        preferredPhrase: цементтеу жұмысын жобалау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.well_control_procedure
+        preferredPhrase: ұңғыманы бақылау рәсімі
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.blowout_preventer_test
+        preferredPhrase: атқылауға қарсы жабдық сынағы
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.managed_pressure_drilling
+        preferredPhrase: басқарылатын қысыммен бұрғылау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.directional_drilling_survey
+        preferredPhrase: бағытталған бұрғылау өлшемдері
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.formation_pressure_estimate
+        preferredPhrase: қабат қысымын бағалау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.pore_pressure_prediction
+        preferredPhrase: кеуектік қысымды болжау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.fracture_gradient_estimate
+        preferredPhrase: жарылу градиентін бағалау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.production_logging_survey
+        preferredPhrase: өндіру каротаждық зерттеуі
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.well_stimulation_design
+        preferredPhrase: ұңғыманы қарқындатуды жобалау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.hydraulic_fracturing_treatment
+        preferredPhrase: гидравликалық жару өңдеуі
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.acid_stimulation_program
+        preferredPhrase: қышқылдық өңдеу бағдарламасы
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.artificial_lift_selection
+        preferredPhrase: жасанды көтеруді таңдау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.production_decline_analysis
+        preferredPhrase: өндіру төмендеуін талдау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.water_cut_monitoring
+        preferredPhrase: сулану үлесін бақылау
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.gas_oil_ratio
+        preferredPhrase: газ мұнай қатынасы
+        aliases: []
+      - conceptId: oil_gas_mining.upstream_operations.well_integrity_management
+        preferredPhrase: ұңғыма тұтастығын басқару
+        aliases: []
+
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_hydraulic_model
+        preferredPhrase: құбырдың гидравликалық моделі
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_capacity_analysis
+        preferredPhrase: құбыр өткізу қабілетін талдау
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_pressure_control
+        preferredPhrase: құбыр қысымын басқару
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.compressor_station_operation
+        preferredPhrase: компрессор станциясын пайдалану
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pump_station_operation
+        preferredPhrase: сорғы станциясын пайдалану
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.line_pack_management
+        preferredPhrase: құбыр қорын басқару
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.gas_quality_specification
+        preferredPhrase: газ сапасы спецификациясы
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.natural_gas_dehydration
+        preferredPhrase: табиғи газды сусыздандыру
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.gas_sweetening_process
+        preferredPhrase: газды күкірттен тазарту
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.liquids_recovery_unit
+        preferredPhrase: сұйықтықтарды бөлу қондырғысы
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.custody_transfer_measurement
+        preferredPhrase: коммерциялық есепке алу өлшемі
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.metering_station_calibration
+        preferredPhrase: өлшеу станциясын калибрлеу
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_leak_detection
+        preferredPhrase: құбыр ағып кетуін анықтау
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_corrosion_monitoring
+        preferredPhrase: құбыр коррозиясын бақылау
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.cathodic_protection_system
+        preferredPhrase: катодтық қорғау жүйесі
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.in_line_inspection
+        preferredPhrase: құбырішілік инспекция
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pigging_operation_schedule
+        preferredPhrase: құбыр тазалау кестесі
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.right_of_way_inspection
+        preferredPhrase: құбыр дәлізін тексеру
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.terminal_tank_management
+        preferredPhrase: терминал резервуарларын басқару
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.tank_inventory_reconciliation
+        preferredPhrase: резервуар қорын салыстыру
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.marine_loading_operation
+        preferredPhrase: теңіздік тиеу операциясы
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.truck_loading_terminal
+        preferredPhrase: автоцистерна тиеу терминалы
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.pipeline_nomination_process
+        preferredPhrase: құбыр номинациясы үдерісі
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.gas_balancing_process
+        preferredPhrase: газ теңгерімдеу үдерісі
+        aliases: []
+      - conceptId: oil_gas_mining.midstream_operations.storage_injection_withdrawal
+        preferredPhrase: қоймаға айдау алу
+        aliases: []
+
+      - conceptId: oil_gas_mining.downstream_operations.refinery_crude_slate
+        preferredPhrase: мұнай өңдеу шикізат құрамы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.crude_assay_analysis
+        preferredPhrase: мұнай құрамын талдау
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.atmospheric_distillation_unit
+        preferredPhrase: атмосфералық айдау қондырғысы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.vacuum_distillation_unit
+        preferredPhrase: вакуумдық айдау қондырғысы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.fluid_catalytic_cracking
+        preferredPhrase: сұйық каталитикалық крекинг
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.hydrocracking_process_unit
+        preferredPhrase: гидрокрекинг технологиялық қондырғысы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.catalytic_reforming_unit
+        preferredPhrase: каталитикалық риформинг қондырғысы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.hydrotreating_process_unit
+        preferredPhrase: гидротазалау технологиялық қондырғысы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.delayed_coking_unit
+        preferredPhrase: баяу кокстеу қондырғысы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.sulfur_recovery_unit
+        preferredPhrase: күкірт өндіру қондырғысы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_hydrogen_balance
+        preferredPhrase: зауыт сутегі теңгерімі
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_steam_balance
+        preferredPhrase: зауыт бу теңгерімі
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_fuel_gas
+        preferredPhrase: зауыт отын газы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.octane_blending_model
+        preferredPhrase: октандық араластыру моделі
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.gasoline_pool_optimization
+        preferredPhrase: бензин пулын оңтайландыру
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.diesel_cetane_specification
+        preferredPhrase: дизель цетан спецификациясы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_margin_analysis
+        preferredPhrase: өңдеу маржасын талдау
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.gross_refining_margin
+        preferredPhrase: жалпы өңдеу маржасы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_energy_intensity
+        preferredPhrase: зауыт энергия сыйымдылығы
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.process_heater_efficiency
+        preferredPhrase: технологиялық пеш тиімділігі
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.flare_gas_recovery
+        preferredPhrase: алаулы газды қалпына келтіру
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.refinery_emissions_monitoring
+        preferredPhrase: зауыт шығарындыларын бақылау
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.turnaround_scope_planning
+        preferredPhrase: күрделі жөндеу көлемін жоспарлау
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.unit_reliability_monitoring
+        preferredPhrase: қондырғы сенімділігін бақылау
+        aliases: []
+      - conceptId: oil_gas_mining.downstream_operations.product_quality_giveaway
+        preferredPhrase: өнім сапасының артық қоры
+        aliases: []
+
+      - conceptId: oil_gas_mining.mining_operations.exploration_drilling_campaign
+        preferredPhrase: барлау бұрғылау науқаны
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.geological_block_model
+        preferredPhrase: геологиялық блоктық модель
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.grade_tonnage_curve
+        preferredPhrase: құрам тоннаж қисығы
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.resource_estimation_method
+        preferredPhrase: ресурсты бағалау әдісі
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.reserve_conversion_process
+        preferredPhrase: қорды түрлендіру үдерісі
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.pit_optimization_model
+        preferredPhrase: карьерді оңтайландыру моделі
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mine_production_schedule
+        preferredPhrase: кен өндіру кестесі
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.strip_ratio_analysis
+        preferredPhrase: аршу коэффициентін талдау
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.waste_rock_management
+        preferredPhrase: бос жынысты басқару
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.ore_grade_control
+        preferredPhrase: кен құрамын бақылау
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.blast_design_pattern
+        preferredPhrase: жарылыс сұлбасын жобалау
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.drill_blast_operation
+        preferredPhrase: бұрғылау жару операциясы
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.haul_truck_dispatch
+        preferredPhrase: автосамосвал диспетчерлеуі
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.crusher_throughput_optimization
+        preferredPhrase: ұсатқыш өнімділігін оңтайландыру
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.grinding_circuit_performance
+        preferredPhrase: ұнтақтау тізбегі өнімділігі
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.flotation_recovery_rate
+        preferredPhrase: флотациялық алу коэффициенті
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.leach_recovery_rate
+        preferredPhrase: шаймалау алу коэффициенті
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.metallurgical_balance_calculation
+        preferredPhrase: металлургиялық теңгерімді есептеу
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.tailings_storage_facility
+        preferredPhrase: қалдық сақтау қоймасы
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.tailings_dam_stability
+        preferredPhrase: қалдық бөгеті тұрақтылығы
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mine_dewatering_system
+        preferredPhrase: кенішті сусыздандыру жүйесі
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.ventilation_network_design
+        preferredPhrase: желдету желісін жобалау
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.ground_control_monitoring
+        preferredPhrase: тау жынысын бақылау
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.mine_closure_plan
+        preferredPhrase: кенішті жабу жоспары
+        aliases: []
+      - conceptId: oil_gas_mining.mining_operations.reclamation_liability_estimate
+        preferredPhrase: рекультивация міндеттемесін бағалау
+        aliases: []

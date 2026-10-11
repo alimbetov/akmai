@@ -1,0 +1,112 @@
+version: semantic-concepts-en-insurance-batch-d-v2
+domains:
+  - domainId: insurance
+    subdomains:
+      - id: underwriting_pricing
+        phrases:
+          - risk appetite calibration
+          - underwriting capacity allocation
+          - delegated underwriting authority
+          - policy quotation workflow
+          - quote bind workflow
+          - premium leakage analysis
+          - rate change governance
+          - pricing exception approval
+          - underwriting audit program
+          - portfolio risk selection
+          - underwriting segmentation model
+          - exposure base selection
+          - rate indication method
+          - technical rate review
+          - commercial pricing adjustment
+          - broker commission loading
+          - acquisition cost loading
+          - reinsurance cost allocation
+          - catastrophe pricing surcharge
+          - minimum premium rule
+          - policy fee structure
+          - premium installment factor
+          - renewal offer strategy
+          - underwriter workload allocation
+          - underwriting decision quality
+      - id: claims_management
+        phrases:
+          - claim intake automation
+          - claim assignment rules
+          - claims severity segmentation
+          - complexity based routing
+          - reserve change governance
+          - claims authority matrix
+          - claims payment control
+          - settlement approval workflow
+          - litigation management strategy
+          - defense counsel management
+          - expert witness management
+          - independent adjuster management
+          - medical bill review
+          - bodily injury reserve
+          - property claim reserve
+          - workers compensation reserve
+          - catastrophe claim triage
+          - fraud referral process
+          - special investigation unit
+          - claims anomaly detection
+          - recovery opportunity identification
+          - subrogation demand process
+          - salvage disposal process
+          - claims closure governance
+          - claims complaint handling
+      - id: life_health
+        phrases:
+          - life underwriting evidence
+          - paramedical examination requirement
+          - medical evidence review
+          - financial underwriting assessment
+          - insurable interest verification
+          - policy issue age
+          - attained age rating
+          - benefit waiting period
+          - elimination period provision
+          - guaranteed renewal provision
+          - conversion option value
+          - policy reinstatement process
+          - premium holiday provision
+          - annuity accumulation phase
+          - annuity decumulation phase
+          - longevity hedge strategy
+          - mortality experience study
+          - morbidity experience study
+          - persistency experience study
+          - health plan enrollment
+          - benefit coordination process
+          - provider contract negotiation
+          - health utilization review
+          - case management intervention
+          - population health stratification
+      - id: property_casualty
+        phrases:
+          - property exposure schedule
+          - statement of values
+          - property exposure geocoding
+          - business interruption worksheet
+          - business continuity exposure
+          - equipment breakdown risk
+          - pressure vessel exposure
+          - cargo accumulation exposure
+          - marine hull exposure
+          - aviation liability exposure
+          - cyber business interruption
+          - cyber extortion coverage
+          - privacy liability coverage
+          - product recall coverage
+          - fiduciary liability exposure
+          - public liability exposure
+          - employers liability exposure
+          - construction defect claim
+          - environmental cleanup expense
+          - pollution legal liability
+          - catastrophe aggregate limit
+          - policy sublimit structure
+          - self insured retention
+          - loss sensitive rating
+          - retrospective premium adjustment

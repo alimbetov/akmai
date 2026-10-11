@@ -1,0 +1,112 @@
+version: semantic-concepts-en-manufacturing-batch-c-v2
+domains:
+  - domainId: manufacturing
+    subdomains:
+      - id: production_systems
+        phrases:
+          - demand driven scheduling
+          - production takt alignment
+          - bottleneck buffer management
+          - drum buffer rope
+          - constraint exploitation plan
+          - production campaign sequencing
+          - finite resource allocation
+          - labor skill matrix
+          - operator staffing model
+          - shift pattern optimization
+          - overtime utilization analysis
+          - production loss tree
+          - downtime loss analysis
+          - speed loss analysis
+          - minor stoppage analysis
+          - startup yield loss
+          - production mix optimization
+          - product family scheduling
+          - work center queue
+          - dispatch rule optimization
+          - order release policy
+          - manufacturing throughput accounting
+          - production readiness review
+          - line ramp up
+          - capacity debottlenecking plan
+      - id: quality_management
+        phrases:
+          - acceptance sampling plan
+          - process audit checklist
+          - layered process audit
+          - control plan review
+          - inspection method validation
+          - measurement uncertainty analysis
+          - calibration interval optimization
+          - gauge capability study
+          - defect pareto analysis
+          - defect escape rate
+          - customer return analysis
+          - warranty claim trend
+          - containment effectiveness review
+          - corrective action verification
+          - supplier deviation approval
+          - quality waiver process
+          - product conformity review
+          - process conformity review
+          - capability index monitoring
+          - defect density metric
+          - first time quality
+          - right first time
+          - scrap cost analysis
+          - rework cost analysis
+          - quality loss function
+      - id: maintenance_reliability
+        phrases:
+          - mean time failure
+          - mean downtime analysis
+          - availability loss analysis
+          - maintainability improvement plan
+          - reliability allocation model
+          - reliability prediction model
+          - degradation trend analysis
+          - condition indicator trend
+          - vibration spectrum analysis
+          - bearing defect detection
+          - lubrication contamination control
+          - lubricant analysis program
+          - infrared thermography program
+          - electrical signature analysis
+          - ultrasound leak detection
+          - predictive work generation
+          - maintenance trigger threshold
+          - planned work percentage
+          - wrench time analysis
+          - maintenance schedule attainment
+          - backlog age analysis
+          - spare consumption forecast
+          - repair turnaround time
+          - equipment life extension
+          - reliability improvement program
+      - id: industrial_operations
+        phrases:
+          - control valve performance
+          - loop tuning optimization
+          - controller mode analysis
+          - instrument calibration management
+          - sensor drift monitoring
+          - analyzer performance monitoring
+          - process constraint monitoring
+          - operating window control
+          - alarm priority management
+          - alarm shelving policy
+          - alarm deadband setting
+          - interlock bypass control
+          - override management process
+          - safety barrier assurance
+          - protection layer verification
+          - trip system testing
+          - emergency response drill
+          - operating procedure compliance
+          - shift handover process
+          - operator workload assessment
+          - process energy intensity
+          - utility demand forecast
+          - water balance monitoring
+          - waste stream reduction
+          - process emissions monitoring

@@ -1,0 +1,112 @@
+version: semantic-concepts-en-computer-science-ai-batch-d-v2
+domains:
+  - domainId: computer_science_ai
+    subdomains:
+      - id: algorithms_data_structures
+        phrases:
+          - dynamic programming optimization
+          - bitset optimization technique
+          - persistent segment tree
+          - wavelet tree structure
+          - van Emde Boas tree
+          - Cartesian tree construction
+          - sparse table query
+          - binary lifting technique
+          - Euler tour technique
+          - dominator tree algorithm
+          - minimum cost flow
+          - circulation feasibility algorithm
+          - assignment problem algorithm
+          - Hungarian matching algorithm
+          - maximum clique search
+          - minimum vertex cover
+          - graph coloring heuristic
+          - matroid intersection algorithm
+          - integer programming relaxation
+          - maximum flow scaling algorithm
+          - branch and cut
+          - push relabel algorithm
+          - randomized contraction algorithm
+          - sketching dimensionality reduction
+          - external sorting algorithm
+      - id: software_systems
+        phrases:
+          - linearizability verification method
+          - serializability anomaly detection
+          - split brain prevention
+          - lease renewal protocol
+          - distributed transaction fencing
+          - write conflict detection
+          - replication conflict resolution
+          - quorum read repair
+          - follower read consistency
+          - replica promotion workflow
+          - point in time recovery
+          - incremental backup strategy
+          - disaster recovery objective
+          - recovery point objective
+          - recovery time objective
+          - graceful failover procedure
+          - service dependency graph
+          - cascading failure containment
+          - resource quota enforcement
+          - workload isolation policy
+          - noisy neighbor mitigation
+          - request coalescing strategy
+          - adaptive concurrency limit
+          - brownout control strategy
+          - runtime feature flag
+      - id: machine_learning
+        phrases:
+          - inference serving pipeline
+          - model serving latency
+          - inference throughput optimization
+          - batch inference scheduling
+          - online inference endpoint
+          - feature store consistency
+          - training serving skew
+          - model registry governance
+          - model promotion workflow
+          - shadow model evaluation
+          - champion challenger model
+          - drift remediation workflow
+          - feature drift analysis
+          - prediction stability index
+          - calibration drift monitoring
+          - uncertainty aware routing
+          - abstention policy design
+          - selective prediction method
+          - cost sensitive learning
+          - ordinal classification model
+          - survival prediction model
+          - uplift modeling method
+          - causal machine learning
+          - counterfactual prediction model
+          - synthetic control model
+      - id: data_nlp
+        phrases:
+          - retrieval failure taxonomy
+          - retrieval error analysis
+          - query reformulation policy
+          - semantic routing policy
+          - domain aware retrieval
+          - hierarchical retrieval strategy
+          - parent child retrieval
+          - multi vector retrieval
+          - late fusion retrieval
+          - query document interaction
+          - reranker calibration analysis
+          - retrieval confidence estimate
+          - abstention threshold tuning
+          - evidence sufficiency scoring
+          - evidence contradiction scoring
+          - citation precision evaluation
+          - citation recall evaluation
+          - grounded answer rate
+          - unanswerable query detection
+          - answerability classification model
+          - prompt context allocation
+          - context truncation policy
+          - context redundancy reduction
+          - retrieval cost budgeting
+          - semantic retrieval observability

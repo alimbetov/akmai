@@ -1,0 +1,112 @@
+version: semantic-concepts-en-chemistry-materials-batch-d-v2
+domains:
+  - domainId: chemistry_materials
+    subdomains:
+      - id: organic_chemistry
+        phrases:
+          - route selection matrix
+          - synthetic step economy
+          - reaction telescoping strategy
+          - impurity purge factor
+          - genotoxic impurity control
+          - residual solvent control
+          - reagent hazard assessment
+          - thermal runaway potential
+          - calorimetric safety screening
+          - mixing sensitivity analysis
+          - mass transfer limitation
+          - reaction induction period
+          - catalyst poisoning mechanism
+          - ligand screening workflow
+          - solvent recycle strategy
+          - aqueous workup design
+          - phase separation control
+          - extraction efficiency assessment
+          - crystallization seeding strategy
+          - polymorph selection process
+          - polymorph conversion risk
+          - mother liquor recycle
+          - reaction endpoint monitoring
+          - process analytical technology
+          - scale dependent mixing
+      - id: analytical_chemistry
+        phrases:
+          - measurement system traceability
+          - metrological comparability assessment
+          - analytical decision limit
+          - detection capability estimate
+          - calibration curve weighting
+          - heteroscedastic regression model
+          - matrix interference correction
+          - surrogate standard method
+          - reference standard qualification
+          - certified reference material
+          - measurement repeatability limit
+          - reproducibility limit estimate
+          - laboratory bias monitoring
+          - analytical drift monitoring
+          - control sample trending
+          - outlier result investigation
+          - atypical result investigation
+          - out of specification
+          - out of trend
+          - method transfer protocol
+          - method equivalence assessment
+          - instrument comparability study
+          - measurement robustness assessment
+          - laboratory uncertainty budget
+          - analytical lifecycle management
+      - id: physical_chemistry
+        phrases:
+          - chemical equilibrium perturbation
+          - Le Chatelier response
+          - thermodynamic cycle analysis
+          - chemical exergy calculation
+          - Gibbs Duhem relation
+          - phase rule analysis
+          - azeotrope composition analysis
+          - vapor pressure correlation
+          - excess volume calculation
+          - partial pressure equilibrium
+          - interfacial adsorption kinetics
+          - heterogeneous nucleation mechanism
+          - homogeneous nucleation mechanism
+          - crystal growth morphology
+          - diffusion boundary layer
+          - ionic strength correction
+          - Debye Huckel model
+          - electrochemical overpotential analysis
+          - Butler Volmer kinetics
+          - Tafel slope analysis
+          - electrode polarization resistance
+          - charge transfer resistance
+          - double layer structure
+          - molecular solvation shell
+          - solvent reorganization energy
+      - id: materials_science
+        phrases:
+          - creep damage accumulation
+          - fatigue damage accumulation
+          - crack closure effect
+          - fracture process zone
+          - residual life assessment
+          - damage tolerance analysis
+          - notch sensitivity factor
+          - stress concentration factor
+          - microvoid coalescence mechanism
+          - cleavage fracture initiation
+          - corrosion product characterization
+          - galvanic corrosion risk
+          - pitting corrosion susceptibility
+          - crevice corrosion susceptibility
+          - sensitization susceptibility assessment
+          - hydrogen diffusion behavior
+          - embrittlement susceptibility testing
+          - coating defect density
+          - interface fracture energy
+          - adhesive failure mechanism
+          - cohesive failure mechanism
+          - composite delamination growth
+          - fiber orientation distribution
+          - anisotropic material response
+          - microstructure evolution model

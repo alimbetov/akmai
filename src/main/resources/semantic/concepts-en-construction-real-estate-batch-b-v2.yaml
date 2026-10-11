@@ -1,0 +1,112 @@
+version: semantic-concepts-en-construction-real-estate-batch-b-v2
+domains:
+  - domainId: construction_real_estate
+    subdomains:
+      - id: design_construction
+        phrases:
+          - schematic design review
+          - design development package
+          - structural framing plan
+          - foundation settlement analysis
+          - wind load analysis
+          - seismic load analysis
+          - lateral stability system
+          - façade performance testing
+          - waterproofing system design
+          - roof drainage design
+          - mechanical load calculation
+          - electrical load schedule
+          - lighting design calculation
+          - fire alarm design
+          - sprinkler hydraulic calculation
+          - construction logistics study
+          - temporary access planning
+          - crane lifting plan
+          - site safety coordination
+          - inspection test plan
+          - material approval process
+          - mockup approval process
+          - commissioning readiness review
+          - practical completion inspection
+          - defect liability period
+      - id: real_estate_market
+        phrases:
+          - property income capitalization
+          - property terminal value
+          - stabilized occupancy rate
+          - lease event schedule
+          - weighted average lease
+          - tenant credit quality
+          - rental growth assumption
+          - operating expense ratio
+          - property tax burden
+          - service charge recovery
+          - capital expenditure reserve
+          - tenant rollover risk
+          - leasing velocity analysis
+          - rent free period
+          - lease break option
+          - renewal option value
+          - property market liquidity
+          - transaction comparables analysis
+          - development profit margin
+          - development yield analysis
+          - land acquisition basis
+          - residual land value
+          - property hold period
+          - exit capitalization rate
+          - portfolio diversification strategy
+      - id: facilities_management
+        phrases:
+          - facilities asset register
+          - facility performance indicator
+          - building condition index
+          - maintenance response time
+          - maintenance completion rate
+          - facility service request
+          - asset replacement planning
+          - lifecycle cost analysis
+          - building system inspection
+          - mechanical equipment servicing
+          - electrical maintenance program
+          - plumbing maintenance program
+          - fire protection maintenance
+          - vertical transport maintenance
+          - space allocation planning
+          - occupancy cost analysis
+          - utility cost benchmarking
+          - water consumption monitoring
+          - indoor comfort monitoring
+          - cleaning performance audit
+          - security incident monitoring
+          - vendor performance management
+          - facilities contract renewal
+          - facility compliance register
+          - building resilience planning
+      - id: project_controls
+        phrases:
+          - baseline change control
+          - schedule risk analysis
+          - cost risk analysis
+          - quantitative risk analysis
+          - probabilistic cost forecast
+          - probabilistic schedule forecast
+          - earned schedule analysis
+          - progress curve analysis
+          - resource loading analysis
+          - resource leveling plan
+          - procurement schedule integration
+          - contractor schedule review
+          - delay analysis method
+          - time impact analysis
+          - extension time assessment
+          - change order valuation
+          - claims schedule analysis
+          - forecast accuracy review
+          - contingency drawdown analysis
+          - trend management process
+          - project controls assurance
+          - cost code structure
+          - work breakdown structure
+          - schedule coding structure
+          - project reporting calendar

@@ -1,0 +1,307 @@
+version: semantic-surfaces-ru-insurance-batch-d-v2
+languages:
+  - language: ru
+    surfaces:
+      - conceptId: insurance.underwriting_pricing.risk_appetite_calibration
+        preferredPhrase: калибровка риск аппетита
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.underwriting_capacity_allocation
+        preferredPhrase: распределение андеррайтинговой емкости
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.delegated_underwriting_authority
+        preferredPhrase: делегированные андеррайтинговые полномочия
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.policy_quotation_workflow
+        preferredPhrase: процесс расчета предложения по полису
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.quote_bind_workflow
+        preferredPhrase: процесс заключения договора по предложению
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.premium_leakage_analysis
+        preferredPhrase: анализ утечки страховой премии
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.rate_change_governance
+        preferredPhrase: управление изменением тарифов
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.pricing_exception_approval
+        preferredPhrase: одобрение исключения в тарификации
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.underwriting_audit_program
+        preferredPhrase: программа аудита андеррайтинга
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.portfolio_risk_selection
+        preferredPhrase: отбор рисков портфеля
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.underwriting_segmentation_model
+        preferredPhrase: модель сегментации андеррайтинга
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.exposure_base_selection
+        preferredPhrase: выбор базы экспозиции
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.rate_indication_method
+        preferredPhrase: метод определения тарифа
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.technical_rate_review
+        preferredPhrase: проверка технического тарифа
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.commercial_pricing_adjustment
+        preferredPhrase: коммерческая корректировка тарифа
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.broker_commission_loading
+        preferredPhrase: нагрузка брокерской комиссии
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.acquisition_cost_loading
+        preferredPhrase: нагрузка расходов на привлечение
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.reinsurance_cost_allocation
+        preferredPhrase: распределение стоимости перестрахования
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.catastrophe_pricing_surcharge
+        preferredPhrase: катастрофическая тарифная надбавка
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.minimum_premium_rule
+        preferredPhrase: правило минимальной премии
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.policy_fee_structure
+        preferredPhrase: структура сборов по полису
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.premium_installment_factor
+        preferredPhrase: фактор рассрочки страховой премии
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.renewal_offer_strategy
+        preferredPhrase: стратегия предложения на продление
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.underwriter_workload_allocation
+        preferredPhrase: распределение нагрузки андеррайтеров
+        aliases: []
+      - conceptId: insurance.underwriting_pricing.underwriting_decision_quality
+        preferredPhrase: качество андеррайтингового решения
+        aliases: []
+
+      - conceptId: insurance.claims_management.claim_intake_automation
+        preferredPhrase: автоматизация приема требований
+        aliases: []
+      - conceptId: insurance.claims_management.claim_assignment_rules
+        preferredPhrase: правила назначения требований
+        aliases: []
+      - conceptId: insurance.claims_management.claims_severity_segmentation
+        preferredPhrase: сегментация требований по тяжести
+        aliases: []
+      - conceptId: insurance.claims_management.complexity_based_routing
+        preferredPhrase: маршрутизация по сложности
+        aliases: []
+      - conceptId: insurance.claims_management.reserve_change_governance
+        preferredPhrase: управление изменением резервов
+        aliases: []
+      - conceptId: insurance.claims_management.claims_authority_matrix
+        preferredPhrase: матрица полномочий по требованиям
+        aliases: []
+      - conceptId: insurance.claims_management.claims_payment_control
+        preferredPhrase: контроль выплат по требованиям
+        aliases: []
+      - conceptId: insurance.claims_management.settlement_approval_workflow
+        preferredPhrase: процесс одобрения урегулирования
+        aliases: []
+      - conceptId: insurance.claims_management.litigation_management_strategy
+        preferredPhrase: стратегия управления судебными спорами
+        aliases: []
+      - conceptId: insurance.claims_management.defense_counsel_management
+        preferredPhrase: управление защитными юристами
+        aliases: []
+      - conceptId: insurance.claims_management.expert_witness_management
+        preferredPhrase: управление экспертами свидетелями
+        aliases: []
+      - conceptId: insurance.claims_management.independent_adjuster_management
+        preferredPhrase: управление независимыми урегулировщиками
+        aliases: []
+      - conceptId: insurance.claims_management.medical_bill_review
+        preferredPhrase: проверка медицинских счетов
+        aliases: []
+      - conceptId: insurance.claims_management.bodily_injury_reserve
+        preferredPhrase: резерв по телесным повреждениям
+        aliases: []
+      - conceptId: insurance.claims_management.property_claim_reserve
+        preferredPhrase: резерв по имущественным требованиям
+        aliases: []
+      - conceptId: insurance.claims_management.workers_compensation_reserve
+        preferredPhrase: резерв по компенсациям работникам
+        aliases: []
+      - conceptId: insurance.claims_management.catastrophe_claim_triage
+        preferredPhrase: триаж катастрофических требований
+        aliases: []
+      - conceptId: insurance.claims_management.fraud_referral_process
+        preferredPhrase: процесс направления подозрений на мошенничество
+        aliases: []
+      - conceptId: insurance.claims_management.special_investigation_unit
+        preferredPhrase: подразделение специальных расследований
+        aliases: []
+      - conceptId: insurance.claims_management.claims_anomaly_detection
+        preferredPhrase: выявление аномалий требований
+        aliases: []
+      - conceptId: insurance.claims_management.recovery_opportunity_identification
+        preferredPhrase: выявление возможностей возврата
+        aliases: []
+      - conceptId: insurance.claims_management.subrogation_demand_process
+        preferredPhrase: процесс суброгационного требования
+        aliases: []
+      - conceptId: insurance.claims_management.salvage_disposal_process
+        preferredPhrase: процесс реализации годных остатков
+        aliases: []
+      - conceptId: insurance.claims_management.claims_closure_governance
+        preferredPhrase: управление закрытием требований
+        aliases: []
+      - conceptId: insurance.claims_management.claims_complaint_handling
+        preferredPhrase: обработка жалоб по требованиям
+        aliases: []
+
+      - conceptId: insurance.life_health.life_underwriting_evidence
+        preferredPhrase: доказательства для андеррайтинга жизни
+        aliases: []
+      - conceptId: insurance.life_health.paramedical_examination_requirement
+        preferredPhrase: требование парамедицинского обследования
+        aliases: []
+      - conceptId: insurance.life_health.medical_evidence_review
+        preferredPhrase: проверка медицинских доказательств
+        aliases: []
+      - conceptId: insurance.life_health.financial_underwriting_assessment
+        preferredPhrase: финансовая андеррайтинговая оценка
+        aliases: []
+      - conceptId: insurance.life_health.insurable_interest_verification
+        preferredPhrase: проверка страхового интереса
+        aliases: []
+      - conceptId: insurance.life_health.policy_issue_age
+        preferredPhrase: возраст выпуска полиса
+        aliases: []
+      - conceptId: insurance.life_health.attained_age_rating
+        preferredPhrase: тарификация по достигнутому возрасту
+        aliases: []
+      - conceptId: insurance.life_health.benefit_waiting_period
+        preferredPhrase: период ожидания выплаты
+        aliases: []
+      - conceptId: insurance.life_health.elimination_period_provision
+        preferredPhrase: условие периода ожидания
+        aliases: []
+      - conceptId: insurance.life_health.guaranteed_renewal_provision
+        preferredPhrase: условие гарантированного продления
+        aliases: []
+      - conceptId: insurance.life_health.conversion_option_value
+        preferredPhrase: стоимость опции конвертации
+        aliases: []
+      - conceptId: insurance.life_health.policy_reinstatement_process
+        preferredPhrase: процесс восстановления полиса
+        aliases: []
+      - conceptId: insurance.life_health.premium_holiday_provision
+        preferredPhrase: условие каникул по страховой премии
+        aliases: []
+      - conceptId: insurance.life_health.annuity_accumulation_phase
+        preferredPhrase: фаза накопления аннуитета
+        aliases: []
+      - conceptId: insurance.life_health.annuity_decumulation_phase
+        preferredPhrase: фаза выплат аннуитета
+        aliases: []
+      - conceptId: insurance.life_health.longevity_hedge_strategy
+        preferredPhrase: стратегия хеджирования долголетия
+        aliases: []
+      - conceptId: insurance.life_health.mortality_experience_study
+        preferredPhrase: исследование фактической смертности
+        aliases: []
+      - conceptId: insurance.life_health.morbidity_experience_study
+        preferredPhrase: исследование фактической заболеваемости
+        aliases: []
+      - conceptId: insurance.life_health.persistency_experience_study
+        preferredPhrase: исследование сохранения полисов
+        aliases: []
+      - conceptId: insurance.life_health.health_plan_enrollment
+        preferredPhrase: подключение к медицинскому плану
+        aliases: []
+      - conceptId: insurance.life_health.benefit_coordination_process
+        preferredPhrase: процесс координации страховых выплат
+        aliases: []
+      - conceptId: insurance.life_health.provider_contract_negotiation
+        preferredPhrase: переговоры по договору с медицинским поставщиком
+        aliases: []
+      - conceptId: insurance.life_health.health_utilization_review
+        preferredPhrase: анализ использования медицинских услуг
+        aliases: []
+      - conceptId: insurance.life_health.case_management_intervention
+        preferredPhrase: вмешательство по управлению случаем
+        aliases: []
+      - conceptId: insurance.life_health.population_health_stratification
+        preferredPhrase: стратификация здоровья населения
+        aliases: []
+
+      - conceptId: insurance.property_casualty.property_exposure_schedule
+        preferredPhrase: ведомость имущественной экспозиции
+        aliases: []
+      - conceptId: insurance.property_casualty.statement_of_values
+        preferredPhrase: ведомость страховых стоимостей
+        aliases: []
+      - conceptId: insurance.property_casualty.property_exposure_geocoding
+        preferredPhrase: геокодирование имущественной экспозиции
+        aliases: []
+      - conceptId: insurance.property_casualty.business_interruption_worksheet
+        preferredPhrase: расчетный лист перерыва в деятельности
+        aliases: []
+      - conceptId: insurance.property_casualty.business_continuity_exposure
+        preferredPhrase: экспозиция непрерывности бизнеса
+        aliases: []
+      - conceptId: insurance.property_casualty.equipment_breakdown_risk
+        preferredPhrase: риск поломки оборудования
+        aliases: []
+      - conceptId: insurance.property_casualty.pressure_vessel_exposure
+        preferredPhrase: экспозиция сосудов под давлением
+        aliases: []
+      - conceptId: insurance.property_casualty.cargo_accumulation_exposure
+        preferredPhrase: экспозиция накопления грузов
+        aliases: []
+      - conceptId: insurance.property_casualty.marine_hull_exposure
+        preferredPhrase: экспозиция морского корпуса
+        aliases: []
+      - conceptId: insurance.property_casualty.aviation_liability_exposure
+        preferredPhrase: экспозиция авиационной ответственности
+        aliases: []
+      - conceptId: insurance.property_casualty.cyber_business_interruption
+        preferredPhrase: киберперерыв в деятельности
+        aliases: []
+      - conceptId: insurance.property_casualty.cyber_extortion_coverage
+        preferredPhrase: покрытие кибервымогательства
+        aliases: []
+      - conceptId: insurance.property_casualty.privacy_liability_coverage
+        preferredPhrase: покрытие ответственности за конфиденциальность
+        aliases: []
+      - conceptId: insurance.property_casualty.product_recall_coverage
+        preferredPhrase: покрытие отзыва продукции
+        aliases: []
+      - conceptId: insurance.property_casualty.fiduciary_liability_exposure
+        preferredPhrase: экспозиция фидуциарной ответственности
+        aliases: []
+      - conceptId: insurance.property_casualty.public_liability_exposure
+        preferredPhrase: экспозиция публичной ответственности
+        aliases: []
+      - conceptId: insurance.property_casualty.employers_liability_exposure
+        preferredPhrase: экспозиция ответственности работодателя
+        aliases: []
+      - conceptId: insurance.property_casualty.construction_defect_claim
+        preferredPhrase: требование по строительному дефекту
+        aliases: []
+      - conceptId: insurance.property_casualty.environmental_cleanup_expense
+        preferredPhrase: расходы на экологическую очистку
+        aliases: []
+      - conceptId: insurance.property_casualty.pollution_legal_liability
+        preferredPhrase: юридическая ответственность за загрязнение
+        aliases: []
+      - conceptId: insurance.property_casualty.catastrophe_aggregate_limit
+        preferredPhrase: агрегатный катастрофический лимит
+        aliases: []
+      - conceptId: insurance.property_casualty.policy_sublimit_structure
+        preferredPhrase: структура сублимитов полиса
+        aliases: []
+      - conceptId: insurance.property_casualty.self_insured_retention
+        preferredPhrase: собственное удержание страхователя
+        aliases: []
+      - conceptId: insurance.property_casualty.loss_sensitive_rating
+        preferredPhrase: тарификация с учетом фактических убытков
+        aliases: []
+      - conceptId: insurance.property_casualty.retrospective_premium_adjustment
+        preferredPhrase: ретроспективная корректировка премии
+        aliases: []

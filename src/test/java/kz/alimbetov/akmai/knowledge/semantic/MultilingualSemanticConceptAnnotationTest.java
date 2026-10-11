@@ -12,10 +12,20 @@ class MultilingualSemanticConceptAnnotationTest {
 
     private final SemanticDomainCatalog domainCatalog =
             new SemanticDomainCatalog();
+    private final SemanticMorphologyRegistry morphology =
+            SemanticTestMorphology.registry();
+    private final SemanticConceptSurfaceRegistry surfaceRegistry =
+            new SemanticConceptSurfaceRegistry(
+                    new EnglishSemanticConceptCatalog(domainCatalog),
+                    morphology
+            );
     private final SemanticChunkAnnotator annotator =
             new SemanticChunkAnnotator(
                     new SemanticDomainRouter(domainCatalog),
-                    matcher()
+                    new SemanticConceptMatcher(
+                            surfaceRegistry,
+                            morphology
+                    )
             );
 
     @Test
@@ -33,7 +43,7 @@ class MultilingualSemanticConceptAnnotationTest {
         assertThat(annotated.metadata())
                 .containsEntry(
                         "semanticConceptVersion",
-                        "semantic-surfaces-ru-v1"
+                        surfaceRegistry.version("ru")
                 );
     }
 
@@ -55,7 +65,7 @@ class MultilingualSemanticConceptAnnotationTest {
         assertThat(annotated.metadata())
                 .containsEntry(
                         "semanticConceptVersion",
-                        "semantic-surfaces-kk-v1"
+                        surfaceRegistry.version("kk")
                 );
     }
 
@@ -75,7 +85,7 @@ class MultilingualSemanticConceptAnnotationTest {
         assertThat(annotated.metadata())
                 .containsEntry(
                         "semanticConceptVersion",
-                        "semantic-surfaces-zh-v1"
+                        surfaceRegistry.version("zh")
                 );
     }
 
@@ -84,38 +94,31 @@ class MultilingualSemanticConceptAnnotationTest {
         List<LanguageCase> cases = List.of(
                 new LanguageCase(
                         "de",
-                        "Die Kapitaladäquanzquote bleibt stabil.",
-                        "semantic-surfaces-de-v1"
+                        "Die Kapitaladäquanzquote bleibt stabil."
                 ),
                 new LanguageCase(
                         "fr",
-                        "Le ratio adéquation des fonds propres reste solide.",
-                        "semantic-surfaces-fr-v1"
+                        "Le ratio adéquation des fonds propres reste solide."
                 ),
                 new LanguageCase(
                         "es",
-                        "El ratio de adecuación de capital sigue estable.",
-                        "semantic-surfaces-es-v1"
+                        "El ratio de adecuación de capital sigue estable."
                 ),
                 new LanguageCase(
                         "pt",
-                        "O índice de adequação de capital permanece sólido.",
-                        "semantic-surfaces-pt-v1"
+                        "O índice de adequação de capital permanece sólido."
                 ),
                 new LanguageCase(
                         "it",
-                        "Il coefficiente di adeguatezza patrimoniale resta solido.",
-                        "semantic-surfaces-it-v1"
+                        "Il coefficiente di adeguatezza patrimoniale resta solido."
                 ),
                 new LanguageCase(
                         "tr",
-                        "Sermaye yeterlilik oranı güçlü kalmaktadır.",
-                        "semantic-surfaces-tr-v1"
+                        "Sermaye yeterlilik oranı güçlü kalmaktadır."
                 ),
                 new LanguageCase(
                         "el",
-                        "Ο δείκτης κεφαλαιακής επάρκειας παραμένει ισχυρός.",
-                        "semantic-surfaces-el-v1"
+                        "Ο δείκτης κεφαλαιακής επάρκειας παραμένει ισχυρός."
                 )
         );
 
@@ -134,29 +137,14 @@ class MultilingualSemanticConceptAnnotationTest {
                     .as(value.language())
                     .containsEntry(
                             "semanticConceptVersion",
-                            value.version()
+                            surfaceRegistry.version(value.language())
                     );
         }
     }
 
-    private SemanticConceptMatcher matcher() {
-        SemanticMorphologyRegistry morphology =
-                SemanticTestMorphology.registry();
-        return new SemanticConceptMatcher(
-                new SemanticConceptSurfaceRegistry(
-                        new EnglishSemanticConceptCatalog(
-                                domainCatalog
-                        ),
-                        morphology
-                ),
-                morphology
-        );
-    }
-
     private record LanguageCase(
             String language,
-            String text,
-            String version
+            String text
     ) {
     }
 

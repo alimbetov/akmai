@@ -1,0 +1,112 @@
+version: semantic-concepts-en-earth-environmental-science-batch-c-v2
+domains:
+  - domainId: earth_environmental_science
+    subdomains:
+      - id: geology
+        phrases:
+          - lithospheric flexure model
+          - crustal isostasy adjustment
+          - mantle convection pattern
+          - geodynamic stress field
+          - tectonic strain partitioning
+          - fault rupture propagation
+          - earthquake focal mechanism
+          - seismic attenuation structure
+          - receiver function analysis
+          - seismic tomography model
+          - anisotropy splitting analysis
+          - sediment compaction trend
+          - porosity depth relation
+          - diagenetic cementation history
+          - carbonate platform evolution
+          - clastic depositional system
+          - provenance mixing model
+          - detrital mineral chronology
+          - metamorphic reaction texture
+          - pressure temperature path
+          - partial melting process
+          - magma crystallization sequence
+          - volcanic plumbing system
+          - geothermal gradient estimate
+          - basin maturity modeling
+      - id: climate_science
+        phrases:
+          - climate feedback parameter
+          - effective radiative forcing
+          - transient warming response
+          - pattern effect climate
+          - ocean heat transport
+          - meridional overturning variability
+          - ocean mixed layer
+          - thermocline depth variability
+          - sea level budget
+          - glacier equilibrium line
+          - ice sheet mass balance
+          - ice shelf buttressing
+          - permafrost thaw rate
+          - vegetation climate feedback
+          - land atmosphere coupling
+          - soil moisture feedback
+          - convective precipitation response
+          - atmospheric blocking persistence
+          - tropical circulation shift
+          - extratropical storm track
+          - compound climate event
+          - climate emergence time
+          - internal climate variability
+          - decadal climate prediction
+          - climate emulator model
+      - id: hydrology
+        phrases:
+          - catchment response time
+          - runoff coefficient estimation
+          - infiltration excess runoff
+          - saturation excess runoff
+          - subsurface stormflow process
+          - groundwater recession analysis
+          - aquifer hydraulic diffusivity
+          - pumping interference analysis
+          - groundwater capture zone
+          - groundwater flow path
+          - stream aquifer exchange
+          - hyporheic exchange process
+          - river flood routing
+          - channel conveyance capacity
+          - hydraulic roughness calibration
+          - sediment rating relation
+          - reservoir routing method
+          - drought duration analysis
+          - drought deficit volume
+          - snow accumulation model
+          - snowpack energy balance
+          - glacier melt modeling
+          - rainfall intensity duration
+          - stormwater detention sizing
+          - hydrologic forecast uncertainty
+      - id: environmental_assessment
+        phrases:
+          - environmental exposure pathway
+          - pollutant fate modeling
+          - contaminant source characterization
+          - human exposure assessment
+          - ecological exposure assessment
+          - dose response assessment
+          - environmental risk characterization
+          - cumulative exposure assessment
+          - environmental justice screening
+          - environmental sensitivity mapping
+          - habitat condition assessment
+          - ecological integrity index
+          - ecosystem resilience assessment
+          - biodiversity net gain
+          - restoration success criteria
+          - conservation priority mapping
+          - water quality modeling
+          - nutrient loading assessment
+          - eutrophication risk analysis
+          - sediment quality assessment
+          - contaminated groundwater plume
+          - remediation endpoint definition
+          - monitored natural attenuation
+          - environmental performance indicator
+          - permit exceedance analysis

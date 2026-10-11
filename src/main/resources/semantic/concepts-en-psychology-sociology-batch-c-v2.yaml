@@ -1,0 +1,112 @@
+version: semantic-concepts-en-psychology-sociology-batch-c-v2
+domains:
+  - domainId: psychology_sociology
+    subdomains:
+      - id: cognitive_psychology
+        phrases:
+          - attentional capture effect
+          - attentional disengagement cost
+          - spatial cueing effect
+          - inhibition return effect
+          - perceptual load effect
+          - memory span capacity
+          - serial position effect
+          - spacing learning effect
+          - testing learning effect
+          - encoding specificity principle
+          - context dependent memory
+          - state dependent memory
+          - memory reconsolidation process
+          - source monitoring error
+          - false memory formation
+          - prospective memory cue
+          - prospective time estimation
+          - temporal discounting judgment
+          - probabilistic reasoning bias
+          - base rate neglect
+          - framing decision effect
+          - anchoring adjustment bias
+          - confirmation bias process
+          - cognitive effort allocation
+          - metacognitive control strategy
+      - id: behavioral_psychology
+        phrases:
+          - response shaping sequence
+          - chained behavior procedure
+          - differential reinforcement procedure
+          - response cost procedure
+          - escape conditioning process
+          - avoidance conditioning process
+          - conditioned suppression effect
+          - latent inhibition effect
+          - overshadowing learning effect
+          - blocking learning effect
+          - stimulus equivalence class
+          - behavioral contrast effect
+          - schedule induced behavior
+          - token reinforcement economy
+          - contingency contract intervention
+          - functional behavior assessment
+          - antecedent behavior consequence
+          - competing response training
+          - habit reversal training
+          - exposure response prevention
+          - behavioral rehearsal method
+          - self management intervention
+          - reinforcement preference assessment
+          - behavioral activation treatment
+          - response effort manipulation
+      - id: social_psychology
+        phrases:
+          - social categorization process
+          - ingroup favoritism effect
+          - outgroup homogeneity effect
+          - intergroup attribution bias
+          - stereotype activation process
+          - stereotype suppression effect
+          - implicit association measure
+          - attitude accessibility effect
+          - attitude polarization process
+          - motivated reasoning process
+          - identity threat response
+          - social identity complexity
+          - collective efficacy belief
+          - collective action framing
+          - group norm internalization
+          - descriptive norm effect
+          - injunctive norm effect
+          - social proof heuristic
+          - reciprocity compliance effect
+          - commitment consistency effect
+          - authority influence effect
+          - scarcity persuasion effect
+          - interpersonal rejection sensitivity
+          - relational mobility measure
+          - social belonging intervention
+      - id: sociology_methods
+        phrases:
+          - survey mode effect
+          - questionnaire response bias
+          - interviewer effect analysis
+          - item nonresponse analysis
+          - poststratification weighting method
+          - calibration weighting method
+          - complex survey variance
+          - design effect estimation
+          - multilevel regression poststratification
+          - latent growth model
+          - growth mixture model
+          - discrete time hazard
+          - continuous time hazard
+          - competing event history
+          - social sequence clustering
+          - network homophily analysis
+          - network assortativity measure
+          - brokerage position analysis
+          - diffusion cascade analysis
+          - peer influence estimation
+          - contextual effect modeling
+          - neighborhood effect analysis
+          - intergenerational mobility analysis
+          - social inequality trajectory
+          - mixed methods integration

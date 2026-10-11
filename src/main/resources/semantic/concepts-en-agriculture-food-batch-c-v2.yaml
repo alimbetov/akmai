@@ -1,0 +1,112 @@
+version: semantic-concepts-en-agriculture-food-batch-c-v2
+domains:
+  - domainId: agriculture_food
+    subdomains:
+      - id: crop_science
+        phrases:
+          - soil texture classification
+          - soil compaction assessment
+          - soil salinity monitoring
+          - soil ph monitoring
+          - nutrient uptake efficiency
+          - nitrogen use efficiency
+          - phosphorus use efficiency
+          - potassium uptake monitoring
+          - root zone moisture
+          - irrigation deficit strategy
+          - irrigation uniformity analysis
+          - water stress index
+          - canopy temperature monitoring
+          - leaf area index
+          - crop biomass estimation
+          - crop maturity assessment
+          - yield component analysis
+          - yield stability analysis
+          - harvest loss measurement
+          - weed seedbank assessment
+          - insect threshold monitoring
+          - disease severity scoring
+          - resistance management strategy
+          - seed vigor assessment
+          - field variability mapping
+      - id: livestock_production
+        phrases:
+          - herd productivity analysis
+          - lactation curve analysis
+          - milk component monitoring
+          - reproductive efficiency index
+          - conception rate analysis
+          - pregnancy rate monitoring
+          - calving difficulty rate
+          - neonatal mortality monitoring
+          - lameness prevalence monitoring
+          - rumination activity monitoring
+          - feed intake monitoring
+          - dry matter intake
+          - ration cost optimization
+          - feed efficiency analysis
+          - forage intake estimation
+          - pasture carrying capacity
+          - grazing rotation planning
+          - animal comfort assessment
+          - bedding quality management
+          - barn ventilation performance
+          - livestock water quality
+          - veterinary medicine inventory
+          - withdrawal period control
+          - disease outbreak response
+          - mortality cause analysis
+      - id: food_processing
+        phrases:
+          - ingredient dosing accuracy
+          - batch uniformity analysis
+          - mixing time optimization
+          - process temperature profile
+          - process pressure profile
+          - cooking loss analysis
+          - dehydration rate control
+          - fermentation yield monitoring
+          - cooling rate validation
+          - freezing rate analysis
+          - thaw loss monitoring
+          - filling weight control
+          - package weight compliance
+          - seal strength testing
+          - package oxygen transmission
+          - package moisture barrier
+          - cold room performance
+          - refrigeration load analysis
+          - cleanability assessment process
+          - sanitation cycle optimization
+          - changeover sanitation verification
+          - line startup verification
+          - process capability monitoring
+          - finished yield reconciliation
+          - manufacturing loss accounting
+      - id: food_safety
+        phrases:
+          - hazard severity assessment
+          - hazard likelihood assessment
+          - control measure validation
+          - prerequisite program verification
+          - sanitation effectiveness testing
+          - environmental pathogen mapping
+          - swab sampling program
+          - indicator organism testing
+          - microbial source tracking
+          - allergen risk assessment
+          - allergen cleaning validation
+          - label compliance review
+          - ingredient traceability review
+          - supplier approval program
+          - supplier verification audit
+          - food authenticity testing
+          - vulnerability mitigation plan
+          - intentional adulteration assessment
+          - recall decision process
+          - recall communication plan
+          - traceability lot linkage
+          - temperature excursion assessment
+          - shelf life safety
+          - regulatory hold process
+          - food safety incident

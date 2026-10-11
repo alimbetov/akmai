@@ -1,0 +1,112 @@
+version: semantic-concepts-en-insurance-batch-b-v2
+domains:
+  - domainId: insurance
+    subdomains:
+      - id: underwriting_pricing
+        phrases:
+          - technical premium calculation
+          - pure premium estimate
+          - indicated rate change
+          - rate relativities analysis
+          - rating factor selection
+          - underwriting score model
+          - policy tier assignment
+          - preferred risk classification
+          - substandard risk classification
+          - underwriting appetite matrix
+          - risk acceptance threshold
+          - policy issuance criteria
+          - renewal pricing strategy
+          - new business pricing
+          - premium discount structure
+          - premium surcharge structure
+          - deductible pricing factor
+          - coverage pricing factor
+          - territory rating factor
+          - occupation rating factor
+          - vehicle rating factor
+          - property rating factor
+          - pricing model validation
+          - pricing governance framework
+          - underwriting performance monitoring
+      - id: claims_management
+        phrases:
+          - claim frequency analysis
+          - claim severity trend
+          - claims inventory management
+          - claims backlog monitoring
+          - claims cycle time
+          - straight through claims
+          - automated claims adjudication
+          - claims settlement authority
+          - claims escalation process
+          - claims dispute resolution
+          - claims litigation reserve
+          - bodily injury assessment
+          - property damage assessment
+          - total loss valuation
+          - repair cost estimate
+          - medical claim review
+          - disability claim assessment
+          - death claim verification
+          - claims recovery strategy
+          - subrogation potential assessment
+          - salvage value estimate
+          - claims fraud scoring
+          - duplicate claim detection
+          - claims reserve review
+          - claims operational controls
+      - id: life_health
+        phrases:
+          - guaranteed issue coverage
+          - simplified issue coverage
+          - survivorship life insurance
+          - variable life insurance
+          - variable annuity contract
+          - fixed annuity contract
+          - annuity payout option
+          - annuity surrender charge
+          - policy loan provision
+          - premium payment period
+          - guaranteed cash value
+          - nonforfeiture benefit option
+          - accelerated death benefit
+          - accidental death benefit
+          - waiver of premium rider
+          - living benefit rider
+          - health benefit limit
+          - health plan deductible
+          - coinsurance benefit structure
+          - copayment benefit structure
+          - provider reimbursement rate
+          - utilization management program
+          - prior authorization process
+          - care management program
+          - health risk adjustment
+      - id: property_casualty
+        phrases:
+          - dwelling property coverage
+          - commercial auto coverage
+          - fleet insurance coverage
+          - umbrella liability coverage
+          - directors officers liability
+          - media liability coverage
+          - environmental liability coverage
+          - employment practices liability
+          - inland marine coverage
+          - ocean marine coverage
+          - cargo transit coverage
+          - ordinance law coverage
+          - builders risk coverage
+          - terrorism insurance coverage
+          - flood insurance coverage
+          - earthquake insurance coverage
+          - windstorm insurance coverage
+          - hail damage coverage
+          - actual loss sustained
+          - agreed value coverage
+          - functional replacement cost
+          - policy per occurrence limit
+          - aggregate deductible structure
+          - catastrophe deductible provision
+          - property coinsurance requirement

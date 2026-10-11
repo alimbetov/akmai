@@ -1,0 +1,307 @@
+version: semantic-surfaces-kk-finance-batch-c-v2
+languages:
+  - language: kk
+    surfaces:
+      - conceptId: finance_banking.lending_credit.credit_portfolio_migration
+        preferredPhrase: кредиттік портфель көші-қоны
+        aliases: []
+      - conceptId: finance_banking.lending_credit.obligor_risk_rating
+        preferredPhrase: міндеткер тәуекелінің рейтингі
+        aliases: []
+      - conceptId: finance_banking.lending_credit.borrower_risk_classification
+        preferredPhrase: қарыз алушы тәуекелін жіктеу
+        aliases: []
+      - conceptId: finance_banking.lending_credit.credit_risk_segmentation
+        preferredPhrase: кредиттік тәуекелді сегменттеу
+        aliases: []
+      - conceptId: finance_banking.lending_credit.lending_policy_exception
+        preferredPhrase: несиелеу саясатынан ерекшелік
+        aliases: []
+      - conceptId: finance_banking.lending_credit.collateral_eligibility_criteria
+        preferredPhrase: кепіл жарамдылығы критерийлері
+        aliases: []
+      - conceptId: finance_banking.lending_credit.collateral_haircut_methodology
+        preferredPhrase: кепіл дисконтының әдістемесі
+        aliases: []
+      - conceptId: finance_banking.lending_credit.scheduled_principal_repayment_profile
+        preferredPhrase: негізгі борышты жоспарлы өтеу профилі
+        aliases: []
+      - conceptId: finance_banking.lending_credit.balloon_payment_structure
+        preferredPhrase: ірі соңғы төлем құрылымы
+        aliases: []
+      - conceptId: finance_banking.lending_credit.covenant_breach_remediation
+        preferredPhrase: ковенант бұзылуын түзету
+        aliases: []
+      - conceptId: finance_banking.lending_credit.distressed_debt_restructuring
+        preferredPhrase: проблемалық борышты қайта құрылымдау
+        aliases: []
+      - conceptId: finance_banking.lending_credit.debt_refinancing_transaction
+        preferredPhrase: борышты қайта қаржыландыру мәмілесі
+        aliases: []
+      - conceptId: finance_banking.lending_credit.credit_exposure_aggregation
+        preferredPhrase: кредиттік экспозицияны біріктіру
+        aliases: []
+      - conceptId: finance_banking.lending_credit.single_borrower_limit
+        preferredPhrase: бір қарыз алушы лимиті
+        aliases: []
+      - conceptId: finance_banking.lending_credit.connected_counterparty_exposure
+        preferredPhrase: байланысты контрагенттер экспозициясы
+        aliases: []
+      - conceptId: finance_banking.lending_credit.credit_concentration_threshold
+        preferredPhrase: кредиттік шоғырлану шегі
+        aliases: []
+      - conceptId: finance_banking.lending_credit.watchlist_account_management
+        preferredPhrase: бақылау тізіміндегі шоттарды басқару
+        aliases: []
+      - conceptId: finance_banking.lending_credit.special_mention_loan
+        preferredPhrase: ерекше бақылаудағы несие
+        aliases: []
+      - conceptId: finance_banking.lending_credit.past_due_classification
+        preferredPhrase: мерзімі өткен берешекті жіктеу
+        aliases: []
+      - conceptId: finance_banking.lending_credit.impaired_loan_assessment
+        preferredPhrase: құнсызданған несиені бағалау
+        aliases: []
+      - conceptId: finance_banking.lending_credit.expected_credit_loss
+        preferredPhrase: күтілетін кредиттік шығын
+        aliases: []
+      - conceptId: finance_banking.lending_credit.lifetime_credit_loss
+        preferredPhrase: бүкіл мерзімдік кредиттік шығын
+        aliases: []
+      - conceptId: finance_banking.lending_credit.twelve_month_credit_loss
+        preferredPhrase: он екі айлық кредиттік шығын
+        aliases: []
+      - conceptId: finance_banking.lending_credit.cure_rate_analysis
+        preferredPhrase: қалпына келу коэффициентін талдау
+        aliases: []
+      - conceptId: finance_banking.lending_credit.recovery_rate_estimation
+        preferredPhrase: өндіріп алу коэффициентін бағалау
+        aliases: []
+
+      - conceptId: finance_banking.deposits_liquidity.stable_funding_requirement
+        preferredPhrase: тұрақты қаржыландыру талабы
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.wholesale_funding_profile
+        preferredPhrase: көтерме қаржыландыру профилі
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.retail_deposit_stickiness
+        preferredPhrase: бөлшек депозиттердің тұрақтылығы
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.nonoperational_deposit_balance
+        preferredPhrase: операциялық емес депозит қалдығы
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.operational_deposit_balance
+        preferredPhrase: операциялық депозит қалдығы
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.liquidity_coverage_buffer
+        preferredPhrase: өтімділікті жабу буфері
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.contingency_funding_capacity
+        preferredPhrase: төтенше қаржыландыру мүмкіндігі
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.secured_funding_capacity
+        preferredPhrase: қамтамасыз етілген қаржыландыру мүмкіндігі
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.unsecured_funding_capacity
+        preferredPhrase: қамтамасыз етілмеген қаржыландыру мүмкіндігі
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.funding_rollover_risk
+        preferredPhrase: қаржыландыруды ұзарту тәуекелі
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.short_term_funding_ratio
+        preferredPhrase: қысқа мерзімді қаржыландыру коэффициенті
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.long_term_funding_ratio
+        preferredPhrase: ұзақ мерзімді қаржыландыру коэффициенті
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.liquidity_asset_haircut
+        preferredPhrase: өтімді активтер дисконты
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.central_bank_liquidity_access
+        preferredPhrase: орталық банк өтімділігіне қолжетімділік
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.emergency_central_bank_support
+        preferredPhrase: орталық банктің төтенше қолдауы
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.deposit_concentration_threshold
+        preferredPhrase: депозит шоғырлануының шегі
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.contractual_cash_inflow
+        preferredPhrase: шарттық ақша түсімі
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.contractual_cash_outflow
+        preferredPhrase: шарттық ақша шығысы
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.behavioral_cash_flow
+        preferredPhrase: мінез құлықтық ақша ағыны
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.liquidity_limit_utilization
+        preferredPhrase: өтімділік лимитін пайдалану
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.liquidity_early_warning
+        preferredPhrase: өтімділік бойынша ерте ескерту
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.funding_plan_execution
+        preferredPhrase: қаржыландыру жоспарын орындау
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.treasury_liquidity_position
+        preferredPhrase: қазынашылық өтімділік позициясы
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.collateral_funding_requirement
+        preferredPhrase: кепілдік қаржыландыру талабы
+        aliases: []
+      - conceptId: finance_banking.deposits_liquidity.settlement_liquidity_requirement
+        preferredPhrase: есеп айырысу өтімділігі талабы
+        aliases: []
+
+      - conceptId: finance_banking.risk_capital.risk_asset_intensity
+        preferredPhrase: тәуекел активтерінің қарқындылығы
+        aliases: []
+      - conceptId: finance_banking.risk_capital.regulatory_credit_risk_method
+        preferredPhrase: кредиттік тәуекелдің реттеушілік әдісі
+        aliases: []
+      - conceptId: finance_banking.risk_capital.standardized_market_risk_approach
+        preferredPhrase: нарықтық тәуекелдің стандартталған тәсілі
+        aliases: []
+      - conceptId: finance_banking.risk_capital.standardized_operational_risk_approach
+        preferredPhrase: операциялық тәуекелдің стандартталған тәсілі
+        aliases: []
+      - conceptId: finance_banking.risk_capital.advanced_measurement_approach
+        preferredPhrase: жетілдірілген өлшеу тәсілі
+        aliases: []
+      - conceptId: finance_banking.risk_capital.internal_model_approval
+        preferredPhrase: ішкі модельді мақұлдау
+        aliases: []
+      - conceptId: finance_banking.risk_capital.model_validation_framework
+        preferredPhrase: модельді валидациялау жүйесі
+        aliases: []
+      - conceptId: finance_banking.risk_capital.stress_capital_requirement
+        preferredPhrase: стресс капитал талабы
+        aliases: []
+      - conceptId: finance_banking.risk_capital.systemic_risk_buffer
+        preferredPhrase: жүйелік тәуекел буфері
+        aliases: []
+      - conceptId: finance_banking.risk_capital.capital_surcharge_requirement
+        preferredPhrase: капитал үстемесіне талап
+        aliases: []
+      - conceptId: finance_banking.risk_capital.minimum_regulatory_capital
+        preferredPhrase: ең төменгі реттеушілік капитал
+        aliases: []
+      - conceptId: finance_banking.risk_capital.capital_distribution_restriction
+        preferredPhrase: капитал бөлуді шектеу
+        aliases: []
+      - conceptId: finance_banking.risk_capital.dividend_payout_restriction
+        preferredPhrase: дивиденд төлеуді шектеу
+        aliases: []
+      - conceptId: finance_banking.risk_capital.capital_recovery_plan
+        preferredPhrase: капиталды қалпына келтіру жоспары
+        aliases: []
+      - conceptId: finance_banking.risk_capital.capital_contingency_action
+        preferredPhrase: капитал бойынша төтенше іс қимыл
+        aliases: []
+      - conceptId: finance_banking.risk_capital.risk_aggregation_framework
+        preferredPhrase: тәуекелдерді біріктіру жүйесі
+        aliases: []
+      - conceptId: finance_banking.risk_capital.enterprise_risk_taxonomy
+        preferredPhrase: корпоративтік тәуекелдер таксономиясы
+        aliases: []
+      - conceptId: finance_banking.risk_capital.enterprise_risk_limit_structure
+        preferredPhrase: корпоративтік тәуекел лимиттерінің құрылымы
+        aliases: []
+      - conceptId: finance_banking.risk_capital.risk_escalation_process
+        preferredPhrase: тәуекелді эскалациялау үдерісі
+        aliases: []
+      - conceptId: finance_banking.risk_capital.risk_acceptance_criteria
+        preferredPhrase: тәуекелді қабылдау критерийлері
+        aliases: []
+      - conceptId: finance_banking.risk_capital.interest_rate_shock
+        preferredPhrase: пайыздық мөлшерлеме шогы
+        aliases: []
+      - conceptId: finance_banking.risk_capital.basis_risk_exposure
+        preferredPhrase: базистік тәуекел экспозициясы
+        aliases: []
+      - conceptId: finance_banking.risk_capital.spread_risk_exposure
+        preferredPhrase: спред тәуекелі экспозициясы
+        aliases: []
+      - conceptId: finance_banking.risk_capital.foreign_exchange_risk
+        preferredPhrase: валюталық тәуекел
+        aliases: []
+      - conceptId: finance_banking.risk_capital.equity_price_risk
+        preferredPhrase: акция бағасының тәуекелі
+        aliases: []
+
+      - conceptId: finance_banking.payments_compliance.sanctions_screening_governance
+        preferredPhrase: санкциялық тексеруді басқару
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.name_screening_process
+        preferredPhrase: атауларды тексеру үдерісі
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.payment_beneficiary_screening
+        preferredPhrase: төлем алушысын тексеру
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.originator_information_verification
+        preferredPhrase: төлем бастамашысы ақпаратын тексеру
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.funds_transfer_regulation
+        preferredPhrase: қаражат аударымын реттеу
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.suspicious_transaction_report
+        preferredPhrase: күмәнді транзакция туралы есеп
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.transaction_monitoring_risk_score
+        preferredPhrase: транзакция мониторингі тәуекел балы
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.customer_due_diligence_rating
+        preferredPhrase: клиентті тексеру рейтингі
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.geographic_risk_assessment
+        preferredPhrase: географиялық тәуекелді бағалау
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.product_risk_assessment
+        preferredPhrase: өнім тәуекелін бағалау
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.channel_risk_assessment
+        preferredPhrase: арна тәуекелін бағалау
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.money_laundering_risk
+        preferredPhrase: ақшаны жылыстату тәуекелі
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.terrorist_financing_risk
+        preferredPhrase: терроризмді қаржыландыру тәуекелі
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.proliferation_financing_risk
+        preferredPhrase: таратуды қаржыландыру тәуекелі
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.correspondent_banking_screening
+        preferredPhrase: корреспонденттік банкингті тексеру
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.nested_correspondent_relationship
+        preferredPhrase: кірістірілген корреспонденттік қатынас
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.shell_bank_prohibition
+        preferredPhrase: қабық банкке тыйым салу
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.payment_transparency_requirement
+        preferredPhrase: төлем ашықтығына талап
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.wire_transfer_traceability
+        preferredPhrase: банктік аударымның қадағалану мүмкіндігі
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.fraud_case_management
+        preferredPhrase: алаяқтық істерін басқару
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.card_fraud_investigation
+        preferredPhrase: карталық алаяқтықты тергеу
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.account_takeover_detection
+        preferredPhrase: шотты басып алуды анықтау
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.mule_account_detection
+        preferredPhrase: делдал шоттарды анықтау
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.payment_velocity_control
+        preferredPhrase: төлем жылдамдығын бақылау
+        aliases: []
+      - conceptId: finance_banking.payments_compliance.transaction_limit_control
+        preferredPhrase: транзакция лимитін бақылау
+        aliases: []

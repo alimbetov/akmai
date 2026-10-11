@@ -1,0 +1,112 @@
+version: semantic-concepts-en-computer-science-ai-batch-b-v2
+domains:
+  - domainId: computer_science_ai
+    subdomains:
+      - id: algorithms_data_structures
+        phrases:
+          - dynamic connectivity algorithm
+          - persistent data structure
+          - randomized search tree
+          - interval tree structure
+          - range query structure
+          - nearest neighbor search
+          - locality sensitive hashing
+          - graph partitioning algorithm
+          - strongly connected components
+          - maximum bipartite matching
+          - minimum cut algorithm
+          - network flow decomposition
+          - shortest path heuristic
+          - heuristic search algorithm
+          - beam search algorithm
+          - branch decomposition method
+          - tree decomposition method
+          - fixed parameter tractability
+          - kernelization reduction method
+          - combinatorial optimization algorithm
+          - submodular optimization method
+          - probabilistic data structure
+          - succinct data structure
+          - cache aware algorithm
+          - parallel graph algorithm
+      - id: software_systems
+        phrases:
+          - quorum replication protocol
+          - distributed lease mechanism
+          - fencing token protocol
+          - consensus log replication
+          - snapshot isolation level
+          - serializable transaction schedule
+          - distributed deadlock detection
+          - write skew anomaly
+          - read repair process
+          - anti entropy synchronization
+          - conflict resolution strategy
+          - partition tolerance strategy
+          - service mesh architecture
+          - request hedging strategy
+          - adaptive load shedding
+          - backpressure control mechanism
+          - rate limiting policy
+          - retry budget policy
+          - graceful degradation strategy
+          - chaos engineering experiment
+          - failure injection testing
+          - blue green deployment
+          - canary release strategy
+          - schema migration strategy
+          - zero downtime deployment
+      - id: machine_learning
+        phrases:
+          - transformer attention mechanism
+          - mixture experts model
+          - diffusion generative model
+          - variational autoencoder model
+          - generative adversarial network
+          - metric learning objective
+          - triplet loss objective
+          - curriculum learning strategy
+          - continual learning method
+          - catastrophic forgetting analysis
+          - multi task learning
+          - federated learning protocol
+          - differential privacy training
+          - adversarial training method
+          - adversarial example detection
+          - out of distribution detection
+          - conformal prediction method
+          - probability calibration method
+          - decision threshold optimization
+          - class imbalance handling
+          - synthetic data generation
+          - weak supervision strategy
+          - semi supervised learning
+          - knowledge distillation process
+          - model compression technique
+      - id: data_nlp
+        phrases:
+          - retrieval query expansion
+          - reciprocal rank fusion
+          - hybrid retrieval pipeline
+          - passage reranking model
+          - cross encoder reranker
+          - bi encoder retrieval
+          - semantic chunking strategy
+          - document segmentation pipeline
+          - entity linking system
+          - entity resolution process
+          - ontology alignment method
+          - knowledge graph completion
+          - graph neural retrieval
+          - embedding quantization method
+          - approximate nearest neighbor
+          - vector index partitioning
+          - retrieval recall evaluation
+          - ranking precision evaluation
+          - mean reciprocal rank
+          - normalized discounted gain
+          - answer grounding evaluation
+          - citation faithfulness check
+          - prompt injection detection
+          - context relevance scoring
+          - semantic cache policy

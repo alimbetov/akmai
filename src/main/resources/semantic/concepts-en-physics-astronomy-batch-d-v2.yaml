@@ -1,0 +1,112 @@
+version: semantic-concepts-en-physics-astronomy-batch-d-v2
+domains:
+  - domainId: physics_astronomy
+    subdomains:
+      - id: classical_mechanics
+        phrases:
+          - symplectic integrator scheme
+          - Hamiltonian chaos indicator
+          - frequency map analysis
+          - resonance overlap criterion
+          - Melnikov function analysis
+          - KAM torus breakup
+          - canonical perturbation theory
+          - multiple scale analysis
+          - secular perturbation theory
+          - averaging method dynamics
+          - Floquet stability analysis
+          - parametric resonance instability
+          - nonlinear normal mode
+          - modal participation factor
+          - rigid body nutation
+          - Euler Poinsot motion
+          - rolling without slipping
+          - friction cone constraint
+          - impact restitution law
+          - contact impulse model
+          - slender body dynamics
+          - vortex induced vibration
+          - shock wave propagation
+          - acoustic impedance matching
+          - aeroelastic flutter boundary
+      - id: thermodynamics
+        phrases:
+          - adiabatic switching method
+          - Jarzynski equality relation
+          - Crooks fluctuation relation
+          - free energy landscape
+          - potential mean force
+          - excess chemical potential
+          - thermodynamic conjugate pair
+          - Gibbs adsorption equation
+          - Kelvin curvature relation
+          - capillary condensation condition
+          - nucleation free energy
+          - classical nucleation theory
+          - metastable phase lifetime
+          - critical nucleus size
+          - phase field thermodynamics
+          - equation state fitting
+          - caloric equation relation
+          - Gruneisen parameter relation
+          - shock Hugoniot curve
+          - thermodynamic response function
+          - entropy rate production
+          - minimum entropy production
+          - local equilibrium hypothesis
+          - thermal rectification effect
+          - thermoelectric figure merit
+      - id: electromagnetism
+        phrases:
+          - dyadic Green function
+          - Helmholtz wave equation
+          - Mie scattering solution
+          - Rayleigh scattering limit
+          - optical theorem relation
+          - scattering phase function
+          - radiation pressure force
+          - electromagnetic angular momentum
+          - spin orbit interaction
+          - geometric phase optics
+          - Jones matrix calculus
+          - Mueller matrix polarimetry
+          - coupled mode theory
+          - temporal coupled mode
+          - quality factor coupling
+          - impedance boundary condition
+          - perfect conductor boundary
+          - dielectric waveguide mode
+          - surface impedance model
+          - antenna aperture efficiency
+          - radar cross section
+          - phased array beamforming
+          - near field diffraction
+          - nonlinear frequency mixing
+          - parametric optical amplification
+      - id: astrophysics
+        phrases:
+          - luminosity distance relation
+          - cosmic distance ladder
+          - standard candle calibration
+          - tip red giant branch
+          - Cepheid period luminosity
+          - galaxy clustering bias
+          - two point correlation
+          - matter power spectrum
+          - redshift survey selection
+          - photometric redshift calibration
+          - spectroscopic redshift measurement
+          - baryon fraction constraint
+          - cluster mass calibration
+          - Sunyaev Zeldovich effect
+          - integrated Sachs Wolfe
+          - cosmic reionization optical depth
+          - primordial non Gaussianity
+          - inflationary consistency relation
+          - dark matter annihilation
+          - dark matter direct detection
+          - neutron star tidal deformability
+          - binary inspiral waveform
+          - kilonova emission model
+          - fast transient localization
+          - exoplanet atmospheric retrieval

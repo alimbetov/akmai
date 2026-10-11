@@ -1,0 +1,112 @@
+version: semantic-concepts-en-psychology-sociology-batch-d-v2
+domains:
+  - domainId: psychology_sociology
+    subdomains:
+      - id: cognitive_psychology
+        phrases:
+          - attentional orienting response
+          - endogenous attention cue
+          - exogenous attention cue
+          - visual working memory
+          - phonological working memory
+          - episodic buffer function
+          - memory interference effect
+          - proactive interference effect
+          - retroactive interference effect
+          - retrieval induced forgetting
+          - directed forgetting effect
+          - generation memory effect
+          - self reference effect
+          - levels processing effect
+          - feature binding process
+          - perceptual grouping principle
+          - object recognition process
+          - face recognition accuracy
+          - lexical access process
+          - sentence processing difficulty
+          - cognitive reflection test
+          - belief updating bias
+          - probability judgment calibration
+          - confidence accuracy relation
+          - mind wandering frequency
+      - id: behavioral_psychology
+        phrases:
+          - differential reinforcement alternative
+          - differential reinforcement incompatible
+          - differential reinforcement omission
+          - noncontingent reinforcement procedure
+          - response interruption redirection
+          - stimulus fading procedure
+          - prompt dependency reduction
+          - errorless learning procedure
+          - behavioral skills training
+          - task analysis procedure
+          - preference assessment method
+          - paired stimulus preference
+          - multiple stimulus preference
+          - functional communication training
+          - escape extinction procedure
+          - demand fading procedure
+          - high probability sequence
+          - activity schedule intervention
+          - self monitoring procedure
+          - goal setting intervention
+          - implementation intention strategy
+          - behavioral economic demand
+          - reinforcer demand elasticity
+          - relapse renewal effect
+          - maintenance generalization plan
+      - id: social_psychology
+        phrases:
+          - social identity salience
+          - self categorization process
+          - identity fusion measure
+          - group entitativity perception
+          - intergroup anxiety effect
+          - stereotype content model
+          - warmth competence judgment
+          - social dominance hierarchy
+          - status characteristics theory
+          - procedural justice perception
+          - distributive justice perception
+          - legitimacy judgment process
+          - trust repair process
+          - interpersonal forgiveness process
+          - empathic concern response
+          - perspective taking effect
+          - moral licensing effect
+          - moral cleansing behavior
+          - norm misperception effect
+          - social reference point
+          - network social influence
+          - collective threat perception
+          - political efficacy perception
+          - social support buffering
+          - relationship commitment process
+      - id: sociology_methods
+        phrases:
+          - sampling frame coverage
+          - probability proportional sampling
+          - replicate weight variance
+          - Taylor linearization variance
+          - raking weight adjustment
+          - propensity score adjustment
+          - small area estimation
+          - synthetic population estimation
+          - record linkage method
+          - longitudinal attrition analysis
+          - panel conditioning effect
+          - fixed effects panel
+          - random effects panel
+          - difference decomposition method
+          - Oaxaca Blinder decomposition
+          - regression decomposition analysis
+          - causal mediation analysis
+          - cross lagged panel model
+          - inverse probability treatment
+          - network autocorrelation model
+          - spatial social analysis
+          - latent transition analysis
+          - multiple correspondence analysis
+          - correspondence analysis method
+          - qualitative coding reliability

@@ -1,0 +1,307 @@
+version: semantic-surfaces-kk-manufacturing-batch-b-v2
+languages:
+  - language: kk
+    surfaces:
+      - conceptId: manufacturing.production_systems.aggregate_production_planning
+        preferredPhrase: жиынтық өндірісті жоспарлау
+        aliases: []
+      - conceptId: manufacturing.production_systems.production_capacity_model
+        preferredPhrase: өндірістік қуат моделі
+        aliases: []
+      - conceptId: manufacturing.production_systems.rough_cut_capacity
+        preferredPhrase: ірілендірілген қуат бағасы
+        aliases: []
+      - conceptId: manufacturing.production_systems.order_promising_process
+        preferredPhrase: тапсырысты орындау уәдесі
+        aliases: []
+      - conceptId: manufacturing.production_systems.finished_goods_availability
+        preferredPhrase: дайын өнім қолжетімділігі
+        aliases: []
+      - conceptId: manufacturing.production_systems.capacity_promise_calculation
+        preferredPhrase: қуат уәдесін есептеу
+        aliases: []
+      - conceptId: manufacturing.production_systems.production_campaign_planning
+        preferredPhrase: өндірістік науқанды жоспарлау
+        aliases: []
+      - conceptId: manufacturing.production_systems.sequence_dependent_setup
+        preferredPhrase: реттілікке тәуелді баптау
+        aliases: []
+      - conceptId: manufacturing.production_systems.changeover_matrix_optimization
+        preferredPhrase: ауыстыру матрицасын оңтайландыру
+        aliases: []
+      - conceptId: manufacturing.production_systems.bottleneck_resource_scheduling
+        preferredPhrase: тар ресурс кестесін жоспарлау
+        aliases: []
+      - conceptId: manufacturing.production_systems.constraint_based_scheduling
+        preferredPhrase: шектеуге негізделген жоспарлау
+        aliases: []
+      - conceptId: manufacturing.production_systems.production_dispatch_priority
+        preferredPhrase: өндірістік диспетчерлік басымдық
+        aliases: []
+      - conceptId: manufacturing.production_systems.work_center_efficiency
+        preferredPhrase: жұмыс орталығының тиімділігі
+        aliases: []
+      - conceptId: manufacturing.production_systems.labor_capacity_planning
+        preferredPhrase: еңбек қуатын жоспарлау
+        aliases: []
+      - conceptId: manufacturing.production_systems.overtime_capacity_planning
+        preferredPhrase: үстеме уақыт қуатын жоспарлау
+        aliases: []
+      - conceptId: manufacturing.production_systems.production_variance_analysis
+        preferredPhrase: өндірістік ауытқуды талдау
+        aliases: []
+      - conceptId: manufacturing.production_systems.manufacturing_lead_time
+        preferredPhrase: өндірістің орындалу мерзімі
+        aliases: []
+      - conceptId: manufacturing.production_systems.queue_time_reduction
+        preferredPhrase: кезек уақытын қысқарту
+        aliases: []
+      - conceptId: manufacturing.production_systems.move_time_reduction
+        preferredPhrase: тасымалдау уақытын қысқарту
+        aliases: []
+      - conceptId: manufacturing.production_systems.manufacturing_cycle_efficiency
+        preferredPhrase: өндірістік цикл тиімділігі
+        aliases: []
+      - conceptId: manufacturing.production_systems.work_order_completion
+        preferredPhrase: жұмыс тапсырысын аяқтау
+        aliases: []
+      - conceptId: manufacturing.production_systems.production_attainment_rate
+        preferredPhrase: өндірістік жоспарды орындау деңгейі
+        aliases: []
+      - conceptId: manufacturing.production_systems.schedule_adherence_rate
+        preferredPhrase: кестеге сәйкестік деңгейі
+        aliases: []
+      - conceptId: manufacturing.production_systems.line_utilization_analysis
+        preferredPhrase: желі пайдалануын талдау
+        aliases: []
+      - conceptId: manufacturing.production_systems.production_flow_optimization
+        preferredPhrase: өндірістік ағынды оңтайландыру
+        aliases: []
+
+      - conceptId: manufacturing.quality_management.quality_risk_assessment
+        preferredPhrase: сапа тәуекелін бағалау
+        aliases: []
+      - conceptId: manufacturing.quality_management.supplier_defect_rate
+        preferredPhrase: жеткізуші ақауларының деңгейі
+        aliases: []
+      - conceptId: manufacturing.quality_management.customer_defect_rate
+        preferredPhrase: клиент ақауларының деңгейі
+        aliases: []
+      - conceptId: manufacturing.quality_management.defect_opportunity_analysis
+        preferredPhrase: ақау мүмкіндігін талдау
+        aliases: []
+      - conceptId: manufacturing.quality_management.defects_per_million
+        preferredPhrase: миллионға шаққандағы ақаулар
+        aliases: []
+      - conceptId: manufacturing.quality_management.process_sigma_level
+        preferredPhrase: процестің сигма деңгейі
+        aliases: []
+      - conceptId: manufacturing.quality_management.capability_maturity_review
+        preferredPhrase: қабілеттілік жетілуін бағалау
+        aliases: []
+      - conceptId: manufacturing.quality_management.measurement_bias_analysis
+        preferredPhrase: өлшеу ығысуын талдау
+        aliases: []
+      - conceptId: manufacturing.quality_management.measurement_linearity_study
+        preferredPhrase: өлшеу сызықтылығын зерттеу
+        aliases: []
+      - conceptId: manufacturing.quality_management.measurement_stability_study
+        preferredPhrase: өлшеу тұрақтылығын зерттеу
+        aliases: []
+      - conceptId: manufacturing.quality_management.control_limit_calculation
+        preferredPhrase: бақылау шектерін есептеу
+        aliases: []
+      - conceptId: manufacturing.quality_management.special_cause_variation
+        preferredPhrase: арнайы себепті ауытқу
+        aliases: []
+      - conceptId: manufacturing.quality_management.common_cause_variation
+        preferredPhrase: жалпы себепті ауытқу
+        aliases: []
+      - conceptId: manufacturing.quality_management.process_drift_detection
+        preferredPhrase: процесс дрейфін анықтау
+        aliases: []
+      - conceptId: manufacturing.quality_management.process_centering_analysis
+        preferredPhrase: процесті орталықтандыру талдауы
+        aliases: []
+      - conceptId: manufacturing.quality_management.tolerance_stack_analysis
+        preferredPhrase: төзімділіктер тізбегін талдау
+        aliases: []
+      - conceptId: manufacturing.quality_management.design_verification_review
+        preferredPhrase: жобаны верификациялау шолуы
+        aliases: []
+      - conceptId: manufacturing.quality_management.process_validation_protocol
+        preferredPhrase: процесті валидациялау хаттамасы
+        aliases: []
+      - conceptId: manufacturing.quality_management.inspection_effectiveness_review
+        preferredPhrase: инспекция тиімділігін бағалау
+        aliases: []
+      - conceptId: manufacturing.quality_management.audit_finding_closure
+        preferredPhrase: аудит ескертулерін жабу
+        aliases: []
+      - conceptId: manufacturing.quality_management.quality_escape_prevention
+        preferredPhrase: сапа ауытқуын болдырмау
+        aliases: []
+      - conceptId: manufacturing.quality_management.defect_recurrence_analysis
+        preferredPhrase: ақаудың қайталануын талдау
+        aliases: []
+      - conceptId: manufacturing.quality_management.warranty_failure_analysis
+        preferredPhrase: кепілдік ақауын талдау
+        aliases: []
+      - conceptId: manufacturing.quality_management.field_failure_analysis
+        preferredPhrase: пайдалану ақауын талдау
+        aliases: []
+      - conceptId: manufacturing.quality_management.supplier_process_validation
+        preferredPhrase: жеткізуші процесін валидациялау
+        aliases: []
+
+      - conceptId: manufacturing.maintenance_reliability.failure_consequence_analysis
+        preferredPhrase: ақау салдарын талдау
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.equipment_criticality_ranking
+        preferredPhrase: жабдық критикалылығының рейтингі
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.reliability_growth_analysis
+        preferredPhrase: сенімділік өсімін талдау
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.reliability_demonstration_test
+        preferredPhrase: сенімділікті растау сынағы
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.weibull_failure_analysis
+        preferredPhrase: Вейбулл ақау талдауы
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.maintenance_interval_optimization
+        preferredPhrase: қызмет көрсету аралығын оңтайландыру
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.age_replacement_policy
+        preferredPhrase: жас бойынша ауыстыру саясаты
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.risk_based_maintenance
+        preferredPhrase: тәуекелге негізделген қызмет көрсету
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.maintenance_task_analysis
+        preferredPhrase: жөндеу тапсырмасын талдау
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.precision_maintenance_practice
+        preferredPhrase: дәл техникалық қызмет тәжірибесі
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.operator_driven_maintenance
+        preferredPhrase: оператор жүргізетін қызмет көрсету
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.autonomous_maintenance_program
+        preferredPhrase: автономды қызмет көрсету бағдарламасы
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.maintenance_labor_planning
+        preferredPhrase: жөндеу еңбегін жоспарлау
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.maintenance_resource_leveling
+        preferredPhrase: жөндеу ресурстарын теңестіру
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.spare_parts_stocking
+        preferredPhrase: қосалқы бөлшек қорын жасау
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.critical_spare_strategy
+        preferredPhrase: критикалық қосалқы бөлшек стратегиясы
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.repairable_spare_analysis
+        preferredPhrase: жөнделетін қосалқыны талдау
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.failure_reporting_system
+        preferredPhrase: ақауларды тіркеу жүйесі
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.bad_actor_equipment
+        preferredPhrase: проблемалы жабдық
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.chronic_failure_elimination
+        preferredPhrase: созылмалы ақауды жою
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.asset_health_monitoring
+        preferredPhrase: актив күйін мониторингтеу
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.condition_alarm_threshold
+        preferredPhrase: күй дабылының шегі
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.predictive_maintenance_accuracy
+        preferredPhrase: болжамды қызмет дәлдігі
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.shutdown_readiness_review
+        preferredPhrase: тоқтатуға дайындықты бағалау
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.maintenance_cost_optimization
+        preferredPhrase: жөндеу құнын оңтайландыру
+        aliases: []
+
+      - conceptId: manufacturing.industrial_operations.process_control_strategy
+        preferredPhrase: процесті басқару стратегиясы
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.control_loop_performance
+        preferredPhrase: басқару контурының тиімділігі
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.advanced_process_control
+        preferredPhrase: жетілдірілген процесті басқару
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.model_predictive_control
+        preferredPhrase: модельдік болжамды басқару
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.process_variable_monitoring
+        preferredPhrase: процесс айнымалыларын мониторингтеу
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.historian_data_quality
+        preferredPhrase: тарихшы деректерінің сапасы
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.alarm_flood_analysis
+        preferredPhrase: дабыл тасқынын талдау
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.operator_alarm_response
+        preferredPhrase: оператордың дабылға реакциясы
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.process_interlock_logic
+        preferredPhrase: процесс блокировка логикасы
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.emergency_shutdown_system
+        preferredPhrase: авариялық тоқтату жүйесі
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.process_hazard_analysis
+        preferredPhrase: процесс қауіптілігін талдау
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.bow_tie_analysis
+        preferredPhrase: бантик әдісімен талдау
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.barrier_performance_monitoring
+        preferredPhrase: тосқауыл тиімділігін мониторингтеу
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.process_safety_indicator
+        preferredPhrase: процесс қауіпсіздігі көрсеткіші
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.major_accident_hazard
+        preferredPhrase: ірі авария қаупі
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.permit_compliance_monitoring
+        preferredPhrase: рұқсат талаптарын мониторингтеу
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.contractor_safety_management
+        preferredPhrase: мердігер қауіпсіздігін басқару
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.energy_isolation_verification
+        preferredPhrase: энергия оқшаулауын тексеру
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.plant_startup_procedure
+        preferredPhrase: зауытты іске қосу рәсімі
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.plant_shutdown_procedure
+        preferredPhrase: зауытты тоқтату рәсімі
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.operating_envelope_monitoring
+        preferredPhrase: жұмыс диапазонын мониторингтеу
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.utility_balance_optimization
+        preferredPhrase: коммуналдық балансын оңтайландыру
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.compressed_air_demand
+        preferredPhrase: сығылған ауаға сұраныс
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.steam_trap_monitoring
+        preferredPhrase: бу тұзағын мониторингтеу
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.plant_loss_accounting
+        preferredPhrase: зауыт шығындарын есепке алу
+        aliases: []

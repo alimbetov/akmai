@@ -36,7 +36,7 @@ class EnglishSemanticConceptAnnotationTest {
         assertThat(annotated.metadata())
                 .containsEntry(
                         "semanticConceptVersion",
-                        "semantic-concepts-en-v1"
+                        "semantic-concepts-en-v2"
                 );
     }
 

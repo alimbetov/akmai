@@ -1,0 +1,112 @@
+version: semantic-concepts-en-oil-gas-mining-batch-c-v2
+domains:
+  - domainId: oil_gas_mining
+    subdomains:
+      - id: upstream_operations
+        phrases:
+          - prospect maturation workflow
+          - exploration portfolio ranking
+          - seismic attribute analysis
+          - amplitude variation analysis
+          - structural interpretation model
+          - depositional environment model
+          - reservoir facies model
+          - saturation height model
+          - capillary pressure analysis
+          - relative permeability curve
+          - reservoir material balance
+          - pressure buildup analysis
+          - interference well testing
+          - production optimization model
+          - nodal analysis model
+          - inflow performance relationship
+          - tubing performance analysis
+          - artificial lift surveillance
+          - gas lift optimization
+          - electric submersible pump
+          - well deliverability analysis
+          - production chemistry management
+          - scale inhibition program
+          - corrosion inhibition program
+          - sand production management
+      - id: midstream_operations
+        phrases:
+          - pipeline transient analysis
+          - surge pressure analysis
+          - pipeline flow assurance
+          - wax deposition control
+          - hydrate formation control
+          - slugging risk assessment
+          - compressor surge control
+          - compressor efficiency map
+          - station fuel consumption
+          - pipeline integrity threat
+          - corrosion growth rate
+          - crack growth assessment
+          - remaining strength calculation
+          - pressure test assessment
+          - anomaly repair program
+          - pipeline isolation plan
+          - emergency shutdown valve
+          - tank overfill protection
+          - tank vapor loss
+          - terminal loading rate
+          - terminal berth scheduling
+          - gas storage deliverability
+          - storage working gas
+          - storage cushion gas
+          - midstream tariff model
+      - id: downstream_operations
+        phrases:
+          - crude compatibility analysis
+          - crude blend optimization
+          - desalter performance monitoring
+          - furnace duty optimization
+          - distillation cut point
+          - column reflux optimization
+          - catalytic cracker severity
+          - hydrocracker conversion rate
+          - reformer octane yield
+          - hydrogen consumption forecast
+          - refinery hydrogen network
+          - sulfur plant recovery
+          - amine system performance
+          - refinery water balance
+          - cooling water system
+          - flare load analysis
+          - refinery maintenance backlog
+          - process unit availability
+          - catalyst life prediction
+          - refinery constraint analysis
+          - blending giveaway reduction
+          - product specification margin
+          - refinery carbon intensity
+          - refinery energy benchmark
+          - margin improvement initiative
+      - id: mining_operations
+        phrases:
+          - resource classification confidence
+          - geostatistical block estimation
+          - variogram model analysis
+          - grade interpolation method
+          - pit shell optimization
+          - mine phase design
+          - pushback sequence planning
+          - short interval control
+          - fleet productivity analysis
+          - haul cycle optimization
+          - shovel productivity monitoring
+          - drill utilization analysis
+          - explosive energy distribution
+          - blast movement monitoring
+          - dilution control strategy
+          - ore loss analysis
+          - plant feed reconciliation
+          - comminution energy index
+          - grinding media consumption
+          - flotation reagent optimization
+          - concentrate grade control
+          - tailings water recovery
+          - mine water balance
+          - geotechnical hazard mapping
+          - closure cost estimate

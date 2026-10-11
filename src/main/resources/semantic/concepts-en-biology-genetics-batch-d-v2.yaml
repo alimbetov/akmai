@@ -1,0 +1,112 @@
+version: semantic-concepts-en-biology-genetics-batch-d-v2
+domains:
+  - domainId: biology_genetics
+    subdomains:
+      - id: molecular_biology
+        phrases:
+          - promoter occupancy analysis
+          - enhancer redundancy mechanism
+          - transcription burst dynamics
+          - chromatin domain boundary
+          - topological domain organization
+          - replication timing profile
+          - DNA replication checkpoint
+          - stalled fork recovery
+          - telomere length maintenance
+          - RNA stability regulation
+          - RNA localization mechanism
+          - ribosomal quality control
+          - translational fidelity mechanism
+          - protein folding surveillance
+          - proteostasis network regulation
+          - ubiquitin chain topology
+          - SUMO modification pathway
+          - phosphoproteomic signaling map
+          - kinase substrate profiling
+          - phosphatase substrate profiling
+          - molecular condensate formation
+          - phase separation mechanism
+          - enhancer promoter specificity
+          - transcriptional noise regulation
+          - gene expression burst
+      - id: genetics
+        phrases:
+          - variant evidence framework
+          - segregation likelihood estimate
+          - de novo evidence strength
+          - phenotype match scoring
+          - computational variant prediction
+          - population allele constraint
+          - gene intolerance metric
+          - loss function constraint
+          - haploinsufficiency evidence score
+          - dosage sensitivity assessment
+          - copy number interpretation
+          - structural variant annotation
+          - breakpoint resolution analysis
+          - repeat expansion detection
+          - mitochondrial variant analysis
+          - mosaic fraction estimate
+          - clonal hematopoiesis detection
+          - tumor purity estimate
+          - somatic copy number
+          - mutation clonality estimate
+          - genomic scar analysis
+          - homologous repair deficiency
+          - ancestry adjusted association
+          - transethnic meta analysis
+          - polygenic interaction model
+      - id: cell_biology
+        phrases:
+          - cell state transition
+          - cell state plasticity
+          - cell fate trajectory
+          - single cell lineage
+          - organelle stress signaling
+          - mitochondrial permeability transition
+          - mitochondrial calcium uptake
+          - lysosomal calcium signaling
+          - autophagy initiation complex
+          - autophagy cargo recognition
+          - endosomal maturation process
+          - membrane curvature sensing
+          - membrane tension regulation
+          - cortical actin remodeling
+          - focal adhesion turnover
+          - cell substrate adhesion
+          - nuclear mechanotransduction pathway
+          - nuclear envelope integrity
+          - chromatin mechanical response
+          - cell volume regulation
+          - osmotic stress response
+          - contact guidance migration
+          - chemotactic migration response
+          - cell cycle reentry
+          - senescence associated phenotype
+      - id: physiology
+        phrases:
+          - ventricular compliance measurement
+          - myocardial oxygen demand
+          - coronary flow reserve
+          - arterial wave reflection
+          - pulse wave velocity
+          - microvascular resistance index
+          - pulmonary diffusion capacity
+          - respiratory muscle workload
+          - renal oxygen consumption
+          - renal sodium handling
+          - glomerular hemodynamic regulation
+          - renal tubular feedback
+          - hepatic blood flow
+          - hepatic extraction fraction
+          - glucose disposal rate
+          - insulin secretion index
+          - beta cell reserve
+          - hypothalamic thermoregulation response
+          - neurovascular coupling response
+          - cerebral autoregulation mechanism
+          - baroreflex sensitivity measurement
+          - autonomic reflex testing
+          - skeletal muscle fatigue
+          - exercise oxygen uptake
+          - systemic vascular conductance

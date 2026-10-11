@@ -1,0 +1,112 @@
+version: semantic-concepts-en-construction-real-estate-batch-c-v2
+domains:
+  - domainId: construction_real_estate
+    subdomains:
+      - id: design_construction
+        phrases:
+          - geotechnical investigation report
+          - soil bearing capacity
+          - settlement monitoring plan
+          - retaining wall design
+          - excavation support design
+          - dewatering system design
+          - pile load testing
+          - concrete strength testing
+          - reinforcement inspection process
+          - structural steel inspection
+          - facade installation sequence
+          - waterproofing inspection plan
+          - roofing inspection process
+          - mechanical commissioning test
+          - electrical commissioning test
+          - plumbing pressure test
+          - fire protection testing
+          - building envelope testing
+          - air tightness testing
+          - thermal bridging analysis
+          - acoustic performance assessment
+          - accessibility compliance review
+          - construction defect tracking
+          - punch list management
+          - occupancy permit process
+      - id: real_estate_market
+        phrases:
+          - rental comparables analysis
+          - sales comparables analysis
+          - gross income multiplier
+          - capitalization yield spread
+          - property risk premium
+          - vacancy allowance estimate
+          - rent collection rate
+          - tenant default risk
+          - lease rollover schedule
+          - weighted lease maturity
+          - tenant concentration risk
+          - anchor tenant exposure
+          - rental incentive analysis
+          - leasing commission structure
+          - property operating margin
+          - net effective rent
+          - property liquidity discount
+          - transaction closing cost
+          - acquisition due diligence
+          - property title review
+          - zoning compliance review
+          - development density analysis
+          - development cost benchmark
+          - residual development value
+          - property portfolio rotation
+      - id: facilities_management
+        phrases:
+          - asset condition index
+          - preventive task library
+          - maintenance priority matrix
+          - service request backlog
+          - work order aging
+          - maintenance response priority
+          - asset failure history
+          - asset replacement forecast
+          - lifecycle renewal program
+          - facility energy audit
+          - utility demand management
+          - building water efficiency
+          - indoor environmental quality
+          - indoor temperature monitoring
+          - indoor humidity monitoring
+          - indoor air monitoring
+          - space demand forecast
+          - occupancy density analysis
+          - workplace utilization rate
+          - service contractor performance
+          - contract compliance monitoring
+          - facility risk register
+          - emergency preparedness plan
+          - business continuity facility
+          - accessibility facility audit
+      - id: project_controls
+        phrases:
+          - integrated master schedule
+          - schedule logic review
+          - schedule health assessment
+          - critical path sensitivity
+          - near critical path
+          - total float analysis
+          - free float analysis
+          - schedule compression strategy
+          - acceleration cost analysis
+          - delay event register
+          - contemporaneous delay analysis
+          - window delay analysis
+          - as planned analysis
+          - as built analysis
+          - earned value forecast
+          - estimate confidence level
+          - cost contingency model
+          - schedule contingency model
+          - risk adjusted forecast
+          - trend register management
+          - change log governance
+          - commitment cost tracking
+          - actual cost reconciliation
+          - forecast completion date
+          - project performance baseline

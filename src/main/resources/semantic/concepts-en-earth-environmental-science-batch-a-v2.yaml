@@ -1,0 +1,112 @@
+version: semantic-concepts-en-earth-environmental-science-batch-a-v2
+domains:
+  - domainId: earth_environmental_science
+    subdomains:
+      - id: geology
+        phrases:
+          - plate boundary dynamics
+          - crustal deformation analysis
+          - seismic hazard assessment
+          - earthquake source mechanism
+          - fault slip rate
+          - paleoseismic event analysis
+          - basin subsidence history
+          - sediment provenance analysis
+          - stratigraphic sequence interpretation
+          - depositional environment reconstruction
+          - diagenetic alteration process
+          - metamorphic grade assessment
+          - igneous differentiation process
+          - magma chamber evolution
+          - volcanic eruption hazard
+          - geochronological age dating
+          - radiometric dating method
+          - isotope geochemistry analysis
+          - structural geology mapping
+          - fracture network characterization
+          - rock mechanical behavior
+          - geotechnical site characterization
+          - subsurface geophysical imaging
+          - seismic reflection interpretation
+          - gravity anomaly interpretation
+      - id: climate_science
+        phrases:
+          - climate sensitivity estimate
+          - radiative forcing balance
+          - carbon cycle feedback
+          - ocean heat uptake
+          - sea level projection
+          - climate attribution analysis
+          - paleoclimate reconstruction method
+          - atmospheric aerosol forcing
+          - cloud feedback mechanism
+          - hydrological cycle response
+          - monsoon variability pattern
+          - jet stream variability
+          - El Nino oscillation
+          - Atlantic circulation strength
+          - ocean acidification trend
+          - marine heatwave event
+          - drought severity index
+          - heatwave frequency analysis
+          - climate extreme attribution
+          - regional climate downscaling
+          - climate ensemble projection
+          - emissions scenario pathway
+          - carbon budget estimate
+          - tipping element assessment
+          - climate risk scenario
+      - id: hydrology
+        phrases:
+          - rainfall runoff modeling
+          - infiltration capacity estimate
+          - evapotranspiration rate estimate
+          - soil moisture balance
+          - streamflow routing method
+          - river hydrograph analysis
+          - baseflow separation method
+          - groundwater recharge estimation
+          - aquifer transmissivity estimate
+          - hydraulic conductivity measurement
+          - groundwater drawdown analysis
+          - well pumping test
+          - contaminant transport model
+          - unsaturated zone flow
+          - groundwater surface interaction
+          - reservoir operation model
+          - flood inundation mapping
+          - flood return period
+          - drought hydrology index
+          - snowmelt runoff model
+          - glacier mass balance
+          - sediment transport rate
+          - watershed water yield
+          - urban stormwater runoff
+          - hydrological forecast model
+      - id: environmental_assessment
+        phrases:
+          - life cycle assessment
+          - environmental baseline survey
+          - pollutant dispersion model
+          - air quality modeling
+          - emissions inventory analysis
+          - greenhouse gas inventory
+          - environmental compliance audit
+          - contaminated site assessment
+          - soil contamination mapping
+          - groundwater contamination assessment
+          - remediation feasibility study
+          - ecological baseline survey
+          - habitat suitability assessment
+          - species distribution model
+          - ecosystem service valuation
+          - biodiversity offset planning
+          - environmental flow requirement
+          - cumulative impact assessment
+          - strategic environmental assessment
+          - environmental risk register
+          - waste characterization study
+          - hazardous waste management
+          - noise impact assessment
+          - environmental monitoring plan
+          - remediation performance monitoring

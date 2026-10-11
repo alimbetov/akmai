@@ -1,0 +1,112 @@
+version: semantic-concepts-en-medicine-pharmacology-batch-c-v2
+domains:
+  - domainId: medicine_pharmacology
+    subdomains:
+      - id: clinical_diagnosis
+        phrases:
+          - Bayesian diagnostic updating
+          - posterior disease probability
+          - diagnostic odds ratio
+          - clinical prediction rule
+          - disease probability threshold
+          - sequential test strategy
+          - reflex testing protocol
+          - confirmatory testing pathway
+          - diagnostic discordance review
+          - imaging phenotype pattern
+          - radiologic severity grading
+          - pathology margin assessment
+          - molecular pathology classification
+          - biomarker cutoff selection
+          - reference interval interpretation
+          - organ dysfunction scoring
+          - frailty assessment index
+          - delirium screening assessment
+          - pain severity assessment
+          - functional impairment scoring
+          - diagnostic resource utilization
+          - diagnostic turnaround time
+          - triage acuity score
+          - clinical escalation trigger
+          - diagnostic safety netting
+      - id: pharmacology
+        phrases:
+          - physiologically based pharmacokinetics
+          - target mediated disposition
+          - time dependent clearance
+          - saturable elimination kinetics
+          - nonlinear dose exposure
+          - interindividual variability model
+          - intraindividual variability estimate
+          - covariate pharmacokinetic analysis
+          - allometric dose scaling
+          - exposure safety relationship
+          - exposure efficacy relationship
+          - receptor desensitization mechanism
+          - active metabolite exposure
+          - metabolite toxicity assessment
+          - drug accumulation kinetics
+          - dosing interval optimization
+          - concentration guided dosing
+          - model informed dosing
+          - therapeutic concentration range
+          - concentration toxicity threshold
+          - drug interaction liability
+          - mechanism based inhibition
+          - transporter mediated disposition
+          - pharmacodynamic tolerance model
+          - adverse reaction causality
+      - id: clinical_trials
+        phrases:
+          - group sequential design
+          - sample size reestimation
+          - adaptive randomization method
+          - response adaptive randomization
+          - Bayesian trial design
+          - platform trial design
+          - basket trial design
+          - umbrella trial design
+          - master protocol design
+          - enrichment trial design
+          - surrogate endpoint validation
+          - competing risk analysis
+          - restricted mean survival
+          - proportional hazards assumption
+          - treatment interaction analysis
+          - missing not random
+          - tipping point analysis
+          - estimand sensitivity analysis
+          - adherence adjusted effect
+          - principal stratum analysis
+          - site effect analysis
+          - investigator effect assessment
+          - data cutoff procedure
+          - database lock process
+          - clinical study report
+      - id: epidemiology
+        phrases:
+          - directed acyclic graph
+          - causal effect estimation
+          - marginal structural model
+          - g computation formula
+          - doubly robust estimation
+          - negative control analysis
+          - quantitative bias analysis
+          - E value analysis
+          - sensitivity to confounding
+          - mediation effect analysis
+          - competing risk incidence
+          - multistate disease model
+          - recurrent event epidemiology
+          - person time denominator
+          - standardized rate difference
+          - excess mortality estimate
+          - years life lost
+          - quality adjusted life years
+          - disability weight estimate
+          - burden attributable fraction
+          - outbreak reproduction interval
+          - serial interval distribution
+          - generation interval estimate
+          - epidemic doubling time
+          - surveillance ascertainment bias

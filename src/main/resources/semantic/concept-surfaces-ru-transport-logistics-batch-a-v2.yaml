@@ -1,0 +1,307 @@
+version: semantic-surfaces-ru-transport-logistics-batch-a-v2
+languages:
+  - language: ru
+    surfaces:
+      - conceptId: transport_logistics.freight_transport.freight_lane_analysis
+        preferredPhrase: анализ грузовых направлений
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.modal_split_analysis
+        preferredPhrase: анализ распределения по видам транспорта
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.intermodal_transport_planning
+        preferredPhrase: планирование интермодальных перевозок
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.container_transport_service
+        preferredPhrase: услуга контейнерной перевозки
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.bulk_freight_transport
+        preferredPhrase: перевозка навалочных грузов
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.less_than_truckload
+        preferredPhrase: сборная автомобильная перевозка
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.full_truckload_service
+        preferredPhrase: перевозка полной машиной
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.rail_wagon_utilization
+        preferredPhrase: использование железнодорожных вагонов
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.rail_terminal_dwell
+        preferredPhrase: простой на железнодорожном терминале
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.port_container_dwell
+        preferredPhrase: простой контейнера в порту
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.air_freight_capacity
+        preferredPhrase: провозная емкость авиагрузов
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.air_cargo_yield
+        preferredPhrase: доходность авиагрузовых перевозок
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.freight_rate_index
+        preferredPhrase: индекс грузовых ставок
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.transport_cost_allocation
+        preferredPhrase: распределение транспортных затрат
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.cargo_consolidation_service
+        preferredPhrase: услуга консолидации грузов
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.cargo_deconsolidation_process
+        preferredPhrase: процесс деконсолидации грузов
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.cross_docking_operation
+        preferredPhrase: операция кросс докинга
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.freight_forwarding_service
+        preferredPhrase: транспортно экспедиторская услуга
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.customs_brokerage_process
+        preferredPhrase: процесс таможенного брокерского обслуживания
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.dangerous_goods_transport
+        preferredPhrase: перевозка опасных грузов
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.oversized_cargo_transport
+        preferredPhrase: перевозка негабаритных грузов
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.temperature_controlled_transport
+        preferredPhrase: перевозка с температурным контролем
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.transport_damage_rate
+        preferredPhrase: уровень повреждений при перевозке
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.freight_claims_management
+        preferredPhrase: управление претензиями по перевозкам
+        aliases: []
+      - conceptId: transport_logistics.freight_transport.carrier_performance_monitoring
+        preferredPhrase: мониторинг эффективности перевозчика
+        aliases: []
+
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_slotting_optimization
+        preferredPhrase: оптимизация размещения товаров на складе
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_space_utilization
+        preferredPhrase: использование складской площади
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.dock_door_scheduling
+        preferredPhrase: планирование доковых ворот
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.yard_management_system
+        preferredPhrase: система управления складским двором
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.inbound_receiving_process
+        preferredPhrase: процесс приемки входящих поставок
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.putaway_optimization_strategy
+        preferredPhrase: стратегия оптимизации размещения на хранение
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.replenishment_task_planning
+        preferredPhrase: планирование задач пополнения
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.wave_picking_process
+        preferredPhrase: волновой процесс комплектования
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.zone_picking_process
+        preferredPhrase: зональный процесс комплектования
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.batch_picking_process
+        preferredPhrase: пакетный процесс комплектования
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.pick_path_optimization
+        preferredPhrase: оптимизация маршрута комплектовщика
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.packing_station_design
+        preferredPhrase: проектирование упаковочной станции
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.shipping_dock_operation
+        preferredPhrase: работа отгрузочного дока
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.inventory_cycle_counting
+        preferredPhrase: циклическая инвентаризация запасов
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.inventory_accuracy_rate
+        preferredPhrase: коэффициент точности запасов
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_labor_planning
+        preferredPhrase: планирование складского персонала
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_productivity_rate
+        preferredPhrase: производительность склада
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.distribution_center_capacity_planning
+        preferredPhrase: планирование мощности распределительного центра
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.cross_dock_scheduling
+        preferredPhrase: планирование кросс докинга
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.returns_processing_center
+        preferredPhrase: центр обработки возвратов
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.reverse_logistics_operation
+        preferredPhrase: операция обратной логистики
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.value_added_services
+        preferredPhrase: услуги с добавленной стоимостью
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.warehouse_safety_management
+        preferredPhrase: управление безопасностью склада
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.temperature_mapping_study
+        preferredPhrase: исследование температурного картирования
+        aliases: []
+      - conceptId: transport_logistics.warehousing_distribution.distribution_order_cycle
+        preferredPhrase: цикл распределительного заказа
+        aliases: []
+
+      - conceptId: transport_logistics.fleet_operations.fleet_replacement_strategy
+        preferredPhrase: стратегия замены автопарка
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_lifecycle_cost
+        preferredPhrase: стоимость жизненного цикла автомобиля
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_acquisition_planning
+        preferredPhrase: планирование приобретения автопарка
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_preventive_maintenance
+        preferredPhrase: профилактическое обслуживание транспорта
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_downtime_analysis
+        preferredPhrase: анализ простоев транспорта
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_availability_rate
+        preferredPhrase: коэффициент готовности автопарка
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.driver_utilization_rate
+        preferredPhrase: коэффициент использования водителей
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.driver_hours_compliance
+        preferredPhrase: соблюдение норм рабочего времени водителей
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.electronic_logging_device
+        preferredPhrase: электронное устройство регистрации водителя
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_route_adherence
+        preferredPhrase: соблюдение маршрутов автопарком
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_idling_reduction
+        preferredPhrase: сокращение холостого хода транспорта
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fuel_consumption_monitoring
+        preferredPhrase: мониторинг расхода топлива
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_tire_management
+        preferredPhrase: управление шинами автопарка
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.telematics_event_monitoring
+        preferredPhrase: мониторинг телематических событий
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.driver_behavior_scoring
+        preferredPhrase: оценка поведения водителей
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.harsh_braking_event
+        preferredPhrase: событие резкого торможения
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.speed_compliance_monitoring
+        preferredPhrase: мониторинг соблюдения скоростного режима
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_accident_frequency
+        preferredPhrase: частота аварий автопарка
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.vehicle_inspection_program
+        preferredPhrase: программа осмотра транспортных средств
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.roadworthiness_compliance_check
+        preferredPhrase: проверка технической исправности транспорта
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_insurance_management
+        preferredPhrase: управление страхованием автопарка
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_emissions_monitoring
+        preferredPhrase: мониторинг выбросов автопарка
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.electric_fleet_transition
+        preferredPhrase: переход на электрический автопарк
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.charging_infrastructure_planning
+        preferredPhrase: планирование зарядной инфраструктуры
+        aliases: []
+      - conceptId: transport_logistics.fleet_operations.fleet_total_ownership
+        preferredPhrase: совокупная стоимость владения автопарком
+        aliases: []
+
+      - conceptId: transport_logistics.supply_chain.supply_chain_visibility
+        preferredPhrase: прозрачность цепи поставок
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supplier_risk_assessment
+        preferredPhrase: оценка рисков поставщика
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supplier_capacity_planning
+        preferredPhrase: планирование мощности поставщика
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supplier_performance_scorecard
+        preferredPhrase: карта показателей поставщика
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.purchase_order_fulfillment
+        preferredPhrase: исполнение заказа на закупку
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.material_lead_time
+        preferredPhrase: срок поставки материала
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.safety_stock_optimization
+        preferredPhrase: оптимизация страхового запаса
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.inventory_replenishment_policy
+        preferredPhrase: политика пополнения запасов
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.demand_forecast_accuracy
+        preferredPhrase: точность прогноза спроса
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.sales_operations_planning
+        preferredPhrase: планирование продаж и операций
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.integrated_business_planning
+        preferredPhrase: интегрированное бизнес планирование
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.available_to_promise
+        preferredPhrase: доступно для обещания клиенту
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.capable_to_promise
+        preferredPhrase: доступно по производственным возможностям
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.order_allocation_rule
+        preferredPhrase: правило распределения заказов
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.multi_echelon_inventory
+        preferredPhrase: многоуровневое управление запасами
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.inventory_positioning_strategy
+        preferredPhrase: стратегия размещения запасов
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.network_capacity_planning
+        preferredPhrase: планирование мощности логистической сети
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supply_disruption_scenario
+        preferredPhrase: сценарий сбоя поставок
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supplier_diversification_strategy
+        preferredPhrase: стратегия диверсификации поставщиков
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.dual_sourcing_strategy
+        preferredPhrase: стратегия двойного снабжения
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.nearshoring_supply_strategy
+        preferredPhrase: стратегия ближнего размещения поставок
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.reshoring_supply_strategy
+        preferredPhrase: стратегия возврата снабжения в страну
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supply_chain_control_tower
+        preferredPhrase: центр управления цепью поставок
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.end_to_end_traceability
+        preferredPhrase: сквозная прослеживаемость поставок
+        aliases: []
+      - conceptId: transport_logistics.supply_chain.supply_chain_carbon
+        preferredPhrase: углеродный след цепи поставок
+        aliases: []

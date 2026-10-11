@@ -1,0 +1,112 @@
+version: semantic-concepts-en-chemistry-materials-batch-b-v2
+domains:
+  - domainId: chemistry_materials
+    subdomains:
+      - id: organic_chemistry
+        phrases:
+          - asymmetric reaction design
+          - stereoselective synthesis control
+          - diastereoselective reaction pathway
+          - radical reaction mechanism
+          - pericyclic reaction pathway
+          - photochemical reaction mechanism
+          - electroorganic synthesis method
+          - cross coupling reaction
+          - metathesis reaction pathway
+          - cycloaddition reaction mechanism
+          - rearrangement reaction mechanism
+          - organocatalytic reaction design
+          - biocatalytic synthesis route
+          - protecting group removal
+          - functional group compatibility
+          - substrate scope evaluation
+          - reaction selectivity analysis
+          - reaction impurity profiling
+          - process chemistry optimization
+          - reaction calorimetry study
+          - crystallization process development
+          - solvent selection strategy
+          - telescoped synthesis sequence
+          - route robustness assessment
+          - scale up hazard assessment
+      - id: analytical_chemistry
+        phrases:
+          - chromatographic method development
+          - gradient elution optimization
+          - chromatographic selectivity factor
+          - peak tailing assessment
+          - signal noise ratio
+          - detector linearity assessment
+          - analytical range verification
+          - method specificity assessment
+          - method accuracy assessment
+          - method precision assessment
+          - robustness testing protocol
+          - system suitability testing
+          - carryover contamination assessment
+          - matrix matched calibration
+          - standard addition method
+          - isotope dilution analysis
+          - calibration uncertainty budget
+          - limit quantification verification
+          - sample stability study
+          - extract recovery assessment
+          - ion suppression assessment
+          - spectral library matching
+          - chemometric classification model
+          - multivariate calibration model
+          - laboratory proficiency testing
+      - id: physical_chemistry
+        phrases:
+          - reaction order determination
+          - kinetic isotope effect
+          - activation entropy estimate
+          - activation enthalpy estimate
+          - equilibrium constant measurement
+          - chemical activity calculation
+          - osmotic coefficient model
+          - excess Gibbs energy
+          - partial molar property
+          - heat capacity measurement
+          - calorimetric enthalpy measurement
+          - phase transition enthalpy
+          - critical point behavior
+          - supercritical fluid behavior
+          - intermolecular force model
+          - molecular partition function
+          - vibrational energy level
+          - rotational energy level
+          - electronic excitation state
+          - photophysical relaxation pathway
+          - electron transfer kinetics
+          - double layer capacitance
+          - zeta potential measurement
+          - micelle formation process
+          - nucleation growth kinetics
+      - id: materials_science
+        phrases:
+          - grain boundary engineering
+          - precipitate strengthening mechanism
+          - solid solution strengthening
+          - work hardening behavior
+          - residual stress measurement
+          - stress strain curve
+          - ductile fracture mechanism
+          - brittle fracture mechanism
+          - fatigue life prediction
+          - creep rupture testing
+          - crack propagation resistance
+          - impact toughness testing
+          - thermal cycling durability
+          - thermal shock resistance
+          - diffusion barrier performance
+          - coating adhesion strength
+          - coating thickness measurement
+          - surface roughness measurement
+          - porosity fraction analysis
+          - pore size distribution
+          - composite failure mode
+          - fiber matrix interface
+          - polymer viscoelastic behavior
+          - ceramic fracture behavior
+          - materials degradation mechanism

@@ -1,0 +1,112 @@
+version: semantic-concepts-en-physics-astronomy-batch-c-v2
+domains:
+  - domainId: physics_astronomy
+    subdomains:
+      - id: classical_mechanics
+        phrases:
+          - symplectic phase flow
+          - Liouville theorem mechanics
+          - action angle variables
+          - adiabatic invariant dynamics
+          - nonlinear resonance condition
+          - separatrix crossing dynamics
+          - Lyapunov stability analysis
+          - chaotic attractor dynamics
+          - Poincare section analysis
+          - Kolmogorov Arnold Moser theory
+          - rigid body precession
+          - torque free rotation
+          - Euler angle kinematics
+          - rolling constraint dynamics
+          - contact mechanics model
+          - Hertz contact stress
+          - elastic wave propagation
+          - continuum constitutive relation
+          - stress wave reflection
+          - potential flow solution
+          - boundary layer separation
+          - vortex shedding frequency
+          - turbulence energy cascade
+          - compressible flow shock
+          - acoustic resonance mode
+      - id: thermodynamics
+        phrases:
+          - virial equation expansion
+          - compressibility factor relation
+          - residual thermodynamic property
+          - thermodynamic force flux relation
+          - Gibbs phase rule
+          - Clapeyron slope relation
+          - critical exponent scaling
+          - order parameter fluctuation
+          - renormalization group scaling
+          - ensemble equivalence condition
+          - grand potential relation
+          - Helmholtz partition relation
+          - canonical fluctuation variance
+          - heat capacity anomaly
+          - susceptibility critical behavior
+          - transport coefficient relation
+          - Green Kubo relation
+          - Boltzmann transport equation
+          - nonequilibrium steady state
+          - entropy production principle
+          - irreversible transport coupling
+          - thermal diffusion effect
+          - Soret effect coefficient
+          - Dufour effect coefficient
+          - phase coexistence curve
+      - id: electromagnetism
+        phrases:
+          - retarded potential solution
+          - Green function electromagnetics
+          - radiation reaction force
+          - Lienard Wiechert potential
+          - electromagnetic momentum density
+          - Maxwell stress tensor
+          - wave packet propagation
+          - anisotropic dielectric response
+          - birefringence phase retardation
+          - nonlinear optical susceptibility
+          - dielectric relaxation spectrum
+          - magnetic hysteresis loop
+          - ferromagnetic domain wall
+          - superconducting penetration depth
+          - Josephson junction dynamics
+          - skin effect impedance
+          - surface plasmon resonance
+          - photonic band structure
+          - metamaterial effective medium
+          - antenna impedance matching
+          - near field coupling
+          - far field radiation
+          - waveguide cutoff frequency
+          - cavity perturbation method
+          - plasma dispersion relation
+      - id: astrophysics
+        phrases:
+          - stellar oscillation mode
+          - asteroseismic frequency spectrum
+          - stellar convection zone
+          - stellar magnetic dynamo
+          - stellar wind mass loss
+          - binary mass transfer
+          - orbital period decay
+          - tidal circularization timescale
+          - neutron star equation state
+          - neutron star glitch
+          - pulsar braking index
+          - magnetosphere particle acceleration
+          - black hole shadow
+          - relativistic jet launching
+          - accretion state transition
+          - galaxy merger rate
+          - galaxy quenching mechanism
+          - circumgalactic medium structure
+          - dark matter subhalo
+          - baryonic feedback process
+          - weak lensing tomography
+          - redshift space distortion
+          - cosmic shear spectrum
+          - primordial power spectrum
+          - standard siren distance

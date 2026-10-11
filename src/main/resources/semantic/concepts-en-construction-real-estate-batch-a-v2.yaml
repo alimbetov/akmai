@@ -1,0 +1,112 @@
+version: semantic-concepts-en-construction-real-estate-batch-a-v2
+domains:
+  - domainId: construction_real_estate
+    subdomains:
+      - id: design_construction
+        phrases:
+          - conceptual design package
+          - detailed design package
+          - construction design review
+          - structural load analysis
+          - foundation design calculation
+          - steel connection design
+          - concrete mix design
+          - building envelope design
+          - mechanical system design
+          - electrical system design
+          - plumbing system design
+          - fire protection design
+          - construction method statement
+          - site logistics plan
+          - temporary works design
+          - construction sequencing plan
+          - constructability review process
+          - design coordination meeting
+          - shop drawing review
+          - request for information
+          - submittal approval process
+          - construction quality plan
+          - site inspection checklist
+          - commissioning test plan
+          - building handover process
+      - id: real_estate_market
+        phrases:
+          - property comparable analysis
+          - discounted cash flow valuation
+          - capitalization rate analysis
+          - net operating income
+          - gross rental income
+          - effective rental income
+          - vacancy rate analysis
+          - tenant retention rate
+          - lease renewal probability
+          - market rent assessment
+          - rent escalation clause
+          - lease incentive package
+          - tenant improvement allowance
+          - commercial lease structure
+          - triple net lease
+          - gross lease structure
+          - property absorption rate
+          - lease expiry profile
+          - development feasibility study
+          - highest best use
+          - land residual valuation
+          - property transaction yield
+          - real estate capex
+          - asset repositioning strategy
+          - property exit strategy
+      - id: facilities_management
+        phrases:
+          - facility condition assessment
+          - asset lifecycle plan
+          - building maintenance strategy
+          - facility maintenance prioritization
+          - reactive maintenance process
+          - facility work order
+          - service level agreement
+          - facility help desk
+          - space utilization analysis
+          - workplace occupancy analytics
+          - energy management system
+          - building automation system
+          - heating ventilation maintenance
+          - chiller maintenance program
+          - elevator maintenance contract
+          - fire system inspection
+          - facility compliance audit
+          - janitorial service management
+          - security service management
+          - waste service management
+          - utility consumption monitoring
+          - indoor air quality
+          - facility capital renewal
+          - deferred maintenance backlog
+          - occupant satisfaction survey
+      - id: project_controls
+        phrases:
+          - project cost baseline
+          - project schedule baseline
+          - cost performance index
+          - schedule performance index
+          - estimate at completion
+          - estimate to complete
+          - budget at completion
+          - project cash flow
+          - cost variance analysis
+          - schedule variance analysis
+          - critical path analysis
+          - float consumption analysis
+          - schedule recovery plan
+          - project change control
+          - change impact assessment
+          - contractor earned progress
+          - quantity progress measurement
+          - project risk quantification
+          - contingency reserve analysis
+          - management reserve allocation
+          - cost forecast update
+          - schedule forecast update
+          - project controls dashboard
+          - progress measurement system
+          - project closeout forecast

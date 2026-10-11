@@ -1,0 +1,112 @@
+version: semantic-concepts-en-mathematics-statistics-batch-d-v2
+domains:
+  - domainId: mathematics_statistics
+    subdomains:
+      - id: probability_statistics
+        phrases:
+          - Bayesian model averaging
+          - posterior odds ratio
+          - posterior credible region
+          - marginal likelihood estimation
+          - bridge sampling estimator
+          - thermodynamic integration estimator
+          - Rao Blackwellized estimator
+          - U statistic asymptotics
+          - Hájek projection method
+          - stochastic dominance test
+          - kernel two sample test
+          - energy distance statistic
+          - distance covariance measure
+          - concentration inequality bound
+          - large deviation principle
+          - central limit theorem
+          - Berry Esseen bound
+          - Slutsky theorem application
+          - continuous mapping theorem
+          - contiguity asymptotic theory
+          - semiparametric efficiency bound
+          - influence function analysis
+          - doubly robust estimator
+          - synthetic control method
+          - interrupted time series
+      - id: algebra_geometry
+        phrases:
+          - Smith normal form
+          - rational canonical form
+          - minimal polynomial computation
+          - characteristic polynomial factorization
+          - matrix pencil analysis
+          - invariant subspace decomposition
+          - exterior derivative operator
+          - exact sequence construction
+          - spectral sequence computation
+          - chain complex homology
+          - category functor mapping
+          - natural transformation identity
+          - universal property construction
+          - Noether normalization lemma
+          - Hilbert polynomial computation
+          - primary ideal decomposition
+          - localization ring construction
+          - algebraic closure field
+          - divisor class group
+          - intersection multiplicity calculation
+          - Morse theory criticality
+          - characteristic class computation
+          - Chern class invariant
+          - orbifold quotient structure
+          - triangulated category structure
+      - id: optimization
+        phrases:
+          - constraint qualification condition
+          - Slater condition theorem
+          - duality gap certificate
+          - parametric optimization analysis
+          - sensitivity derivative optimization
+          - active set method
+          - gradient projection algorithm
+          - Newton optimization method
+          - quasi Newton optimization
+          - conjugate gradient optimization
+          - stochastic mirror descent
+          - adaptive gradient optimization
+          - coordinate proximal method
+          - proximal Newton method
+          - operator splitting optimization
+          - monotone operator inclusion
+          - variational inequality problem
+          - equilibrium constraint program
+          - conic optimization problem
+          - quadratic programming model
+          - nonlinear least squares
+          - optimal control problem
+          - dynamic programming recursion
+          - policy iteration optimization
+          - value iteration optimization
+      - id: numerical_methods
+        phrases:
+          - Courant stability condition
+          - von Neumann stability
+          - finite difference stencil
+          - upwind discretization scheme
+          - flux limiter method
+          - WENO reconstruction scheme
+          - discontinuous Galerkin method
+          - finite element stabilization
+          - Petrov Galerkin formulation
+          - mixed finite element
+          - isogeometric analysis method
+          - meshfree approximation method
+          - immersed boundary method
+          - particle mesh method
+          - fast Fourier transform
+          - discrete cosine transform
+          - pseudospectral differentiation matrix
+          - matrix free solver
+          - deflation preconditioning method
+          - algebraic domain decomposition
+          - local truncation error
+          - global discretization error
+          - backward error analysis
+          - condition number estimation
+          - manufactured solution verification
