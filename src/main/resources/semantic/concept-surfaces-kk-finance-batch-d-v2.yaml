@@ -246,7 +246,7 @@ languages:
         preferredPhrase: клиент тәуекелін сегменттеу
         aliases: []
       - conceptId: finance_banking.payments_compliance.beneficial_owner_screening
-        preferredPhrase: бенефициарлық иені тексеру
+        preferredPhrase: бенефициарлық иені тізімдер бойынша тексеру
         aliases: []
       - conceptId: finance_banking.payments_compliance.transaction_pattern_analysis
         preferredPhrase: транзакция үлгілерін талдау
