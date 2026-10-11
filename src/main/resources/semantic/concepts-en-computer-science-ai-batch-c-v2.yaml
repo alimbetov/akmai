@@ -20,7 +20,7 @@ domains:
           - Mo algorithm technique
           - meet in middle
           - branch and price
-          - column generation method
+          - bidirectional search algorithm
           - primal dual algorithm
           - approximation ratio analysis
           - competitive ratio analysis
