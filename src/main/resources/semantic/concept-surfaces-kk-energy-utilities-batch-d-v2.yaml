@@ -1,0 +1,307 @@
+version: semantic-surfaces-kk-energy-utilities-batch-d-v2
+languages:
+  - language: kk
+    surfaces:
+      - conceptId: energy_utilities.power_generation.startup_energy_requirement
+        preferredPhrase: іске қосу энергиясы талабы
+        aliases: []
+      - conceptId: energy_utilities.power_generation.shutdown_thermal_stress
+        preferredPhrase: тоқтату кезіндегі жылулық кернеу
+        aliases: []
+      - conceptId: energy_utilities.power_generation.boiler_ramp_constraint
+        preferredPhrase: қазандық қуат өзгерісі шектеуі
+        aliases: []
+      - conceptId: energy_utilities.power_generation.turbine_ramp_capability
+        preferredPhrase: турбина қуат өзгерту қабілеті
+        aliases: []
+      - conceptId: energy_utilities.power_generation.generator_minimum_load
+        preferredPhrase: генератор ең төмен жүктемесі
+        aliases: []
+      - conceptId: energy_utilities.power_generation.unit_cycling_cost
+        preferredPhrase: агрегат циклдеу шығыны
+        aliases: []
+      - conceptId: energy_utilities.power_generation.forced_outage_performance_metric
+        preferredPhrase: мәжбүрлі ажырату тиімділік көрсеткіші
+        aliases: []
+      - conceptId: energy_utilities.power_generation.outage_cause_classification
+        preferredPhrase: ажырату себептерін жіктеу
+        aliases: []
+      - conceptId: energy_utilities.power_generation.maintenance_reserve_planning
+        preferredPhrase: жөндеу резервін жоспарлау
+        aliases: []
+      - conceptId: energy_utilities.power_generation.generation_adequacy_contribution
+        preferredPhrase: генерация жеткіліктілігіне үлес
+        aliases: []
+      - conceptId: energy_utilities.power_generation.primary_frequency_response
+        preferredPhrase: бастапқы жиілік реакциясы
+        aliases: []
+      - conceptId: energy_utilities.power_generation.secondary_frequency_response
+        preferredPhrase: екінші жиілік реакциясы
+        aliases: []
+      - conceptId: energy_utilities.power_generation.governor_droop_setting
+        preferredPhrase: реттегіш статизм баптауы
+        aliases: []
+      - conceptId: energy_utilities.power_generation.automatic_voltage_regulation
+        preferredPhrase: кернеуді автоматты реттеу
+        aliases: []
+      - conceptId: energy_utilities.power_generation.excitation_limiter_coordination
+        preferredPhrase: қоздыру шектегіштерін үйлестіру
+        aliases: []
+      - conceptId: energy_utilities.power_generation.generator_reactive_capability
+        preferredPhrase: генератор реактив қуат мүмкіндігі
+        aliases: []
+      - conceptId: energy_utilities.power_generation.synchronous_condenser_operation
+        preferredPhrase: синхронды компенсатор жұмысы
+        aliases: []
+      - conceptId: energy_utilities.power_generation.condenser_fouling_assessment
+        preferredPhrase: конденсатор ластануын бағалау
+        aliases: []
+      - conceptId: energy_utilities.power_generation.cooling_system_efficiency
+        preferredPhrase: салқындату жүйесі тиімділігі
+        aliases: []
+      - conceptId: energy_utilities.power_generation.heat_recovery_performance
+        preferredPhrase: жылуды қалпына келтіру тиімділігі
+        aliases: []
+      - conceptId: energy_utilities.power_generation.steam_cycle_optimization
+        preferredPhrase: бу циклін оңтайландыру
+        aliases: []
+      - conceptId: energy_utilities.power_generation.combustion_tuning_program
+        preferredPhrase: жануды баптау бағдарламасы
+        aliases: []
+      - conceptId: energy_utilities.power_generation.emissions_performance_testing
+        preferredPhrase: шығарындылар көрсеткіштерін сынау
+        aliases: []
+      - conceptId: energy_utilities.power_generation.fuel_inventory_assurance
+        preferredPhrase: отын қоры жеткіліктілігін қамтамасыз ету
+        aliases: []
+      - conceptId: energy_utilities.power_generation.generation_portfolio_optimization
+        preferredPhrase: генерация портфелін оңтайландыру
+        aliases: []
+
+      - conceptId: energy_utilities.power_grid.probabilistic_load_flow
+        preferredPhrase: ықтималдық жүктеме ағыны
+        aliases: []
+      - conceptId: energy_utilities.power_grid.security_constrained_dispatch
+        preferredPhrase: қауіпсіздік шектеулі диспетчерлеу
+        aliases: []
+      - conceptId: energy_utilities.power_grid.remedial_action_scheme
+        preferredPhrase: түзету әрекеттері сұлбасы
+        aliases: []
+      - conceptId: energy_utilities.power_grid.special_protection_scheme
+        preferredPhrase: арнайы қорғау сұлбасы
+        aliases: []
+      - conceptId: energy_utilities.power_grid.underfrequency_load_shedding
+        preferredPhrase: төмен жиілікте жүктемені ажырату
+        aliases: []
+      - conceptId: energy_utilities.power_grid.undervoltage_load_shedding
+        preferredPhrase: төмен кернеуде жүктемені ажырату
+        aliases: []
+      - conceptId: energy_utilities.power_grid.restoration_switching_sequence
+        preferredPhrase: қалпына келтіру коммутация реті
+        aliases: []
+      - conceptId: energy_utilities.power_grid.dynamic_reactive_support
+        preferredPhrase: динамикалық реактив қолдау
+        aliases: []
+      - conceptId: energy_utilities.power_grid.voltage_collapse_margin
+        preferredPhrase: кернеу құлау қоры
+        aliases: []
+      - conceptId: energy_utilities.power_grid.frequency_nadir_assessment
+        preferredPhrase: жиілік минимумын бағалау
+        aliases: []
+      - conceptId: energy_utilities.power_grid.rate_change_frequency
+        preferredPhrase: жиілік өзгеру жылдамдығы
+        aliases: []
+      - conceptId: energy_utilities.power_grid.system_inertia_estimation
+        preferredPhrase: жүйе инерциясын бағалау
+        aliases: []
+      - conceptId: energy_utilities.power_grid.oscillatory_mode_identification
+        preferredPhrase: тербелмелі режимді анықтау
+        aliases: []
+      - conceptId: energy_utilities.power_grid.electromechanical_mode_damping
+        preferredPhrase: электромеханикалық режимді бәсеңдету
+        aliases: []
+      - conceptId: energy_utilities.power_grid.transformer_loss_evaluation
+        preferredPhrase: трансформатор шығынын бағалау
+        aliases: []
+      - conceptId: energy_utilities.power_grid.transformer_aging_assessment
+        preferredPhrase: трансформатор қартаюын бағалау
+        aliases: []
+      - conceptId: energy_utilities.power_grid.cable_thermal_rating
+        preferredPhrase: кабель жылулық рейтингі
+        aliases: []
+      - conceptId: energy_utilities.power_grid.conductor_temperature_monitoring
+        preferredPhrase: өткізгіш температурасын мониторингілеу
+        aliases: []
+      - conceptId: energy_utilities.power_grid.feeder_voltage_optimization
+        preferredPhrase: фидер кернеуін оңтайландыру
+        aliases: []
+      - conceptId: energy_utilities.power_grid.distributed_voltage_regulation
+        preferredPhrase: таратылған кернеуді реттеу
+        aliases: []
+      - conceptId: energy_utilities.power_grid.outage_cause_analytics
+        preferredPhrase: ажырату себептері аналитикасы
+        aliases: []
+      - conceptId: energy_utilities.power_grid.reliability_worth_assessment
+        preferredPhrase: сенімділік құндылығын бағалау
+        aliases: []
+      - conceptId: energy_utilities.power_grid.resilience_event_modeling
+        preferredPhrase: төзімділік оқиғасын модельдеу
+        aliases: []
+      - conceptId: energy_utilities.power_grid.wildfire_grid_mitigation
+        preferredPhrase: орман өрті желілік тәуекелін азайту
+        aliases: []
+      - conceptId: energy_utilities.power_grid.storm_restoration_analytics
+        preferredPhrase: дауылдан қалпына келу аналитикасы
+        aliases: []
+
+      - conceptId: energy_utilities.energy_markets.security_constrained_market
+        preferredPhrase: қауіпсіздік шектеулі нарық
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.reserve_cooptimization_model
+        preferredPhrase: резервті бірлесіп оңтайландыру моделі
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.energy_reserve_cooptimization
+        preferredPhrase: энергия резервін бірлесіп оңтайландыру
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.marginal_loss_pricing
+        preferredPhrase: шекті шығын бойынша баға белгілеу
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.scarcity_reserve_demand
+        preferredPhrase: тапшылық резервіне сұраныс
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.capacity_performance_obligation
+        preferredPhrase: қуат өнімділігі міндеттемесі
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.reliability_must_run
+        preferredPhrase: сенімділік үшін міндетті генерация
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.uplift_cost_causation
+        preferredPhrase: қосымша шығын себептілігін бөлу
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.revenue_adequacy_assessment
+        preferredPhrase: кіріс жеткіліктілігін бағалау
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.congestion_surplus_allocation
+        preferredPhrase: желілік шектеу артығын бөлу
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.nodal_settlement_validation
+        preferredPhrase: тораптық есеп айырысуды тексеру
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.bilateral_settlement_netting
+        preferredPhrase: екіжақты есеп айырысуды неттингтеу
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.collateral_requirement_calculation
+        preferredPhrase: кепіл талаптарын есептеу
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.credit_exposure_monitoring
+        preferredPhrase: кредиттік тәуекелді мониторингілеу
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.market_participant_default
+        preferredPhrase: нарық қатысушысының дефолты
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.virtual_bidding_strategy
+        preferredPhrase: виртуалды өтінім стратегиясы
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.financial_transmission_auction
+        preferredPhrase: қаржылық беріліс аукционы
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.demand_bid_participation
+        preferredPhrase: сұраныс өтініміне қатысу
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.distributed_resource_aggregation
+        preferredPhrase: таратылған ресурстарды біріктіру
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.retail_load_obligation
+        preferredPhrase: бөлшек жүктеме міндеттемесі
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.supplier_switching_settlement
+        preferredPhrase: жеткізуші ауысуын есеп айырысу
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.tariff_true_up
+        preferredPhrase: тарифтік есепті нақтылау
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.regulatory_revenue_cap
+        preferredPhrase: реттеушілік кіріс шегі
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.performance_based_regulation
+        preferredPhrase: нәтижеге негізделген реттеу
+        aliases: []
+      - conceptId: energy_utilities.energy_markets.energy_affordability_metric
+        preferredPhrase: энергия қолжетімділігі көрсеткіші
+        aliases: []
+
+      - conceptId: energy_utilities.renewable_energy.photovoltaic_availability_loss
+        preferredPhrase: фотоэлектр қолжетімділік шығыны
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.solar_degradation_warranty
+        preferredPhrase: күн модулі деградация кепілдігі
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.inverter_availability_monitoring
+        preferredPhrase: инвертор даярлығын мониторингілеу
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.tracker_performance_assessment
+        preferredPhrase: трекер өнімділігін бағалау
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.solar_resource_uncertainty
+        preferredPhrase: күн ресурсы белгісіздігі
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.wind_shear_analysis
+        preferredPhrase: жел ығысуын талдау
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.wind_turbulence_intensity
+        preferredPhrase: жел турбуленттілігі қарқындылығы
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.turbine_gearbox_condition
+        preferredPhrase: турбина редукторы күйі
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.turbine_blade_inspection
+        preferredPhrase: турбина қалақшасын тексеру
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.wind_curtailment_forecast
+        preferredPhrase: жел генерациясы шектеу болжамы
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.storage_depth_discharge
+        preferredPhrase: жинақтауыш разряд тереңдігі
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.battery_roundtrip_degradation
+        preferredPhrase: батарея толық цикл деградациясы
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.battery_cell_imbalance
+        preferredPhrase: батарея ұяшықтары теңгерімсіздігі
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.battery_state_estimation
+        preferredPhrase: батарея күйін бағалау
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.storage_warranty_management
+        preferredPhrase: жинақтауыш кепілдігін басқару
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.storage_cycling_strategy
+        preferredPhrase: жинақтауыш циклдеу стратегиясы
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.long_duration_storage
+        preferredPhrase: ұзақ мерзімді энергия сақтау
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_capacity_accreditation
+        preferredPhrase: жаңартылатын қуатты аккредиттеу
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_adequacy_contribution
+        preferredPhrase: жаңартылатын жеткіліктілікке үлес
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.hybrid_inverter_control
+        preferredPhrase: гибридті инверторды басқару
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_ramp_forecasting
+        preferredPhrase: жаңартылатын қуат өзгерісін болжау
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.solar_forecast_uncertainty
+        preferredPhrase: күн болжамының белгісіздігі
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.wind_forecast_uncertainty
+        preferredPhrase: жел болжамының белгісіздігі
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_hedge_effectiveness
+        preferredPhrase: жаңартылатын хедж тиімділігі
+        aliases: []
+      - conceptId: energy_utilities.renewable_energy.renewable_offtake_structure
+        preferredPhrase: жаңартылатын энергия сатып алу құрылымы
+        aliases: []
