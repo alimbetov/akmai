@@ -142,7 +142,7 @@ languages:
         preferredPhrase: операция морской погрузки
         aliases: []
       - conceptId: oil_gas_mining.midstream_operations.truck_loading_terminal
-        preferredPhrase: терминал автомобильной налива
+        preferredPhrase: терминал автомобильного налива
         aliases: []
       - conceptId: oil_gas_mining.midstream_operations.pipeline_nomination_process
         preferredPhrase: процесс номинации трубопроводных объемов
@@ -237,7 +237,7 @@ languages:
         preferredPhrase: геологическая блочная модель
         aliases: []
       - conceptId: oil_gas_mining.mining_operations.grade_tonnage_curve
-        preferredPhrase: кривая содержание тоннаж
+        preferredPhrase: кривая содержания и тоннажа
         aliases: []
       - conceptId: oil_gas_mining.mining_operations.resource_estimation_method
         preferredPhrase: метод оценки минеральных ресурсов
@@ -285,7 +285,7 @@ languages:
         preferredPhrase: расчет металлургического баланса
         aliases: []
       - conceptId: oil_gas_mining.mining_operations.tailings_storage_facility
-        preferredPhrase: хвостохранилище
+        preferredPhrase: объект хранения хвостов
         aliases: []
       - conceptId: oil_gas_mining.mining_operations.tailings_dam_stability
         preferredPhrase: устойчивость дамбы хвостохранилища
