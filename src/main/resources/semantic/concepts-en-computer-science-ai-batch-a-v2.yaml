@@ -64,7 +64,7 @@ domains:
           - logistic regression model
           - probabilistic graphical model
           - Bayesian network model
-          - hidden Markov model
+          - conditional random field
           - reinforcement learning policy
           - policy gradient method
           - value function approximation
