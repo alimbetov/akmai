@@ -107,6 +107,6 @@ domains:
           - loss to followup bias
           - cluster effect adjustment
           - survey weighting method
-          - age period cohort
+          - age period cohort modeling
           - spatial disease clustering
           - epidemic growth rate
