@@ -98,7 +98,7 @@ domains:
           - instrumental variable analysis
           - nested case control design
           - self controlled case series
-          - regression discontinuity design
+          - case cohort design
           - target trial emulation
           - immortal time bias
           - collider bias assessment
