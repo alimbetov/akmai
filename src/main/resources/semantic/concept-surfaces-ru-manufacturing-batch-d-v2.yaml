@@ -1,0 +1,304 @@
+version: semantic-surfaces-ru-manufacturing-batch-d-v2
+languages:
+  - language: ru
+    surfaces:
+      - conceptId: manufacturing.production_systems.demand_capacity_reconciliation
+        preferredPhrase: согласование спроса и производственной мощности
+        aliases: []
+      - conceptId: manufacturing.production_systems.finite_loading_strategy
+        preferredPhrase: стратегия конечной загрузки мощностей
+        aliases: []
+      - conceptId: manufacturing.production_systems.constrained_resource_planning
+        preferredPhrase: планирование ограниченных ресурсов
+        aliases: []
+      - conceptId: manufacturing.production_systems.production_freeze_horizon
+        preferredPhrase: горизонт фиксации производственного плана
+        aliases: []
+      - conceptId: manufacturing.production_systems.planning_time_fence
+        preferredPhrase: временная граница планирования
+        aliases: []
+      - conceptId: manufacturing.production_systems.campaign_changeover_strategy
+        preferredPhrase: стратегия переналадки между кампаниями
+        aliases: []
+      - conceptId: manufacturing.production_systems.batch_campaign_efficiency
+        preferredPhrase: эффективность партийной кампании
+        aliases: []
+      - conceptId: manufacturing.production_systems.manufacturing_order_sequencing
+        preferredPhrase: последовательность производственных заказов
+        aliases: []
+      - conceptId: manufacturing.production_systems.queue_discipline_policy
+        preferredPhrase: политика дисциплины очереди
+        aliases: []
+      - conceptId: manufacturing.production_systems.bottleneck_throughput_target
+        preferredPhrase: целевая пропускная способность узкого места
+        aliases: []
+      - conceptId: manufacturing.production_systems.constraint_buffer_penetration
+        preferredPhrase: проникновение в буфер ограничения
+        aliases: []
+      - conceptId: manufacturing.production_systems.work_center_saturation
+        preferredPhrase: насыщение производственного центра
+        aliases: []
+      - conceptId: manufacturing.production_systems.shift_capacity_utilization
+        preferredPhrase: использование мощности смены
+        aliases: []
+      - conceptId: manufacturing.production_systems.labor_flexibility_index
+        preferredPhrase: индекс гибкости персонала
+        aliases: []
+      - conceptId: manufacturing.production_systems.cross_training_coverage
+        preferredPhrase: охват перекрестного обучения персонала
+        aliases: []
+      - conceptId: manufacturing.production_systems.production_recovery_plan
+        preferredPhrase: план восстановления производства
+        aliases: []
+      - conceptId: manufacturing.production_systems.lost_production_opportunity
+        preferredPhrase: потерянная производственная возможность
+        aliases: []
+      - conceptId: manufacturing.production_systems.line_starvation_analysis
+        preferredPhrase: анализ голодания производственной линии
+        aliases: []
+      - conceptId: manufacturing.production_systems.line_blocking_analysis
+        preferredPhrase: анализ блокировки производственной линии
+        aliases: []
+      - conceptId: manufacturing.production_systems.buffer_inventory_control
+        preferredPhrase: управление буферным запасом
+        aliases: []
+      - conceptId: manufacturing.production_systems.production_synchronization_method
+        preferredPhrase: метод синхронизации производства
+        aliases: []
+      - conceptId: manufacturing.production_systems.mixed_model_sequencing
+        preferredPhrase: последовательность смешанных моделей
+        aliases: []
+      - conceptId: manufacturing.production_systems.takt_adherence_monitoring
+        preferredPhrase: мониторинг соблюдения такта
+        aliases: []
+      - conceptId: manufacturing.production_systems.production_stability_index
+        preferredPhrase: индекс стабильности производства
+        aliases: []
+      - conceptId: manufacturing.production_systems.capacity_expansion_trigger
+        preferredPhrase: триггер расширения производственной мощности
+        aliases: []
+      - conceptId: manufacturing.quality_management.supplier_capability_assessment
+        preferredPhrase: оценка способности поставщика
+        aliases: []
+      - conceptId: manufacturing.quality_management.supplier_process_maturity
+        preferredPhrase: зрелость процесса поставщика
+        aliases: []
+      - conceptId: manufacturing.quality_management.incoming_defect_containment
+        preferredPhrase: локализация входящих дефектов
+        aliases: []
+      - conceptId: manufacturing.quality_management.inspection_escape_probability
+        preferredPhrase: вероятность пропуска дефекта контролем
+        aliases: []
+      - conceptId: manufacturing.quality_management.measurement_traceability_control
+        preferredPhrase: контроль прослеживаемости измерений
+        aliases: []
+      - conceptId: manufacturing.quality_management.calibration_drift_analysis
+        preferredPhrase: анализ дрейфа калибровки
+        aliases: []
+      - conceptId: manufacturing.quality_management.gauge_bias_correction
+        preferredPhrase: коррекция смещения измерительного средства
+        aliases: []
+      - conceptId: manufacturing.quality_management.process_capability_target
+        preferredPhrase: целевой уровень способности процесса
+        aliases: []
+      - conceptId: manufacturing.quality_management.tolerance_capability_analysis
+        preferredPhrase: анализ способности по допускам
+        aliases: []
+      - conceptId: manufacturing.quality_management.design_tolerance_allocation
+        preferredPhrase: распределение конструкторских допусков
+        aliases: []
+      - conceptId: manufacturing.quality_management.deviation_permit_process
+        preferredPhrase: процесс разрешения отклонения
+        aliases: []
+      - conceptId: manufacturing.quality_management.concession_approval_workflow
+        preferredPhrase: процесс согласования уступки по качеству
+        aliases: []
+      - conceptId: manufacturing.quality_management.nonconformance_disposition_board
+        preferredPhrase: комиссия по решению несоответствий
+        aliases: []
+      - conceptId: manufacturing.quality_management.defect_root_taxonomy
+        preferredPhrase: классификация корневых причин дефектов
+        aliases: []
+      - conceptId: manufacturing.quality_management.recurring_defect_analysis
+        preferredPhrase: анализ повторяющихся дефектов
+        aliases: []
+      - conceptId: manufacturing.quality_management.warranty_exposure_estimate
+        preferredPhrase: оценка гарантийной экспозиции
+        aliases: []
+      - conceptId: manufacturing.quality_management.complaint_severity_classification
+        preferredPhrase: классификация серьезности жалоб
+        aliases: []
+      - conceptId: manufacturing.quality_management.customer_escape_analysis
+        preferredPhrase: анализ пропущенных клиенту дефектов
+        aliases: []
+      - conceptId: manufacturing.quality_management.layered_audit_compliance
+        preferredPhrase: соблюдение требований многоуровневого аудита
+        aliases: []
+      - conceptId: manufacturing.quality_management.control_plan_effectiveness
+        preferredPhrase: эффективность плана управления качеством
+        aliases: []
+      - conceptId: manufacturing.quality_management.inspection_frequency_optimization
+        preferredPhrase: оптимизация частоты контроля
+        aliases: []
+      - conceptId: manufacturing.quality_management.quality_risk_prioritization
+        preferredPhrase: приоритизация рисков качества
+        aliases: []
+      - conceptId: manufacturing.quality_management.prevention_cost_analysis
+        preferredPhrase: анализ затрат на предупреждение дефектов
+        aliases: []
+      - conceptId: manufacturing.quality_management.appraisal_cost_analysis
+        preferredPhrase: анализ затрат на оценку качества
+        aliases: []
+      - conceptId: manufacturing.quality_management.failure_cost_analysis
+        preferredPhrase: анализ затрат из-за отказов
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.reliability_centered_task
+        preferredPhrase: задача обслуживания по надежности
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.maintenance_effectiveness_index
+        preferredPhrase: индекс эффективности обслуживания
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.preventive_maintenance_optimization
+        preferredPhrase: оптимизация профилактического обслуживания
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.predictive_lead_time
+        preferredPhrase: прогнозный упреждающий интервал
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.failure_precursor_detection
+        preferredPhrase: выявление предвестников отказа
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.degradation_threshold_model
+        preferredPhrase: модель порога деградации
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.condition_monitoring_coverage
+        preferredPhrase: охват мониторинга состояния
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.lubrication_contamination_index
+        preferredPhrase: индекс загрязнения смазочного материала
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.bearing_remaining_life
+        preferredPhrase: остаточный ресурс подшипника
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.motor_insulation_health
+        preferredPhrase: состояние изоляции электродвигателя
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.rotating_equipment_balance
+        preferredPhrase: балансировка вращающегося оборудования
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.shaft_alignment_verification
+        preferredPhrase: проверка центровки валов
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.precision_lubrication_practice
+        preferredPhrase: практика точного смазывания
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.maintenance_planner_workload
+        preferredPhrase: нагрузка планировщика обслуживания
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.maintenance_scheduling_efficiency
+        preferredPhrase: эффективность планирования обслуживания
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.planned_schedule_stability
+        preferredPhrase: стабильность планового графика обслуживания
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.backlog_risk_ranking
+        preferredPhrase: ранжирование рисков ремонтного бэклога
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.critical_spare_availability
+        preferredPhrase: доступность критических запасных частей
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.spare_obsolescence_management
+        preferredPhrase: управление устареванием запасных частей
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.repair_quality_verification
+        preferredPhrase: проверка качества ремонта
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.repeat_failure_rate
+        preferredPhrase: частота повторных отказов
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.bad_actor_elimination
+        preferredPhrase: устранение проблемного оборудования
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.reliability_loss_accounting
+        preferredPhrase: учет потерь надежности
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.asset_renewal_strategy
+        preferredPhrase: стратегия обновления активов
+        aliases: []
+      - conceptId: manufacturing.maintenance_reliability.lifecycle_maintenance_cost
+        preferredPhrase: стоимость обслуживания жизненного цикла
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.process_constraint_hierarchy
+        preferredPhrase: иерархия ограничений процесса
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.control_performance_benchmark
+        preferredPhrase: эталон эффективности управления
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.valve_stiction_detection
+        preferredPhrase: выявление заедания регулирующего клапана
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.loop_oscillation_detection
+        preferredPhrase: выявление колебаний контура регулирования
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.analyzer_calibration_drift
+        preferredPhrase: дрейф калибровки анализатора
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.instrument_fault_detection
+        preferredPhrase: выявление неисправностей приборов
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.sensor_redundancy_validation
+        preferredPhrase: проверка резервирования датчиков
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.alarm_load_metric
+        preferredPhrase: показатель нагрузки сигнализаций
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.standing_alarm_reduction
+        preferredPhrase: сокращение постоянных сигнализаций
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.nuisance_alarm_elimination
+        preferredPhrase: устранение ложных сигнализаций
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.operator_response_reliability
+        preferredPhrase: надежность реакции оператора
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.bypass_duration_monitoring
+        preferredPhrase: мониторинг длительности обхода защиты
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.safety_function_demand
+        preferredPhrase: востребованность функции безопасности
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.safety_function_availability
+        preferredPhrase: доступность функции безопасности
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.barrier_degradation_monitoring
+        preferredPhrase: мониторинг деградации защитного барьера
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.permit_risk_assessment
+        preferredPhrase: оценка риска разрешения на работу
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.energy_isolation_audit
+        preferredPhrase: аудит изоляции источников энергии
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.procedure_deviation_control
+        preferredPhrase: контроль отклонений от процедуры
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.startup_readiness_assurance
+        preferredPhrase: обеспечение готовности к пуску
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.shutdown_readiness_assurance
+        preferredPhrase: обеспечение готовности к останову
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.operating_discipline_audit
+        preferredPhrase: аудит эксплуатационной дисциплины
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.shift_communication_quality
+        preferredPhrase: качество коммуникации между сменами
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.utility_efficiency_index
+        preferredPhrase: индекс эффективности инженерных ресурсов
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.process_loss_intensity
+        preferredPhrase: интенсивность технологических потерь
+        aliases: []
+      - conceptId: manufacturing.industrial_operations.plant_environmental_performance_index
+        preferredPhrase: индекс экологической эффективности предприятия
+        aliases: []
