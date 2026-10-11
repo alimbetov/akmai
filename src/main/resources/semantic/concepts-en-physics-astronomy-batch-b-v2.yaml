@@ -37,12 +37,12 @@ domains:
           - fugacity coefficient calculation
           - thermodynamic stability matrix
           - phase diagram construction
-          - critical point behavior
+          - critical opalescence phenomenon
           - spinodal decomposition thermodynamics
           - Joule Thomson effect
           - isentropic expansion process
           - isothermal compressibility coefficient
-          - thermal expansion coefficient
+          - isentropic compressibility coefficient
           - Maxwell Boltzmann distribution
           - Bose Einstein distribution
           - Fermi Dirac distribution
