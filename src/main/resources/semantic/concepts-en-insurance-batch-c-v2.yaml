@@ -96,7 +96,7 @@ domains:
           - storm surge exposure
           - wildfire exposure assessment
           - flood zone classification
-          - seismic hazard assessment
+          - earthquake loss vulnerability assessment
           - wind vulnerability model
           - building occupancy factor
           - construction quality factor
