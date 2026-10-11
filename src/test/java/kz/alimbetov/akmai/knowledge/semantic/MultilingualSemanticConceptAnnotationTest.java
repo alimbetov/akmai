@@ -33,7 +33,7 @@ class MultilingualSemanticConceptAnnotationTest {
         assertThat(annotated.metadata())
                 .containsEntry(
                         "semanticConceptVersion",
-                        "semantic-surfaces-ru-v1+semantic-surfaces-ru-finance-batch-a-v2+semantic-surfaces-ru-finance-batch-b-v2+semantic-surfaces-ru-finance-batch-c-v2"
+                        "semantic-surfaces-ru-v1+semantic-surfaces-ru-finance-batch-a-v2+semantic-surfaces-ru-finance-batch-b-v2+semantic-surfaces-ru-finance-batch-c-v2+semantic-surfaces-ru-finance-batch-d-v2"
                 );
     }
 
