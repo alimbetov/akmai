@@ -23,7 +23,7 @@ domains:
           - graph coloring heuristic
           - matroid intersection algorithm
           - integer programming relaxation
-          - Lagrangian relaxation method
+          - maximum flow scaling algorithm
           - branch and cut
           - cutting plane method
           - randomized contraction algorithm
