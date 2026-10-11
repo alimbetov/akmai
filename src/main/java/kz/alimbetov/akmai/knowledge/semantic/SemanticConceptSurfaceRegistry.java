@@ -340,7 +340,7 @@ public class SemanticConceptSurfaceRegistry {
         );
     }
 
-    private static List<String> multilingualResources() {
+    static List<String> multilingualResources() {
         ArrayList<String> resources = new ArrayList<>();
         addLanguageResources(resources, "ru");
         addLanguageResources(resources, "kk");
