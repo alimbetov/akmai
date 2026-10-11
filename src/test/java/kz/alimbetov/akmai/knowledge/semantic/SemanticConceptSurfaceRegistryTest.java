@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.knowledge.semantic;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Set;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test;
 class SemanticConceptSurfaceRegistryTest {
 
     private static final int MULTILINGUAL_V1_BASELINE = 384;
+    private static final int RU_FINANCE_BATCH_A_ADDITIONS = 100;
 
     private final SemanticDomainCatalog domainCatalog =
             new SemanticDomainCatalog();
@@ -24,7 +26,7 @@ class SemanticConceptSurfaceRegistryTest {
             );
 
     @Test
-    void englishSurfacesTrackCurrentCanonicalCorpusWhileTranslatedPacksStayOnTheirVersionedBaseline() {
+    void englishSurfacesTrackCurrentCanonicalCorpusWhileTranslatedPacksStayVersioned() {
         assertThat(registry.surfaces("en"))
                 .hasSameSizeAs(conceptCatalog.concepts());
 
@@ -32,7 +34,14 @@ class SemanticConceptSurfaceRegistryTest {
                 .map(SemanticConcept::id)
                 .collect(Collectors.toSet());
 
-        for (String language : List.of("ru", "kk", "zh", "de", "fr", "es", "pt", "it", "tr", "el")) {
+        assertThat(registry.surfaces("ru"))
+                .hasSize(MULTILINGUAL_V1_BASELINE + RU_FINANCE_BATCH_A_ADDITIONS)
+                .allSatisfy(surface ->
+                        assertThat(canonicalIds)
+                                .contains(surface.conceptId())
+                );
+
+        for (String language : List.of("kk", "zh", "de", "fr", "es", "pt", "it", "tr", "el")) {
             assertThat(registry.surfaces(language))
                     .as(language)
                     .hasSize(MULTILINGUAL_V1_BASELINE)
@@ -44,7 +53,26 @@ class SemanticConceptSurfaceRegistryTest {
     }
 
     @Test
-    void completedV1SurfacePacksPreserveAllDomainsAndSubdomains() {
+    void russianFinanceBatchACompletesOneHundredAdditionalCanonicalSurfaces() {
+        assertThat(registry.surfaces("ru").stream()
+                .filter(surface -> surface.domainId().equals("finance_banking"))
+                .toList())
+                .hasSize(124);
+
+        assertThat(registry.surfaces("ru").stream()
+                .filter(surface -> surface.domainId().equals("finance_banking"))
+                .collect(Collectors.groupingBy(
+                        SemanticConceptSurface::subdomainId,
+                        Collectors.counting()
+                )))
+                .containsEntry("lending_credit", 31L)
+                .containsEntry("deposits_liquidity", 31L)
+                .containsEntry("risk_capital", 31L)
+                .containsEntry("payments_compliance", 31L);
+    }
+
+    @Test
+    void completedSurfacePacksPreserveAllDomainsAndSubdomains() {
         List<String> canonicalDomains = conceptCatalog.concepts().stream()
                 .map(SemanticConcept::domainId)
                 .distinct()
@@ -112,11 +140,13 @@ class SemanticConceptSurfaceRegistryTest {
     }
 
     @Test
-    void languageVersionsAreIndependent() {
+    void languageVersionsAreIndependentAndAdditivePacksAreVisible() {
         assertThat(registry.version("en"))
                 .isEqualTo("semantic-concepts-en-v2");
         assertThat(registry.version("ru"))
-                .isEqualTo("semantic-surfaces-ru-v1");
+                .isEqualTo(
+                        "semantic-surfaces-ru-v1+semantic-surfaces-ru-finance-batch-a-v2"
+                );
         assertThat(registry.version("kk"))
                 .isEqualTo("semantic-surfaces-kk-v1");
         assertThat(registry.version("zh"))
@@ -138,8 +168,43 @@ class SemanticConceptSurfaceRegistryTest {
     }
 
     @Test
+    void additivePacksCannotOverrideExistingConceptSurface() {
+        String conceptId = "finance_banking.lending_credit.credit_risk_assessment";
+        MultilingualConceptSurfaceDefinition first =
+                definition("ru-test-a", conceptId, "оценка кредитного риска");
+        MultilingualConceptSurfaceDefinition duplicate =
+                definition("ru-test-b", conceptId, "повторная оценка риска");
+
+        assertThatThrownBy(() -> new SemanticConceptSurfaceRegistry(
+                conceptCatalog,
+                morphology,
+                List.of(first, duplicate)
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Duplicate semantic surface for ru/" + conceptId);
+    }
+
+    @Test
     void unknownLanguageWithoutPackStaysUnsupported() {
         assertThat(registry.surfaces("ja")).isEmpty();
         assertThat(registry.version("ja")).isNull();
+    }
+
+    private static MultilingualConceptSurfaceDefinition definition(
+            String version,
+            String conceptId,
+            String phrase
+    ) {
+        return new MultilingualConceptSurfaceDefinition(
+                version,
+                List.of(new MultilingualConceptSurfaceDefinition.LanguageSurfaces(
+                        "ru",
+                        List.of(new MultilingualConceptSurfaceDefinition.Surface(
+                                conceptId,
+                                phrase,
+                                List.of()
+                        ))
+                ))
+        );
     }
 }
