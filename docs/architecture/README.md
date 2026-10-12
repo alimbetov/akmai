@@ -5,6 +5,7 @@ This directory contains current architecture contracts and active target/experim
 ## Start here
 
 - [`current-runtime-architecture.md`](current-runtime-architecture.md) — **CURRENT** end-to-end runtime architecture.
+- [`unified-lifecycle-contract-v1.md`](unified-lifecycle-contract-v1.md) — **TARGET / IMPLEMENTATION IN PROGRESS** unified authority for document TTL, generation publication/supersession, parent-child eligibility, graph invalidation/decay and Dream forgetting.
 - [`retrieval-correctness-hardening-v1.md`](retrieval-correctness-hardening-v1.md) — **TARGET** retrieval correctness hardening for candidate-time canonical eligibility, temporal-authority ordering, context backfill, batched projection materialization and original-query preservation.
 - [`adaptive-graph-runtime.md`](adaptive-graph-runtime.md) — **CURRENT** Adaptive Association Graph behavior and feature boundaries.
 - [`rag-self-optimizing-platform-v1.1-technical-spec.md`](rag-self-optimizing-platform-v1.1-technical-spec.md) — **CURRENT / IMPLEMENTED** self-optimizing v1.1 engineering contract.
@@ -62,6 +63,7 @@ Current lane enablement depends on runtime configuration and registered componen
 
 ## Storage, lifecycle and retention
 
+- `unified-lifecycle-contract-v1.md` — TARGET unified lifecycle authority and invariant/race matrix; remains TARGET until full Stage 4 exact-head evidence is green.
 - `chunk-lifecycle-retention.md` — generation lifecycle and payload retirement.
 - `retrieval-partitioning-indexing-strategy.md` — PostgreSQL partitioning/indexing strategy.
 - `retrieval-storage-greenfield-blueprint.md` — storage architecture blueprint; keep only while it remains aligned with the implemented storage direction.
