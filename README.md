@@ -18,7 +18,8 @@ See:
 
 - [`docs/README.md`](docs/README.md) — documentation entry point;
 - [`docs/architecture/current-runtime-architecture.md`](docs/architecture/current-runtime-architecture.md) — authoritative runtime map;
-- [`docs/audit/post-v1.1-readiness-2026-10-08.md`](docs/audit/post-v1.1-readiness-2026-10-08.md) — readiness decision and blockers.
+- [`docs/audit/production-readiness-hardening-2026-10-12.md`](docs/audit/production-readiness-hardening-2026-10-12.md) — current readiness/hardening decision and remaining release blockers;
+- [`docs/audit/post-v1.1-readiness-2026-10-08.md`](docs/audit/post-v1.1-readiness-2026-10-08.md) — historical readiness snapshot.
 
 ## Goals
 
@@ -187,6 +188,7 @@ AkmAI treats security/lifecycle as retrieval constraints, not final redaction:
 - ACL scope is resolved before retrieval and revalidated before final context;
 - only eligible published generations may enter context;
 - TTL expiry is synchronously fenced during retrieval;
+- historical Query Memory source references are revalidated against current ACL/lifecycle before reuse;
 - learned graph edges cannot cross ACL boundaries;
 - non-local startup fails closed for unsafe security/local-bypass/default-credential combinations;
 - request bodies are byte-bounded even for unknown/chunked transfer;
@@ -229,6 +231,7 @@ Implemented safeguards include:
 
 - persistent Query Memory with PostgreSQL source of truth and bounded L1 cache;
 - ACL / embedding-profile / policy namespace isolation;
+- current lifecycle revalidation of historical source references before Query Memory reuse;
 - privacy-safe query/source fingerprints;
 - duplicate suppression and source/query diversity gates;
 - feedback trust classes and anti-poisoning caps;
@@ -238,7 +241,10 @@ Implemented safeguards include:
 - fail-closed promotion gates and rollback semantics;
 - request-level policy/cohort attribution for reproducibility.
 
-Engineering contract: [`docs/architecture/rag-self-optimizing-platform-v1.1-technical-spec.md`](docs/architecture/rag-self-optimizing-platform-v1.1-technical-spec.md).
+Engineering contracts:
+
+- [`docs/architecture/rag-self-optimizing-platform-v1.1-technical-spec.md`](docs/architecture/rag-self-optimizing-platform-v1.1-technical-spec.md);
+- [`docs/services/query-memory-learning.md`](docs/services/query-memory-learning.md).
 
 ## Runtime feature defaults
 
@@ -290,7 +296,7 @@ The operations plane includes:
 - production container build;
 - canonical-source rebuild / disaster recovery procedures.
 
-Timeouts are enforced at retrieval worker/JDBC/model transport boundaries. `strategy-timeout < request-timeout` is a validated runtime invariant.
+Timeouts are enforced at retrieval worker/JDBC/model transport boundaries. `strategy-timeout < request-timeout` is a validated runtime invariant. Direct PostgreSQL integration coverage also verifies timeout termination and connection reuse after repeated timeout cycles.
 
 Operations index: [`docs/operations/README.md`](docs/operations/README.md).
 
@@ -371,13 +377,13 @@ Multi-replica migration ownership is database-visible and fenced by owner lease 
 
 Before calling a deployment release-qualified:
 
-1. keep the candidate CI green;
+1. keep the exact candidate CI/quality/storage/image gates green;
 2. establish/review `benchmarks/rag-benchmark-v1/baselines/approved.json`;
 3. run integrated live v1.1 qualification on the exact candidate SHA/tag;
-4. retain quality, SMALL/MEDIUM performance, grounding and final qualification artifacts;
+4. retain quality, performance, grounding and final qualification artifacts;
 5. protect `main` with required checks/review policy;
-6. derive target-hardware p95/p99, throughput and saturation SLOs;
-7. close/reconcile historical issues #36-#41 with issue-specific current evidence;
+6. derive target-hardware p50/p95/p99, throughput and saturation SLO/capacity limits;
+7. retain the closed #36-#41 evidence mapping and reopen only on new failing evidence;
 8. maintain a separately versioned human-reviewed corpus before broad external quality claims.
 
 ## Documentation map
@@ -387,9 +393,12 @@ Start at [`docs/README.md`](docs/README.md).
 Key documents:
 
 - [Current runtime architecture](docs/architecture/current-runtime-architecture.md)
+- [Unified lifecycle contract](docs/architecture/unified-lifecycle-contract-v1.md)
 - [Adaptive graph runtime](docs/architecture/adaptive-graph-runtime.md)
+- [Query Memory / learning contract](docs/services/query-memory-learning.md)
 - [Architecture index](docs/architecture/README.md)
-- [Post-v1.1 readiness audit](docs/audit/post-v1.1-readiness-2026-10-08.md)
+- [Current production-readiness hardening audit](docs/audit/production-readiness-hardening-2026-10-12.md)
+- [Historical post-v1.1 readiness snapshot](docs/audit/post-v1.1-readiness-2026-10-08.md)
 - [Audit index](docs/audit/README.md)
 - [Operations index](docs/operations/README.md)
 - [Quality index](docs/quality/README.md)
@@ -398,12 +407,12 @@ Key documents:
 
 ## Next milestones
 
-The next phase is qualification/evidence and measured adaptive-memory improvement, not uncontrolled feature growth:
+The next phase is qualification/evidence, not uncontrolled feature growth:
 
-1. finish issue-specific closure evidence for #36-#41;
+1. finish the current test-coverage/documentation truthfulness pass and obtain exact-head green gates;
 2. establish the immutable approved benchmark baseline;
-3. retain one successful integrated v1.1 release qualification;
+3. retain one successful integrated v1.1 release qualification on the exact candidate;
 4. enable required checks / branch protection for `main`;
-5. qualify latency/throughput/SLOs on target hardware;
+5. qualify latency/throughput/saturation/capacity on target hardware;
 6. build a human-reviewed representative external-validity corpus;
 7. evaluate Adaptive Graph incremental utility (grounding/citation lift, contradiction and context-cost signals) before broader online enablement.

@@ -37,7 +37,7 @@ A service/process is considered **documented** only when its contract contains:
 | Graph / Dream | Dream ownership / lease / fencing | [`dream-cycle.md`](dream-cycle.md) | DRAFT |
 | Graph / Dream | Dream candidate lifecycle | [`dream-cycle.md`](dream-cycle.md) | DRAFT |
 | Graph maintenance | Graph cleanup / maintenance | [`scheduled-jobs.md`](scheduled-jobs.md), [`adaptive-graph-mutation.md`](adaptive-graph-mutation.md) | DRAFT |
-| Learning | Query memory / learning events | TBD | TODO |
+| Learning | Query memory / learning events / feedback | [`query-memory-learning.md`](query-memory-learning.md) | DRAFT |
 | Publication | Publication / activation lifecycle | [`publication-lifecycle.md`](publication-lifecycle.md) | DRAFT |
 | Repair | Generation reconciliation | [`generation-reconciliation.md`](generation-reconciliation.md) | DRAFT |
 | Repair | Physical repair / residual cleanup | [`generation-reconciliation.md`](generation-reconciliation.md) | DRAFT |

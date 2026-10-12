@@ -5,17 +5,17 @@ This directory contains current architecture contracts and active target/experim
 ## Start here
 
 - [`current-runtime-architecture.md`](current-runtime-architecture.md) — **CURRENT** end-to-end runtime architecture.
-- [`unified-lifecycle-contract-v1.md`](unified-lifecycle-contract-v1.md) — **TARGET / IMPLEMENTATION IN PROGRESS** unified authority for document TTL, generation publication/supersession, parent-child eligibility, graph invalidation/decay and Dream forgetting.
-- [`retrieval-correctness-hardening-v1.md`](retrieval-correctness-hardening-v1.md) — **TARGET** retrieval correctness hardening for candidate-time canonical eligibility, temporal-authority ordering, context backfill, batched projection materialization and original-query preservation.
+- [`unified-lifecycle-contract-v1.md`](unified-lifecycle-contract-v1.md) — **CURRENT / IMPLEMENTED** unified authority for document TTL, generation publication/supersession, parent-child eligibility, Query Memory source reuse, graph invalidation and Dream candidate eligibility. Merged through PR #96.
+- [`retrieval-correctness-hardening-v1.md`](retrieval-correctness-hardening-v1.md) — **CURRENT / IMPLEMENTED** retrieval correctness hardening for candidate-time canonical eligibility, temporal-authority ordering, context backfill, batched projection materialization and original-query preservation.
 - [`adaptive-graph-runtime.md`](adaptive-graph-runtime.md) — **CURRENT** Adaptive Association Graph behavior and feature boundaries.
 - [`rag-self-optimizing-platform-v1.1-technical-spec.md`](rag-self-optimizing-platform-v1.1-technical-spec.md) — **CURRENT / IMPLEMENTED** self-optimizing v1.1 engineering contract.
 - [`fileservice-knowledge-contract-v1.md`](fileservice-knowledge-contract-v1.md) — **CURRENT** FileService → AkmAI canonical knowledge boundary implemented in the existing ingestion/generation pipeline.
-- [`async-ingestion-worker-v1.md`](async-ingestion-worker-v1.md) — **CURRENT / IMPLEMENTED** async admission + PostgreSQL durable job queue + worker orchestration aligned to the existing idempotency, generation and publication primitives. The implementation landed through PR #89 and preserves separate job and ingestion fencing domains.
+- [`async-ingestion-worker-v1.md`](async-ingestion-worker-v1.md) — **CURRENT / IMPLEMENTED** async admission + PostgreSQL durable job queue + worker orchestration aligned to existing idempotency, generation and publication primitives.
 - [`async-ingestion-worker-v1-code-blueprint.md`](async-ingestion-worker-v1-code-blueprint.md) — **CURRENT IMPLEMENTATION REFERENCE** code/package/SQL/config/test mapping for the implemented async-ingestion runtime.
 - [`async-ingestion-worker-v1-closeout.md`](async-ingestion-worker-v1-closeout.md) — implementation closeout, verification evidence and remaining rollout qualification boundaries.
 - [`runtime-app-parameters.md`](runtime-app-parameters.md) — runtime-mutable parameter architecture; actual defaults remain authoritative in `src/main/resources/application.yml`.
 
-For concrete HTTP/service request-response examples and RAG question/answer contracts, see [`../services/external-api-contracts.md`](../services/external-api-contracts.md).
+For concrete HTTP/service request-response examples and RAG question/answer contracts, see [`../services/external-api-contracts.md`](../services/external-api-contracts.md). For Query Memory / learning / feedback behavior, see [`../services/query-memory-learning.md`](../services/query-memory-learning.md).
 
 ## Current integration architecture
 
@@ -24,13 +24,13 @@ For concrete HTTP/service request-response examples and RAG question/answer cont
 | [`fileservice-knowledge-contract-v1.md`](fileservice-knowledge-contract-v1.md) | CURRENT | Synchronous-first FileService → AkmAI canonical service boundary using the existing ingestion/generation pipeline, stable source identity, generation-aware result/replay and typed retrieval provenance. The canonical v1 service path is implemented; a dedicated public canonical REST endpoint is not currently exposed. |
 | [`async-ingestion-worker-v1.md`](async-ingestion-worker-v1.md) | CURRENT / IMPLEMENTED | Implements the FileService boundary as `202 Accepted` + `knowledge_ingestion_job` + bounded worker execution while preserving `KnowledgeIngestionService` as the sole RAG ingestion engine. Runtime includes separate job vs ingestion leases, stable internal idempotency replay recovery, active-claim-aware stale-generation recovery, retry/ambiguity handling, bounded concurrency and status lookup. |
 | [`async-ingestion-worker-v1-code-blueprint.md`](async-ingestion-worker-v1-code-blueprint.md) | CURRENT IMPLEMENTATION REFERENCE | Maps the async runtime onto the codebase: package/class placement, `/api/knowledge/ingestions` endpoints, admission `accessLevel` authorization, Liquibase queue/source-identity migrations, repository SQL/transactions, `KnowledgeIngestionPort` reuse, monitored bounded executor, heartbeat, exception mapping and test coverage. |
-| [`async-ingestion-worker-v1-closeout.md`](async-ingestion-worker-v1-closeout.md) | CURRENT VERIFICATION | Records merge/CI evidence, invariant verification and the remaining production rollout qualifications that are operational rather than missing implementation. |
+| [`async-ingestion-worker-v1-closeout.md`](async-ingestion-worker-v1-closeout.md) | CURRENT VERIFICATION | Records merge/CI evidence, invariant verification and remaining production rollout qualifications that are operational rather than missing implementation. |
 
 ## Adaptive retrieval and memory
 
 | Document | Classification | Purpose |
 |---|---|---|
-| `retrieval-correctness-hardening-v1.md` | TARGET | Makes canonical READY/ACTIVE/TTL/generation/ACL eligibility authoritative before bounded retrieval truncation, moves parent expansion before temporal authority, adds bounded context backfill, replaces per-key UNION materialization with batched VALUES lookup and guarantees ORIGINAL query chunks cannot be evicted by multi-query expansion. |
+| `retrieval-correctness-hardening-v1.md` | CURRENT / IMPLEMENTED | Canonical READY/ACTIVE/TTL/generation/ACL eligibility before bounded retrieval truncation, parent expansion before temporal authority, bounded context backfill, batched VALUES projection lookup and preservation of ORIGINAL query chunks. |
 | `adaptive-chunk-graph.md` | CURRENT REFERENCE | Core architecture and invariants for bounded learned chunk associations. Read together with `adaptive-graph-runtime.md` for executable runtime behavior. |
 | `adaptive-chunk-graph-calibration.md` | CURRENT CALIBRATION CONTRACT | Measurement-driven graph threshold/limit calibration. |
 | `adaptive-chunk-graph-rollout.md` | CURRENT ROLLOUT CONTRACT | Shadow/canary/online rollout rules and recovery assumptions. |
@@ -63,7 +63,7 @@ Current lane enablement depends on runtime configuration and registered componen
 
 ## Storage, lifecycle and retention
 
-- `unified-lifecycle-contract-v1.md` — TARGET unified lifecycle authority and invariant/race matrix; remains TARGET until full Stage 4 exact-head evidence is green.
+- `unified-lifecycle-contract-v1.md` — CURRENT unified lifecycle authority, transition/invariant contract and race/failure semantics; detailed completion proof is retained under `docs/audit/`.
 - `chunk-lifecycle-retention.md` — generation lifecycle and payload retirement.
 - `retrieval-partitioning-indexing-strategy.md` — PostgreSQL partitioning/indexing strategy.
 - `retrieval-storage-greenfield-blueprint.md` — storage architecture blueprint; keep only while it remains aligned with the implemented storage direction.
