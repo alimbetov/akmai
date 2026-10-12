@@ -121,24 +121,7 @@ class DreamSemanticRetirementIntegrationTest {
     @Test
     void lifecycleInvalidationCanStillRetirePrior() {
         DreamLeaseManager.Authority authority = prepareActivePrior();
-        jdbc.update(
-                """
-                UPDATE knowledge_document_lifecycle
-                SET lifecycle_policy = 'TTL',
-                    expires_at = clock_timestamp() - interval '1 second'
-                WHERE document_id = 'doc-b'
-                """
-        );
-        jdbc.update(
-                """
-                UPDATE knowledge_document_generation
-                SET generation_status = 'RETIRED',
-                    retired_at = clock_timestamp(),
-                    cleanup_required = TRUE
-                WHERE document_id = 'doc-b'
-                  AND generation = 1
-                """
-        );
+        invalidateDocB();
 
         SemanticGraphPriorWriter.RetirementResult result =
                 writer.retireCandidate(
@@ -155,6 +138,36 @@ class DreamSemanticRetirementIntegrationTest {
         );
         assertThat(candidateState()).isEqualTo("STALE");
         assertThat(activeSemanticRows()).isZero();
+    }
+
+    @Test
+    void lifecycleInvalidationMakesStoredActiveCandidateImmediatelyUnusable() {
+        prepareActivePrior();
+        invalidateDocB();
+
+        assertThat(candidates.findActivePairsForSource(
+                1,
+                POLICY_FINGERPRINT,
+                pair().first()
+        )).isEmpty();
+        assertThat(candidateState()).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void observationIsRejectedWhenEndpointExpiresBeforePersist() {
+        insertGeneration("doc-a");
+        insertGeneration("doc-b");
+        insertLease("pod-a", 7);
+        DreamLeaseManager.Authority authority = authority("pod-a", 7);
+        invalidateDocB();
+
+        assertThatThrownBy(() -> observeActive(authority))
+                .isInstanceOf(DreamLeaseManager.LostDreamAuthorityException.class)
+                .hasMessageContaining("lifecycle fencing");
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM knowledge_chunk_dream_candidate",
+                Integer.class
+        )).isZero();
     }
 
     @Test
@@ -282,6 +295,27 @@ class DreamSemanticRetirementIntegrationTest {
                         DreamCandidateRepository.ObservationOutcome.POSITIVE,
                         Instant.now()
                 )
+        );
+    }
+
+    private void invalidateDocB() {
+        jdbc.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET lifecycle_policy = 'TTL',
+                    expires_at = clock_timestamp() - interval '1 second'
+                WHERE document_id = 'doc-b'
+                """
+        );
+        jdbc.update(
+                """
+                UPDATE knowledge_document_generation
+                SET generation_status = 'RETIRED',
+                    retired_at = clock_timestamp(),
+                    cleanup_required = TRUE
+                WHERE document_id = 'doc-b'
+                  AND generation = 1
+                """
         );
     }
 
