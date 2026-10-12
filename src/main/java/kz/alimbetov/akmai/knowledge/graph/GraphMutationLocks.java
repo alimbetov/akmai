@@ -124,7 +124,7 @@ public class GraphMutationLocks {
                 WHERE l.document_id = ?
                   AND l.access_level = ?
                   AND l.published_generation = ?
-                  AND """ + PublishedLifecycleSql.eligible("l") + """
+                  AND """ + PublishedLifecycleSql.lifecycleEligible("l") + """
                 FOR SHARE
                 """;
         Integer eligible = jdbcTemplate.query(
