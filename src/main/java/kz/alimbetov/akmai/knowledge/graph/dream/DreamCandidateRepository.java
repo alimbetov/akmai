@@ -24,7 +24,7 @@ public class DreamCandidateRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public void observe(
+    public ObservationResult observe(
             DreamLeaseManager.Authority authority,
             Observation observation
     ) {
@@ -195,11 +195,34 @@ public class DreamCandidateRepository {
                 pair.second().accessLevel(),
                 pair.second().generation()
         );
-        if (changed != 1) {
-            throw new DreamLeaseManager.LostDreamAuthorityException(
-                    "Dream candidate observation rejected by lease or lifecycle fencing"
-            );
+        if (changed == 1) {
+            return ObservationResult.OBSERVED;
         }
+
+        Boolean owned = jdbcTemplate.queryForObject(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM adaptive_graph_dream_lease lease
+                    WHERE lease.graph_version = ?
+                      AND lease.semantic_policy_fingerprint = ?
+                      AND lease.owner_id = ?
+                      AND lease.fencing_token = ?
+                      AND lease.lease_until > clock_timestamp()
+                )
+                """,
+                Boolean.class,
+                authority.graphVersion(),
+                authority.policyFingerprint(),
+                authority.ownerId(),
+                authority.fencingToken()
+        );
+        if (Boolean.TRUE.equals(owned)) {
+            return ObservationResult.ENDPOINT_INELIGIBLE;
+        }
+        throw new DreamLeaseManager.LostDreamAuthorityException(
+                "Dream candidate observation rejected by lease fencing"
+        );
     }
 
     /**
@@ -444,6 +467,11 @@ public class DreamCandidateRepository {
     }
 
     private record StaleResult(boolean owned, boolean changed) {
+    }
+
+    public enum ObservationResult {
+        OBSERVED,
+        ENDPOINT_INELIGIBLE
     }
 
     public enum CandidateState {
