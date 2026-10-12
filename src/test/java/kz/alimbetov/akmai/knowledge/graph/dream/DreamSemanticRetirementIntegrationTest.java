@@ -154,7 +154,7 @@ class DreamSemanticRetirementIntegrationTest {
     }
 
     @Test
-    void observationIsRejectedWhenEndpointExpiresBeforePersist() {
+    void observationClassifiesEndpointExpiryWithoutPretendingLeaseLoss() {
         insertGeneration("doc-a");
         insertGeneration("doc-b");
         insertLease("pod-a", 7);
@@ -162,8 +162,35 @@ class DreamSemanticRetirementIntegrationTest {
         invalidateDocB();
 
         assertThatThrownBy(() -> observeActive(authority))
+                .isInstanceOf(DreamCandidateRepository.EndpointIneligibleException.class)
+                .hasMessageContaining("endpoint");
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM knowledge_chunk_dream_candidate",
+                Integer.class
+        )).isZero();
+    }
+
+    @Test
+    void observationStillFailsHardWhenDreamLeaseIsLost() {
+        insertGeneration("doc-a");
+        insertGeneration("doc-b");
+        insertLease("pod-a", 7);
+        DreamLeaseManager.Authority oldAuthority = authority("pod-a", 7);
+        jdbc.update(
+                """
+                UPDATE adaptive_graph_dream_lease
+                SET owner_id = 'pod-new',
+                    fencing_token = 8,
+                    lease_until = clock_timestamp() + interval '1 minute'
+                WHERE graph_version = 1
+                  AND semantic_policy_fingerprint = ?
+                """,
+                POLICY_FINGERPRINT
+        );
+
+        assertThatThrownBy(() -> observeActive(oldAuthority))
                 .isInstanceOf(DreamLeaseManager.LostDreamAuthorityException.class)
-                .hasMessageContaining("lifecycle fencing");
+                .hasMessageContaining("lease fencing");
         assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM knowledge_chunk_dream_candidate",
                 Integer.class
