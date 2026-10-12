@@ -1,7 +1,7 @@
 # Knowledge ingestion service contract
 
 **Implementation:** `KnowledgeIngestionService`, `PersistenceCoordinator`, `PublicationOutcomeResolver`  
-**Status:** CURRENT
+**Status:** CURRENT / IMPLEMENTED — exact-head verification pending
 
 ## Process
 
@@ -28,6 +28,7 @@ With an `Idempotency-Key`, ingestion first claims a lease-backed idempotency rec
 15. A definitely failed ingestion marks the new generation and current idempotency request failed.
 16. Failure-recording/cleanup errors must never replace the primary ingestion failure; cleanup errors are attached as suppressed exceptions.
 17. Canonical ingestion must prepare the canonical structure before semantic chunking.
+18. Concurrent claims for the same idempotency key/fingerprint may produce only one active ownership token; contenders observe `IN_PROGRESS` while the live PostgreSQL lease remains valid.
 
 ## Positive Cases
 
@@ -37,6 +38,7 @@ With an `Idempotency-Key`, ingestion first claims a lease-backed idempotency rec
 - Active claim: renew lease across stages and use the same claim context through persistence/publication.
 - Publication call throws after commit but durable state says `COMMITTED`: treat ingestion as successful.
 - A published, retired, or cleaned generation with a non-null `published_at` remains a committed publication for ambiguity recovery.
+- Two simultaneous same-key/same-fingerprint claims serialize on PostgreSQL state: exactly one becomes `CLAIMED`, the other sees `IN_PROGRESS`, and only one request row exists.
 
 ## Negative Cases
 
@@ -78,6 +80,8 @@ With an `Idempotency-Key`, ingestion first claims a lease-backed idempotency rec
 
 - Idempotency replay must never duplicate side effects.
 - A claimant that loses its lease must not continue expensive downstream work.
+- At most one live claim context owns a given idempotency key at a time.
+- Contending same-key requests must not create duplicate request rows or duplicate ownership tokens.
 - No persistence is allowed for a zero-searchable-chunk document.
 - Protected request metadata (`source`, `access_level`) cannot be spoofed by arbitrary metadata.
 - One persistence invocation may contain chunks for one document only.
@@ -127,6 +131,15 @@ With an `Idempotency-Key`, ingestion first claims a lease-backed idempotency rec
 - canonical chunking failure;
 - blank canonical idempotency-key bypass.
 
+### PostgreSQL idempotency / ownership
+
+`src/test/java/kz/alimbetov/akmai/knowledge/idempotency/IdempotencyIntegrationTest.java`
+
+- successful request replay without a new claim;
+- different-fingerprint key reuse fails closed;
+- expired claim recovers an already-published searchable manifest without allocating another generation;
+- concurrent same-key/same-fingerprint claims produce exactly one `CLAIMED` owner and one `IN_PROGRESS` contender with one durable request row.
+
 ### Persistence/publication failure model
 
 `src/test/java/kz/alimbetov/akmai/knowledge/ingestion/PersistenceCoordinatorTest.java`
@@ -157,4 +170,10 @@ With an `Idempotency-Key`, ingestion first claims a lease-backed idempotency rec
 
 `KnowledgeIngestionService` is the orchestration/idempotency boundary, not the publication transaction. `PersistenceCoordinator` owns generation allocation, embedding assembly, publication decision handling, and failure compensation. `GenerationPublicationService` owns the atomic publication transaction. `PublicationOutcomeResolver` is used only after an exception makes the publication result ambiguous.
 
+Idempotency claim acquisition is serialized by the durable `knowledge_ingestion_request` row and row lock. The uniqueness boundary is the idempotency key; PostgreSQL time determines whether the current lease is still live. A contender cannot manufacture ownership from JVM-local state.
+
 Lease heartbeats are deliberately placed around expensive stages so stale claimants are fenced before consuming more work. Failure bookkeeping is best-effort with respect to causality: if bookkeeping itself fails, its exception is suppressed onto the primary failure rather than replacing the original cause.
+
+## Verification status
+
+The implementation and evidence above are present on `quality/production-readiness-hardening-v1`. Inventory promotion to `VERIFIED` waits for green exact-head CI/regression evidence on the branch head containing the concurrent PostgreSQL idempotency proof and this contract update.
