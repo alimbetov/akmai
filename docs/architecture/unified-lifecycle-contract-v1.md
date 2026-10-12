@@ -1,31 +1,31 @@
 # Unified lifecycle contract v1
 
-Status: `TARGET`
+Status: **CURRENT / IMPLEMENTED**
 
-Branch: `feature/unified-lifecycle-contract-v1`
+Current implementation baseline: merged by PR #96 into `main@57c5941166a9bd0bac67b1e273b4f908ee27e167`.
 
-Baseline: `main@c8ca0d9263e2b481ef6c669c8174276160e7a769`
+Completion/evidence ledger: [`../audit/unified-lifecycle-contract-v1-completion-2026-10-12.md`](../audit/unified-lifecycle-contract-v1-completion-2026-10-12.md).
+
+The earlier pre-remediation audit is historical evidence only: [`../audit/unified-lifecycle-contract-v1-audit-2026-10-12.md`](../audit/unified-lifecycle-contract-v1-audit-2026-10-12.md).
 
 ## Purpose
 
-Close the remaining lifecycle correctness gap by making document retention, generation publication, parent/child visibility, adaptive-graph aging and Dream forgetting one coherent and testable contract.
+AkmAI uses one lifecycle authority model for document retention, generation publication, parent/child visibility, retrieval eligibility, adaptive-graph endpoints and Dream candidates.
 
-The target is not to add another independent lifecycle subsystem. Existing storage, fencing, generation and cleanup primitives remain the implementation basis. The change must centralize authority and eligibility semantics, remove predicate drift, propagate invalidation consistently and prove race/failure behavior with integration tests.
+There is no second lifecycle store and no cache/Redis authority. PostgreSQL lifecycle/generation state, PostgreSQL time and fencing/transaction ownership remain authoritative.
 
-## Authority hierarchy
-
-Lifecycle authority is strictly ordered:
+The governing rule is:
 
 ```text
 Document lifecycle
   -> Published generation
     -> Parent/child eligibility
-      -> Chunk/vector/identifier/reference eligibility
+      -> Chunk/vector/identifier/reference/concept eligibility
         -> Adaptive graph endpoint/edge eligibility
           -> Dream candidate eligibility
 ```
 
-A derived object must never be online-eligible after the authority object from which it derives becomes ineligible.
+Derived state may remain physically present after invalidation, but it must become logically unusable immediately when its authority becomes ineligible.
 
 ## Canonical online-generation predicate
 
@@ -40,105 +40,114 @@ generationOnline(documentId, generation) :=
     AND (expires_at IS NULL OR expires_at > database_now)
 ```
 
-`database_now` is PostgreSQL time. Application-node clocks must not decide distributed lifecycle validity.
+`database_now` is PostgreSQL time (`clock_timestamp()` or an equivalent database-time expression). Pod/JVM clocks are not distributed lifecycle authority.
 
-Physical cleanup may lag logical invalidation. Logical invalidation must never lag physical cleanup.
+The executable SQL boundary is centralized in `PublishedLifecycleSql`:
 
-The executable implementation uses `PublishedLifecycleSql` as the canonical read-side SQL primitive. `eligible(lifecycleAlias)` proves the lifecycle predicate plus existence of the referenced `PUBLISHED` generation; `publishedGenerationEligible(lifecycleAlias, generationAlias)` provides the mechanically equivalent join-based form for hot paths that already join `knowledge_document_generation`.
+- `eligible(lifecycleAlias)` — lifecycle predicate plus proof that the referenced generation is physically `PUBLISHED`;
+- `publishedGenerationEligible(lifecycleAlias, generationAlias)` — equivalent joined form for hot paths that already join `knowledge_document_generation`;
+- lifecycle-state-only form is used only where an explicit exact-generation locking step follows in the same transaction.
 
-## Lifecycle states
+No caller may replace the canonical predicate with a weaker local interpretation.
 
-The semantic state model is:
+## Semantic lifecycle states
 
 ```text
 STAGING -> ACTIVE -> SUPERSEDED -> RETIRING -> RETIRED
                \---------------------> RETIRING
 ```
 
-Existing table-specific enums remain where compatible. The semantic state is derived from authoritative storage state; it is not a second persisted state machine.
+These are semantic states derived from existing authoritative rows, not a new persisted state machine.
 
-### Physical-to-semantic state mapping
+| Authoritative state | Semantic state | Online? |
+|---|---|---:|
+| first generation `STAGING`, no published generation | STAGING | no |
+| lifecycle `READY/ACTIVE`, unexpired, exact published generation `PUBLISHED` | ACTIVE | yes |
+| `G(n)=PUBLISHED` while replacement `G(n+1)=STAGING` | G(n) ACTIVE; G(n+1) STAGING | G(n) only |
+| replacement publication atomically moves authority to `G(n+1)` | G(n) SUPERSEDED/RETIRING; G(n+1) ACTIVE | G(n+1) only |
+| TTL expired but payload still exists | RETIRING logically | no |
+| lifecycle `DELETE_PENDING` / `DELETING` | RETIRING | no |
+| generation `RETIRING`, `RETIRED`, `FAILED`, or lifecycle points elsewhere | SUPERSEDED/RETIRING/RETIRED | no |
+| Dream/graph row whose endpoint lost authority | derived stale/retired logically | no |
 
-| Authoritative physical state | Semantic state | Online eligible? | Notes |
-|---|---|---:|---|
-| no published generation; current generation `STAGING`; lifecycle `INGESTING` | `STAGING` | no | first ingestion has nothing older to serve |
-| lifecycle `READY/ACTIVE`, unexpired; `published_generation=G`; generation `G=PUBLISHED` | `ACTIVE` | yes | only canonical online state |
-| `G(n)=PUBLISHED` while `G(n+1)=STAGING`; lifecycle remains `READY/ACTIVE` and points to `G(n)` | `ACTIVE` for `G(n)`, `STAGING` for `G(n+1)` | only `G(n)` | replacement ingestion must not create an availability hole |
-| replacement publication transaction changes old generation to `RETIRING` and new generation to `PUBLISHED` | old `SUPERSEDED/RETIRING`, new `ACTIVE` | only new generation | authority flip is atomic |
-| lifecycle TTL has expired while physical rows still exist | `RETIRING` logically | no | logical invalidation precedes asynchronous purge |
-| lifecycle/retention `DELETE_PENDING` or `DELETING` | `RETIRING` | no | claim/lease/fencing owns destructive work |
-| generation `RETIRING` or lifecycle points elsewhere | `SUPERSEDED/RETIRING` | no | stale payload may still exist physically |
-| generation `RETIRED/CLEANED` or lifecycle `DELETED` | `RETIRED` | no | terminal for online use |
-| generation `FAILED` with an older valid `published_generation` | failed staging attempt; older generation remains `ACTIVE` | older generation only | failed replacement must not create downtime |
-| Dream candidate `ACTIVE` whose endpoint loses generation authority | derived `RETIRED/STALE` logically | no | physical row may remain `ACTIVE` until retirement, but read/write boundaries filter it immediately |
+## Publication and replacement
 
-### Transition matrix
+Starting replacement ingestion for `G(n+1)` must not hide a valid published `G(n)`.
 
-| Transition | Owning boundary | Required lock/fence | Online result | Failure behavior |
-|---|---|---|---|---|
-| absent -> first `STAGING` | `DocumentGenerationRepository.allocate` | lifecycle row `FOR UPDATE`; PostgreSQL transaction | none | allocation rollback leaves no partial authority |
-| `ACTIVE G(n)` + allocate `G(n+1)` | `DocumentGenerationRepository.allocate` | lifecycle row `FOR UPDATE`; stale retention claim cleared under same row authority | `G(n)` stays online; `G(n+1)` offline | failure/retry cannot hide `G(n)` |
-| `STAGING G(n+1)` -> publish | `GenerationPublicationService` | lifecycle row `FOR UPDATE`; exact generation row `FOR UPDATE`; idempotency fence | atomic `G(n)` off / `G(n+1)` on | stale publisher returns superseded/fails closed |
-| `STAGING` -> `FAILED` | generation failure/recovery | exact generation identity; lifecycle update generation-fenced | previous published generation remains online when present | no resurrection of failed staging payload |
-| `ACTIVE` -> TTL-invalid | canonical eligibility predicate using `clock_timestamp()` | PostgreSQL time | immediately offline | physical cleanup may lag |
-| TTL-invalid -> `DELETE_PENDING` | `RetentionClaimRepository` | `FOR UPDATE SKIP LOCKED`, claim id/generation/worker/lease | remains offline | stale contender cannot own claim |
-| `DELETE_PENDING` -> `DELETING` -> `DELETED` | `ChunkRetentionService` | generation-scoped claim fence + transaction | remains offline | lease/fence loss aborts destructive commit |
-| valid graph endpoints -> graph mutation | `GraphMutationLocks` | lifecycle `FOR SHARE` -> generation `FOR SHARE` -> canonical advisory locks | mutation allowed only while both endpoints valid | invalid endpoint fails closed |
-| Dream source/candidate observe | Dream repositories | live Dream lease/token plus canonical endpoint eligibility | candidate usable only while both endpoints valid | lifecycle loss rejects write or filters stored row |
-| graph/Dream retirement | retirement path | retirement locks permit already-invalid authority rows | only removes derived state | cannot re-enable authority |
+While replacement staging is in progress:
 
-### Forbidden transitions
+```text
+lifecycle_status = READY
+retention_status = ACTIVE
+published_generation = G(n)
+generation = G(n+1)          // staging/current work identity
+```
 
-The following transitions are contract violations:
+Only `published_generation` is online authority.
 
-- `STAGING -> online` without atomic publication;
-- `RETIRING/RETIRED/FAILED -> PUBLISHED` by retry or worker restart;
-- `G(n+1)` staging causing valid `G(n)` to become unavailable;
-- Dream or graph local state making an ineligible generation usable;
-- physical cleanup of `G(n)` mutating payload keyed to `G(n+1)`;
-- lease renewal or stale claim reuse after fencing authority is lost.
+Publication owns the atomic authority flip. After successful publication, exactly one generation may satisfy `generationOnline(...)`.
 
-### Document TTL
+A failed/stale publisher or retry must never resurrect a generation that is no longer authoritative.
 
-When `expires_at <= database_now`, the document becomes immediately ineligible for:
+## TTL and physical cleanup
 
-- retrieval and final context;
-- graph traversal and graph mutation;
-- graph learning/reinforcement;
-- Dream candidate discovery/admission;
-- query-memory reuse when source eligibility depends on the expired generation;
-- identifier/reference/concept expansion through the expired generation.
+TTL invalidation is synchronous at read/write eligibility boundaries:
 
-The retention worker then performs asynchronous physical purge using existing claim/lease/fencing semantics.
+```text
+expires_at <= clock_timestamp()
+=> immediately offline
+```
 
-### Generation lifecycle
+The retention worker performs physical cleanup asynchronously after logical invalidation.
 
-Publishing `G(n+1)` atomically makes `G(n+1)` the only online generation and makes `G(n)` logically superseded even if old payload remains physically present until cleanup.
+Therefore:
 
-Starting ingestion for `G(n+1)` does not change online authority when `G(n)` is already published. Replacement staging is represented by the generation row, while document lifecycle remains `READY` for the older published generation.
+```text
+logical invalidation may precede physical deletion
+physical deletion must never precede authority/fencing proof
+```
 
-Invariant: at most one generation of a document may satisfy `generationOnline(...)`.
+Retention claims are generation-scoped and use PostgreSQL ownership/lease/fencing semantics. A stale worker cannot continue destructive cleanup after losing authority.
 
-### Parent/child lifecycle
+Replacement staging and destructive retention are mutually fenced so cleanup of `G(n)` cannot mutate payload belonging to `G(n+1)`.
 
-Children inherit authority from their owning generation. A child cannot outlive its parent generation.
+## Parent/child eligibility
 
-If local child expiry is introduced, effective expiry is the minimum of parent and child expiry. Local child state can only narrow, never widen, parent eligibility.
+Children inherit generation authority from their parent document/generation.
 
-### Adaptive graph decay
+A child cannot remain online after its parent generation becomes ineligible. Any child-local eligibility rule may only narrow parent authority, never widen it.
 
-Graph lifecycle distinguishes two causes:
+Parent expansion resolves exact document/generation/chunk identities through current published projection eligibility before adding evidence.
 
-1. **authority invalidation** — source or target generation becomes ineligible; edge becomes unusable immediately;
-2. **semantic decay** — both endpoints remain eligible, but evidence/usage decays according to graph policy.
+## Retrieval and final context
 
-Authority invalidation always dominates graph score, temperature or decay state.
+All retrieval lanes and final context reuse obey the canonical published lifecycle boundary.
 
-### Graph TTL
+An item that was eligible during an early retrieval phase may still be rejected by final-context revalidation if its lifecycle changes before answer construction.
 
-Graph TTL is derived, not authoritative. Effective edge eligibility requires both endpoints to be lifecycle-valid plus any graph-local policy.
+Required behavior includes:
 
-Conceptually:
+- expired rows rejected;
+- non-`READY` lifecycle rejected;
+- non-`ACTIVE` retention rejected;
+- non-`PUBLISHED` generation rejected;
+- superseded generation rejected;
+- ACL mismatch rejected;
+- final context revalidation repeats authority checks to close TOCTOU races.
+
+## Query Memory
+
+Historical Query Memory is derived state. It cannot outlive its cited sources logically.
+
+Before a historical observation reaches HyDE/query-memory prompt input, every cited source reference is revalidated against current projection, ACL and canonical published lifecycle state.
+
+One invalid source invalidates that observation. A match with no surviving observations is dropped.
+
+Detailed contract: [`../services/query-memory-learning.md`](../services/query-memory-learning.md).
+
+## Adaptive graph
+
+Graph eligibility is derived from endpoint authority:
 
 ```text
 edgeEligible = sourceGenerationOnline
@@ -146,15 +155,35 @@ edgeEligible = sourceGenerationOnline
             AND graphLocalPolicyAllows
 ```
 
-A stale row may remain in storage temporarily, but it must not be usable online.
+Canonical endpoint filtering occurs before graph `ORDER BY/LIMIT`, so an expired/superseded high-score edge cannot consume adjacency budget or displace a valid edge before later materialization.
 
-### Dream forgetting
+Mutation paths use canonical lock order:
 
-Dream never decides whether authoritative knowledge is alive. Dream candidates are eligible only while all referenced generations are eligible.
+```text
+lifecycle authority
+  -> exact generation row
+    -> canonical transaction advisory node locks
+      -> writer-specific mutation
+```
 
-Candidate observation re-proves both endpoint generations together with the live Dream lease/token. Reads of `ACTIVE` candidate rows also join both endpoint lifecycle/generation authorities. Therefore a physically retained stale row is immediately non-usable before asynchronous retirement/compaction changes its stored state.
+Normal graph mutation requires both endpoints to remain eligible. Retirement paths may lock already-invalid rows in order to remove derived state, but may never re-enable authority.
 
-Dream state must never resurrect a superseded, expired, retiring or retired generation.
+## Dream candidates
+
+Dream never decides whether authoritative knowledge is alive.
+
+Candidate observation requires:
+
+- live Dream lease/fencing token;
+- source endpoint online eligibility;
+- target endpoint online eligibility.
+
+Lifecycle invalidation and lease loss are distinct outcomes:
+
+- endpoint invalidation is a local candidate skip/retirement condition;
+- actual Dream authority loss is fatal to the current Dream owner/run.
+
+Stored `ACTIVE` candidate rows are revalidated on read; physical state cannot resurrect an invalid endpoint.
 
 ## Mandatory invariants
 
@@ -164,161 +193,97 @@ Dream state must never resurrect a superseded, expired, retiring or retired gene
 | INV-02 | Expired document never participates in graph expansion or mutation. |
 | INV-03 | Expired document never produces or retains usable Dream candidates. |
 | INV-04 | Only `published_generation` may be online-visible. |
-| INV-05 | Publication of a replacement generation atomically invalidates the previous generation for online use. |
-| INV-06 | A child can never be online-eligible after its parent generation becomes ineligible. |
-| INV-07 | A graph edge can never be online-eligible after either endpoint becomes ineligible. |
+| INV-05 | Replacement publication atomically invalidates the previous online generation. |
+| INV-06 | A child cannot remain online after its parent generation becomes ineligible. |
+| INV-07 | A graph edge cannot remain online after either endpoint becomes ineligible. |
 | INV-08 | Dream cannot resurrect invalid graph/generation state. |
 | INV-09 | Physical cleanup may lag logical invalidation; logical invalidation may not lag physical cleanup. |
 | INV-10 | Retry, restart or lease loss cannot resurrect retired/ineligible state. |
 | INV-11 | Purging `G(n)` cannot delete or mutate payload belonging to `G(n+1)`. |
 | INV-12 | Distributed lifecycle decisions use PostgreSQL time and fencing, not pod-local time. |
 
-## Stage 1 — Lifecycle contract + invariant matrix
+## Allowed transition matrix
 
-### Scope
+| Transition | Owning boundary | Authority / fence | Result |
+|---|---|---|---|
+| absent -> first STAGING | `DocumentGenerationRepository.allocate` | lifecycle row transaction | no online generation |
+| ACTIVE G(n) + allocate G(n+1) | generation allocation | lifecycle row authority | G(n) remains online |
+| STAGING G(n+1) -> publish | `GenerationPublicationService` | lifecycle + exact generation locks/fence | atomic G(n) off / G(n+1) on |
+| STAGING -> FAILED | failure/recovery path | exact generation identity | older published generation remains online if present |
+| ACTIVE -> TTL-invalid | canonical eligibility | PostgreSQL time | immediately offline |
+| TTL-invalid -> DELETE_PENDING/DELETING | retention claim/service | claim id + generation + worker + lease | remains offline |
+| valid endpoints -> graph mutation | `GraphMutationLocks` | lifecycle/generation/advisory locks | mutation allowed while both remain valid |
+| Dream candidate observation | Dream repositories | Dream token + both endpoint authorities | persist only when all fences hold |
+| invalid derived state -> retirement | retirement paths | retirement locks/fencing | derived state removed only |
 
-- inventory every lifecycle predicate in Retrieval, Query Memory, Reference/Identifier/Concept expansion, Generation publication, Retention, Adaptive Graph and Dream;
-- map every current state to the semantic lifecycle states;
-- document allowed and forbidden transitions;
-- document authority hierarchy and failure semantics;
-- define PostgreSQL-time and transaction/fencing rules;
-- define logical invalidation versus physical purge semantics.
+## Forbidden transitions
 
-### Deliverables
+The following are contract violations:
 
-- this document promoted from `TARGET` to `CURRENT` only after implementation;
-- machine-readable or code-level invariant names for tests/metrics where practical;
-- lifecycle transition matrix;
-- negative-case matrix covering stale claims, stale generations and endpoint invalidation.
+- STAGING becoming online without atomic publication;
+- RETIRING/RETIRED/FAILED becoming `PUBLISHED` by retry/restart;
+- staging `G(n+1)` making valid `G(n)` unavailable;
+- Query Memory, graph or Dream making an expired/superseded generation usable;
+- purge of `G(n)` mutating `G(n+1)` payload;
+- stale retention/Dream/re-embedding authority continuing after fencing loss;
+- using JVM time as distributed lifecycle/lease authority.
 
-### Exit criteria
+## Failure and race evidence
 
-No subsystem has an undocumented interpretation of `READY`, `ACTIVE`, `PUBLISHED`, `expires_at`, `published_generation`, supersession or forgetting.
+The current implementation is backed by real PostgreSQL/failure tests including:
 
-## Stage 2 — Canonical eligibility boundary
+- `PostgresPublishedLifecycleEligibilityIntegrationTest`
+  - expired rows rejected across retrieval types;
+  - final-context expiry race;
+  - `INGESTING` / non-`PUBLISHED` / generation / ACL fencing.
+- `RetentionReingestionRaceTest`
+  - replacement staging keeps current published generation online;
+  - retention/re-ingestion ownership conflicts.
+- `ConcurrentGenerationPublicationIntegrationTest`
+  - publication concurrency/stale publisher behavior.
+- `RetentionLeaseExpiryIntegrationTest`
+  - lease expiry after destructive work begins rolls back the cleanup transaction.
+- adaptive graph mutation integration tests
+  - endpoint invalidation races;
+  - canonical locking/rollback/no-half-edge semantics.
+- `DreamSemanticRetirementIntegrationTest`
+  - invalid endpoint makes stored candidate immediately unusable;
+  - lifecycle race cannot persist usable candidate;
+  - stale token cannot commit retirement.
+- `QueryMemorySourceEligibilityIntegrationTest`
+  - historical source reuse cannot bypass TTL, ACL, supersession or lifecycle readiness.
 
-### Scope
+The detailed INV-01..INV-12 evidence mapping is retained in the completion ledger rather than duplicated here.
 
-Remove semantic duplication between Retrieval, Graph and Dream. Centralize the authoritative online-generation boundary without creating a new competing lifecycle store.
+## Positive cases
 
-Implemented shape:
+1. A valid `READY/ACTIVE/PUBLISHED` unexpired generation is retrievable under an authorized ACL.
+2. Replacement staging preserves the older published generation until atomic cutover.
+3. Publication makes the new generation visible and the prior generation unusable in one authority transition.
+4. Physical cleanup may run later without exposing stale payload meanwhile.
+5. Graph/Dream/Query Memory may use derived state only while underlying generations remain eligible.
 
-```text
-PublishedLifecycleSql.eligible(lifecycleAlias)
-PublishedLifecycleSql.publishedGenerationEligible(lifecycleAlias, generationAlias)
-```
+## Negative cases
 
-The first form preserves compatibility for repositories that expose only the lifecycle alias and verifies the referenced `PUBLISHED` generation through an indexed `EXISTS`. The second is used when the hot path already joins the exact generation and avoids another query or redundant authority store.
+1. TTL expires between retrieval and final context: final context rejects the source.
+2. A lifecycle row points to a non-`PUBLISHED` generation: fail closed.
+3. A graph endpoint becomes invalid before mutation: transaction fails/skips without half-edge state.
+4. A Dream endpoint becomes invalid before observation: candidate is not persisted as usable; the run does not misclassify that local invalidation as lease loss.
+5. Retention loses lease after destructive work begins: the transaction rolls back.
+6. A stale generation remains physically present: canonical read boundaries still reject it.
+7. A stale worker/retry cannot republish or resurrect retired authority.
 
-### Required consumers
+## Operational rules
 
-- retrieval pre-filter/final revalidation;
-- query-memory source eligibility;
-- graph mutation locks;
-- graph expansion/search;
-- Dream source/candidate selection;
-- reference/identifier/concept paths where generation eligibility is relevant.
+- Do not introduce a second lifecycle authority store.
+- Do not weaken `PublishedLifecycleSql` predicates to recover performance; optimize joins/indexes while preserving semantics.
+- Do not remove final-context revalidation merely because earlier retrieval was filtered.
+- Keep lifecycle/generation/advisory lock ordering stable across graph writers.
+- Use PostgreSQL time for distributed expiry/lease decisions.
+- Treat physical cleanup lag as an operational concern, not permission to keep stale rows logically usable.
 
-### Constraints
+## Verification status
 
-- no permissive fallback when lifecycle state cannot be verified;
-- no Redis/cache authority;
-- no pod-local-time decisions;
-- preserve ACL/access-level checks as an independent mandatory boundary;
-- avoid introducing extra JDBC round trips on hot retrieval paths where a joined predicate can prove the same condition.
+The lifecycle implementation and completion evidence are merged into `main` through PR #96. This contract is therefore `CURRENT`.
 
-### Exit criteria
-
-Predicate drift is removed. All required consumers use the canonical contract or a mechanically equivalent shared query boundary covered by contract tests.
-
-## Stage 3 — Propagation
-
-### Scope
-
-Make invalidation propagation explicit and monotonic:
-
-```text
-Document expiry/deletion
-  -> generation ineligible
-    -> children ineligible
-      -> graph endpoints/edges ineligible
-        -> Dream candidates ineligible
-```
-
-Generation supersession follows the same path for the previous generation.
-
-### Required behavior
-
-- publish `G(n+1)` fences `G(n)` from online paths in the publication transaction;
-- staging `G(n+1)` does not hide a valid already-published `G(n)`;
-- child/projection/vector/reference/identifier rows may physically remain until purge, but cannot pass eligibility;
-- graph and Dream reject invalid endpoints even if their own local rows still exist;
-- cleanup workers remain generation-scoped and fenced;
-- stale cleanup claims fail closed;
-- re-ingestion after expiration/deletion creates a new valid generation without reviving stale derived state.
-
-### Exit criteria
-
-There is no valid execution path in which superseded/expired authority remains usable because cleanup or maintenance has not yet run.
-
-## Stage 4 — Failure-injection proof
-
-The following races are release-blocking tests for this work.
-
-| Scenario | Required proof |
-|---|---|
-| TTL expires during query | Final context revalidation rejects the source even if it passed an earlier retrieval phase. |
-| Replacement staging | `G(n)` remains online while `G(n+1)` is `STAGING`. |
-| Publication race | Only the newest successfully published generation remains online; stale publisher is fenced/superseded. |
-| Retention lease loss | Stale worker cannot continue or commit destructive cleanup after lease/fence loss. |
-| Dream race | Candidate discovered before invalidation cannot be persisted as usable or applied after authority becomes invalid. |
-| Graph mutation race | Edge mutation fails closed if source/target generation becomes invalid before commit. |
-| `G(n+1)` published while purging `G(n)` | Cleanup remains generation-scoped and cannot remove or corrupt `G(n+1)`. |
-| Pod clock skew | Eligibility/lease behavior is unchanged because database time is authoritative. |
-| Worker retry/restart | Retired/ineligible state is not resurrected and cleanup remains idempotent/fenced. |
-
-Tests should use real PostgreSQL transactions where the behavior depends on locking, database time, SKIP LOCKED, leases, fencing or concurrent publication/cleanup.
-
-## Acceptance criteria
-
-This gap is closed only when all of the following are true:
-
-1. Document TTL, generation lifecycle, parent/child lifecycle, adaptive graph decay, graph TTL and Dream forgetting are described by this single authority model.
-2. Retrieval, Graph and Dream cannot diverge on whether a generation is online-eligible.
-3. Supersession and expiry invalidate online use synchronously; cleanup may remain asynchronous.
-4. Derived state cannot outlive authority logically.
-5. Cleanup is generation-scoped and fenced against newer publication.
-6. All twelve mandatory invariants have positive and negative automated coverage.
-7. The required race scenarios above pass repeatedly under integration/failure-injection execution.
-8. Existing quality gates are not weakened to make the change pass.
-9. Current-state documentation is updated in the same PR and this document is promoted to `CURRENT` or merged into the authoritative runtime architecture document.
-
-## Current implementation progress
-
-The branch now implements the first correctness hardening slice:
-
-- replacement staging preserves an existing published generation as online authority;
-- canonical lifecycle SQL proves both lifecycle state and physical `PUBLISHED` generation state;
-- final retrieval eligibility, Query Memory, semantic neighbor search, Dream source enumeration and graph mutation lifecycle checks use the shared semantics;
-- Dream candidate observation and `ACTIVE` reads re-prove both endpoint generations;
-- real PostgreSQL tests cover replacement staging, non-`PUBLISHED` generation fail-closed behavior and Dream lifecycle invalidation.
-
-The document remains `TARGET` until Stage 4 is fully mapped to INV-01..INV-12 and an exact final branch head passes the required CI/quality workflows.
-
-## Non-goals
-
-- replacing PostgreSQL lifecycle authority with Redis or an external coordinator;
-- redesigning ingestion payloads unrelated to lifecycle correctness;
-- adding independent TTL clocks to every derived table;
-- making physical deletion synchronous with request paths;
-- weakening graph/Dream functionality by disabling it instead of fixing lifecycle correctness.
-
-## Implementation order
-
-Implement strictly in this order:
-
-1. Stage 1 contract and executable invariant inventory.
-2. Stage 2 canonical eligibility boundary and consumer migration.
-3. Stage 3 invalidation/supersession propagation hardening.
-4. Stage 4 failure-injection tests and evidence.
-5. Update current architecture/readiness documentation and declare the lifecycle gap closed only after the full suite is green.
+`CURRENT` describes implementation state. It does **not** mean the whole AkmAI release is production-qualified; benchmark baseline, integrated live qualification, target-hardware SLO evidence and repository governance are tracked separately in the current production-readiness audit.
