@@ -1,6 +1,7 @@
 package kz.alimbetov.akmai.knowledge.lifecycle;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -104,6 +105,76 @@ class RetentionReingestionRaceTest {
         );
         assertThat(stillOwned).isZero();
         assertThat(claims.release(claim)).isFalse();
+    }
+
+    @Test
+    void retentionCannotClaimWhileReplacementGenerationIsStaging() {
+        long first = generations.allocate(
+                "doc-staging",
+                RetentionPolicy.TTL,
+                Instant.now().minusSeconds(60),
+                null,
+                "fingerprint-1",
+                1L
+        );
+        publish("doc-staging", first);
+        long second = generations.allocate(
+                "doc-staging",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fingerprint-2",
+                1L
+        );
+
+        assertThat(second).isEqualTo(first + 1);
+        assertThat(claims.claimExpired(
+                10,
+                5,
+                "pod-retention",
+                Duration.ofMinutes(10)
+        )).isEmpty();
+        assertThat(claims.countEligibleBacklog(5)).isZero();
+    }
+
+    @Test
+    void replacementAllocationIsRejectedAfterDestructiveCleanupStarts() {
+        long first = generations.allocate(
+                "doc-deleting",
+                RetentionPolicy.TTL,
+                Instant.now().minusSeconds(60),
+                null,
+                "fingerprint-1",
+                1L
+        );
+        publish("doc-deleting", first);
+        RetentionClaim claim = claims.claimExpired(
+                1,
+                5,
+                "pod-retention",
+                Duration.ofMinutes(10)
+        ).getFirst();
+        jdbc.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET retention_status = 'DELETING',
+                    lifecycle_status = 'DELETING'
+                WHERE document_id = ?
+                  AND claim_id = ?
+                """,
+                "doc-deleting",
+                claim.claimId()
+        );
+
+        assertThatThrownBy(() -> generations.allocate(
+                "doc-deleting",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fingerprint-2",
+                1L
+        )).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("currently being deleted");
     }
 
     @Test
