@@ -1,6 +1,6 @@
 # Runtime safety flags
 
-Status: **IMPLEMENTED**
+Status: **CURRENT / IMPLEMENTED — exact-head verification pending**
 
 ## Purpose
 
@@ -70,7 +70,7 @@ Local remembered database state is version-monotonic. If concurrent reads comple
 
 ## Failure semantics
 
-Positive cases:
+### Positive cases
 
 - cached read hits local cache without JDBC;
 - cache miss reads PostgreSQL and populates LKG/cache;
@@ -79,7 +79,7 @@ Positive cases:
 - successful admin transition validates dependencies under lock and publishes cache only after commit;
 - concurrent dependency transitions serialize and preserve invariants.
 
-Negative cases:
+### Negative cases
 
 - authoritative DB failure -> explicit unavailable; no fallback authorization;
 - corrupt persisted boolean -> error; corruption is not treated as availability failure;
@@ -88,6 +88,46 @@ Negative cases:
 - delayed older read completion -> cannot downgrade newer local `row_version`;
 - stale cached `true` -> cannot authorize consumers classified as authoritative mutation paths.
 
+## Transaction and concurrency boundary
+
+Administrative mutation is database-serialized through the complete registry lock plus `row_version` compare-and-set. The lock snapshot and update execute in one transaction. Concurrent transitions that would jointly violate a dependency cannot both commit.
+
+Cached reads are process-local acceleration only. They never become distributed mutation authority. Mutation-capable consumers must use authoritative PostgreSQL reads; when PostgreSQL is unavailable, starting new mutation work is rejected.
+
+## Tests
+
+### `AppParameterServiceTest`
+
+Covers:
+
+- cache hit without repeated JDBC;
+- authoritative read bypassing stale cached `true`;
+- authoritative DB outage failing with `AppParameterUnavailableException`;
+- version-monotonic cache/LKG behavior when an older read completes after a newer one;
+- static fallback for cache-safe reads during DB outage;
+- last-known-good reuse for cache-safe reads;
+- corrupt persisted boolean failing rather than falling back;
+- dependency rejection for invalid flag transitions;
+- optimistic update conflict;
+- eviction of known-stale local state after conflict.
+
+### `PostgresAppParameterRepositoryIntegrationTest`
+
+Real PostgreSQL evidence covers:
+
+- migration seeds the complete boolean registry;
+- stale `row_version` update is rejected;
+- two concurrent dependency transitions are serialized so exactly one succeeds when both together would produce an invalid graph state;
+- final persisted state preserves the dependency invariant.
+
+### `AppParameterControllerTest`
+
+Covers the administrative HTTP/controller boundary, including propagation of service-level conflict/validation behavior.
+
 ## Operational rule
 
 Runtime flags are kill switches, not feature-discovery state. For mutation-capable consumers, temporary PostgreSQL unavailability means **do not start new mutation work**. Availability degradation is preferable to executing durable work under a stale `true`.
+
+## Verification status
+
+The implementation and evidence are present on `quality/production-readiness-hardening-v1`. This contract remains pending inventory promotion until the exact head that contains this mapping passes the required CI/regression gates. No runtime semantics were changed by this documentation pass.
