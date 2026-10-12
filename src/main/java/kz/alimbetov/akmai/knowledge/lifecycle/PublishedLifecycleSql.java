@@ -3,10 +3,11 @@ package kz.alimbetov.akmai.knowledge.lifecycle;
 /**
  * Canonical SQL fragments for online lifecycle eligibility.
  *
- * <p>The lifecycle-only predicate is retained for callers that already bind an
- * exact published generation through another trusted relation. New online paths
- * should prefer {@link #publishedGenerationEligible(String, String)} so the
- * lifecycle row and the physical generation state are proven together.</p>
+ * <p>{@link #eligible(String)} is the backward-compatible boundary for callers
+ * that expose only a lifecycle alias; it verifies the referenced published
+ * generation with an indexed EXISTS lookup. Callers that already join the exact
+ * generation should use {@link #publishedGenerationEligible(String, String)} to
+ * express the same contract without a redundant subquery.</p>
  */
 public final class PublishedLifecycleSql {
 
@@ -14,11 +15,18 @@ public final class PublishedLifecycleSql {
     }
 
     public static String eligible(String lifecycleAlias) {
-        String alias = requireAlias(lifecycleAlias);
-        return " " + alias + ".lifecycle_status = 'READY'"
-                + " AND " + alias + ".retention_status = 'ACTIVE'"
-                + " AND (" + alias + ".expires_at IS NULL"
-                + " OR " + alias + ".expires_at > clock_timestamp()) ";
+        String lifecycle = requireAlias(lifecycleAlias);
+        return lifecycleEligible(lifecycle)
+                + " AND EXISTS ("
+                + "SELECT 1 FROM knowledge_document_generation __akmai_generation "
+                + "WHERE __akmai_generation.document_id = "
+                + lifecycle + ".document_id"
+                + " AND __akmai_generation.generation = "
+                + lifecycle + ".published_generation"
+                + " AND __akmai_generation.access_level = "
+                + lifecycle + ".access_level"
+                + " AND __akmai_generation.generation_status = 'PUBLISHED'"
+                + ") ";
     }
 
     public static String publishedGenerationEligible(
@@ -27,7 +35,7 @@ public final class PublishedLifecycleSql {
     ) {
         String lifecycle = requireAlias(lifecycleAlias);
         String generation = requireAlias(generationAlias);
-        return eligible(lifecycle)
+        return lifecycleEligible(lifecycle)
                 + " AND " + lifecycle + ".published_generation = "
                 + generation + ".generation"
                 + " AND " + lifecycle + ".document_id = "
@@ -35,6 +43,14 @@ public final class PublishedLifecycleSql {
                 + " AND " + lifecycle + ".access_level = "
                 + generation + ".access_level"
                 + " AND " + generation + ".generation_status = 'PUBLISHED' ";
+    }
+
+    private static String lifecycleEligible(String lifecycle) {
+        return " " + lifecycle + ".lifecycle_status = 'READY'"
+                + " AND " + lifecycle + ".retention_status = 'ACTIVE'"
+                + " AND " + lifecycle + ".published_generation IS NOT NULL"
+                + " AND (" + lifecycle + ".expires_at IS NULL"
+                + " OR " + lifecycle + ".expires_at > clock_timestamp()) ";
     }
 
     private static String requireAlias(String alias) {
