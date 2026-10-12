@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -155,6 +156,58 @@ class DreamCandidateDiscoveryFailureModelTest {
         assertThat(report.activatedCandidates()).isZero();
         assertThat(report.appliedSemanticPriors()).isEqualTo(1);
         assertThat(report.budget().dbRowsTouched()).isEqualTo(3);
+    }
+
+    @Test
+    void endpointInvalidationDuringPersistSkipsPairWithoutFailingRun() {
+        when(neighbors.search(
+                any(float[].class),
+                eq("en"),
+                eq(1L),
+                eq(33),
+                eq(0.86),
+                eq(true),
+                eq(Duration.ofSeconds(5))
+        )).thenReturn(List.of(neighbor));
+        when(candidates.findActivePairsForSource(
+                1,
+                POLICY_FINGERPRINT,
+                source.node()
+        )).thenReturn(List.of());
+        when(reciprocalVerifier.verify(
+                any(), eq(source), eq(neighbor), eq(1), eq(policy), any()
+        )).thenReturn(new DreamReciprocalNeighborVerifier.Verification(
+                true,
+                true,
+                0.96,
+                0.95,
+                1,
+                1,
+                false
+        ));
+        when(confidenceCalculator.calculate(
+                anyDouble(), anyDouble(), anyInt(), anyInt(), anyInt(), anyBoolean()
+        )).thenReturn(0.97);
+        doThrow(new DreamCandidateRepository.EndpointIneligibleException(
+                "endpoint expired"
+        )).when(candidates).observe(eq(authority), any());
+
+        DreamCandidateDiscovery.DiscoveryReport report = discovery.discover(
+                List.of(source),
+                UUID.randomUUID(),
+                authority,
+                policy,
+                budget(20),
+                "fast"
+        );
+
+        assertThat(report.persistedCandidates()).isZero();
+        assertThat(report.activatedCandidates()).isZero();
+        assertThat(report.appliedSemanticPriors()).isZero();
+        assertThat(report.budget().dbRowsTouched()).isZero();
+        verify(priorWriter, never()).applyCandidate(
+                any(), any(), anyDouble(), any()
+        );
     }
 
     @Test
