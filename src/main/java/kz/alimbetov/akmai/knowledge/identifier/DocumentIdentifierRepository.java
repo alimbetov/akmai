@@ -6,6 +6,7 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.Set;
 import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
+import kz.alimbetov.akmai.knowledge.lifecycle.PublishedLifecycleSql;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -332,7 +333,9 @@ public class DocumentIdentifierRepository {
                           ON l.document_id = i.document_id
                          AND l.published_generation = i.generation
                          AND l.access_level = i.access_level
-                        WHERE l.retention_status = 'ACTIVE'
+                        WHERE """);
+            sql.append(PublishedLifecycleSql.eligible("l"));
+            sql.append("""
                           AND i.access_level = ?
                     """);
             sql.append(predicate);
