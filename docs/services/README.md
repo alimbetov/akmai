@@ -34,8 +34,12 @@ Use [`external-api-contracts.md`](external-api-contracts.md) as the current inte
 - `RagResponse` sources and canonical-block provenance;
 - feedback and common API error envelopes.
 
+## Learning and adaptive-memory contract
+
+Use [`query-memory-learning.md`](query-memory-learning.md) for the current Query Memory / learning-event / explicit-feedback contract, including namespace isolation, privacy fingerprints, anti-poisoning/idempotency, lifecycle source revalidation, positive/negative cases and executable test mapping.
+
 ## Inventory
 
-The inventory is maintained in `service-inventory.md` and expanded service-by-service from the current codebase.
+The inventory is maintained in [`service-inventory.md`](service-inventory.md) and expanded service-by-service from the current codebase.
 
-Use `service-template.md` as the required structure for each service contract.
+Use [`service-template.md`](service-template.md) as the required structure for each service contract.
