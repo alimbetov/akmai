@@ -32,7 +32,8 @@ Status: **DRAFT** until one exact PR-head SHA passes CI, Retrieval Quality Gate,
 - `claimNew()` succeeds only for an unowned migration with fencing token `0`.
 - `claimExpiredActive()` uses `FOR UPDATE SKIP LOCKED`, replaces the owner, and increments the fencing token.
 - `renew()` requires the same migration id, owner id, fencing token, active status, and a still-live lease.
-- Once a lease has expired, the old owner cannot revive it with `renew()`.
+- `renewOwnedActiveLeases()` renews only active migrations owned by this process and whose lease is still live.
+- Once a lease has expired, the old owner cannot revive it with either manual renewal or scheduler heartbeat.
 - Once another replica has taken over, stale owner writes guarded by owner/fencing predicates must affect zero rows and fail.
 - Heartbeat renewal is independent of the synchronous migration call path so a long embedding/model call does not automatically expire an otherwise healthy owner.
 
@@ -73,6 +74,7 @@ After recovery, optional auto-migration runs only when the configured profile di
 - Snapshot/lifecycle/source/candidate/profile validation changes before cutover: cutover fails before publication switch.
 - Unexpected row counts during source-retire/candidate-publish/lifecycle-switch: the cutover transaction rolls back.
 - Lease expires or another replica takes over: stale owner loses authority and must not continue authoritative cleanup or cutover.
+- Scheduler heartbeat sees an already-expired local lease: it updates zero rows and must not resurrect stale ownership.
 
 ## Failure authority
 
@@ -96,6 +98,13 @@ Current executable coverage includes `ReembeddingIntegrationTest` for:
 - stale-owner renew rejection;
 - startup recovery ignoring a live remote lease;
 - startup recovery claiming an expired migration before abort.
+
+`ReembeddingLeaseHeartbeatSchedulerIntegrationTest` adds direct scheduler-path PostgreSQL evidence:
+
+- `heartbeat()` extends a still-live locally owned lease back to the configured lease duration;
+- a contender cannot claim the migration after the heartbeat refresh;
+- an already-expired locally owned lease is not resurrected by scheduler heartbeat;
+- after expiry, another replica can take over and receives the incremented fencing token.
 
 `ReembeddingPropertiesTest` covers the heartbeat/lease startup invariant and the short-lease compatibility constructor.
 
@@ -128,3 +137,7 @@ The persisted migration and migration-document rows are the durable forensic sou
 - Failed REEMBEDDING generations remain cleanup-required and are handled by normal generation reconciliation/retention cleanup paths.
 - A stale replica must be treated as non-authoritative even if it still has in-memory migration state.
 - When primary and recovery failures coexist, operations should diagnose the primary exception first and inspect suppressed exceptions for recovery degradation.
+
+## Verification status
+
+The scheduler-heartbeat gap is covered on `quality/production-readiness-hardening-v1`. Inventory promotion remains blocked until the exact branch head containing this test and contract passes the required CI/quality/storage/image gate set.
