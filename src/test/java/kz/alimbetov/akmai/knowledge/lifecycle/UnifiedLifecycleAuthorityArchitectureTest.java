@@ -55,6 +55,20 @@ class UnifiedLifecycleAuthorityArchitectureTest {
     }
 
     @Test
+    void parentExpansionCannotBypassPublishedProjectionBoundary()
+            throws Exception {
+        String parentExpansion = normalized(
+                "src/main/java/kz/alimbetov/akmai/rag/retrieval/"
+                        + "ParentContextExpansion.java"
+        );
+
+        assertThat(parentExpansion)
+                .contains("publishedsearchprojectionreader")
+                .contains("repository.findpublishedbykeys(")
+                .doesNotContain("searchprojectionrepository");
+    }
+
+    @Test
     void dreamCandidateBoundaryDistinguishesLifecycleFromLeaseAuthority()
             throws Exception {
         String candidates = normalized(
