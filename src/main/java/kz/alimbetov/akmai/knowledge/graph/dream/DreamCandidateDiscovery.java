@@ -194,16 +194,12 @@ public class DreamCandidateDiscovery {
                 } else {
                     state = DreamCandidateRepository.CandidateState.CANDIDATE;
                 }
-                if (mayActivate) {
-                    activatedForSource++;
-                    activated++;
-                }
 
                 NormalizedEvidence evidence = normalize(
                         source.node(), pair, verification
                 );
                 Instant observedAt = Instant.now();
-                reserveCandidateObservation(
+                boolean observationPersisted = reserveCandidateObservation(
                         authority,
                         new DreamCandidateRepository.Observation(
                                 pair,
@@ -227,7 +223,15 @@ public class DreamCandidateDiscovery {
                         ),
                         budget
                 );
+                if (!observationPersisted) {
+                    continue;
+                }
+
                 persisted++;
+                if (mayActivate) {
+                    activatedForSource++;
+                    activated++;
+                }
                 if (verification.mutualKnn()) {
                     mutual++;
                 }
@@ -291,7 +295,7 @@ public class DreamCandidateDiscovery {
         return result != SemanticGraphPriorWriter.RetirementResult.NO_CHANGE;
     }
 
-    private void reserveCandidateObservation(
+    private boolean reserveCandidateObservation(
             DreamLeaseManager.Authority authority,
             DreamCandidateRepository.Observation observation,
             DreamBudget budget
@@ -301,6 +305,9 @@ public class DreamCandidateDiscovery {
         try {
             candidates.observe(authority, observation);
             keepReservation = true;
+            return true;
+        } catch (DreamCandidateRepository.EndpointIneligibleException ignored) {
+            return false;
         } finally {
             if (!keepReservation) {
                 budget.releaseDbRows(1);

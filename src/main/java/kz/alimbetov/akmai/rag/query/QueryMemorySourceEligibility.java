@@ -3,14 +3,15 @@ package kz.alimbetov.akmai.rag.query;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import kz.alimbetov.akmai.knowledge.lifecycle.PublishedLifecycleSql;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
  * Prevents derived query memory from outliving the currently published source
  * material that justified it. Historical notes are optimization hints only;
- * they are dropped when their cited chunks are no longer ACTIVE, unexpired and
- * published for the caller's ACL scope.
+ * they are dropped when their cited chunks are no longer online-eligible for
+ * the caller's ACL scope.
  */
 @Component
 public class QueryMemorySourceEligibility {
@@ -65,22 +66,24 @@ public class QueryMemorySourceEligibility {
     }
 
     private boolean eligible(SourceRef source, Set<Long> accessLevels) {
-        Integer count = jdbcTemplate.query(
-                """
+        String sql = """
                 SELECT count(*)
                 FROM knowledge_search_projection p
                 JOIN knowledge_document_lifecycle l
                   ON l.document_id = p.document_id
                  AND l.access_level = p.access_level
                  AND l.published_generation = p.generation
+                JOIN knowledge_document_generation g
+                  ON g.document_id = p.document_id
+                 AND g.generation = p.generation
+                 AND g.access_level = p.access_level
                 WHERE p.document_id = ?
                   AND p.chunk_id = ?
                   AND p.access_level = ANY (?::bigint[])
-                  AND l.lifecycle_status = 'READY'
-                  AND l.retention_status = 'ACTIVE'
-                  AND (l.expires_at IS NULL
-                       OR l.expires_at > clock_timestamp())
-                """,
+                  AND """
+                + PublishedLifecycleSql.publishedGenerationEligible("l", "g");
+        Integer count = jdbcTemplate.query(
+                sql,
                 ps -> {
                     ps.setString(1, source.documentId());
                     ps.setString(2, source.chunkId());

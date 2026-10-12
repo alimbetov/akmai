@@ -68,7 +68,7 @@ class PostgresPublishedLifecycleEligibilityIntegrationTest {
     @Test
     void expiredActivePublishedRowIsRejectedForEveryRetrievalType() {
         OffsetDateTime expiredAt = OffsetDateTime.now(ZoneOffset.UTC).minusSeconds(5);
-        insertLifecycle("expired-doc", "TTL", expiredAt, 1L, 1L);
+        insertPublished("expired-doc", "TTL", expiredAt, 1L, 1L);
 
         List<RetrievalHit> hits = Arrays.stream(RetrievalType.values())
                 .map(type -> hit(type, 1L, "expired-doc", 1L))
@@ -85,7 +85,7 @@ class PostgresPublishedLifecycleEligibilityIntegrationTest {
     @Test
     void finalContextRevalidationRejectsDocumentThatExpiresAfterRetrieval() {
         OffsetDateTime future = OffsetDateTime.now(ZoneOffset.UTC).plusHours(1);
-        insertLifecycle("race-doc", "TTL", future, 1L, 1L);
+        insertPublished("race-doc", "TTL", future, 1L, 1L);
         RetrievalHit retrieved = hit(RetrievalType.VECTOR, 1L, "race-doc", 1L);
 
         PublishedSearchProjectionReader projectionReader =
@@ -113,7 +113,7 @@ class PostgresPublishedLifecycleEligibilityIntegrationTest {
 
     @Test
     void finalContextRevalidationRejectsPublishedGenerationWhileLifecycleIsIngesting() {
-        insertLifecycle("ingesting-doc", "PERMANENT", null, 7L, 1L);
+        insertPublished("ingesting-doc", "PERMANENT", null, 7L, 1L);
         RetrievalHit retrieved = hit(
                 RetrievalType.VECTOR,
                 1L,
@@ -145,10 +145,31 @@ class PostgresPublishedLifecycleEligibilityIntegrationTest {
     }
 
     @Test
+    void lifecyclePointingAtNonPublishedGenerationFailsClosed() {
+        insertPublished("inconsistent-doc", "PERMANENT", null, 3L, 1L);
+        jdbc.update(
+                """
+                UPDATE knowledge_document_generation
+                SET generation_status = 'RETIRING',
+                    retired_at = clock_timestamp()
+                WHERE document_id = ?
+                  AND generation = ?
+                """,
+                "inconsistent-doc",
+                3L
+        );
+
+        assertThat(eligibility.filter(
+                List.of(hit(RetrievalType.VECTOR, 1L, "inconsistent-doc", 3L)),
+                Set.of(1L)
+        )).isEmpty();
+    }
+
+    @Test
     void nonExpiredRowsRemainEligible() {
         OffsetDateTime future = OffsetDateTime.now(ZoneOffset.UTC).plusHours(1);
-        insertLifecycle("future-ttl", "TTL", future, 1L, 1L);
-        insertLifecycle("permanent", "PERMANENT", null, 1L, 1L);
+        insertPublished("future-ttl", "TTL", future, 1L, 1L);
+        insertPublished("permanent", "PERMANENT", null, 1L, 1L);
 
         List<RetrievalHit> hits = List.of(
                 hit(RetrievalType.VECTOR, 1L, "future-ttl", 1L),
@@ -162,8 +183,8 @@ class PostgresPublishedLifecycleEligibilityIntegrationTest {
 
     @Test
     void publishedGenerationAndAclRemainPartOfTheFence() {
-        insertLifecycle("published-doc", "PERMANENT", null, 2L, 1L);
-        insertLifecycle("other-acl", "PERMANENT", null, 1L, 2L);
+        insertPublished("published-doc", "PERMANENT", null, 2L, 1L);
+        insertPublished("other-acl", "PERMANENT", null, 1L, 2L);
 
         List<RetrievalHit> hits = List.of(
                 hit(RetrievalType.VECTOR, 1L, "published-doc", 2L),
@@ -176,7 +197,7 @@ class PostgresPublishedLifecycleEligibilityIntegrationTest {
                 .containsExactly(tuple("published-doc", 2L));
     }
 
-    private void insertLifecycle(
+    private void insertPublished(
             String documentId,
             String policy,
             OffsetDateTime expiresAt,
@@ -192,6 +213,25 @@ class PostgresPublishedLifecycleEligibilityIntegrationTest {
                 publishedGeneration + 1,
                 accessLevel,
                 expiresAt
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_generation (
+                    document_id,
+                    generation,
+                    generation_status,
+                    generation_kind,
+                    physical_id_version,
+                    access_level,
+                    cleanup_required,
+                    started_at,
+                    published_at
+                ) VALUES (?, ?, 'PUBLISHED', 'INGESTION', 2, ?, false,
+                          clock_timestamp(), clock_timestamp())
+                """,
+                documentId,
+                publishedGeneration,
+                accessLevel
         );
     }
 

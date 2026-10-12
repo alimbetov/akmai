@@ -138,6 +138,51 @@ class AdaptiveGraphMutationFailureMatrixIntegrationTest {
     }
 
     @Test
+    void mutationFailsClosedWhenGenerationInvalidationCommitsWhileWaiting()
+            throws Exception {
+        insertPublished("doc-a");
+        insertPublished("doc-b");
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try (Connection invalidator = dataSource.getConnection()) {
+            invalidator.setAutoCommit(false);
+            try (PreparedStatement statement = invalidator.prepareStatement(
+                    """
+                    UPDATE knowledge_document_generation
+                    SET generation_status = 'RETIRED',
+                        retired_at = clock_timestamp(),
+                        cleanup_required = true
+                    WHERE document_id = 'doc-b'
+                      AND generation = 1
+                    """
+            )) {
+                assertThat(statement.executeUpdate()).isEqualTo(1);
+            }
+
+            Future<?> mutation = executor.submit(() ->
+                    online.reinforceSymmetric(
+                            node("doc-a"),
+                            node("doc-b"),
+                            AssociationBand.CANDIDATE,
+                            evidence(19)
+                    )
+            );
+
+            Thread.sleep(200);
+            assertThat(mutation.isDone()).isFalse();
+            invalidator.commit();
+
+            assertThatThrownBy(() -> mutation.get(10, TimeUnit.SECONDS))
+                    .isInstanceOf(java.util.concurrent.ExecutionException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        assertThat(associationCount()).isZero();
+    }
+
+    @Test
     void reversedOnlinePairConcurrencyDoesNotDeadlockOrCreateHalfPair()
             throws Exception {
         insertPublished("doc-a");

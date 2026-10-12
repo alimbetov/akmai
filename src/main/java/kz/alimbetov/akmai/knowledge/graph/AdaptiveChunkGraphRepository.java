@@ -4,6 +4,7 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import kz.alimbetov.akmai.knowledge.lifecycle.PublishedLifecycleSql;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -120,36 +121,65 @@ public class AdaptiveChunkGraphRepository
                 .sorted()
                 .toList();
 
-        return jdbcTemplate.query(
-                """
-                SELECT target_document_id,
-                       target_generation,
-                       target_chunk_id,
-                       band,
-                       weight,
-                       support_count,
-                       context_count,
-                       citation_count,
-                       distinct_query_support,
-                       last_reinforced_at,
-                       graph_version
-                FROM knowledge_chunk_association
-                WHERE access_level = ?
-                  AND source_document_id = ?
-                  AND source_generation = ?
-                  AND source_chunk_id = ?
-                  AND graph_version = ?
-                  AND band = ANY (?)
-                  AND weight >= ?
-                ORDER BY weight DESC,
-                         distinct_query_support DESC,
-                         citation_count DESC,
-                         last_reinforced_at DESC,
-                         target_document_id,
-                         target_generation,
-                         target_chunk_id
+        String sql = """
+                SELECT a.target_document_id,
+                       a.target_generation,
+                       a.target_chunk_id,
+                       a.band,
+                       a.weight,
+                       a.support_count,
+                       a.context_count,
+                       a.citation_count,
+                       a.distinct_query_support,
+                       a.last_reinforced_at,
+                       a.graph_version
+                FROM knowledge_chunk_association a
+                JOIN knowledge_document_lifecycle source_lifecycle
+                  ON source_lifecycle.document_id = a.source_document_id
+                 AND source_lifecycle.access_level = a.access_level
+                 AND source_lifecycle.published_generation = a.source_generation
+                JOIN knowledge_document_generation source_generation
+                  ON source_generation.document_id = a.source_document_id
+                 AND source_generation.generation = a.source_generation
+                 AND source_generation.access_level = a.access_level
+                JOIN knowledge_document_lifecycle target_lifecycle
+                  ON target_lifecycle.document_id = a.target_document_id
+                 AND target_lifecycle.access_level = a.access_level
+                 AND target_lifecycle.published_generation = a.target_generation
+                JOIN knowledge_document_generation target_generation
+                  ON target_generation.document_id = a.target_document_id
+                 AND target_generation.generation = a.target_generation
+                 AND target_generation.access_level = a.access_level
+                WHERE a.access_level = ?
+                  AND a.source_document_id = ?
+                  AND a.source_generation = ?
+                  AND a.source_chunk_id = ?
+                  AND a.graph_version = ?
+                  AND a.band = ANY (?)
+                  AND a.weight >= ?
+                  AND %s
+                  AND %s
+                ORDER BY a.weight DESC,
+                         a.distinct_query_support DESC,
+                         a.citation_count DESC,
+                         a.last_reinforced_at DESC,
+                         a.target_document_id,
+                         a.target_generation,
+                         a.target_chunk_id
                 LIMIT ?
-                """,
+                """.formatted(
+                        PublishedLifecycleSql.publishedGenerationEligible(
+                                "source_lifecycle",
+                                "source_generation"
+                        ),
+                        PublishedLifecycleSql.publishedGenerationEligible(
+                                "target_lifecycle",
+                                "target_generation"
+                        )
+                );
+
+        return jdbcTemplate.query(
+                sql,
                 ps -> {
                     ps.setLong(1, source.accessLevel());
                     ps.setString(2, source.documentId());

@@ -4,7 +4,7 @@ Status: **DRAFT** until one exact PR-head SHA passes CI, Retrieval Quality Gate,
 
 ## Purpose
 
-Adaptive graph mutation maintains bilateral chunk associations without allowing stale, expired, unpublished, cross-ACL, partially committed, or non-authoritative graph state to become durable.
+Adaptive graph mutation maintains bilateral chunk associations without allowing stale, expired, unpublished, cross-ACL, partially committed, or non-authoritative graph state to become durable or usable online.
 
 The shared mutation authority is `GraphMutationLocks`. It is used by:
 
@@ -12,14 +12,15 @@ The shared mutation authority is `GraphMutationLocks`. It is used by:
 - `SemanticAssociationSeedRepository` for semantic seeding;
 - `SemanticGraphPriorWriter` for fenced Dream semantic priors.
 
-The three writers intentionally have different evidence/admission semantics, but they must share the same lifecycle and lock-order authority.
+The three writers intentionally have different evidence/admission semantics, but they must share the same lifecycle and lock-order authority. Online graph reads additionally enforce lifecycle authority for both endpoints before ranking and limit.
 
 ## Entry points
 
 - `AdaptiveChunkGraphRepository.reinforceSymmetric(...)` / `reinforceSymmetricBatch(...)`;
+- `AdaptiveChunkGraphRepository.findRelated(...)` for lifecycle-filtered online graph lookup;
 - `SemanticAssociationSeedRepository.seedSymmetric(...)`;
 - `SemanticGraphPriorWriter.applyCandidate(...)`;
-- `GraphMutationLocks.lockEligiblePublishedNodes(...)` is the common transaction-scoped authority primitive.
+- `GraphMutationLocks.lockEligiblePublishedNodes(...)` is the common transaction-scoped mutation authority primitive.
 
 ## Shared authority sequence
 
@@ -46,6 +47,20 @@ validate input pair(s)
 ```
 
 No writer may duplicate or weaken the shared lifecycle/advisory locking SQL.
+
+Online lookup follows the corresponding read-side boundary in one SQL statement:
+
+```text
+association row
+  -> join source lifecycle + exact source generation
+  -> join target lifecycle + exact target generation
+  -> require both generationOnline(...)
+  -> band / weight predicates
+  -> ORDER BY
+  -> LIMIT
+```
+
+Lifecycle filtering is deliberately before `ORDER BY/LIMIT`. Late filtering is insufficient because an invalid high-score edge could otherwise displace a valid edge and consume graph candidate budget.
 
 ## Business rules
 
@@ -104,7 +119,15 @@ and is locked `FOR SHARE` in canonical order.
 
 A corrupt state where lifecycle still points at generation `N` but generation `N` has already become `RETIRED`, `FAILED`, `CLEANED`, or another non-PUBLISHED state must fail closed.
 
-### GRAPH-BR-05 — advisory locks serialize graph node admission/mutation
+### GRAPH-BR-05 — online reads require both endpoints to remain authoritative
+
+`AdaptiveChunkGraphRepository.findRelated(...)` must not expose a stored edge merely because the graph row still exists.
+
+Both source and target must satisfy the canonical lifecycle+generation predicate in the same lookup SQL. This filtering occurs before sorting and `LIMIT`, so expired/superseded high-score rows cannot influence candidate ordering, consume lookup budget, or hide a lower-score valid edge.
+
+A stale graph row may remain physically present for maintenance/decay, but it is immediately unusable online when either endpoint loses authority.
+
+### GRAPH-BR-06 — advisory locks serialize graph node admission/mutation
 
 After lifecycle and generation fences, each canonical node receives:
 
@@ -114,7 +137,7 @@ pg_advisory_xact_lock(hashtextextended('akmai:adaptive-graph:node:' || lockKey, 
 
 The advisory lock is transaction-scoped. Hash collision may reduce concurrency but cannot widen mutation authority.
 
-### GRAPH-BR-06 — bilateral writes are atomic
+### GRAPH-BR-07 — bilateral writes are atomic
 
 Every logical pair is stored in both directions in one PostgreSQL statement:
 
@@ -127,7 +150,7 @@ If either direction violates a constraint or the statement fails, neither direct
 
 For an online batch, all pair writes share the outer graph mutation transaction. A later pair failure must roll back earlier pair writes from the same batch.
 
-### GRAPH-BR-07 — online learned evidence is idempotent by query bucket
+### GRAPH-BR-08 — online learned evidence is idempotent by query bucket
 
 `AdaptiveChunkGraphRepository` may reinforce CANDIDATE/WARM/HOT associations only.
 
@@ -135,7 +158,7 @@ Learned evidence counters are incremented only when `query_support_sketch` gains
 
 Online learned evidence remains distinct from Dream semantic prior evidence.
 
-### GRAPH-BR-08 — semantic seed degree admission is bilateral and serialized
+### GRAPH-BR-09 — semantic seed degree admission is bilateral and serialized
 
 `SemanticAssociationSeedRepository` reads pair existence plus semantic degree for both nodes only after shared node locks are held.
 
@@ -151,13 +174,13 @@ An existing pair may refresh semantic evidence without consuming a new degree sl
 
 Concurrent reversed seeding must serialize through the same canonical node locks, so both calls observe a stable admission state.
 
-### GRAPH-BR-09 — semantic seed refresh keeps strongest observed similarity
+### GRAPH-BR-10 — semantic seed refresh keeps strongest observed similarity
 
 Ingestion semantic seeding uses `greatest(existing, incoming)` for `semantic_similarity` and advances `semantic_last_seen_at`.
 
 This differs intentionally from Dream revalidation, which records the current semantic prior value under Dream fencing authority.
 
-### GRAPH-BR-10 — Dream apply requires fenced authority in final DML
+### GRAPH-BR-11 — Dream apply requires fenced authority in final DML
 
 `SemanticGraphPriorWriter` additionally requires a live row in `adaptive_graph_dream_lease` matching:
 
@@ -169,7 +192,7 @@ This differs intentionally from Dream revalidation, which records the current se
 
 The predicate is part of the bilateral mutation DML itself. A stale token therefore changes zero rows and raises `LostDreamAuthorityException`; no preliminary check is considered sufficient authority.
 
-### GRAPH-BR-11 — lock wait is timeout-bounded
+### GRAPH-BR-12 — lock wait is timeout-bounded
 
 Online reinforcement and semantic seeding run through `graphMutationTransactionTemplate`.
 
@@ -179,7 +202,7 @@ A lifecycle/generation/advisory lock wait must therefore terminate through the a
 
 After timeout/rollback, no new bilateral association rows may remain from the failed mutation.
 
-### GRAPH-BR-12 — cross-ACL and self edges are forbidden
+### GRAPH-BR-13 — cross-ACL and self edges are forbidden
 
 All public writers reject:
 
@@ -203,6 +226,21 @@ reinforceSymmetricBatch
 ```
 
 A failure in observation `N` rolls back successful observations `1..N-1` from that batch.
+
+### Online lookup
+
+```text
+findRelated
+  -> route by source ACL/document/generation/chunk + graph version
+  -> join source lifecycle/generation authority
+  -> join target lifecycle/generation authority
+  -> reject any edge with an invalid endpoint
+  -> apply band/weight filters
+  -> rank
+  -> limit
+```
+
+This boundary is the online Graph TTL implementation. Physical association rows may outlive endpoint validity, but lookup usability may not.
 
 ### Semantic seeding
 
@@ -231,6 +269,8 @@ Dream does not increment learned support/context/citation counters.
 ## Positive cases
 
 - two READY/ACTIVE/non-expired PUBLISHED nodes in one ACL may be reinforced;
+- valid source/target edges are returned by graph lookup;
+- invalid high-score edge is removed before `LIMIT`, allowing a lower-score valid edge to survive;
 - repeated online query bucket is idempotent;
 - distinct query buckets increase learned evidence;
 - a semantic pair below both degree caps is seeded bilaterally;
@@ -245,6 +285,8 @@ Dream does not increment learned support/context/citation counters.
 - TTL expired -> reject;
 - lifecycle points at a non-PUBLISHED generation -> reject;
 - exact generation row missing -> reject;
+- source or target invalid at graph read time -> edge absent before ranking/limit;
+- endpoint invalidation commits while mutation waits -> mutation resumes, rechecks authoritative generation state, fails closed, zero graph rows;
 - cross-ACL pair -> reject;
 - self edge -> reject;
 - semantic degree exceeded for either endpoint -> no write;
@@ -260,6 +302,8 @@ All graph mutation writes are database-only and remain inside bounded transactio
 `GraphMutationLocks` relies on transaction scope for both PostgreSQL row locks and `pg_advisory_xact_lock`; this is why an active transaction is now an explicit precondition rather than documentation only.
 
 A transaction failure releases row/advisory locks automatically. No local in-memory ownership survives rollback.
+
+Graph lookup is read-only and does not depend on cleanup having removed stale rows: endpoint authority is resolved synchronously in the lookup SQL.
 
 ## Concurrency / lock ordering
 
@@ -307,12 +351,14 @@ Graph mutation is retry-safe because:
 
 After transaction rollback there is no separate graph recovery protocol: the caller may retry under fresh lifecycle/lease authority.
 
+Stale graph rows require no synchronous physical recovery to preserve correctness because online lookup filters endpoint authority before ranking/limit. Maintenance may retire/compact them asynchronously.
+
 ## Tests
 
 Primary executable coverage:
 
-- `AdaptiveChunkGraphRepositoryTest` — normal symmetric association, ACL isolation, stale generation fence, query-bucket idempotency, graph-version isolation;
-- `AdaptiveGraphMutationFailureMatrixIntegrationTest` — active transaction precondition, generation-status fence, reversed online/semantic concurrency, forced half-pair rollback, batch rollback and real lifecycle-lock timeout;
+- `AdaptiveChunkGraphRepositoryTest` — normal symmetric association, ACL isolation, pre-limit source/target lifecycle filtering, stale generation fence, query-bucket idempotency, graph-version isolation;
+- `AdaptiveGraphMutationFailureMatrixIntegrationTest` — active transaction precondition, generation-status fence, concurrent endpoint invalidation while mutation waits, reversed online/semantic concurrency, forced half-pair rollback, batch rollback and real lifecycle-lock timeout;
 - `SemanticGraphPriorWriterIntegrationTest` — valid bilateral Dream apply, stale fencing rollback, expiry rejection, reversed-pair concurrency and real transaction timeout;
 - `SemanticGraphPriorWriterTest` — apply gate and graph-version rejection.
 
@@ -321,6 +367,8 @@ Primary executable coverage:
 - [x] Canonical node ordering documented and exercised concurrently
 - [x] Lifecycle authority locked before graph mutation
 - [x] Exact generation must still be PUBLISHED
+- [x] Graph reads filter both endpoints before ranking/limit
+- [x] Concurrent endpoint invalidation fails closed during mutation
 - [x] Shared primitive rejects non-transactional use
 - [x] Bilateral half-pair rollback tested
 - [x] Online batch rollback tested

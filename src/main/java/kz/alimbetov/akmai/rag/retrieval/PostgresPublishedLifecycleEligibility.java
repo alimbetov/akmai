@@ -81,7 +81,13 @@ public class PostgresPublishedLifecycleEligibility
                        l.document_id,
                        l.published_generation
                 FROM knowledge_document_lifecycle l
-                WHERE """ + PublishedLifecycleSql.eligible("l") + """
+                JOIN knowledge_document_generation g
+                  ON g.document_id = l.document_id
+                 AND g.generation = l.published_generation
+                 AND g.access_level = l.access_level
+                WHERE """
+                + PublishedLifecycleSql.publishedGenerationEligible("l", "g")
+                + """
                   AND (l.access_level,
                        l.document_id,
                        l.published_generation) IN (

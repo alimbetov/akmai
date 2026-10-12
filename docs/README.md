@@ -2,7 +2,7 @@
 
 This directory is the documentation entry point for the current AkmAI codebase.
 
-Last synchronized against executable code baseline: `main@259853a2b97a7bc75429b86f27f6f3d091268a11` on 2026-10-11.
+Last synchronized against executable code baseline: `main@c8ca0d9263e2b481ef6c669c8174276160e7a769` on 2026-10-12.
 
 ## Documentation contract
 
@@ -23,6 +23,7 @@ If a document no longer matches the current runtime, it must be updated in the s
 |---|---|
 | Product status and quick start | [`../README.md`](../README.md) |
 | Runtime architecture | [`architecture/current-runtime-architecture.md`](architecture/current-runtime-architecture.md) |
+| Unified lifecycle contract v1 | [`architecture/unified-lifecycle-contract-v1.md`](architecture/unified-lifecycle-contract-v1.md) — `TARGET` until all four implementation/proof stages are complete |
 | Adaptive Association Graph runtime | [`architecture/adaptive-graph-runtime.md`](architecture/adaptive-graph-runtime.md) |
 | Runtime feature switches | [`architecture/runtime-app-parameters.md`](architecture/runtime-app-parameters.md) and `application.yml` |
 | External/integration contracts and RAG question/answer examples | [`services/external-api-contracts.md`](services/external-api-contracts.md) |
@@ -55,6 +56,7 @@ Current and explicitly marked target architecture, storage and retrieval contrac
 Major areas:
 
 - current RAG runtime and adaptive graph;
+- unified lifecycle authority, retention, generation supersession and derived-state invalidation;
 - FileService → AkmAI canonical knowledge-ingestion contract;
 - self-optimizing retrieval and query memory;
 - semantic concept retrieval and semantic intelligence;

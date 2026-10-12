@@ -2,6 +2,7 @@ package kz.alimbetov.akmai.knowledge.graph;
 
 import java.util.Collection;
 import java.util.TreeSet;
+import kz.alimbetov.akmai.knowledge.lifecycle.PublishedLifecycleSql;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -117,21 +118,17 @@ public class GraphMutationLocks {
     }
 
     private void lockEligibleLifecycle(ChunkGraphNode node) {
-        Integer eligible = jdbcTemplate.query(
-                """
+        String sql = """
                 SELECT 1
-                FROM knowledge_document_lifecycle
-                WHERE document_id = ?
-                  AND access_level = ?
-                  AND published_generation = ?
-                  AND lifecycle_status = 'READY'
-                  AND retention_status = 'ACTIVE'
-                  AND (
-                      expires_at IS NULL
-                      OR expires_at > clock_timestamp()
-                  )
+                FROM knowledge_document_lifecycle l
+                WHERE l.document_id = ?
+                  AND l.access_level = ?
+                  AND l.published_generation = ?
+                  AND """ + PublishedLifecycleSql.lifecycleEligible("l") + """
                 FOR SHARE
-                """,
+                """;
+        Integer eligible = jdbcTemplate.query(
+                sql,
                 (rs, rowNum) -> rs.getInt(1),
                 node.documentId(),
                 node.accessLevel(),

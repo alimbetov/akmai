@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import kz.alimbetov.akmai.knowledge.graph.ChunkGraphNode;
+import kz.alimbetov.akmai.knowledge.lifecycle.PublishedLifecycleSql;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -45,8 +46,7 @@ public class DreamCandidateRepository {
                 observation.outcome() == ObservationOutcome.POSITIVE;
         Timestamp observedAt = Timestamp.from(observation.observedAt());
 
-        int changed = jdbcTemplate.update(
-                """
+        String sql = """
                 INSERT INTO knowledge_chunk_dream_candidate (
                     access_level,
                     node_a_document_id,
@@ -89,6 +89,30 @@ public class DreamCandidateRepository {
                       AND lease.fencing_token = ?
                       AND lease.lease_until > clock_timestamp()
                 )
+                  AND EXISTS (
+                    SELECT 1
+                    FROM knowledge_document_lifecycle la
+                    JOIN knowledge_document_generation ga
+                      ON ga.document_id = la.document_id
+                     AND ga.generation = la.published_generation
+                     AND ga.access_level = la.access_level
+                    WHERE la.document_id = ?
+                      AND la.access_level = ?
+                      AND la.published_generation = ?
+                      AND %s
+                )
+                  AND EXISTS (
+                    SELECT 1
+                    FROM knowledge_document_lifecycle lb
+                    JOIN knowledge_document_generation gb
+                      ON gb.document_id = lb.document_id
+                     AND gb.generation = lb.published_generation
+                     AND gb.access_level = lb.access_level
+                    WHERE lb.document_id = ?
+                      AND lb.access_level = ?
+                      AND lb.published_generation = ?
+                      AND %s
+                )
                 ON CONFLICT (
                     access_level,
                     node_a_document_id,
@@ -127,7 +151,13 @@ public class DreamCandidateRepository {
                     END,
                     last_verified_at = EXCLUDED.last_verified_at,
                     updated_at = clock_timestamp()
-                """,
+                """.formatted(
+                        PublishedLifecycleSql.publishedGenerationEligible("la", "ga"),
+                        PublishedLifecycleSql.publishedGenerationEligible("lb", "gb")
+                );
+
+        int changed = jdbcTemplate.update(
+                sql,
                 pair.first().accessLevel(),
                 pair.first().documentId(),
                 pair.first().generation(),
@@ -157,20 +187,50 @@ public class DreamCandidateRepository {
                 authority.graphVersion(),
                 authority.policyFingerprint(),
                 authority.ownerId(),
+                authority.fencingToken(),
+                pair.first().documentId(),
+                pair.first().accessLevel(),
+                pair.first().generation(),
+                pair.second().documentId(),
+                pair.second().accessLevel(),
+                pair.second().generation()
+        );
+        if (changed == 1) {
+            return;
+        }
+
+        Boolean owned = jdbcTemplate.queryForObject(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM adaptive_graph_dream_lease lease
+                    WHERE lease.graph_version = ?
+                      AND lease.semantic_policy_fingerprint = ?
+                      AND lease.owner_id = ?
+                      AND lease.fencing_token = ?
+                      AND lease.lease_until > clock_timestamp()
+                )
+                """,
+                Boolean.class,
+                authority.graphVersion(),
+                authority.policyFingerprint(),
+                authority.ownerId(),
                 authority.fencingToken()
         );
-        if (changed != 1) {
-            throw new DreamLeaseManager.LostDreamAuthorityException(
-                    "Dream candidate observation rejected by fencing"
+        if (Boolean.TRUE.equals(owned)) {
+            throw new EndpointIneligibleException(
+                    "Dream candidate endpoint lost lifecycle eligibility"
             );
         }
+        throw new DreamLeaseManager.LostDreamAuthorityException(
+                "Dream candidate observation rejected by lease fencing"
+        );
     }
 
     /**
-     * Returns ACTIVE pairs currently involving the source under the exact Dream
-     * policy epoch. The coordinator is single-owner, so this snapshot is used to
-     * apply retention hysteresis and to retire pairs that disappear from the
-     * source's current forward top-K.
+     * Returns lifecycle-valid ACTIVE pairs currently involving the source under
+     * the exact Dream policy epoch. Stored stale rows may remain until retirement
+     * or compaction, but they are never returned as usable Dream state.
      */
     public List<DreamPair> findActivePairsForSource(
             int graphVersion,
@@ -192,32 +252,55 @@ public class DreamCandidateRepository {
             );
         }
 
-        return jdbcTemplate.query(
-                """
-                SELECT access_level,
-                       node_a_document_id,
-                       node_a_generation,
-                       node_a_chunk_id,
-                       node_b_document_id,
-                       node_b_generation,
-                       node_b_chunk_id
-                FROM knowledge_chunk_dream_candidate
-                WHERE graph_version = ?
-                  AND semantic_policy_fingerprint = ?
-                  AND state = 'ACTIVE'
-                  AND access_level = ?
+        String sql = """
+                SELECT c.access_level,
+                       c.node_a_document_id,
+                       c.node_a_generation,
+                       c.node_a_chunk_id,
+                       c.node_b_document_id,
+                       c.node_b_generation,
+                       c.node_b_chunk_id
+                FROM knowledge_chunk_dream_candidate c
+                JOIN knowledge_document_lifecycle la
+                  ON la.document_id = c.node_a_document_id
+                 AND la.access_level = c.access_level
+                 AND la.published_generation = c.node_a_generation
+                JOIN knowledge_document_generation ga
+                  ON ga.document_id = c.node_a_document_id
+                 AND ga.generation = c.node_a_generation
+                 AND ga.access_level = c.access_level
+                JOIN knowledge_document_lifecycle lb
+                  ON lb.document_id = c.node_b_document_id
+                 AND lb.access_level = c.access_level
+                 AND lb.published_generation = c.node_b_generation
+                JOIN knowledge_document_generation gb
+                  ON gb.document_id = c.node_b_document_id
+                 AND gb.generation = c.node_b_generation
+                 AND gb.access_level = c.access_level
+                WHERE c.graph_version = ?
+                  AND c.semantic_policy_fingerprint = ?
+                  AND c.state = 'ACTIVE'
+                  AND c.access_level = ?
+                  AND %s
+                  AND %s
                   AND (
                       (
-                          node_a_document_id = ?
-                          AND node_a_generation = ?
-                          AND node_a_chunk_id = ?
+                          c.node_a_document_id = ?
+                          AND c.node_a_generation = ?
+                          AND c.node_a_chunk_id = ?
                       ) OR (
-                          node_b_document_id = ?
-                          AND node_b_generation = ?
-                          AND node_b_chunk_id = ?
+                          c.node_b_document_id = ?
+                          AND c.node_b_generation = ?
+                          AND c.node_b_chunk_id = ?
                       )
                   )
-                """,
+                """.formatted(
+                        PublishedLifecycleSql.publishedGenerationEligible("la", "ga"),
+                        PublishedLifecycleSql.publishedGenerationEligible("lb", "gb")
+                );
+
+        return jdbcTemplate.query(
+                sql,
                 (rs, rowNum) -> DreamPair.of(
                         new ChunkGraphNode(
                                 rs.getLong("access_level"),
@@ -386,6 +469,13 @@ public class DreamCandidateRepository {
     }
 
     private record StaleResult(boolean owned, boolean changed) {
+    }
+
+    public static final class EndpointIneligibleException
+            extends IllegalStateException {
+        public EndpointIneligibleException(String message) {
+            super(message);
+        }
     }
 
     public enum CandidateState {
