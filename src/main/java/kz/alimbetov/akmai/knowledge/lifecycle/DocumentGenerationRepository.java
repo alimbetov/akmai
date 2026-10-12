@@ -79,14 +79,15 @@ public class DocumentGenerationRepository {
 
             AllocationState current = jdbcTemplate.queryForObject(
                     """
-                    SELECT next_generation, retention_status
+                    SELECT next_generation, retention_status, published_generation
                     FROM knowledge_document_lifecycle
                     WHERE document_id = ?
                     FOR UPDATE
                     """,
                     (rs, rowNum) -> new AllocationState(
                             rs.getLong("next_generation"),
-                            RetentionStatus.valueOf(rs.getString("retention_status"))
+                            RetentionStatus.valueOf(rs.getString("retention_status")),
+                            nullableLong(rs, "published_generation")
                     ),
                     documentId
             );
@@ -100,12 +101,15 @@ public class DocumentGenerationRepository {
             }
 
             long generation = current.nextGeneration();
+            String lifecycleStatus = current.publishedGeneration() == null
+                    ? "INGESTING"
+                    : "READY";
             jdbcTemplate.update(
                     """
                     UPDATE knowledge_document_lifecycle
                     SET next_generation = ?,
                         generation = ?,
-                        lifecycle_status = 'INGESTING',
+                        lifecycle_status = ?,
                         ingestion_started_at = clock_timestamp(),
                         retention_status = 'ACTIVE',
                         claim_generation = NULL,
@@ -121,6 +125,7 @@ public class DocumentGenerationRepository {
                     """,
                     generation + 1,
                     generation,
+                    lifecycleStatus,
                     documentId
             );
 
@@ -298,6 +303,11 @@ public class DocumentGenerationRepository {
         return value == null ? null : value.toInstant();
     }
 
+    private Long nullableLong(ResultSet rs, String column) throws SQLException {
+        long value = rs.getLong(column);
+        return rs.wasNull() ? null : value;
+    }
+
     private java.sql.Timestamp timestamp(Instant value) {
         return value == null ? null : java.sql.Timestamp.from(value);
     }
@@ -312,7 +322,8 @@ public class DocumentGenerationRepository {
 
     private record AllocationState(
             long nextGeneration,
-            RetentionStatus retentionStatus
+            RetentionStatus retentionStatus,
+            Long publishedGeneration
     ) {
     }
 
