@@ -7,14 +7,15 @@ import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileStorageManager;
 import kz.alimbetov.akmai.knowledge.graph.ChunkGraphNode;
+import kz.alimbetov.akmai.knowledge.lifecycle.PublishedLifecycleSql;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /**
- * Enumerates only currently published, READY, ACTIVE and unexpired vectors.
- * Fast-lane keyset uses lifecycle.updated_at, which publication updates after
- * vector insertion inside the same transaction. Rescan uses stable node identity
- * ordering so old eligible nodes receive eventual bounded re-evaluation.
+ * Enumerates only currently online-eligible vectors. Fast-lane keyset uses
+ * lifecycle.updated_at, which publication updates after vector insertion inside
+ * the same transaction. Rescan uses stable node identity ordering so old
+ * eligible nodes receive eventual bounded re-evaluation.
  */
 @Repository
 public class DreamSourceRepository {
@@ -64,12 +65,11 @@ public class DreamSourceRepository {
                   ON l.document_id = v.document_id
                  AND l.access_level = v.access_level
                  AND l.published_generation = v.generation
-                WHERE l.lifecycle_status = 'READY'
-                  AND l.retention_status = 'ACTIVE'
-                  AND (
-                      l.expires_at IS NULL
-                      OR l.expires_at > clock_timestamp()
-                  )
+                JOIN knowledge_document_generation g
+                  ON g.document_id = v.document_id
+                 AND g.generation = v.generation
+                 AND g.access_level = v.access_level
+                WHERE %s
                   %s
                 ORDER BY l.updated_at,
                          v.access_level,
@@ -77,7 +77,11 @@ public class DreamSourceRepository {
                          v.generation,
                          v.chunk_id
                 LIMIT ?
-                """.formatted(table, cursor);
+                """.formatted(
+                        table,
+                        PublishedLifecycleSql.publishedGenerationEligible("l", "g"),
+                        cursor
+                );
 
         if (after == null) {
             return jdbcTemplate.query(
@@ -128,19 +132,22 @@ public class DreamSourceRepository {
                   ON l.document_id = v.document_id
                  AND l.access_level = v.access_level
                  AND l.published_generation = v.generation
-                WHERE l.lifecycle_status = 'READY'
-                  AND l.retention_status = 'ACTIVE'
-                  AND (
-                      l.expires_at IS NULL
-                      OR l.expires_at > clock_timestamp()
-                  )
+                JOIN knowledge_document_generation g
+                  ON g.document_id = v.document_id
+                 AND g.generation = v.generation
+                 AND g.access_level = v.access_level
+                WHERE %s
                   %s
                 ORDER BY v.access_level,
                          v.document_id,
                          v.generation,
                          v.chunk_id
                 LIMIT ?
-                """.formatted(table, cursor);
+                """.formatted(
+                        table,
+                        PublishedLifecycleSql.publishedGenerationEligible("l", "g"),
+                        cursor
+                );
 
         if (after == null) {
             return jdbcTemplate.query(
@@ -166,8 +173,7 @@ public class DreamSourceRepository {
         }
         EmbeddingProfile profile = activeProfile();
         String table = storageManager.qualified(profile);
-        return jdbcTemplate.query(
-                """
+        String sql = """
                 SELECT v.access_level,
                        v.document_id,
                        v.generation,
@@ -180,17 +186,21 @@ public class DreamSourceRepository {
                   ON l.document_id = v.document_id
                  AND l.access_level = v.access_level
                  AND l.published_generation = v.generation
+                JOIN knowledge_document_generation g
+                  ON g.document_id = v.document_id
+                 AND g.generation = v.generation
+                 AND g.access_level = v.access_level
                 WHERE v.access_level = ?
                   AND v.document_id = ?
                   AND v.generation = ?
                   AND v.chunk_id = ?
-                  AND l.lifecycle_status = 'READY'
-                  AND l.retention_status = 'ACTIVE'
-                  AND (
-                      l.expires_at IS NULL
-                      OR l.expires_at > clock_timestamp()
-                  )
-                """.formatted(table),
+                  AND %s
+                """.formatted(
+                        table,
+                        PublishedLifecycleSql.publishedGenerationEligible("l", "g")
+                );
+        return jdbcTemplate.query(
+                sql,
                 (rs, rowNum) -> map(rs, profile.profileId()),
                 node.accessLevel(),
                 node.documentId(),
