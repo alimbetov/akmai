@@ -5,6 +5,7 @@ This directory contains current architecture contracts and active target/experim
 ## Start here
 
 - [`current-runtime-architecture.md`](current-runtime-architecture.md) — **CURRENT** end-to-end runtime architecture.
+- [`retrieval-correctness-hardening-v1.md`](retrieval-correctness-hardening-v1.md) — **TARGET** retrieval correctness hardening for candidate-time canonical eligibility, temporal-authority ordering, context backfill, batched projection materialization and original-query preservation.
 - [`adaptive-graph-runtime.md`](adaptive-graph-runtime.md) — **CURRENT** Adaptive Association Graph behavior and feature boundaries.
 - [`rag-self-optimizing-platform-v1.1-technical-spec.md`](rag-self-optimizing-platform-v1.1-technical-spec.md) — **CURRENT / IMPLEMENTED** self-optimizing v1.1 engineering contract.
 - [`fileservice-knowledge-contract-v1.md`](fileservice-knowledge-contract-v1.md) — **CURRENT** FileService → AkmAI canonical knowledge boundary implemented in the existing ingestion/generation pipeline.
@@ -28,6 +29,7 @@ For concrete HTTP/service request-response examples and RAG question/answer cont
 
 | Document | Classification | Purpose |
 |---|---|---|
+| `retrieval-correctness-hardening-v1.md` | TARGET | Makes canonical READY/ACTIVE/TTL/generation/ACL eligibility authoritative before bounded retrieval truncation, moves parent expansion before temporal authority, adds bounded context backfill, replaces per-key UNION materialization with batched VALUES lookup and guarantees ORIGINAL query chunks cannot be evicted by multi-query expansion. |
 | `adaptive-chunk-graph.md` | CURRENT REFERENCE | Core architecture and invariants for bounded learned chunk associations. Read together with `adaptive-graph-runtime.md` for executable runtime behavior. |
 | `adaptive-chunk-graph-calibration.md` | CURRENT CALIBRATION CONTRACT | Measurement-driven graph threshold/limit calibration. |
 | `adaptive-chunk-graph-rollout.md` | CURRENT ROLLOUT CONTRACT | Shadow/canary/online rollout rules and recovery assumptions. |
