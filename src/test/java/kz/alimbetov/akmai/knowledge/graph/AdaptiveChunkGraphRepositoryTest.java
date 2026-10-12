@@ -147,6 +147,58 @@ class AdaptiveChunkGraphRepositoryTest {
     }
 
     @Test
+    void lookupFiltersIneligibleEndpointsBeforeLimit() {
+        insertGeneration("doc-a", 1, 1);
+        insertGeneration("doc-b", 1, 1);
+        insertGeneration("doc-c", 1, 1);
+
+        ChunkGraphNode source =
+                new ChunkGraphNode(1, "doc-a", 1, "chunk-a");
+        ChunkGraphNode expiredHighScore =
+                new ChunkGraphNode(1, "doc-b", 1, "chunk-b");
+        ChunkGraphNode validLowerScore =
+                new ChunkGraphNode(1, "doc-c", 1, "chunk-c");
+
+        repository.reinforceSymmetric(
+                source,
+                expiredHighScore,
+                AssociationBand.HOT,
+                new AssociationEvidence(
+                        0.99, 1, 1, 1, 1, Instant.now(), 1
+                )
+        );
+        repository.reinforceSymmetric(
+                source,
+                validLowerScore,
+                AssociationBand.HOT,
+                new AssociationEvidence(
+                        0.80, 1, 1, 1, 2, Instant.now(), 1
+                )
+        );
+        expire("doc-b");
+
+        assertThat(repository.findRelated(
+                Set.of(1L),
+                source,
+                1,
+                Set.of(AssociationBand.HOT),
+                0.0,
+                1
+        )).extracting(association -> association.target().documentId())
+                .containsExactly("doc-c");
+
+        expire("doc-a");
+        assertThat(repository.findRelated(
+                Set.of(1L),
+                source,
+                1,
+                Set.of(AssociationBand.HOT),
+                0.0,
+                10
+        )).isEmpty();
+    }
+
+    @Test
     void rejectsCrossAclAssociationInJavaAndDatabase() {
         insertGeneration("doc-a", 1, 1);
         insertGeneration("doc-b", 1, 2);
@@ -434,6 +486,18 @@ class AdaptiveChunkGraphRepositoryTest {
         assertThat(plan)
                 .contains("knowledge_chunk_association_al_1_h_")
                 .doesNotContain("knowledge_chunk_association_al_2");
+    }
+
+    private void expire(String documentId) {
+        jdbc.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET lifecycle_policy = 'TTL',
+                    expires_at = clock_timestamp() - interval '1 second'
+                WHERE document_id = ?
+                """,
+                documentId
+        );
     }
 
     private void insertGeneration(
