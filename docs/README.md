@@ -2,7 +2,7 @@
 
 This directory is the documentation entry point for the current AkmAI codebase.
 
-Last synchronized against executable code baseline: `main@c8ca0d9263e2b481ef6c669c8174276160e7a769` on 2026-10-12.
+Current synchronization base: `main@57c5941166a9bd0bac67b1e273b4f908ee27e167` plus the evidence/documentation changes tracked on `quality/production-readiness-hardening-v1`.
 
 ## Documentation contract
 
@@ -23,14 +23,16 @@ If a document no longer matches the current runtime, it must be updated in the s
 |---|---|
 | Product status and quick start | [`../README.md`](../README.md) |
 | Runtime architecture | [`architecture/current-runtime-architecture.md`](architecture/current-runtime-architecture.md) |
-| Unified lifecycle contract v1 | [`architecture/unified-lifecycle-contract-v1.md`](architecture/unified-lifecycle-contract-v1.md) — `TARGET` until all four implementation/proof stages are complete |
+| Unified lifecycle contract v1 | [`architecture/unified-lifecycle-contract-v1.md`](architecture/unified-lifecycle-contract-v1.md) — implemented/current lifecycle authority; completion evidence in the audit index |
 | Adaptive Association Graph runtime | [`architecture/adaptive-graph-runtime.md`](architecture/adaptive-graph-runtime.md) |
 | Runtime feature switches | [`architecture/runtime-app-parameters.md`](architecture/runtime-app-parameters.md) and `application.yml` |
 | External/integration contracts and RAG question/answer examples | [`services/external-api-contracts.md`](services/external-api-contracts.md) |
 | Knowledge ingestion behavior | [`services/knowledge-ingestion.md`](services/knowledge-ingestion.md) |
+| Query Memory / learning / feedback | [`services/query-memory-learning.md`](services/query-memory-learning.md) |
 | FileService → AkmAI knowledge contract v1 | [`architecture/fileservice-knowledge-contract-v1.md`](architecture/fileservice-knowledge-contract-v1.md) |
 | Self-Optimizing RAG v1.1 | [`architecture/rag-self-optimizing-platform-v1.1-technical-spec.md`](architecture/rag-self-optimizing-platform-v1.1-technical-spec.md) |
-| Release readiness | [`audit/post-v1.1-readiness-2026-10-08.md`](audit/post-v1.1-readiness-2026-10-08.md) |
+| Current production-readiness hardening | [`audit/production-readiness-hardening-2026-10-12.md`](audit/production-readiness-hardening-2026-10-12.md) |
+| Historical post-v1.1 readiness snapshot | [`audit/post-v1.1-readiness-2026-10-08.md`](audit/post-v1.1-readiness-2026-10-08.md) |
 | Production gates | [`operations/production-release-gates.md`](operations/production-release-gates.md) |
 | Benchmark contract | [`../benchmarks/rag-benchmark-v1/README.md`](../benchmarks/rag-benchmark-v1/README.md) |
 
@@ -67,13 +69,13 @@ Major areas:
 
 Current service/process behavior and external/integration contracts. Start with [`services/README.md`](services/README.md).
 
-For API and FileService integration use [`services/external-api-contracts.md`](services/external-api-contracts.md).
+For API and FileService integration use [`services/external-api-contracts.md`](services/external-api-contracts.md). For adaptive-memory/learning behavior use [`services/query-memory-learning.md`](services/query-memory-learning.md).
 
 ### `audit/`
 
 Current audit snapshots, defect ledgers and remediation evidence. Start with [`audit/README.md`](audit/README.md).
 
-GitHub issues #36-#41 are historical audit trackers and are now closed as completed. Their remediation/evidence history remains documented in the post-v1.1 readiness audit; once an audit document is fully superseded and contains no unique evidence needed for traceability, remove it rather than retaining a stale duplicate.
+GitHub issues #36-#41 are historical audit trackers and are closed as completed. Their remediation/evidence history remains documented, but current readiness conclusions come from the current hardening ledger. Historical snapshots must not be read as the current open-defect list.
 
 ### `operations/`
 
@@ -126,6 +128,7 @@ OPERATE / LEARN
 - ACL is a pre-routing boundary, not a post-filter.
 - Only eligible published generations may enter final context.
 - TTL expiry is synchronously fenced during retrieval.
+- Query Memory and other derived learning state must revalidate current source lifecycle/ACL before reuse.
 - Exact identifiers and explicit document references retain higher authority than learned associations.
 - Adaptive memory is derived retrieval memory, never authoritative knowledge.
 - Graph-origin evidence does not directly reinforce itself as a normal learning source.
