@@ -17,7 +17,7 @@ Dream v1 is intentionally sequential. The fast lane accelerates recently changed
 - `DreamCheckpointRepository` — fenced fast-lane watermark.
 - `DreamRescanCheckpointRepository` — fenced deterministic rescan cursor.
 - `DreamCandidateDiscovery` — forward/reverse ANN verification and current candidate state.
-- `DreamCandidateRepository` — canonical candidate persistence under live fencing authority.
+- `DreamCandidateRepository` — canonical candidate persistence under live fencing and endpoint lifecycle authority.
 - `SemanticGraphPriorWriter` — restricted semantic-prior apply and atomic candidate/prior retirement boundary.
 
 ## Process
@@ -39,8 +39,10 @@ scheduler tick on every pod
        -> source
        -> forward ANN
        -> reciprocal verification
-       -> candidate current-state transition
-       -> optional fenced semantic prior apply/retirement
+       -> guarded candidate observation
+            -> endpoint invalidated: local SKIP, release DB-row reservation
+            -> lease lost: hard authority-loss failure
+            -> persisted: optional fenced semantic prior apply
        -> authority-loss stop barrier
        -> fenced fast checkpoint CAS
   -> process bounded rescan lane
@@ -136,7 +138,32 @@ When the production apply gate is enabled, `ACTIVE -> STALE` and semantic-prior 
 
 Lifecycle invalidation does not block retirement: retirement locks existing lifecycle/generation rows in canonical order when present, then takes the same canonical advisory node locks used by normal graph mutation. It does not require the obsolete generation to remain eligible/PUBLISHED.
 
-### DREAM-BR-10 — candidate state changes do not synthesize online evidence
+### DREAM-BR-10 — lifecycle invalidation and lease loss are different outcomes
+
+A candidate observation proves two independent authorities in the final DML:
+
+1. the Dream lease is still owned by the current `(graph version, policy fingerprint, owner, fencing token)`;
+2. both candidate endpoints still satisfy canonical online generation eligibility.
+
+If the guarded candidate DML changes zero rows, the repository distinguishes the cause:
+
+```text
+lease still owned
+  -> EndpointIneligibleException
+  -> discovery releases reserved DB-row budget
+  -> candidate is not counted as persisted/activated
+  -> no graph apply is attempted
+  -> current Dream run continues
+
+lease no longer owned
+  -> LostDreamAuthorityException
+  -> distributed authority is lost
+  -> run stops through normal authority-loss handling
+```
+
+Endpoint invalidation is a normal TTL/supersession race, not evidence that the Dream owner lost its distributed lease.
+
+### DREAM-BR-11 — candidate state changes do not synthesize online evidence
 
 Dream candidate updates and semantic retirement must not increment or clear:
 
@@ -148,21 +175,23 @@ Dream candidate updates and semantic retirement must not increment or clear:
 
 Dream remains semantic-prior authority only. Learned evidence and graph bands remain online-learning authority.
 
-### DREAM-BR-11 — candidate persistence is fenced in final DML
+### DREAM-BR-12 — candidate persistence is fenced in final DML
 
-Candidate observations and stale transitions include the live lease predicate in the same SQL statement as the mutation. A separate preliminary ownership check is insufficient.
+Candidate observations and stale transitions include the live lease predicate in the same SQL statement as the mutation. Candidate observation additionally proves both endpoint generations in that same guarded DML. A separate preliminary ownership/lifecycle check is insufficient.
 
-### DREAM-BR-12 — apply and retirement remain independently fenced
+Stored `ACTIVE` rows are also lifecycle-filtered when read. A physically retained row is therefore immediately non-usable after either endpoint loses publication/TTL authority, even before asynchronous retirement/compaction runs.
+
+### DREAM-BR-13 — apply and retirement remain independently fenced
 
 Candidate `ACTIVE` does not itself authorize graph mutation. `SemanticGraphPriorWriter` independently requires the apply gate, eligible graph nodes, degree admission and current Dream fencing authority in final apply DML.
 
 Retirement uses the same live lease identity in final graph DML. It intentionally does not require current graph eligibility because TTL expiry/publication replacement are themselves valid retirement causes.
 
-### DREAM-BR-13 — runtime disable is fail-safe
+### DREAM-BR-14 — runtime disable is fail-safe
 
 If Dream is disabled during a run, the coordinator stops at the next safe boundary and attempts fenced `CANCELLED` finalization. If authority was lost at the same time, lost ownership wins over optimistic cancellation/success semantics.
 
-### DREAM-BR-14 — run success requires current authority
+### DREAM-BR-15 — run success requires current authority
 
 A run may not claim `SUCCEEDED` after the heartbeat stop barrier or after guarded finalization rejects the owner/token. Lost authority is represented as `LOST_OWNERSHIP` best-effort; failure to record that diagnostic must not restore authority.
 
@@ -174,13 +203,16 @@ A run may not claim `SUCCEEDED` after the heartbeat stop barrier or after guarde
 - bounded rescan advances the deterministic cursor independently of fast-lane completeness;
 - an existing ACTIVE pair at confidence between retention and activation remains ACTIVE;
 - a new high-confidence mutual pair can become ACTIVE subject to per-source admission;
+- endpoint invalidation between reciprocal verification and persistence causes a local skip without consuming activation/apply budget;
 - ACTIVE pair retirement atomically marks the candidate STALE and clears both graph semantic priors while preserving learned evidence;
 - apply-disabled shadow mode retires Dream-internal candidate state without mutating the online graph;
 - budget stop produces a bounded partial outcome while preserving resumable checkpoints.
 
 ## Negative / failure cases
 
-- stale owner/token tries candidate/checkpoint/prior mutation -> rejected by fencing;
+- stale owner/token tries candidate/checkpoint/prior mutation -> rejected by fencing and run loses authority;
+- endpoint expires/supersedes during candidate observation while lease remains valid -> local endpoint-ineligible skip, not fake lease loss;
+- stored ACTIVE candidate loses endpoint lifecycle authority -> immediately absent from usable ACTIVE reads;
 - heartbeat loses authority during discovery -> no subsequent checkpoint advancement;
 - heartbeat loss before finalization -> no `SUCCEEDED` outcome;
 - zero rescan reservation -> run fails before lease acquisition;
@@ -207,6 +239,8 @@ lease row
   lease_until > clock_timestamp()
 ```
 
+Candidate observation also requires both endpoint generations to satisfy the shared lifecycle+generation eligibility boundary.
+
 Checkpoint updates additionally use compare-and-set expected cursor/watermark semantics so stale/replayed work cannot skip ranges.
 
 Semantic retirement is a short bounded transaction:
@@ -225,6 +259,8 @@ Failure anywhere before commit rolls back both candidate and graph-side retireme
 
 The candidate store is re-evaluated by future fast/rescan observations. `STALE` records remain auditable under their semantic-policy fingerprint and may become current again only through a later valid observation/admission path.
 
+A physically stored `ACTIVE` candidate whose endpoint is no longer online is not considered active by current reads. Physical state may lag logical invalidation, but usability may not.
+
 DREAM-4B does not accumulate cross-run verification streaks. Stateful streak accumulation remains deferred to DREAM-6 and must not be approximated by repeatedly incrementing the current observation row.
 
 ## Tests
@@ -238,10 +274,13 @@ Primary coverage:
 - `SemanticGraphPriorWriterIntegrationTest`;
 - `DreamSemanticRetirementIntegrationTest`.
 
-The integration matrix covers:
+The integration/failure matrix covers:
 
 - lease token monotonic takeover and stale-owner rejection across DB clients;
 - checkpoint resume across repository restart and fencing after takeover;
+- endpoint lifecycle invalidation during candidate persistence distinguished from actual lease loss;
+- local discovery skip with DB-row reservation release and no activation/apply after endpoint invalidation;
+- stored ACTIVE candidate immediately becoming non-usable after endpoint invalidation;
 - graph semantic-prior retirement preserving learned evidence;
 - lifecycle-invalid retirement;
 - stale fencing rollback across candidate + graph retirement;
@@ -261,7 +300,9 @@ Remaining verification before `VERIFIED`:
 - [x] Bounded rescan coverage requirement enforced
 - [x] ACTIVE retention/current-state semantics implemented
 - [x] Forward-top-K and lifecycle deactivation implemented
-- [x] DB-row budget reserved before Dream writes
+- [x] Endpoint lifecycle race distinguished from actual lease loss
+- [x] Stored ACTIVE candidate usability lifecycle-filtered
+- [x] DB-row budget reserved before Dream writes and released on lifecycle skip
 - [x] Candidate state unit failure matrix added
 - [x] Coordinator authority-loss unit failure matrix added
 - [x] Multi-client lease/checkpoint integration matrix complete
