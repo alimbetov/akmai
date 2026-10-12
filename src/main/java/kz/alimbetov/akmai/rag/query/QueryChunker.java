@@ -69,16 +69,23 @@ public class QueryChunker {
         }
 
         Map<String, QueryChunk> unique = new LinkedHashMap<>();
-        addUnique(unique, original);
+        addOriginals(unique, original);
+        int effectiveLimit = Math.max(
+                advancedProperties.maxExpandedChunks(),
+                unique.size()
+        );
+
         for (String variant : variants) {
-            addUnique(unique, chunk(variant, QueryOrigin.MULTI_QUERY));
-            if (unique.size() >= advancedProperties.maxExpandedChunks()) {
+            if (unique.size() >= effectiveLimit) {
                 break;
             }
+            addExpanded(
+                    unique,
+                    chunk(variant, QueryOrigin.MULTI_QUERY),
+                    effectiveLimit
+            );
         }
-        return unique.values().stream()
-                .limit(advancedProperties.maxExpandedChunks())
-                .toList();
+        return List.copyOf(unique.values());
     }
 
     public List<QueryChunk> chunk(
@@ -119,16 +126,25 @@ public class QueryChunker {
                 : List.copyOf(result);
     }
 
-    private void addUnique(
+    private void addOriginals(
             Map<String, QueryChunk> unique,
             List<QueryChunk> chunks
     ) {
         for (QueryChunk chunk : chunks) {
             unique.putIfAbsent(dedupKey(chunk), chunk);
-            if (advancedProperties != null
-                    && unique.size() >= advancedProperties.maxExpandedChunks()) {
+        }
+    }
+
+    private void addExpanded(
+            Map<String, QueryChunk> unique,
+            List<QueryChunk> chunks,
+            int effectiveLimit
+    ) {
+        for (QueryChunk chunk : chunks) {
+            if (unique.size() >= effectiveLimit) {
                 return;
             }
+            unique.putIfAbsent(dedupKey(chunk), chunk);
         }
     }
 
