@@ -177,6 +177,36 @@ class RetentionLeaseExpiryIntegrationTest {
     private void seedClaimedGeneration() {
         jdbc.update(
                 """
+                INSERT INTO knowledge_embedding_profile (
+                    profile_id,
+                    provider,
+                    model,
+                    dimensions,
+                    distance_type,
+                    tokenizer_profile,
+                    config_fingerprint,
+                    vector_schema,
+                    vector_table,
+                    index_type,
+                    storage_schema_version
+                ) VALUES (
+                    'ep-retention-expiry',
+                    'test',
+                    'deterministic',
+                    3,
+                    'COSINE_DISTANCE',
+                    'test',
+                    'retention-expiry',
+                    'akmai_vector',
+                    'p_retention_expiry',
+                    'NONE',
+                    2
+                )
+                ON CONFLICT (profile_id) DO NOTHING
+                """
+        );
+        jdbc.update(
+                """
                 INSERT INTO knowledge_document_lifecycle (
                     document_id,
                     lifecycle_policy,
