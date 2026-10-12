@@ -4,6 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import kz.alimbetov.akmai.knowledge.api.KnowledgeIngestionResponse;
 import kz.alimbetov.akmai.knowledge.lifecycle.DocumentGenerationRepository;
 import kz.alimbetov.akmai.knowledge.lifecycle.RetentionPolicy;
@@ -95,6 +101,69 @@ class IdempotencyIntegrationTest {
                 .isEqualTo(IngestionIdempotencyRepository.ClaimResult.Status.REPLAY);
         assertThat(replay.response()).isEqualTo(response);
         assertThat(replay.context()).isNull();
+    }
+
+    @Test
+    void concurrentSameKeyClaimsProduceOneOwnerAndOneInProgressResult()
+            throws Exception {
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            Future<IngestionIdempotencyRepository.ClaimResult> first =
+                    executor.submit(() -> {
+                        ready.countDown();
+                        start.await();
+                        return repository.claim(
+                                "key-concurrent",
+                                "doc-concurrent",
+                                "fingerprint-concurrent",
+                                Duration.ofMinutes(10)
+                        );
+                    });
+            Future<IngestionIdempotencyRepository.ClaimResult> second =
+                    executor.submit(() -> {
+                        ready.countDown();
+                        start.await();
+                        return repository.claim(
+                                "key-concurrent",
+                                "doc-concurrent",
+                                "fingerprint-concurrent",
+                                Duration.ofMinutes(10)
+                        );
+                    });
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            List<IngestionIdempotencyRepository.ClaimResult> results = List.of(
+                    first.get(10, TimeUnit.SECONDS),
+                    second.get(10, TimeUnit.SECONDS)
+            );
+
+            assertThat(results)
+                    .extracting(IngestionIdempotencyRepository.ClaimResult::status)
+                    .containsExactlyInAnyOrder(
+                            IngestionIdempotencyRepository.ClaimResult.Status.CLAIMED,
+                            IngestionIdempotencyRepository.ClaimResult.Status.IN_PROGRESS
+                    );
+
+            assertThat(results.stream()
+                    .filter(result -> result.status()
+                            == IngestionIdempotencyRepository.ClaimResult.Status.CLAIMED)
+                    .map(IngestionIdempotencyRepository.ClaimResult::context)
+                    .filter(java.util.Objects::nonNull)
+                    .count()).isEqualTo(1L);
+
+            assertThat(jdbc.queryForObject(
+                    "SELECT count(*) FROM knowledge_ingestion_request WHERE idempotency_key = ?",
+                    Integer.class,
+                    "key-concurrent"
+            )).isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Test
