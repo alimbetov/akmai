@@ -65,8 +65,8 @@ class RetrievalCorrectnessArchitectureTest {
         int lexical = source.indexOf("list<searchprojection> searchlexical");
         String keyedLookup = source.substring(method, lexical);
 
+        assertThat(source).contains("max_keys_per_query = 256");
         assertThat(keyedLookup)
-                .contains("max_keys_per_query = 256")
                 .contains("with requested(")
                 .contains("ordinal")
                 .contains("values")

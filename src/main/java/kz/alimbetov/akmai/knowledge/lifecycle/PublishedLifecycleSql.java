@@ -17,9 +17,9 @@ public final class PublishedLifecycleSql {
         if (alias == null || !alias.matches("[A-Za-z][A-Za-z0-9_]*")) {
             throw new IllegalArgumentException("SQL alias must be a simple identifier");
         }
-        return alias + ".lifecycle_status = 'READY'"
+        return " " + alias + ".lifecycle_status = 'READY'"
                 + " AND " + alias + ".retention_status = 'ACTIVE'"
                 + " AND (" + alias + ".expires_at IS NULL"
-                + " OR " + alias + ".expires_at > clock_timestamp())";
+                + " OR " + alias + ".expires_at > clock_timestamp()) ";
     }
 }

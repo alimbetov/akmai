@@ -132,7 +132,7 @@ class CanonicalCandidateEligibilityIntegrationTest {
         ));
         publish("a-stale", staleGeneration);
         publish("z-good", goodGeneration);
-        lifecycleStatus("a-stale", "FAILED");
+        lifecycleStatus("a-stale", "INGEST_FAILED");
 
         assertThat(projections.searchSemanticConcepts(
                 List.of(concept),
