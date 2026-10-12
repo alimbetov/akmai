@@ -27,7 +27,7 @@ Question
   -> ParentContextExpansion
   -> TemporalAuthorityFilter
   -> context diversity
-  -> eligibility-aware context budgeting / backfill
+  -> eligibility-aware context selection / budget / bounded backfill
   -> final published-context TOCTOU revalidation
   -> generation / citations / grounding
 ```
@@ -41,12 +41,16 @@ The branch must not:
 - change semantic canonical IDs or multilingual semantic corpus content;
 - lower retrieval quality thresholds or release gates;
 - change embedding model/profile contracts;
-- change RRF weights, reranker scoring policy or graph-learning policy unless required only to preserve an existing invariant;
+- change RRF weights, reranker scoring policy or graph-learning policy;
 - introduce Redis or another queue/cache dependency;
 - redesign ingestion/publication semantics;
 - turn graph evidence into an authoritative retrieval lane;
 - change public API request/response contracts unless a proven defect makes that unavoidable;
+- remove existing lifecycle fences merely to reduce DB reads;
+- push `ChunkRole.isSearchable(...)` into candidate SQL in this v1 change;
 - mix unrelated cleanup or broad refactoring into this branch.
+
+`ChunkRole` searchability remains under the existing oversampling/searchable-filtering semantics. It may be optimized later only as a separate benchmark-backed change.
 
 ## 3. Current correctness gaps
 
@@ -62,9 +66,9 @@ AND l.published_generation = requested_generation
 
 However, candidate-producing repositories still contain paths that apply a weaker lifecycle predicate before `LIMIT`, `topK`, ANN candidate truncation or reference/identifier result truncation. A late filter prevents leakage but cannot recover a valid candidate that was displaced before the filter.
 
-The current context flow also applies `TemporalAuthorityFilter` before `ParentContextExpansion`, which means a newly introduced parent chunk may not pass the same document-status/effective-date fence as the child that caused the expansion.
+The current context flow applies `TemporalAuthorityFilter` before `ParentContextExpansion`, which means newly introduced parent evidence can bypass the same temporal/document-authority fence that applied to the child.
 
-Finally, context budgeting happens before the final lifecycle revalidation. If selected entries become ineligible late in the request, valid lower-ranked candidates are not backfilled into the freed context capacity.
+Finally, context budgeting occurs before the final lifecycle revalidation. If selected entries become ineligible late in the request, valid lower-ranked candidates are not promoted into the freed context capacity.
 
 These are retrieval-correctness and recall gaps, not merely performance concerns.
 
@@ -72,20 +76,46 @@ These are retrieval-correctness and recall gaps, not merely performance concerns
 
 ### 4.1 Authoritative lifecycle predicate
 
-Every candidate that can consume a bounded candidate slot, ranking slot, exact-identifier slot, reference slot or context slot must satisfy the same lifecycle predicate at the point where that slot is allocated:
+Every candidate that can consume a bounded retrieval slot must satisfy this lifecycle state:
 
 ```sql
 l.lifecycle_status = 'READY'
 AND l.retention_status = 'ACTIVE'
 AND (l.expires_at IS NULL OR l.expires_at > clock_timestamp())
-AND l.access_level = candidate.access_level
+```
+
+The candidate identity join must additionally prove:
+
+```sql
+l.access_level = candidate.access_level
 AND l.document_id = candidate.document_id
 AND l.published_generation = candidate.generation
 ```
 
 Caller ACL scope remains an additional mandatory predicate.
 
-### 4.2 Two fences, not one
+### 4.2 Mandatory shared SQL contract
+
+The implementation must introduce one narrow reusable lifecycle SQL contract, recommended name:
+
+```text
+kz.alimbetov.akmai.knowledge.lifecycle.PublishedLifecycleSql
+```
+
+It must expose the canonical `READY + ACTIVE + unexpired` predicate as the single executable fragment used by retrieval repositories. Identity joins remain local to each repository because aliases and candidate relations differ.
+
+At minimum the shared lifecycle contract must be consumed by:
+
+- `PublishedVectorSearchRepository`;
+- `PostgresSearchProjectionRepository`;
+- `DocumentIdentifierRepository`;
+- `ReferenceGraphRepository`;
+- `PublishedProjectionLifecycleEligibility`;
+- `PostgresPublishedLifecycleEligibility`.
+
+Do not introduce a generic SQL-builder framework. A small constant/helper is sufficient.
+
+### 4.3 Two fences, not one
 
 Candidate-time filtering does not replace final revalidation.
 
@@ -94,122 +124,169 @@ The target model is:
 ```text
 candidate-time canonical eligibility
         -> ranking / fusion / expansion
-        -> context selection with eligibility-aware backfill
+        -> context selection with bounded backfill
         -> final synchronous canonical eligibility revalidation
         -> answer generation
 ```
 
-The final fence remains necessary for TOCTOU protection against lifecycle/TTL changes that occur after candidate generation.
+Existing intermediate lifecycle filters remain in place in this v1 patch. They provide race protection between repository candidate production and later pipeline stages. Removing redundant reads is explicitly out of scope until correctness is merged and benchmarked.
 
-### 4.3 Fail-closed behavior
+### 4.4 Fail-closed behavior
 
-Malformed routing identity, invalid ACL, unknown generation, non-READY lifecycle, non-ACTIVE retention, expired TTL or a generation mismatch must never be promoted into final answer context.
+Malformed routing identity, invalid ACL, unknown generation, non-READY lifecycle, non-ACTIVE retention, expired TTL or generation mismatch must never enter final answer context.
 
 Infrastructure failure is not equivalent to an empty result. Existing typed failure/degradation semantics remain authoritative.
 
-## 5. Workstream A — push canonical eligibility into candidate SQL
+## 5. Workstream A — canonical eligibility in bounded candidate production
 
 ### 5.1 VECTOR
 
 **Primary code:** `PublishedVectorSearchRepository`.
 
-All vector paths that allocate ANN/exact candidate slots must apply canonical lifecycle eligibility before the bounded candidate set becomes authoritative.
+The vector implementation must preserve the current HNSW-friendly raw probe architecture. The specification distinguishes:
 
-Affected paths include, at minimum:
+```text
+raw ANN probe candidate
+```
+
+from:
+
+```text
+canonically eligible retrieval candidate
+```
+
+A raw probe may be stale. A stale probe must never consume final `topK` authority.
+
+#### 5.1.1 Required global ANN algorithm
+
+Use the existing bounded ANN window/retry model with the following exact semantics:
+
+```text
+1. Collect raw HNSW candidates using the current strict-order ANN probe.
+2. Apply canonical READY + ACTIVE + TTL + ACL + published-generation eligibility.
+3. Compute eligible_count per branch from canonically eligible rows.
+4. If enough eligible rows exist, return the global eligible topK.
+5. If the raw ANN window is saturated and eligible_count is insufficient,
+   increase candidateLimit using the existing bounded retry multiplier.
+6. Repeat only up to ANN_MAX_CANDIDATES_PER_BRANCH.
+7. When the bounded ANN window is exhausted and eligible results are still
+   insufficient, execute the existing fenced fallback with the full canonical
+   lifecycle predicate inside the branch query.
+8. Return only canonically eligible rows.
+```
+
+The raw HNSW probe `LIMIT` may remain before the lifecycle join to preserve index behavior. The requirement is that only canonical eligible rows count toward output `topK` and toward retry sufficiency.
+
+`visible_counts`/equivalent health logic must represent full canonical eligibility after this change; naming should be updated to `eligible`/`eligible_counts` where practical so the code does not imply weaker semantics.
+
+Affected paths include:
 
 - global ANN search;
-- eligibility-aware ANN retry/fallback;
+- ANN retry health;
 - fenced global ANN;
 - document-scoped exact search;
-- language-routed/fallback branches.
+- language-routed and language-fallback searches;
+- HYDE, because it reuses `PublishedVectorSearchRepository`.
 
 Requirements:
 
-1. An `INGESTING`, expired, inactive or unpublished candidate must not consume a final `topK` slot ahead of an eligible candidate.
-2. ANN retry health must be computed against canonically eligible rows, not merely `retention_status='ACTIVE'` rows.
-3. Candidate-time lifecycle joins must retain ACL and exact generation identity.
-4. HNSW behavior must remain deterministic under the existing strict-order configuration.
-5. The change must not remove the final lifecycle fence.
-6. Storage benchmark evidence must show no unacceptable regression in retrieval latency or saturation.
+1. `INGESTING`, expired, inactive or unpublished rows cannot consume final `topK`.
+2. Retry sufficiency uses canonical eligible rows, not only `retention_status='ACTIVE'`.
+3. ACL and exact generation identity remain part of every lifecycle join.
+4. Current HNSW `strict_order` behavior remains.
+5. `ANN_RETRY_MULTIPLIER` and `ANN_MAX_CANDIDATES_PER_BRANCH` remain bounded.
+6. Existing fenced fallback remains present.
+7. The final context lifecycle fence remains present.
+8. Storage benchmark evidence must show no unacceptable latency/saturation regression.
+
+#### 5.1.2 Existing architecture test
+
+`HotRetentionArchitectureTest#globalAnnPreservesHnswThenDetectsStaleCandidateCrowding` must be updated, not removed.
+
+The updated architecture test must prove:
+
+- raw HNSW candidate collection remains index-friendly;
+- lifecycle filtering participates in eligible candidate counting;
+- canonical `READY + ACTIVE + TTL` semantics are present;
+- stale candidate crowding can trigger retry;
+- retry remains bounded;
+- fenced fallback remains.
 
 ### 5.2 LEXICAL
 
-**Primary code:** `PostgresSearchProjectionRepository` lexical search paths.
+**Primary code:** lexical methods in `PostgresSearchProjectionRepository`.
 
-Canonical eligibility must be applied inside the SQL relation that is ranked and limited. Oversampling may remain as a performance/quality technique, but it must not be relied upon for correctness.
+Canonical eligibility must be inside every ranked/limited SQL branch before `LIMIT` consumes a slot:
 
-A stale or expired projection must not displace a valid lexical result before `LIMIT`.
+- FTS RU/EN;
+- trigram paths;
+- simple-language paths;
+- language fallback paths.
+
+Oversampling in `TimedPublishedSearchProjectionReader` remains unchanged in this v1 patch and must not be relied upon for lifecycle correctness.
 
 ### 5.3 CONCEPT
 
-**Primary code:** semantic-concept search paths in `PostgresSearchProjectionRepository` used by `ConceptRetrievalStrategy`.
+**Primary code:** `PostgresSearchProjectionRepository#searchSemanticConcepts` used by `ConceptRetrievalStrategy`.
 
-Concept candidates must satisfy the same canonical lifecycle predicate before concept `topK` is exhausted.
+Canonical eligibility must be applied before concept overlap ordering and branch/global `LIMIT` can consume a slot.
 
-No semantic confidence threshold, concept scoring rule or canonical concept ID is changed by this workstream.
+Semantic confidence, overlap scoring and canonical concept IDs are unchanged.
 
 ### 5.4 IDENTIFIER
 
 **Primary code:** `DocumentIdentifierRepository#queryPublishedScoped` and callers.
 
-Exact identifier retrieval is an authority boundary. Therefore canonical lifecycle eligibility must be enforced before identifier ordering and `LIMIT`.
+Canonical eligibility must be applied before identifier ordering and `LIMIT`.
 
-Required behavior:
+Required regression:
 
 ```text
 newest matching identifier -> ineligible
 older matching identifier  -> eligible
 identifierLimit = 1
 
-EXPECTED: eligible identifier is returned
+EXPECTED: older eligible identifier is returned
 NOT: EMPTY after late filtering
 ```
 
-An identifier-scoped miss must remain fail-closed for dependent semantic lanes; the fix is to make the identifier result correct, not to permit global semantic fallback.
+Identifier-scoped semantic lanes remain fail-closed. Do not introduce global semantic fallback for an identifier miss.
 
 ### 5.5 REFERENCE
 
-**Primary code:** `ReferenceGraphRepository#resolveSameDocumentTargets` and the projection materialization used by `ReferenceRetrievalStrategy`.
+**Primary code:** `ReferenceGraphRepository#resolveSameDocumentTargets` and projection materialization used by `ReferenceRetrievalStrategy`.
 
-Canonical lifecycle eligibility must be enforced before reference target `LIMIT` is consumed.
+Canonical eligibility must be applied before reference target `LIMIT`.
 
-Reference lookup must continue to preserve:
+Preserve:
 
 - same-document scope;
 - exact generation;
 - ACL;
 - reference type/value identity;
-- exclusion of seed chunks.
-
-### 5.6 Predicate drift prevention
-
-The implementation must avoid five subtly different definitions of "published and eligible".
-
-Preferred solution: introduce one internal canonical SQL predicate/builder or a narrowly scoped repository helper that can be reused by retrieval repositories without coupling write-side lifecycle code to retrieval internals.
-
-If SQL-shape constraints require local SQL fragments, add architecture/contract tests that assert all candidate-producing paths contain the required `READY + ACTIVE + TTL + generation + ACL` semantics.
+- seed exclusion.
 
 ## 6. Workstream B — ParentContextExpansion before TemporalAuthorityFilter
 
-The current ordering must change from:
+Change orchestration from:
 
 ```text
-... -> graph competition
-    -> TemporalAuthorityFilter
-    -> ParentContextExpansion
-    -> diversity / budget
+graph competition
+  -> TemporalAuthorityFilter
+  -> ParentContextExpansion
+  -> diversity / budget
 ```
 
 to:
 
 ```text
-... -> graph competition
-    -> ParentContextExpansion
-    -> TemporalAuthorityFilter
-    -> diversity / budget
+graph competition
+  -> ParentContextExpansion
+  -> TemporalAuthorityFilter
+  -> diversity / budget
 ```
 
-Rationale: parent expansion creates new evidence. Every newly introduced parent must pass the same temporal/document-authority rules as directly retrieved evidence.
+No new authority filter is introduced. The existing `TemporalAuthorityFilter` remains authoritative.
 
 Required cases:
 
@@ -218,65 +295,151 @@ Required cases:
 - ACTIVE child -> SUPERSEDED parent: parent rejected;
 - ACTIVE child -> future `effectiveFrom` parent: parent rejected;
 - ACTIVE child -> expired `effectiveTo` parent: parent rejected;
-- malformed temporal metadata on parent: fail closed;
+- malformed parent temporal metadata: fail closed;
 - no temporal metadata: preserve current backward-compatible behavior.
 
 The final lifecycle/TTL revalidation still runs after context selection.
 
-## 7. Workstream C — eligibility-before-budget with backfill + final TOCTOU fence
+## 7. Workstream C — eligibility-before-budget with exactly one backfill round
 
-### 7.1 Problem
+### 7.1 Component boundary
 
-A fixed context budget can currently be consumed by candidates that later fail final revalidation. When those entries are removed, lower-ranked valid candidates are not promoted into the freed slots.
-
-### 7.2 Target behavior
-
-Context selection must operate on a candidate pool large enough to backfill invalidated entries.
-
-The target sequence is:
+Introduce one narrow orchestration component for context selection, recommended name:
 
 ```text
-ranked / expanded candidate pool
-  -> temporal authority
-  -> pre-budget canonical eligibility
-  -> diversity
-  -> budget selection
-  -> final TOCTOU lifecycle/ACL/TTL revalidation
-  -> bounded backfill when final revalidation creates capacity
-  -> optional final revalidation of only newly backfilled entries
-  -> immutable final context
+ContextSelectionCoordinator
 ```
 
-A simpler equivalent implementation is acceptable if it proves the same invariants and does not introduce unbounded DB round-trips.
+Recommended public contract:
+
+```java
+List<RetrievalHit> select(
+    List<RetrievalHit> candidates,
+    String question,
+    Set<Long> accessLevels
+)
+```
+
+It owns context-selection sequencing only. It must reuse existing:
+
+- canonical lifecycle eligibility/revalidator primitives;
+- `ContextDiversityFilter`;
+- `ContextBudget`;
+- `PublishedContextRevalidator`.
+
+Do not duplicate token, document, section or graph quota logic in a second implementation.
+
+### 7.2 Exact selection algorithm
+
+Use at most two selection rounds:
+
+```text
+MAX_CONTEXT_SELECTION_ROUNDS = 2
+```
+
+#### Round 1
+
+```text
+POOL = temporal-authority-filtered candidates
+  -> pre-budget canonical eligibility
+  -> ContextDiversityFilter.apply(POOL)
+  -> ContextBudget.apply(...)
+  -> S1
+  -> PublishedContextRevalidator.revalidate(S1)
+  -> V1
+```
+
+If `S1` and `V1` have the same routing identities, return `V1`.
+
+#### Round 2 — one bounded backfill round
+
+If round 1 lost entries:
+
+```text
+REJECTED = identities(S1) - identities(V1)
+POOL2 = POOL - REJECTED
+
+POOL2
+  -> ContextDiversityFilter.apply(...) from scratch
+  -> ContextBudget.apply(...) from scratch
+  -> S2
+  -> PublishedContextRevalidator.revalidate(S2) for the ENTIRE S2
+  -> V2
+
+return V2
+```
+
+There is no third round. If the second final fence rejects another candidate, return the smaller `V2` context.
+
+The second final fence must revalidate all of `S2`, not only newly backfilled entries, because previously valid evidence can become stale between rounds.
 
 ### 7.3 Backfill invariants
 
 1. Final context never exceeds `contextMaxChunks`.
 2. Final serialized context never exceeds `contextMaxTokens`.
-3. Per-document and per-section diversity rules remain enforced after backfill.
-4. Graph context quota remains enforced.
-5. Backfill preserves original ranking order among still-eligible candidates.
-6. Exact-authority evidence remains protected according to existing authority semantics.
-7. Backfill is bounded; no open-ended retry loop is permitted.
-8. Any candidate inserted by backfill must pass canonical eligibility after the point at which it is selected.
-9. If a TOCTOU change invalidates all candidates, the request returns insufficient information rather than stale evidence.
+3. `contextMaxChunksPerDocument` remains enforced.
+4. `ContextDiversityFilter` section quota remains enforced.
+5. Graph context quota remains enforced by `ContextBudget`.
+6. Ranking order among surviving candidates remains stable.
+7. Exact-authority evidence keeps existing authority semantics.
+8. No open-ended retry loop exists.
+9. Every round uses batched eligibility/revalidation, not one DB query per candidate.
+10. If all candidates become ineligible, return insufficient information rather than stale evidence.
+11. `DataAccessException`/transaction failure remains availability failure, not an empty successful context.
 
-### 7.4 Query-count constraint
+### 7.4 Why selection is rebuilt from scratch
 
-The design should prefer batched eligibility reads. Backfill must not degenerate into one lifecycle query per candidate.
+Round 2 must rerun diversity and `ContextBudget` over `POOL2` rather than incrementally appending chunks to `V1`.
 
-## 8. Workstream D — batch/VALUES implementation of `findPublishedByKeys`
+This is mandatory because the existing budget owns coupled state for:
+
+- chunk count;
+- serialized token count;
+- per-document count;
+- graph quota;
+- chat-model budget;
+
+and `ContextDiversityFilter` owns per-section state. Rebuilding selection from the reduced ordered pool re-proves all invariants without introducing a second quota implementation.
+
+## 8. Workstream D — exact batched `VALUES` implementation of `findPublishedByKeys`
 
 **Primary code:** `PostgresSearchProjectionRepository#findPublishedByKeys`.
 
-Replace the per-key `UNION ALL` shape with a bounded batched relation, preferably:
+### 8.1 Fixed batch size
+
+Use:
+
+```java
+private static final int MAX_KEYS_PER_QUERY = 256;
+```
+
+This intentionally aligns with the existing lifecycle identity batching scale.
+
+### 8.2 Ordered de-duplication
+
+Before SQL batching:
+
+- remove null keys;
+- reject/filter keys outside caller ACL using existing behavior;
+- de-duplicate by `(accessLevel, documentId, generation, chunkId)`;
+- **first occurrence wins**;
+- preserve first-occurrence input order across batch boundaries.
+
+### 8.3 SQL shape
+
+Replace per-key `UNION ALL` with bounded `VALUES` batches containing an ordinal:
 
 ```sql
-WITH requested(access_level, document_id, generation, chunk_id) AS (
+WITH requested(
+    ordinal,
+    access_level,
+    document_id,
+    generation,
+    chunk_id
+) AS (
     VALUES
-      (?, ?, ?, ?),
-      (?, ?, ?, ?),
-      ...
+      (?, ?, ?, ?, ?),
+      (?, ?, ?, ?, ?)
 )
 SELECT p.*
 FROM requested r
@@ -289,76 +452,99 @@ JOIN knowledge_document_lifecycle l
   ON l.access_level = p.access_level
  AND l.document_id = p.document_id
  AND l.published_generation = p.generation
-WHERE l.lifecycle_status = 'READY'
-  AND l.retention_status = 'ACTIVE'
-  AND (l.expires_at IS NULL OR l.expires_at > clock_timestamp())
+WHERE <canonical PublishedLifecycleSql predicate>
+ORDER BY r.ordinal
 ```
 
 Requirements:
 
-- bounded batch size, recommended starting point 128-256 keys;
-- deterministic de-duplication of requested keys;
-- no cross-ACL/cross-generation match;
-- result identity remains `(accessLevel, documentId, generation, chunkId)`;
 - empty input returns empty without DB access;
-- result order must be deterministic where callers rely on ordering; otherwise callers must explicitly reapply their own rank order;
-- no SQL-size explosion proportional to thousands of `UNION ALL` branches.
+- no cross-ACL/cross-generation/chunk match;
+- no per-key `UNION ALL` SQL;
+- batch boundaries are invisible to callers;
+- final returned order follows first-occurrence request order for found eligible keys;
+- missing/ineligible keys simply do not produce rows;
+- all reads remain inside the existing retrieval transaction timeout.
 
-The implementation should be reusable by fusion, parent/graph materialization and final revalidation paths where applicable without changing their business semantics.
+## 9. Workstream E — preserve all ORIGINAL query chunks
 
-## 9. Workstream E — preserve all ORIGINAL query chunks under multi-query expansion
+**Primary code:** `QueryChunker#chunk(String)` multi-query merge logic.
 
-**Primary code:** `QueryChunker` multi-query merge logic.
+Original deterministic decomposition is mandatory. Probabilistic multi-query variants are supplemental.
 
-The expansion budget must never truncate deterministic ORIGINAL query decomposition.
-
-Target invariant:
-
-```text
-all ORIGINAL chunks are retained first
-multi-query chunks may consume only remaining expansion capacity
-```
-
-If `maxExpandedChunks` is smaller than the number of ORIGINAL chunks, ORIGINAL chunks still win. The effective returned count may therefore be at least the original decomposition size. Configuration validation or effective-cap calculation must make this behavior explicit rather than silently dropping original intent.
-
-Recommended rule:
+Implement the following exact policy:
 
 ```text
-effectiveMaxChunks = max(maxExpandedChunks, originalChunkCount)
-remainingExpansionSlots = effectiveMaxChunks - originalChunkCount
+1. Build all ORIGINAL chunks first without applying maxExpandedChunks.
+2. Insert ORIGINAL chunks into ordered de-duplication map.
+3. effectiveMaxChunks = max(maxExpandedChunks, originalUniqueCount).
+4. Generate/add MULTI_QUERY chunks only while unique.size < effectiveMaxChunks.
+5. A generated duplicate never replaces an ORIGINAL chunk.
+6. Return ordered unique values bounded by effectiveMaxChunks.
 ```
+
+Equivalent code structure:
+
+```java
+Map<String, QueryChunk> unique = new LinkedHashMap<>();
+addOriginalsWithoutExpansionCap(unique, original);
+
+int effectiveMaxChunks = Math.max(
+        advancedProperties.maxExpandedChunks(),
+        unique.size()
+);
+
+for (String variant : variants) {
+    addGeneratedUntil(unique, variant, effectiveMaxChunks);
+    if (unique.size() >= effectiveMaxChunks) {
+        break;
+    }
+}
+```
+
+Do not use the current expansion cap inside original insertion.
 
 Additional invariants:
 
-- deterministic de-duplication remains stable;
-- ORIGINAL and MULTI_QUERY identity remain distinguishable;
-- generated paraphrases never replace an original unit;
-- model timeout/rejection still falls back to originals only;
-- no extra model call is introduced when multi-query is disabled.
+- ORIGINAL and MULTI_QUERY origin remain distinguishable;
+- timeout/rejection/model failure returns original chunks exactly;
+- no extra model call when multi-query is disabled;
+- deterministic de-duplication key semantics remain unchanged unless a failing test proves a defect.
 
 ## 10. Transaction, timeout and cancellation requirements
 
-All retrieval DB operations introduced or changed by this branch must remain under the existing bounded retrieval transaction contract.
-
-The implementation must not introduce raw unbounded JDBC reads on the request path.
+All retrieval DB reads changed by this branch must stay under existing bounded retrieval transactions.
 
 Requirements:
 
 - candidate SQL runs under retrieval transaction timeout;
-- batch materialization runs under retrieval transaction timeout;
-- final lifecycle revalidation remains bounded;
-- cancellation/timeout continues to produce typed retrieval outcomes rather than `EMPTY` where infrastructure failed;
-- no swallowed `DataAccessException` may convert infrastructure failure into a valid empty retrieval result at an authority boundary.
+- `findPublishedByKeys` batches run under retrieval transaction timeout;
+- pre-budget eligibility is bounded;
+- final TOCTOU revalidation remains bounded;
+- executor timeout/cancellation semantics remain typed;
+- no swallowed `DataAccessException` may become a normal `EMPTY` authority result;
+- no new raw unbounded JDBC read may be introduced on the request path.
 
-## 11. Test specification
+## 11. Existing fences and classes — preservation rules
 
-Tests are part of the implementation contract. Each workstream requires positive, negative and failure/concurrency coverage.
+This v1 patch is correctness-first. Therefore:
 
-### 11.1 Candidate eligibility integration tests
+- `TimedPublishedSearchProjectionReader` keeps its existing post-query eligibility filtering;
+- `PublishedProjectionLifecycleEligibility` remains and switches to the shared lifecycle SQL contract;
+- `ParallelRetrievalExecutor` lifecycle filtering remains;
+- `PublishedContextRevalidator` remains the final synchronous context fence;
+- `PostgresPublishedLifecycleEligibility` remains authoritative for final lifecycle/ACL/TTL filtering;
+- `ContextDiversityFilter` semantics remain unchanged;
+- `ContextBudget` semantics remain unchanged;
+- redundant-read optimization is deferred to a separate benchmark-backed patch.
 
-For VECTOR, LEXICAL, CONCEPT, IDENTIFIER and REFERENCE create repository/integration cases proving that ineligible high-ranked/newer candidates do not consume bounded slots ahead of eligible candidates.
+## 12. Test specification
 
-Required lifecycle variants:
+Tests are implementation requirements, not optional examples.
+
+### 12.1 Candidate eligibility integration matrix
+
+For VECTOR, LEXICAL, CONCEPT, IDENTIFIER and REFERENCE prove:
 
 - `READY + ACTIVE + unexpired` -> eligible;
 - `INGESTING + ACTIVE` -> rejected;
@@ -368,179 +554,219 @@ Required lifecycle variants:
 - previous/unpublished generation -> rejected;
 - wrong ACL -> rejected.
 
-At least one test per bounded lane must put an ineligible candidate ahead of an eligible candidate and assert that the eligible candidate still appears inside the requested limit/topK.
+At least one test per bounded lane must place an ineligible candidate ahead of an eligible candidate and prove the valid candidate still appears inside requested `limit/topK`.
 
-### 11.2 Identifier authority tests
+### 12.2 VECTOR-specific tests
 
-Positive:
+Mandatory:
 
-- exact identifier finds the eligible canonical chunk;
+1. raw ANN window contains enough canonical eligible rows -> no retry;
+2. raw ANN window is saturated by stale/ineligible rows and eligible `< topK` -> retry occurs;
+3. deeper eligible rows are recovered after retry;
+4. bounded retry reaches `ANN_MAX_CANDIDATES_PER_BRANCH` with insufficient eligible rows -> fenced fallback is used;
+5. fenced fallback returns only canonical eligible rows;
+6. document-scoped exact search excludes `INGESTING` and expired lifecycle rows before `topK`;
+7. updated `HotRetentionArchitectureTest` proves retry/fallback/canonical predicate structure and is not deleted.
+
+### 12.3 Identifier authority tests
+
+- exact identifier finds eligible canonical evidence;
 - multiple ACLs retain only caller-authorized results;
-- newest ineligible + older eligible with `limit=1` returns the older eligible result.
+- newest ineligible + older eligible + `limit=1` returns older eligible;
+- all matching identifiers ineligible -> `EMPTY`;
+- identifier infrastructure failure remains critical and never triggers global semantic fallback.
 
-Negative:
+### 12.4 Reference tests
 
-- all matching identifiers ineligible -> identifier outcome `EMPTY`;
-- identifier infrastructure failure remains critical and does not trigger global semantic fallback.
+- an ineligible target cannot consume the bounded reference slot ahead of an eligible target;
+- same-document, exact generation and ACL invariants remain;
+- expired/INGESTING lifecycle rows are excluded before `LIMIT`.
 
-### 11.3 Parent temporal-authority tests
+### 12.5 Parent temporal-authority tests
 
-- parent introduced after child retrieval passes through temporal authority;
-- DRAFT/SUPERSEDED/future/expired/malformed parent metadata is rejected;
-- valid parent remains eligible and preserves child-derived attribution metadata required by citations/authority handling.
+- valid parent survives;
+- DRAFT/SUPERSEDED/future/expired/malformed parent is rejected;
+- parent retains attribution metadata required by citation/authority behavior.
 
-### 11.4 Budget/backfill tests
+### 12.6 Context selection / backfill tests
 
 Positive:
 
-- early candidates invalidated -> lower-ranked eligible candidates fill released slots;
-- token and chunk limits remain satisfied after backfill;
-- per-document/per-section quotas remain satisfied;
-- exact-authority ordering remains protected.
+- final revalidation removes an early selected candidate and round 2 fills the freed capacity from a lower-ranked valid candidate;
+- round 2 preserves ranking order;
+- token/chunk/document/section/graph quotas remain satisfied;
+- exact-authority semantics remain unchanged.
 
 Negative/failure:
 
-- all backup candidates ineligible -> context shrinks safely;
-- lifecycle changes between pre-budget check and final fence -> stale candidate removed;
-- backfill candidate itself becomes stale before finalization -> removed, no stale generation leaks;
-- DB timeout during authoritative final fence -> retrieval unavailable, not insufficient-information false success.
+- all backup candidates ineligible -> smaller/empty context safely returned;
+- lifecycle changes after pre-budget eligibility -> stale selection removed;
+- a candidate becomes stale between round 1 and round 2 -> second full `S2` revalidation removes it;
+- second revalidation removes another candidate -> **no third selection round**;
+- DB timeout during authoritative revalidation -> retrieval unavailable, not normal insufficient-information success.
 
-### 11.5 `findPublishedByKeys` tests
+### 12.7 `findPublishedByKeys` tests
 
-- empty keys -> no DB query / empty result;
-- duplicate keys -> one canonical result;
-- > batch size -> multiple bounded batches, complete result set;
-- exact ACL/generation/chunk matching;
+- empty input -> no DB query / empty result;
+- duplicate keys -> one result; first occurrence defines order;
+- 256 keys -> one batch;
+- 257+ keys -> multiple bounded batches with complete result set;
+- batch boundaries preserve request order;
+- exact ACL/generation/chunk identity;
 - expired/INGESTING rows excluded;
-- large key set does not generate per-key `UNION ALL` SQL;
-- deterministic behavior under mixed found/missing keys.
+- mixed found/missing/ineligible keys deterministic;
+- SQL does not contain one `UNION ALL` branch per key.
 
-### 11.6 Multi-query tests
+### 12.8 Multi-query tests
 
-- 8 ORIGINAL chunks + `maxExpandedChunks=3` -> all 8 originals retained;
-- originals consume capacity before generated variants;
-- remaining slots are filled by unique MULTI_QUERY variants only;
-- timeout/rejection/model failure -> originals preserved exactly;
-- duplicate generated variant cannot displace original chunk.
+- 8 ORIGINAL chunks + `maxExpandedChunks=3` -> all 8 ORIGINAL chunks retained;
+- generated variants start only after originals are inserted;
+- only remaining effective capacity is available to MULTI_QUERY;
+- generated duplicate cannot replace original;
+- timeout/rejection/model failure preserves originals exactly;
+- multi-query disabled -> no additional model work.
 
-### 11.7 Concurrency / TOCTOU tests
+### 12.9 Deterministic concurrency / TOCTOU tests
 
-Use deterministic synchronization/latches where possible; do not rely on sleep-only races.
+Use latches/barriers/test hooks where possible; do not rely on sleep-only races.
 
-Required scenarios:
+Required:
 
-1. candidate selected while document is READY, lifecycle becomes INGESTING before final fence -> candidate rejected;
-2. TTL crosses expiry between candidate search and final fence -> candidate rejected;
-3. generation N candidate is ranked, generation N+1 publication supersedes it before final fence -> N rejected;
-4. candidate invalidated after pre-budget eligibility -> valid backup fills capacity if still eligible;
-5. simultaneous requests with different ACL scopes must not contaminate batched key materialization.
+1. READY candidate selected, lifecycle becomes INGESTING before final fence -> rejected;
+2. TTL crosses expiry between candidate search and final fence -> rejected;
+3. generation N ranked, N+1 becomes published before final fence -> N rejected;
+4. candidate invalidated after pre-budget eligibility -> eligible backup may fill in round 2;
+5. simultaneous callers with different ACL scopes do not contaminate batched materialization.
 
-### 11.8 Performance/regression tests
+### 12.10 Performance/regression evidence
 
-- retrieval storage benchmark must cover the changed candidate SQL and batched key lookup;
-- compare p50/p95/p99 or existing benchmark-equivalent metrics before/after where the harness supports them;
-- assert no unbounded growth in SQL text or DB round-trips with increasing candidate count;
-- ANN candidate correctness must not be traded for silent recall loss.
+- storage benchmark covers changed candidate SQL and batched keyed materialization;
+- use existing p50/p95/p99 or benchmark-equivalent measures where supported;
+- no unbounded SQL text growth with increasing keyed candidate count;
+- no one-query-per-backfill-candidate pattern;
+- ANN correctness must not be traded for a silent recall regression;
+- benchmark evidence must be compared on the same relevant environment/profile when asserting performance improvement/regression.
 
-## 12. Observability
+## 13. Observability
 
-Existing metrics remain authoritative. Add metrics only when they provide bounded operational value.
+Reuse existing metrics. Add only bounded, low-cardinality telemetry when necessary.
 
-Recommended counters/timers if not already observable:
+Useful candidates:
 
 - candidate lifecycle rejections by lane/reason class;
-- context candidates rejected before budget;
-- final TOCTOU rejections;
-- context backfill count;
+- pre-budget lifecycle rejection count;
+- final TOCTOU rejection count;
+- context backfill triggered count;
 - backfill exhausted count;
-- `findPublishedByKeys` batch count / requested key count.
+- `findPublishedByKeys` batch count/requested-key count.
 
-Do not put document IDs, chunk text, identifiers or other high-cardinality/sensitive values into metric labels.
+Never use document IDs, chunk IDs/text, identifier values or other high-cardinality/sensitive values as metric labels.
 
-## 13. Documentation updates required in the implementation PR
+## 14. Documentation updates required with implementation
 
 When implementation lands, update in the same branch/PR:
 
 - `docs/services/retrieval-flow.md`;
-- `docs/services/retrieval-execution.md` if execution/degradation wording changes;
+- `docs/services/retrieval-execution.md` only if execution/degradation semantics change;
 - `docs/architecture/current-runtime-architecture.md`;
 - relevant storage/indexing documentation if SQL topology changes materially;
-- this document from `TARGET` to `CURRENT / IMPLEMENTED` or remove it after folding all durable rules into current-state docs;
+- this document from `TARGET` to `CURRENT / IMPLEMENTED`, or fold durable rules into current-state docs and remove this TARGET document;
 - `docs/README.md` synchronization baseline.
 
-No stale TARGET specification may remain after implementation is complete.
+No stale TARGET specification may remain after implementation completion.
 
-## 14. Implementation order
+## 15. Implementation order
 
-Implement in this order to keep failures attributable:
+Implement in this order so failures remain attributable:
 
-1. establish shared canonical candidate eligibility contract;
-2. fix IDENTIFIER and REFERENCE candidate predicates;
-3. fix LEXICAL and CONCEPT candidate predicates;
-4. fix VECTOR candidate/ANN eligibility and retry semantics;
-5. replace `findPublishedByKeys` with bounded batched `VALUES` lookup;
-6. move ParentContextExpansion before TemporalAuthorityFilter;
-7. implement eligibility-before-budget and bounded backfill while retaining final TOCTOU fence;
-8. preserve all ORIGINAL query chunks under multi-query expansion;
-9. complete positive/negative/concurrency/failure tests;
-10. run full exact-head validation.
+1. add mandatory shared `PublishedLifecycleSql` contract;
+2. update `PublishedProjectionLifecycleEligibility` and `PostgresPublishedLifecycleEligibility` to use it without changing semantics;
+3. fix IDENTIFIER and REFERENCE candidate predicates;
+4. fix LEXICAL and CONCEPT candidate predicates;
+5. fix VECTOR canonical eligible counting/retry/fallback while preserving HNSW probe shape;
+6. update `HotRetentionArchitectureTest` for the new ANN contract;
+7. replace `findPublishedByKeys` with ordered `VALUES` batches of max 256 keys;
+8. move `ParentContextExpansion` before `TemporalAuthorityFilter`;
+9. add `ContextSelectionCoordinator` with at most two rounds and full second-round revalidation;
+10. preserve all ORIGINAL query chunks before MULTI_QUERY expansion;
+11. complete positive/negative/concurrency/failure tests;
+12. update current-state documentation;
+13. run exact-head validation.
 
-Commits may be split by coherent workstream, but the branch and PR remain one retrieval-correctness change set.
+Commits may be split by coherent workstream, but branch/PR scope remains one retrieval-correctness change set.
 
-## 15. Definition of Done
+## 16. Definition of Done
 
-The branch is merge-ready only when all of the following are true:
+The branch is merge-ready only when all are true:
 
-- all five retrieval candidate producers enforce canonical eligibility before bounded candidate truncation;
+- one shared executable lifecycle SQL contract defines `READY + ACTIVE + unexpired`;
+- VECTOR output/retry/fallback uses canonical eligible counts while preserving raw HNSW probe behavior;
+- LEXICAL, CONCEPT, IDENTIFIER and REFERENCE enforce canonical eligibility before bounded truncation;
+- existing intermediate and final lifecycle fences remain;
 - parent-expanded evidence passes temporal authority;
-- final context can backfill released slots without violating any context budget or authority rule;
-- final synchronous TOCTOU lifecycle/ACL/TTL fence remains present;
-- `findPublishedByKeys` uses bounded batched lookup rather than one `UNION ALL` branch per key;
-- multi-query expansion cannot remove any ORIGINAL query chunk;
-- positive, negative, failure-injection and deterministic concurrency tests exist and pass;
-- no canonical semantic IDs or quality thresholds changed;
+- context selection performs at most one backfill round and revalidates the complete second selection;
+- all context quotas/budgets remain enforced through existing components;
+- `findPublishedByKeys` uses ordered bounded `VALUES` batches with `MAX_KEYS_PER_QUERY=256`;
+- ORIGINAL query chunks cannot be evicted by multi-query expansion capacity;
+- `HotRetentionArchitectureTest` is updated rather than deleted;
+- positive, negative, failure-injection and deterministic concurrency tests pass;
+- no canonical semantic IDs, quality thresholds or public API contracts are weakened;
 - current-state documentation matches executable behavior;
-- the same immutable head SHA passes all required exact-head gates.
+- the same immutable head SHA passes all required gates.
 
-## 16. Exact-head acceptance gates
+## 17. Exact-head acceptance gates
 
-The following workflows must all report `success` against the exact same immutable branch head SHA:
+The exact same immutable branch head SHA must report `success` for:
 
 1. `CI`;
 2. `Retrieval Quality Gate`;
 3. `Retrieval Storage Final Benchmark`;
 4. `Production Image Build`.
 
-A green workflow on an earlier SHA is not acceptance evidence for a later head.
+A green workflow on an earlier SHA is not acceptance evidence.
 
-If any gate fails, fix the implementation or test/documentation defect. Do not lower thresholds, remove assertions, disable tests or weaken eligibility predicates to obtain green status.
+If a gate fails, correct the implementation/test/documentation defect. Do not lower thresholds, remove assertions, disable tests, delete architecture guards or weaken eligibility predicates to obtain green status.
 
-## 17. System architect conclusion
+## 18. System architect conclusion
 
-**Assessment:** APPROVED AS TARGET, implementation recommended before declaring the current retrieval runtime quality-stable.
+**Assessment:** APPROVED AS IMPLEMENTATION-GRADE TARGET after the precision amendments in this document.
 
-The current retrieval architecture is structurally sound: it has generation identity, ACL-scoped routing, typed degradation semantics, bounded executors, canonical fusion, final lifecycle revalidation and grounded answer verification. The identified problems are not a reason to redesign the system.
+The current AkmAI retrieval architecture is structurally sound: generation identity, ACL-scoped routing, typed degradation, bounded executors, canonical fusion, final lifecycle revalidation and grounded answer verification are already present. This branch should therefore remain a narrow correctness hardening rather than a retrieval redesign.
 
-The main architectural weakness is predicate placement. A safety rule applied only after a bounded `LIMIT/topK` protects confidentiality and staleness but does not protect retrieval completeness. Therefore lifecycle eligibility belongs both at candidate admission and at the final TOCTOU boundary.
+The central architectural rule is now explicit: raw ANN probing and canonical retrieval eligibility are different concepts. HNSW may first produce a bounded raw window for planner/index efficiency, but only `READY + ACTIVE + unexpired + exact published generation + ACL` evidence may satisfy retrieval `topK`, identifier/reference limits or context capacity.
 
-Moving parent expansion before temporal authority restores the invariant that every piece of newly introduced evidence crosses all authority fences. Eligibility-aware backfill then restores the complementary completeness invariant: a stale candidate must neither leak into context nor permanently consume a context slot that an eligible lower-ranked candidate could use.
+The second rule is that late TOCTOU safety must not create unbounded compensating work. One backfill round is sufficient: rebuild selection from the remaining ordered pool using the existing diversity/budget components, revalidate the entire second selection, and stop. This preserves correctness while keeping latency and database work bounded.
 
-The proposed batched `VALUES` materialization is architecturally preferable to per-key `UNION ALL` because it bounds SQL-plan complexity while preserving exact composite identity. The multi-query change is also correct: probabilistic expansion is supplemental and must never evict deterministic original intent.
+The ordered `VALUES` materialization with a fixed 256-key batch removes per-key SQL-plan growth without changing composite identity. The shared lifecycle SQL fragment prevents future predicate drift without introducing a new framework.
 
-No new infrastructure component is required. The change should remain inside the existing PostgreSQL/retrieval architecture.
+No new infrastructure component is required. Redis, distributed cache or a separate retrieval service would add complexity without addressing these defects.
 
-**Architectural merge recommendation:** merge only after exact-head evidence proves all four gates on one SHA and concurrency/failure tests prove the TOCTOU and backfill invariants.
+**Architectural merge recommendation:** merge only after one exact head proves all four workflows green and deterministic concurrency tests prove lifecycle/TTL/generation races fail closed.
 
-## 18. RAG expert conclusion
+## 19. RAG expert conclusion
 
-**Assessment:** HIGH-VALUE CORRECTNESS HARDENING; expected effect is improved recall stability and lower false-negative retrieval under lifecycle churn without reducing precision/grounding safeguards.
+**Assessment:** STRONGLY RECOMMENDED, HIGH-VALUE CORRECTNESS HARDENING.
 
-The strongest RAG benefit comes from moving canonical eligibility ahead of lane-specific truncation. Late filtering alone can make an otherwise healthy retriever appear weak: relevant valid evidence exists but is hidden behind expired, ingesting or superseded candidates that consumed ANN, lexical, concept, identifier or reference slots. This is especially damaging for exact-identifier queries because an incorrect `EMPTY` authority result intentionally suppresses broader semantic fallback.
+The expected benefit is higher recall stability and fewer avoidable false negatives under ingestion/lifecycle churn without weakening precision, ACL, generation, temporal-authority, citation or grounding safeguards.
 
-The target preserves the right precision controls: exact identifier/reference authority, ACL scoping, generation identity, temporal authority, bounded graph contribution, context budgets, citations and grounding all remain intact. The proposal therefore improves recall without obtaining it by relaxing safety or relevance thresholds.
+The most important quality defect is bounded-slot pollution: stale or non-authoritative evidence can rank highly enough to consume ANN, lexical, concept, identifier or reference capacity, then disappear in a later fence. That behavior makes a healthy corpus appear incomplete. Moving canonical eligibility into bounded candidate admission fixes the recall defect while retaining the late TOCTOU fence for safety.
 
-Backfill is important for answer quality because final TOCTOU revalidation can otherwise reduce context after ranking and budgeting. A bounded, order-preserving backfill mechanism converts that unavoidable race from silent evidence loss into deterministic context completion.
+Identifier retrieval deserves special emphasis because an incorrect identifier `EMPTY` intentionally prevents broad semantic fallback. Recovering an eligible older exact match behind an ineligible newer row is therefore a correctness requirement, not a recall tuning preference.
 
-Preserving all ORIGINAL query chunks is also a necessary RAG invariant. Multi-query generation is probabilistic recall augmentation; it must consume spare budget only after deterministic decomposition has been retained.
+The bounded context backfill also improves answer quality. Final lifecycle revalidation is unavoidable in a concurrent system, but it should not unnecessarily leave the LLM with a sparse context when valid lower-ranked evidence already exists. Rebuilding the selection once from the reduced candidate pool preserves ranking, token limits, diversity and graph quotas without inventing a parallel budgeting algorithm.
 
-**RAG merge recommendation:** accept the implementation only if the quality gate remains green, identifier false-negative regression tests are present, valid candidates behind ineligible top-ranked candidates are recovered in every bounded lane, and no benchmark evidence shows unacceptable latency/saturation regression.
+Preserving all ORIGINAL query chunks follows the same principle: deterministic intent extraction is authoritative input to retrieval; probabilistic multi-query generation is only supplemental recall augmentation and may consume spare expansion capacity, never replace original intent.
+
+Expected quality direction:
+
+```text
+recall stability           up
+false-negative retrieval   down
+avoidable abstention       down
+context completeness       up
+precision safeguards       unchanged
+ACL/generation safety      unchanged
+grounding strictness       unchanged
+```
+
+**RAG merge recommendation:** accept only when every bounded lane recovers valid evidence behind ineligible higher-ranked candidates, the identifier regression is proven, context backfill remains exactly bounded, retrieval quality gates stay green, and storage benchmark evidence shows no unacceptable latency/saturation regression.
