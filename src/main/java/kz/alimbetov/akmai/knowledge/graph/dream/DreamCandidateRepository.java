@@ -24,7 +24,7 @@ public class DreamCandidateRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public ObservationResult observe(
+    public void observe(
             DreamLeaseManager.Authority authority,
             Observation observation
     ) {
@@ -196,7 +196,7 @@ public class DreamCandidateRepository {
                 pair.second().generation()
         );
         if (changed == 1) {
-            return ObservationResult.OBSERVED;
+            return;
         }
 
         Boolean owned = jdbcTemplate.queryForObject(
@@ -218,7 +218,9 @@ public class DreamCandidateRepository {
                 authority.fencingToken()
         );
         if (Boolean.TRUE.equals(owned)) {
-            return ObservationResult.ENDPOINT_INELIGIBLE;
+            throw new EndpointIneligibleException(
+                    "Dream candidate endpoint lost lifecycle eligibility"
+            );
         }
         throw new DreamLeaseManager.LostDreamAuthorityException(
                 "Dream candidate observation rejected by lease fencing"
@@ -469,9 +471,11 @@ public class DreamCandidateRepository {
     private record StaleResult(boolean owned, boolean changed) {
     }
 
-    public enum ObservationResult {
-        OBSERVED,
-        ENDPOINT_INELIGIBLE
+    public static final class EndpointIneligibleException
+            extends IllegalStateException {
+        public EndpointIneligibleException(String message) {
+            super(message);
+        }
     }
 
     public enum CandidateState {
