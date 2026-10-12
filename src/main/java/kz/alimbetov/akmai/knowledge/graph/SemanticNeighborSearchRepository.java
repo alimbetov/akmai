@@ -9,6 +9,7 @@ import java.util.Locale;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileStorageManager;
+import kz.alimbetov.akmai.knowledge.lifecycle.PublishedLifecycleSql;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -104,13 +105,12 @@ public class SemanticNeighborSearchRepository {
                   ON l.document_id = v.document_id
                  AND l.access_level = v.access_level
                  AND l.published_generation = v.generation
+                JOIN knowledge_document_generation g
+                  ON g.document_id = v.document_id
+                 AND g.generation = v.generation
+                 AND g.access_level = v.access_level
                 WHERE v.access_level = ?
-                  AND l.lifecycle_status = 'READY'
-                  AND l.retention_status = 'ACTIVE'
-                  AND (
-                      l.expires_at IS NULL
-                      OR l.expires_at > clock_timestamp()
-                  )
+                  AND %s
                   %s
                   AND (v.embedding <=> ?) <= ?
                 ORDER BY v.embedding <=> ?,
@@ -118,7 +118,11 @@ public class SemanticNeighborSearchRepository {
                          v.generation,
                          v.chunk_id
                 LIMIT ?
-                """.formatted(table, languagePredicate);
+                """.formatted(
+                        table,
+                        PublishedLifecycleSql.publishedGenerationEligible("l", "g"),
+                        languagePredicate
+                );
 
         return jdbcTemplate.query(
                 sql,
