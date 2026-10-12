@@ -105,7 +105,7 @@ Persistence uses database constraints and conflict handling for anti-poisoning/i
 - cluster creation is `ON CONFLICT (cluster_id) DO NOTHING`;
 - an existing cluster is accepted only if its full namespace still matches;
 - observation uniqueness is `(cluster_id, query_fingerprint)`;
-- duplicate query fingerprints do not create additional support observations;
+- duplicate query fingerprints do not create additional support observations, including concurrent duplicate attempts;
 - duplicate attempts advance the refresh revision so replicas can observe current state without increasing support;
 - observations per cluster and clusters per namespace are bounded;
 - expired clusters are removed by namespace and cutoff.
@@ -201,7 +201,7 @@ Clusters and observations from another retrieval/learning/grounding namespace ar
 
 ### QML-N07 — duplicate reinforcement
 
-The same query fingerprint cannot increase support repeatedly for one cluster, and one request cannot receive multiple feedback reinforcements through different idempotency keys.
+The same query fingerprint cannot increase support repeatedly for one cluster, including two concurrent persistence attempts, and one request cannot receive multiple feedback reinforcements through different idempotency keys.
 
 ### QML-N08 — learning failure
 
@@ -210,6 +210,8 @@ A learning-store/runtime failure must not fail the primary answer path; the lear
 ## Concurrency and recovery
 
 PostgreSQL uniqueness constraints are the final idempotency authority for request learning events, feedback and query-memory observation fingerprints. Local caches are acceleration only and are not distributed authority.
+
+Concurrent persistence of the same `(cluster_id, query_fingerprint)` must admit exactly one support observation. The losing attempt returns non-admitted and cannot increase observation count or rewrite the accepted observation.
 
 Replica convergence uses monotonic `refresh_revision` for persisted Query Memory. No JVM clock is used as a distributed lifecycle/fencing authority for source eligibility; source validity is re-read through the canonical PostgreSQL lifecycle predicate.
 
@@ -220,7 +222,8 @@ If a persisted cluster expires or its underlying sources become ineligible, phys
 Current tests include:
 
 - `QueryMemoryAntiPoisoningIntegrationTest`
-  - duplicate fingerprint suppression;
+  - sequential duplicate fingerprint suppression;
+  - concurrent same-fingerprint deduplication with exactly one admitted support observation;
   - independent fingerprint support;
   - policy namespace isolation;
   - cluster namespace rebinding rejection;
@@ -245,6 +248,10 @@ Current tests include:
   - one feedback signal per request despite different idempotency keys;
   - contradictory replay rejection;
   - trust-class persistence.
+- `RagLearningRecorderFailureTest`
+  - learning persistence failure does not fail the primary request path;
+  - persisted learning event uses the privacy fingerprint and does not carry the raw question in trace payload;
+  - disabled learning does not touch the persistent learning repository.
 - `HydeQueryGeneratorTest`
   - query-memory hints are an optional bounded input and source eligibility is invoked before reuse.
 
