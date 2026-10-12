@@ -163,7 +163,8 @@ class ReferenceGraphIntegrationTest {
         jdbc.update(
                 """
                 UPDATE knowledge_document_lifecycle
-                SET lifecycle_status = 'READY',
+                SET lifecycle_policy = 'TTL',
+                    lifecycle_status = 'READY',
                     expires_at = clock_timestamp() - interval '1 second'
                 WHERE document_id = 'law-1'
                 """
