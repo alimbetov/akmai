@@ -7,6 +7,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -120,6 +125,69 @@ class QueryMemoryAntiPoisoningIntegrationTest {
         assertThat(stored.observationCount()).isEqualTo(1);
         assertThat(stored.centroid()).containsExactly(1.0f, 0.0f);
         assertThat(stored.refreshRevision()).isGreaterThan(revisionBeforeDuplicate);
+        assertThat(repository.findObservations(clusterId, BASE_NAMESPACE, 10))
+                .hasSize(1);
+    }
+
+    @Test
+    void concurrentSameFingerprintCreatesExactlyOneSupportObservation()
+            throws Exception {
+        UUID clusterId = UUID.randomUUID();
+        String fingerprint = "9".repeat(64);
+        Instant observedAt = Instant.parse("2026-10-07T00:00:00Z");
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<Boolean> first = executor.submit(() -> {
+                start.await();
+                return repository.persist(
+                        cluster(
+                                clusterId,
+                                BASE_NAMESPACE,
+                                1,
+                                new float[]{1.0f, 0.0f},
+                                observedAt
+                        ),
+                        fingerprint,
+                        "first",
+                        List.of("doc:c1"),
+                        observedAt,
+                        128,
+                        4
+                );
+            });
+            Future<Boolean> second = executor.submit(() -> {
+                start.await();
+                return repository.persist(
+                        cluster(
+                                clusterId,
+                                BASE_NAMESPACE,
+                                1,
+                                new float[]{1.0f, 0.0f},
+                                observedAt
+                        ),
+                        fingerprint,
+                        "second",
+                        List.of("doc:c2"),
+                        observedAt,
+                        128,
+                        4
+                );
+            });
+
+            start.countDown();
+            assertThat(List.of(
+                    first.get(10, TimeUnit.SECONDS),
+                    second.get(10, TimeUnit.SECONDS)
+            )).containsExactlyInAnyOrder(true, false);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        assertThat(repository.findClustersByNamespace(BASE_NAMESPACE, 10))
+                .singleElement()
+                .extracting(SemanticQueryMemoryRepository.StoredCluster::observationCount)
+                .isEqualTo(1);
         assertThat(repository.findObservations(clusterId, BASE_NAMESPACE, 10))
                 .hasSize(1);
     }
