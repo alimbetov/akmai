@@ -7,7 +7,9 @@ package kz.alimbetov.akmai.knowledge.lifecycle;
  * that expose only a lifecycle alias; it verifies the referenced published
  * generation with an indexed EXISTS lookup. Callers that already join the exact
  * generation should use {@link #publishedGenerationEligible(String, String)} to
- * express the same contract without a redundant subquery.</p>
+ * express the same contract without a redundant subquery. Locking paths that
+ * separately acquire the exact generation row may use
+ * {@link #lifecycleEligible(String)} before that lock.</p>
  */
 public final class PublishedLifecycleSql {
 
@@ -45,7 +47,13 @@ public final class PublishedLifecycleSql {
                 + " AND " + generation + ".generation_status = 'PUBLISHED' ";
     }
 
-    private static String lifecycleEligible(String lifecycle) {
+    /**
+     * Lifecycle half of the canonical predicate. This intentionally does not
+     * prove generation status and is therefore appropriate only when the caller
+     * immediately proves/locks the exact published generation separately.
+     */
+    public static String lifecycleEligible(String lifecycleAlias) {
+        String lifecycle = requireAlias(lifecycleAlias);
         return " " + lifecycle + ".lifecycle_status = 'READY'"
                 + " AND " + lifecycle + ".retention_status = 'ACTIVE'"
                 + " AND " + lifecycle + ".published_generation IS NOT NULL"
