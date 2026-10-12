@@ -123,7 +123,7 @@ public class CanonicalPostgresSearchProjectionRepository
                 },
                 (rs, rowNum) -> new OrderedProjection(
                         rs.getInt("ordinal"),
-                        mapProjection(rs)
+                        mapProjection(rs, rowNum)
                 )
         );
     }
