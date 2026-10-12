@@ -106,6 +106,77 @@ class RetentionReingestionRaceTest {
         assertThat(claims.release(claim)).isFalse();
     }
 
+    @Test
+    void replacementStagingKeepsCurrentPublishedGenerationOnline() {
+        long first = generations.allocate(
+                "doc-online",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fingerprint-1",
+                1L
+        );
+        publish("doc-online", first);
+
+        long second = generations.allocate(
+                "doc-online",
+                RetentionPolicy.PERMANENT,
+                null,
+                null,
+                "fingerprint-2",
+                1L
+        );
+
+        assertThat(second).isEqualTo(first + 1);
+        LifecycleSnapshot lifecycle = jdbc.queryForObject(
+                """
+                SELECT lifecycle_status,
+                       retention_status,
+                       published_generation,
+                       generation
+                FROM knowledge_document_lifecycle
+                WHERE document_id = ?
+                """,
+                (rs, rowNum) -> new LifecycleSnapshot(
+                        rs.getString("lifecycle_status"),
+                        rs.getString("retention_status"),
+                        rs.getLong("published_generation"),
+                        rs.getLong("generation")
+                ),
+                "doc-online"
+        );
+
+        assertThat(lifecycle).isNotNull();
+        assertThat(lifecycle.lifecycleStatus()).isEqualTo("READY");
+        assertThat(lifecycle.retentionStatus()).isEqualTo("ACTIVE");
+        assertThat(lifecycle.publishedGeneration()).isEqualTo(first);
+        assertThat(lifecycle.allocatedGeneration()).isEqualTo(second);
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_document_generation
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND generation_status = 'PUBLISHED'
+                """,
+                Integer.class,
+                "doc-online",
+                first
+        )).isEqualTo(1);
+        assertThat(jdbc.queryForObject(
+                """
+                SELECT count(*)
+                FROM knowledge_document_generation
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND generation_status = 'STAGING'
+                """,
+                Integer.class,
+                "doc-online",
+                second
+        )).isEqualTo(1);
+    }
+
     private void publish(String documentId, long generation) {
         jdbc.update(
                 """
@@ -131,5 +202,13 @@ class RetentionReingestionRaceTest {
                 generation,
                 documentId
         );
+    }
+
+    private record LifecycleSnapshot(
+            String lifecycleStatus,
+            String retentionStatus,
+            long publishedGeneration,
+            long allocatedGeneration
+    ) {
     }
 }
