@@ -207,7 +207,7 @@ class CanonicalCandidateEligibilityIntegrationTest {
     void keyedLookupRejectsExpiredLifecycleSynchronously() {
         long generation = generations.allocate(
                 "expired-doc",
-                RetentionPolicy.TEMPORARY,
+                RetentionPolicy.TTL,
                 Instant.parse("2026-10-01T00:00:00Z"),
                 null,
                 "fp-expired",
