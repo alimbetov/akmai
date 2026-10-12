@@ -22,6 +22,7 @@ import kz.alimbetov.akmai.rag.retrieval.AnswerGroundingVerifier;
 import kz.alimbetov.akmai.rag.retrieval.ContextAssembler;
 import kz.alimbetov.akmai.rag.retrieval.ContextBudget;
 import kz.alimbetov.akmai.rag.retrieval.ContextDiversityFilter;
+import kz.alimbetov.akmai.rag.retrieval.ContextSelectionCoordinator;
 import kz.alimbetov.akmai.rag.retrieval.CitationValidator;
 import kz.alimbetov.akmai.rag.retrieval.EvidenceQualityAssessor;
 import kz.alimbetov.akmai.rag.retrieval.KnowledgeExpansion;
@@ -67,6 +68,7 @@ public class RagQuestionService {
     private final MeasuredRetrievalCoordinator measuredRetrievalCoordinator;
     private ParentContextExpansion parentContextExpansion;
     private ContextDiversityFilter contextDiversityFilter;
+    private ContextSelectionCoordinator contextSelectionCoordinator;
     private EvidenceQualityAssessor evidenceQualityAssessor;
     private RagLearningRecorder ragLearningRecorder;
     private SemanticGroundingVerifier semanticGroundingVerifier;
@@ -170,6 +172,13 @@ public class RagQuestionService {
     @Autowired(required = false)
     void setContextDiversityFilter(ContextDiversityFilter contextDiversityFilter) {
         this.contextDiversityFilter = contextDiversityFilter;
+    }
+
+    @Autowired(required = false)
+    void setContextSelectionCoordinator(
+            ContextSelectionCoordinator contextSelectionCoordinator
+    ) {
+        this.contextSelectionCoordinator = contextSelectionCoordinator;
     }
 
     @Autowired(required = false)
@@ -281,17 +290,25 @@ public class RagQuestionService {
             recordPerformance(RagPipelineStage.EXPANSION, stageStarted);
 
             stageStarted = System.nanoTime();
-            List<RetrievalHit> authorityEligible = temporalAuthorityFilter.filter(
-                    competitive
-            );
             List<RetrievalHit> parentExpanded = parentContextExpansion == null
-                    ? authorityEligible
-                    : parentContextExpansion.expand(authorityEligible, accessLevels);
-            List<RetrievalHit> diversified = contextDiversityFilter == null
-                    ? parentExpanded
-                    : contextDiversityFilter.apply(parentExpanded);
-            List<RetrievalHit> bounded = contextBudget.apply(diversified, question);
-            finalContext = contextRevalidator.revalidate(bounded, accessLevels);
+                    ? competitive
+                    : parentContextExpansion.expand(competitive, accessLevels);
+            List<RetrievalHit> authorityEligible = temporalAuthorityFilter.filter(
+                    parentExpanded
+            );
+            if (contextSelectionCoordinator != null) {
+                finalContext = contextSelectionCoordinator.select(
+                        authorityEligible,
+                        question,
+                        accessLevels
+                );
+            } else {
+                List<RetrievalHit> diversified = contextDiversityFilter == null
+                        ? authorityEligible
+                        : contextDiversityFilter.apply(authorityEligible);
+                List<RetrievalHit> bounded = contextBudget.apply(diversified, question);
+                finalContext = contextRevalidator.revalidate(bounded, accessLevels);
+            }
             recordPerformance(RagPipelineStage.CONTEXT_SELECTION, stageStarted);
             recordStage(RetrievalAttributionStage.SELECTED, finalContext);
         } catch (DataAccessException | TransactionException exception) {

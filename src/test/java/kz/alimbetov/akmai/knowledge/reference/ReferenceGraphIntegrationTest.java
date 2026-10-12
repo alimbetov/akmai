@@ -74,35 +74,7 @@ class ReferenceGraphIntegrationTest {
 
     @Test
     void normalGenerationRowsProduceResolvablePublishedReferenceGraph() {
-        jdbc.update(
-                """
-                INSERT INTO knowledge_document_lifecycle (
-                    document_id, lifecycle_policy, lifecycle_status,
-                    generation, attempt_count, row_version,
-                    created_at, updated_at, retention_status,
-                    published_generation, next_generation, access_level
-                ) VALUES (
-                    'law-1', 'PERMANENT', 'READY',
-                    1, 0, 0,
-                    clock_timestamp(), clock_timestamp(),
-                    'ACTIVE', 1, 2, 7
-                )
-                """
-        );
-        jdbc.update(
-                """
-                INSERT INTO knowledge_document_generation (
-                    document_id, generation, generation_status,
-                    generation_kind, content_fingerprint,
-                    physical_id_version, cleanup_required,
-                    started_at, published_at, access_level
-                ) VALUES (
-                    'law-1', 1, 'PUBLISHED',
-                    'INGESTION', 'fp', 2, false,
-                    clock_timestamp(), clock_timestamp(), 7
-                )
-                """
-        );
+        insertPublishedLifecycle();
 
         SearchProjection target = projection(
                 "article-25",
@@ -160,6 +132,81 @@ class ReferenceGraphIntegrationTest {
                 """,
                 Integer.class
         )).isZero();
+    }
+
+    @Test
+    void referenceLimitCannotExposeNonReadyOrExpiredPublishedGeneration() {
+        insertPublishedLifecycle();
+        SearchProjection target = projection(
+                "article-25",
+                0,
+                "Статья 25. Расторжение договора"
+        );
+        SearchProjection source = projection(
+                "article-30",
+                1,
+                "Последствия определяются статьёй 25 настоящего договора."
+        );
+        projections.saveAll(List.of(target, source));
+        references.saveAll(List.of(target, source));
+
+        jdbc.update(
+                "UPDATE knowledge_document_lifecycle SET lifecycle_status = 'INGESTING' WHERE document_id = 'law-1'"
+        );
+        assertThat(references.resolveSameDocumentTargets(
+                "law-1",
+                List.of("article-30"),
+                Set.of(7L),
+                1
+        )).isEmpty();
+
+        jdbc.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET lifecycle_policy = 'TTL',
+                    lifecycle_status = 'READY',
+                    expires_at = clock_timestamp() - interval '1 second'
+                WHERE document_id = 'law-1'
+                """
+        );
+        assertThat(references.resolveSameDocumentTargets(
+                "law-1",
+                List.of("article-30"),
+                Set.of(7L),
+                1
+        )).isEmpty();
+    }
+
+    private void insertPublishedLifecycle() {
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_lifecycle (
+                    document_id, lifecycle_policy, lifecycle_status,
+                    generation, attempt_count, row_version,
+                    created_at, updated_at, retention_status,
+                    published_generation, next_generation, access_level
+                ) VALUES (
+                    'law-1', 'PERMANENT', 'READY',
+                    1, 0, 0,
+                    clock_timestamp(), clock_timestamp(),
+                    'ACTIVE', 1, 2, 7
+                )
+                """
+        );
+        jdbc.update(
+                """
+                INSERT INTO knowledge_document_generation (
+                    document_id, generation, generation_status,
+                    generation_kind, content_fingerprint,
+                    physical_id_version, cleanup_required,
+                    started_at, published_at, access_level
+                ) VALUES (
+                    'law-1', 1, 'PUBLISHED',
+                    'INGESTION', 'fp', 2, false,
+                    clock_timestamp(), clock_timestamp(), 7
+                )
+                """
+        );
     }
 
     private SearchProjection projection(

@@ -73,7 +73,7 @@ class HotRetentionArchitectureTest {
     }
 
     @Test
-    void globalAnnPreservesHnswThenDetectsStaleCandidateCrowding()
+    void globalAnnPreservesHnswThenDetectsIneligibleCandidateCrowding()
             throws Exception {
         String source = normalized(
                 "src/main/java/kz/alimbetov/akmai/knowledge/vector/"
@@ -97,12 +97,22 @@ class HotRetentionArchitectureTest {
         assertThat(method)
                 .contains("needs_retry")
                 .contains("raw_counts")
-                .contains("visible_counts")
-                .contains("retention_status = 'active'");
+                .contains("eligible_counts")
+                .contains("publishedlifecyclesql.eligible(\"l\")");
         assertThat(source)
                 .contains("ann_retry_multiplier")
                 .contains("ann_max_candidates_per_branch")
                 .contains("fencedglobalann");
+
+        String lifecycleSql = normalized(
+                "src/main/java/kz/alimbetov/akmai/knowledge/lifecycle/"
+                        + "PublishedLifecycleSql.java"
+        );
+        assertThat(lifecycleSql)
+                .contains("lifecycle_status = 'ready'")
+                .contains("retention_status = 'active'")
+                .contains("expires_at is null")
+                .contains("expires_at > clock_timestamp()");
     }
 
     @Test

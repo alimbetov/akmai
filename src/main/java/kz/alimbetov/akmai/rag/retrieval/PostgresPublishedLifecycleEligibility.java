@@ -4,6 +4,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
+import kz.alimbetov.akmai.knowledge.lifecycle.PublishedLifecycleSql;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -80,10 +81,7 @@ public class PostgresPublishedLifecycleEligibility
                        l.document_id,
                        l.published_generation
                 FROM knowledge_document_lifecycle l
-                WHERE l.lifecycle_status = 'READY'
-                  AND l.retention_status = 'ACTIVE'
-                  AND (l.expires_at IS NULL
-                       OR l.expires_at > clock_timestamp())
+                WHERE """ + PublishedLifecycleSql.eligible("l") + """
                   AND (l.access_level,
                        l.document_id,
                        l.published_generation) IN (

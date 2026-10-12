@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Set;
 import kz.alimbetov.akmai.knowledge.chunking.CrossReferenceExtractor;
 import kz.alimbetov.akmai.knowledge.lifecycle.GenerationIdentity;
+import kz.alimbetov.akmai.knowledge.lifecycle.PublishedLifecycleSql;
 import kz.alimbetov.akmai.knowledge.projection.SearchProjection;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -247,7 +248,7 @@ public class ReferenceGraphRepository
                 """ + generationPredicate + """
                   AND e.source_chunk_id = ANY (?)
                   AND e.target_scope = 'SAME_DOCUMENT'
-                  AND l.retention_status = 'ACTIVE'
+                  AND """ + PublishedLifecycleSql.eligible("l") + """
                   AND t.chunk_id <> ALL (?)
                 ORDER BY t.chunk_id
                 LIMIT ?

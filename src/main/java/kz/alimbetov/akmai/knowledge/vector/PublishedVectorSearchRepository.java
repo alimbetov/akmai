@@ -14,6 +14,7 @@ import java.util.Set;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfile;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileService;
 import kz.alimbetov.akmai.knowledge.embedding.EmbeddingProfileStorageManager;
+import kz.alimbetov.akmai.knowledge.lifecycle.PublishedLifecycleSql;
 import kz.alimbetov.akmai.knowledge.model.RetrievalLanguageCatalog;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -397,42 +398,42 @@ public class PublishedVectorSearchRepository {
 
         sql.append("""
                 ),
-                visible AS MATERIALIZED (
+                eligible AS MATERIALIZED (
                     SELECT candidate.*
                     FROM candidates candidate
                     JOIN knowledge_document_lifecycle l
                       ON l.document_id = candidate.document_id
                      AND l.published_generation = candidate.generation
                      AND l.access_level = candidate.access_level
-                    WHERE l.retention_status = 'ACTIVE'
+                    WHERE """ + PublishedLifecycleSql.eligible("l") + """
                 ),
                 raw_counts AS (
                     SELECT branch_id, count(*) AS row_count
                     FROM candidates
                     GROUP BY branch_id
                 ),
-                visible_counts AS (
+                eligible_counts AS (
                     SELECT branch_id, count(*) AS row_count
-                    FROM visible
+                    FROM eligible
                     GROUP BY branch_id
                 ),
                 health AS (
                     SELECT COALESCE(
                         bool_or(
                             COALESCE(raw.row_count, 0) = ?
-                            AND COALESCE(visible_count.row_count, 0) < ?
+                            AND COALESCE(eligible_count.row_count, 0) < ?
                         ),
                         false
                     ) AS needs_retry
                     FROM branch_ids branch
                     LEFT JOIN raw_counts raw
                       ON raw.branch_id = branch.branch_id
-                    LEFT JOIN visible_counts visible_count
-                      ON visible_count.branch_id = branch.branch_id
+                    LEFT JOIN eligible_counts eligible_count
+                      ON eligible_count.branch_id = branch.branch_id
                 ),
-                top_visible AS (
+                top_eligible AS (
                     SELECT *
-                    FROM visible
+                    FROM eligible
                     WHERE distance <= ?
                     ORDER BY distance
                     LIMIT ?
@@ -448,7 +449,7 @@ public class PublishedVectorSearchRepository {
                     result.metadata::text AS metadata_json,
                     1.0 - result.distance AS score,
                     health.needs_retry
-                FROM top_visible result
+                FROM top_eligible result
                 CROSS JOIN health
 
                 UNION ALL
@@ -531,11 +532,14 @@ public class PublishedVectorSearchRepository {
                              AND l.access_level = v.access_level
                             WHERE v.access_level = ?
                               AND v.language = ?
-                              AND l.retention_status = 'ACTIVE'
+                              AND %s
                             ORDER BY v.embedding <=> ?
                             LIMIT ?
                         )
-                        """.formatted(table));
+                        """.formatted(
+                                table,
+                                PublishedLifecycleSql.eligible("l")
+                        ));
 
                 parameters.add(vector);
                 parameters.add(accessLevel);
@@ -596,9 +600,12 @@ public class PublishedVectorSearchRepository {
                      AND v.document_id = l.document_id
                      AND v.generation = l.published_generation
                     WHERE l.access_level = ?
-                      AND l.retention_status = 'ACTIVE'
+                      AND %s
                       AND l.document_id = ANY (?)
-                    """.formatted(table));
+                    """.formatted(
+                            table,
+                            PublishedLifecycleSql.eligible("l")
+                    ));
             if (language != null) {
                 sql.append(" AND v.language = ?\n");
             }

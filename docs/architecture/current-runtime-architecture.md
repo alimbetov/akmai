@@ -1,10 +1,10 @@
 # AkmAI current runtime architecture
 
 Classification: **CURRENT**  
-Synchronized against: `main@33ebbe469d994fe60c227972b1d7f730ce6cf0ba`  
-Date: 2026-10-08
+Synchronized against: `feature/retrieval-correctness-hardening-v1` / PR #95, based on `main@0966cc2bb22cfe924cc55a8d7cafd16ccf1c681a`  
+Date: 2026-10-12
 
-This document describes the executable AkmAI runtime at a system level. Design documents in this directory provide deeper rationale; this file is the current-state map.
+This document describes the executable AkmAI runtime at a system level. Design documents in this directory provide deeper rationale; this file is the current-state map for the implementation carried by the branch above.
 
 ## 1. System purpose
 
@@ -68,8 +68,9 @@ flowchart TB
       GS[AdaptiveGraphShadowExpansion]
       GO[AdaptiveGraphOnlineExpansion]
       GC[AdaptiveGraphCompetitiveAdmission]
-      AUTH[Temporal / authority filtering]
       PARENT[Parent context expansion]
+      AUTH[Temporal / authority filtering]
+      SEL[Eligibility-aware context selection]
       DIV[Diversity filtering]
       BUDGET[ContextBudget]
       REVAL[PublishedContextRevalidator]
@@ -78,7 +79,7 @@ flowchart TB
       CIT[CitationValidator]
       DG[Deterministic grounding]
       SG[Semantic grounding when enabled]
-      RR --> K --> GS --> GO --> GC --> AUTH --> PARENT --> DIV --> BUDGET --> REVAL --> CTX --> LLM --> CIT --> DG --> SG
+      RR --> K --> GS --> GO --> GC --> PARENT --> AUTH --> SEL --> DIV --> BUDGET --> REVAL --> CTX --> LLM --> CIT --> DG --> SG
     end
 
     subgraph LEARN_OPERATE
@@ -133,33 +134,55 @@ The production pipeline supports independent retrieval evidence sources:
 
 These lanes have different authority semantics. Exact identifiers and explicit references are not merely high-scoring vector hits.
 
-The Adaptive Association Graph is deliberately **not** a fifth peer RRF lane. It is a bounded post-rerank expansion/memory layer. See [`adaptive-graph-runtime.md`](adaptive-graph-runtime.md).
+All bounded candidate-producing lanes enforce one canonical read-side lifecycle rule before their authoritative `LIMIT/topK` is allocated:
+
+```text
+READY
++ ACTIVE retention
++ unexpired TTL
++ caller-authorized access level
++ exact document identity
++ exact published generation
+```
+
+VECTOR preserves its raw HNSW probe for index efficiency. The raw probe is not authoritative evidence: candidate eligibility is evaluated after the probe, ineligible-candidate crowding triggers bounded ANN expansion, and the existing fenced fallback remains available. LEXICAL, CONCEPT, IDENTIFIER and REFERENCE apply the same eligibility semantics before their own bounded result truncation.
+
+The Adaptive Association Graph is deliberately **not** a peer RRF lane. It is a bounded post-rerank expansion/memory layer. See [`adaptive-graph-runtime.md`](adaptive-graph-runtime.md).
 
 ## 5. Retrieval flow
 
 ```text
 Question
   -> QueryChunker / query analysis
+       ORIGINAL decomposition is mandatory
+       MULTI_QUERY consumes remaining expansion capacity only
   -> RetrievalPlanner
   -> applicable retrieval lanes
+       canonical candidate eligibility before bounded lane truncation
   -> ResultFusion
   -> Reranker
   -> structural KnowledgeExpansion
   -> adaptive graph observation/online expansion when enabled
   -> competitive admission
-  -> authority/lifecycle filtering
   -> parent expansion
-  -> diversity filtering
-  -> context budget
-  -> final published-context revalidation
+  -> temporal authority filtering
+  -> pre-budget lifecycle eligibility
+  -> diversity + context budget
+  -> final published-context TOCTOU revalidation
+  -> at most one bounded rebuild/backfill if final revalidation releases capacity
+  -> full final revalidation of the rebuilt selection
 ```
 
 Important invariants:
 
 - ACL is applied before and during retrieval; it is not a late redaction step.
-- A retrieval hit must correspond to an eligible published generation before entering final context.
+- A stale, expired, non-READY or unpublished candidate cannot consume a bounded authoritative lane slot ahead of an eligible candidate.
+- Candidate-time lifecycle filtering does not replace existing intermediate or final safety fences.
 - TTL expiry is synchronously fenced even if asynchronous retention cleanup has not run yet.
-- Final context is revalidated after expansion/budgeting to protect against lifecycle changes during the request.
+- Parent evidence is created before temporal authority is applied, so a parent cannot inherit a child's authority decision without being evaluated itself.
+- Context is lifecycle-eligible before budgeting. If the final TOCTOU fence removes selected evidence, the selector may rebuild exactly once from lower-ranked eligible candidates while reapplying diversity and budget rules.
+- A second TOCTOU invalidation returns a smaller safe context rather than starting an unbounded retry loop.
+- Final context is revalidated immediately before generation.
 
 ## 6. Generation and verification
 
@@ -233,6 +256,8 @@ Major data classes include:
 - self-optimizing/query-memory state;
 - audit/runtime parameter state.
 
+Exact projection materialization uses bounded key batches rather than a per-key `UNION ALL` plan. Requests are de-duplicated in first-occurrence order and queried in batches of at most 256 composite `(accessLevel, documentId, generation, chunkId)` identities.
+
 Executable schema truth is in Liquibase migrations under `src/main/resources/db/changelog`.
 
 ## 10. Lifecycle and retention
@@ -240,6 +265,8 @@ Executable schema truth is in Liquibase migrations under `src/main/resources/db/
 Document generations are first-class runtime identities. Re-ingesting a document creates a new generation; old graph/vector/reference state does not silently become the new generation's state.
 
 Retirement/purge must account for all generation payload families, including adaptive associations. Reconciliation and repair verify residual payload rather than assuming cleanup succeeded.
+
+The canonical read-side lifecycle predicate is shared through `PublishedLifecycleSql`, while repository-specific SQL remains responsible for exact ACL/document/generation joins. This avoids semantic drift between candidate admission and final lifecycle fences.
 
 ## 11. Security boundaries
 
@@ -262,6 +289,8 @@ strategy-timeout < request-timeout
 ```
 
 Dependent stages must not start when the remaining request budget is insufficient.
+
+Context selection is intentionally not a serializable snapshot. It uses a pre-budget eligibility read plus a late synchronous final fence; at most one deterministic rebuild/backfill round handles late invalidation. This bounds database work even when lifecycle state changes concurrently.
 
 ## 13. Re-embedding
 

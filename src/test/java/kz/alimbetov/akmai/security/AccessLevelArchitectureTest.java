@@ -227,22 +227,37 @@ class AccessLevelArchitectureTest {
     }
 
     @Test
-    void publishedRetrievalIsPinnedToLifecyclePublicationFence()
+    void publishedRetrievalIsPinnedToCanonicalLifecyclePublicationFence()
             throws Exception {
+        String lifecycle = Files.readString(Path.of(
+                "src/main/java/kz/alimbetov/akmai/knowledge/lifecycle/"
+                        + "PublishedLifecycleSql.java"
+        )).replaceAll("\\s+", " ").toLowerCase();
+
+        assertThat(lifecycle)
+                .contains("lifecycle_status = 'ready'")
+                .contains("retention_status = 'active'")
+                .contains("expires_at is null")
+                .contains("expires_at > clock_timestamp()");
+
         for (String source : List.of(
                 "src/main/java/kz/alimbetov/akmai/knowledge/vector/"
                         + "PublishedVectorSearchRepository.java",
                 "src/main/java/kz/alimbetov/akmai/knowledge/projection/"
-                        + "PostgresSearchProjectionRepository.java"
+                        + "CanonicalPostgresSearchProjectionRepository.java",
+                "src/main/java/kz/alimbetov/akmai/knowledge/identifier/"
+                        + "DocumentIdentifierRepository.java",
+                "src/main/java/kz/alimbetov/akmai/knowledge/reference/"
+                        + "ReferenceGraphRepository.java"
         )) {
             String text = Files.readString(Path.of(source))
                     .replaceAll("\\s+", " ")
                     .toLowerCase();
 
             assertThat(text)
-                    .as("%s must enforce published lifecycle visibility", source)
+                    .as("%s must enforce canonical published lifecycle visibility", source)
                     .contains("published_generation")
-                    .contains("retention_status = 'active'")
+                    .contains("publishedlifecyclesql.eligible(\"l\")")
                     .doesNotContain("storage_state");
         }
     }
