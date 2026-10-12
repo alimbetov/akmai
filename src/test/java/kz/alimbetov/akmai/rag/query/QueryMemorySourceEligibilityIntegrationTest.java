@@ -91,8 +91,8 @@ class QueryMemorySourceEligibilityIntegrationTest {
     @Test
     void rejectsWrongAclSupersededGenerationAndNonReadyLifecycle() {
         seedPublished("acl-doc", 1L, 2L, "acl-chunk", false);
-        seedPublished("superseded-doc", 2L, 1L, "new-chunk", false);
-        seedProjection("superseded-doc", 1L, 1L, "old-chunk");
+        seedPublished("superseded-doc", 1L, 1L, "old-chunk", false);
+        supersede("superseded-doc", 1L, 2L, 1L);
         seedPublished("ingesting-doc", 1L, 1L, "ingesting-chunk", false);
         jdbc.update(
                 "UPDATE knowledge_document_lifecycle SET lifecycle_status = 'INGESTING' WHERE document_id = ?",
@@ -180,7 +180,7 @@ class QueryMemorySourceEligibilityIntegrationTest {
                     ?,
                     ?,
                     CASE WHEN ? THEN clock_timestamp() - interval '1 second'
-                         ELSE clock_timestamp() + interval '1 hour'
+                         ELSE NULL
                     END
                 )
                 """,
@@ -192,6 +192,54 @@ class QueryMemorySourceEligibilityIntegrationTest {
                 accessLevel,
                 expired
         );
+        insertGeneration(documentId, generation, accessLevel, "PUBLISHED");
+        seedProjection(documentId, generation, accessLevel, chunkId);
+    }
+
+    private void supersede(
+            String documentId,
+            long previousGeneration,
+            long publishedGeneration,
+            long accessLevel
+    ) {
+        jdbc.update(
+                """
+                UPDATE knowledge_document_generation
+                SET generation_status = 'RETIRING',
+                    cleanup_required = true,
+                    retired_at = clock_timestamp()
+                WHERE document_id = ?
+                  AND generation = ?
+                  AND access_level = ?
+                """,
+                documentId,
+                previousGeneration,
+                accessLevel
+        );
+        insertGeneration(documentId, publishedGeneration, accessLevel, "PUBLISHED");
+        jdbc.update(
+                """
+                UPDATE knowledge_document_lifecycle
+                SET generation = ?,
+                    published_generation = ?,
+                    next_generation = ?
+                WHERE document_id = ?
+                  AND access_level = ?
+                """,
+                publishedGeneration,
+                publishedGeneration,
+                publishedGeneration + 1,
+                documentId,
+                accessLevel
+        );
+    }
+
+    private void insertGeneration(
+            String documentId,
+            long generation,
+            long accessLevel,
+            String status
+    ) {
         jdbc.update(
                 """
                 INSERT INTO knowledge_document_generation (
@@ -204,14 +252,14 @@ class QueryMemorySourceEligibilityIntegrationTest {
                     cleanup_required,
                     started_at,
                     published_at
-                ) VALUES (?, ?, 'PUBLISHED', 'INGESTION', 2, ?, false,
+                ) VALUES (?, ?, ?, 'INGESTION', 2, ?, false,
                           clock_timestamp(), clock_timestamp())
                 """,
                 documentId,
                 generation,
+                status,
                 accessLevel
         );
-        seedProjection(documentId, generation, accessLevel, chunkId);
     }
 
     private void seedProjection(
