@@ -3,6 +3,7 @@ package kz.alimbetov.akmai.knowledge.lifecycle;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -115,7 +116,7 @@ class RetentionLeaseExpiryIntegrationTest {
                 .thenReturn(Optional.of(profile));
         when(manifests.findVectorIds(any())).thenReturn(List.of());
         when(vectors.deleteGeneration(any(), any())).thenAnswer(invocation -> {
-            Thread.sleep(350L);
+            Thread.sleep(1_500L);
             return 0;
         });
         when(vectors.countGeneration(any(), any())).thenReturn(0);
@@ -144,6 +145,7 @@ class RetentionLeaseExpiryIntegrationTest {
 
         assertThat(result.status())
                 .isEqualTo(RetentionCleanupResult.Status.STALE_CLAIM);
+        verify(vectors).deleteGeneration(any(), any());
         assertThat(jdbc.queryForObject(
                 """
                 SELECT retention_status || ':' || lifecycle_status
@@ -203,7 +205,7 @@ class RetentionLeaseExpiryIntegrationTest {
                     ?,
                     'pod-a',
                     clock_timestamp(),
-                    clock_timestamp() + interval '200 milliseconds',
+                    clock_timestamp() + interval '1 second',
                     clock_timestamp() - interval '1 minute',
                     0,
                     0,
