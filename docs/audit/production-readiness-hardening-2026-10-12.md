@@ -3,7 +3,7 @@
 Classification: **CURRENT HARDENING LEDGER / RELEASE QUALIFICATION NOT YET COMPLETE**
 
 Audited base: `main@57c5941166a9bd0bac67b1e273b4f908ee27e167`  
-Hardening branch evidence head before this document: `quality/production-readiness-hardening-v1@590a46fb6da226dc2f00589f9e6ab7e037e88c8e`
+Hardening branch: `quality/production-readiness-hardening-v1`
 
 This document supersedes `post-v1.1-readiness-2026-10-08.md` for current open-gap classification. The older audit remains a historical snapshot and is still useful for traceability.
 
@@ -17,7 +17,7 @@ Current classification:
 - **CONDITIONAL GO** — production candidate after deployment-specific qualification;
 - **NO-GO** — broad externally claimed production release until the release blockers below are closed on one exact candidate SHA/tag.
 
-The remaining work is now primarily qualification/governance/evidence, not another core RAG redesign.
+The remaining work is primarily qualification/governance/evidence, not another core RAG redesign.
 
 ## What changed since the 2026-10-08 audit
 
@@ -25,12 +25,16 @@ The historical issue tracker state and runtime state have been reconciled substa
 
 - issues #36-#41 are closed/completed and must no longer be presented as open production defects;
 - unified lifecycle authority is implemented across retrieval, final context, Query Memory source reuse, adaptive graph endpoints and Dream candidates;
-- TTL/published-generation PostgreSQL integration evidence now exists;
+- TTL/published-generation PostgreSQL integration evidence exists;
 - retrieval PostgreSQL timeout and repeated connection-reuse evidence exists;
 - request-body streaming/unknown-length enforcement is covered;
 - non-local security startup validation is covered;
 - re-embedding, retention, Dream, graph mutation and reconciliation have PostgreSQL ownership/fencing/failure evidence;
-- Query Memory / learning events now have a dedicated service contract and direct source-lifecycle integration coverage on this hardening branch.
+- Query Memory / learning events now have a dedicated service contract and direct source-lifecycle integration coverage;
+- Query Memory now has direct concurrent duplicate-suppression evidence;
+- learning recorder failure/privacy behavior now has direct tests;
+- ingestion idempotency now has a real concurrent same-key PostgreSQL ownership test;
+- runtime safety flags now have explicit documentation-to-test mapping for stale cache, authoritative read failure, optimistic conflict and concurrent dependency transitions.
 
 These changes close evidence/documentation gaps. They do not, by themselves, establish release qualification.
 
@@ -40,13 +44,16 @@ These changes close evidence/documentation gaps. They do not, by themselves, est
 |---|---|---|
 | Published lifecycle / TTL | `PostgresPublishedLifecycleEligibilityIntegrationTest` proves expired rejection across retrieval types, final-context expiry race, non-`READY`, non-`PUBLISHED`, generation and ACL fencing | IMPLEMENTED + DIRECT PG EVIDENCE |
 | Query Memory source reuse | `QueryMemorySourceEligibilityIntegrationTest` proves live acceptance plus expired, mixed-source, malformed, ACL, superseded-generation, non-`READY` and empty-scope rejection | IMPLEMENTED ON HARDENING BRANCH; EXACT-HEAD GATE PENDING |
-| Query Memory anti-poisoning | `QueryMemoryAntiPoisoningIntegrationTest` proves duplicate suppression, independent support and policy namespace isolation | IMPLEMENTED |
+| Query Memory anti-poisoning | `QueryMemoryAntiPoisoningIntegrationTest` proves duplicate suppression, independent support, policy namespace isolation and concurrent same-fingerprint admission of exactly one observation | IMPLEMENTED ON HARDENING BRANCH; EXACT-HEAD GATE PENDING |
+| Learning recorder failure/privacy | `RagLearningRecorderFailureTest` proves persistence failure is non-fatal, raw question is not persisted and disabled learning does not touch the repository | IMPLEMENTED ON HARDENING BRANCH; EXACT-HEAD GATE PENDING |
 | Learning / feedback persistence | `SelfOptimizingRagPersistenceIntegrationTest`, `RagFeedbackAntiPoisoningIntegrationTest` prove persistence, revision refresh, TTL cleanup, request/feedback idempotency and anti-poisoning | IMPLEMENTED |
+| Ingestion idempotency ownership | `IdempotencyIntegrationTest` proves replay, fingerprint conflict, expired published-claim recovery and concurrent same-key ownership with one `CLAIMED` + one `IN_PROGRESS` result | IMPLEMENTED ON HARDENING BRANCH; EXACT-HEAD GATE PENDING |
 | Retrieval executor cancellation | `ParallelRetrievalExecutorCancellationTest`, `ParallelRetrievalExecutorRecoveryTest` prove owned-task cancellation and worker reuse | IMPLEMENTED |
 | PostgreSQL retrieval timeout/recovery | `RetrievalTransactionTimeoutIntegrationTest` uses real `pg_sleep(5)` and proves timeout plus connection reuse after repeated timeout cycles | IMPLEMENTED + DIRECT PG EVIDENCE |
 | Request byte boundary | `RequestBodySizeFilterTest`, `RequestBodySizeFilterTransportIntegrationTest` cover declared-size and unknown/chunked transport enforcement | IMPLEMENTED |
 | Non-local startup security | `SecurityStartupValidatorTest` covers fail-closed unsafe configuration | IMPLEMENTED |
 | Unified lifecycle races | `RetentionReingestionRaceTest`, graph mutation lifecycle race tests, retention lease-expiry rollback and lifecycle completion ledger | IMPLEMENTED |
+| Runtime parameter authority | `AppParameterServiceTest`, `PostgresAppParameterRepositoryIntegrationTest` cover authoritative DB reads, fail-safe cached reads, stale-cache eviction, optimistic conflict and concurrent dependency transition serialization | IMPLEMENTED + DIRECT PG CONCURRENCY EVIDENCE |
 | Multi-pod ownership | Dream, re-embedding, retention, reconciliation, graph maintenance and audit scheduler ownership/fencing tests | IMPLEMENTED |
 
 ## Test coverage findings in this hardening pass
@@ -65,7 +72,25 @@ This branch adds `QueryMemorySourceEligibilityIntegrationTest` and proves that h
 - a lifecycle that left `READY`;
 - any source when caller ACL scope is empty.
 
-This is the main new runtime evidence added by the first pass.
+### Resolved: Query Memory concurrent duplicate reinforcement
+
+The existing anti-poisoning integration test proved duplicate suppression sequentially. This branch adds a real two-thread PostgreSQL race using the same `(clusterId, queryFingerprint)` and requires exactly one admitted observation. Database uniqueness remains the final anti-poisoning authority.
+
+### Resolved: learning recorder failure/privacy boundary
+
+`RagLearningRecorderFailureTest` now proves three rules directly:
+
+- persistence failure is logged/dropped and does not fail the user request;
+- raw question text is not persisted as durable learning identity when the fingerprint path is active;
+- disabled learning does not invoke the persistent learning repository.
+
+### Resolved: concurrent ingestion idempotency ownership
+
+`IdempotencyIntegrationTest` now includes two simultaneous claims for the same key/fingerprint. The expected durable result is exactly one active claimant, one `IN_PROGRESS` contender and one `knowledge_ingestion_request` row. This proves the claim row/lease boundary under actual PostgreSQL concurrency rather than only mock-level orchestration.
+
+### Reclassified: runtime safety flags were already concurrency-tested
+
+`PostgresAppParameterRepositoryIntegrationTest.concurrentDependencyUpdatesCannotCommitInvalidGraphState` already runs two conflicting administrative transitions concurrently and proves that the registry lock serializes them so only one succeeds. `AppParameterServiceTest` already covers authoritative-read failure, stale cache, monotonic versions and optimistic conflict. The gap was missing service-contract evidence mapping, not missing runtime coverage.
 
 ### Reclassified: retrieval resource recovery was already covered
 
@@ -84,39 +109,33 @@ Together with `ParallelRetrievalExecutorRecoveryTest`, this closes the old evide
 
 ### Reclassified: TTL real-row proof was already covered
 
-The old audit requested a real expired PostgreSQL row test. `PostgresPublishedLifecycleEligibilityIntegrationTest` now provides this directly and also proves final-context expiry races and exact published generation/ACL fencing.
+The old audit requested a real expired PostgreSQL row test. `PostgresPublishedLifecycleEligibilityIntegrationTest` provides this directly and also proves final-context expiry races and exact published generation/ACL fencing.
 
 The old #36 evidence gap is therefore no longer current.
 
 ## Documentation truthfulness findings
 
-### D1 — Query Memory / learning contract was missing
+### D1 — Query Memory / learning contract: resolved
 
 `docs/services/service-inventory.md` previously listed Query Memory / learning events as `TODO` even though the implementation and several integration tests already existed.
 
-This branch adds `docs/services/query-memory-learning.md` and changes the inventory entry to `DRAFT`.
+This branch adds `docs/services/query-memory-learning.md` and changes the inventory entry to `DRAFT`. Promotion to `VERIFIED` still requires exact-head green evidence.
 
-`DRAFT` is intentional. The contract must not become `VERIFIED` until the same exact documentation/code head passes required gates.
+### D2 — unified lifecycle / retrieval correctness status drift: resolved
 
-### D2 — top-level docs baseline is stale
+Top-level and architecture indexes were stale after merged lifecycle/retrieval-hardening work. This branch:
 
-`docs/README.md` still states synchronization against `main@c8ca0d...`, which predates the merged unified lifecycle contract. It also calls unified lifecycle `TARGET` despite completion evidence and merge into `main`.
+- promotes `unified-lifecycle-contract-v1.md` to `CURRENT / IMPLEMENTED`;
+- promotes `retrieval-correctness-hardening-v1.md` to `CURRENT / IMPLEMENTED`;
+- synchronizes `docs/README.md` and `docs/architecture/README.md` with merged implementation state.
 
-Required remediation in this branch:
+### D3 — root README issue-state drift: resolved
 
-- synchronize the documentation baseline to current `main`/hardening evidence;
-- classify unified lifecycle as current implementation rather than target work;
-- make this hardening ledger the current readiness entry point;
-- preserve the 2026-10-08 audit explicitly as historical evidence.
+The root README no longer instructs readers to close #36-#41 as current work. Those issues are treated as historical completed trackers; current release blockers are benchmark baseline, integrated qualification, target-hardware SLO evidence, governance and external-validity evidence.
 
-### D3 — top-level README still tells readers to close #36-#41
+### D4 — runtime safety flag contract lacked concrete test mapping: resolved
 
-The current README release checklist/next milestones still mention closing/reconciling issues #36-#41 even though current audit index already classifies them as closed/completed historical trackers.
-
-Required remediation:
-
-- replace that task with retaining current closure/evidence mapping;
-- keep actual release blockers prominent.
+`docs/services/runtime-safety-flags.md` now maps positive/negative/concurrency behavior to `AppParameterServiceTest`, `PostgresAppParameterRepositoryIntegrationTest` and `AppParameterControllerTest`.
 
 ## Remaining production-release blockers
 
