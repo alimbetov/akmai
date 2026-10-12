@@ -55,6 +55,26 @@ class RetrievalCorrectnessArchitectureTest {
     }
 
     @Test
+    void canonicalProjectionImplementationCannotBypassTimedReaderBoundary()
+            throws Exception {
+        String canonical = normalized(
+                "src/main/java/kz/alimbetov/akmai/knowledge/projection/"
+                        + "CanonicalPostgresSearchProjectionRepository.java"
+        );
+        String timed = normalized(
+                "src/main/java/kz/alimbetov/akmai/knowledge/projection/"
+                        + "TimedPublishedSearchProjectionReader.java"
+        );
+
+        assertThat(canonical)
+                .doesNotContain("@repository")
+                .doesNotContain("@primary");
+        assertThat(timed)
+                .contains("@primary")
+                .contains("new canonicalpostgressearchprojectionrepository(");
+    }
+
+    @Test
     void keyedLookupUsesBoundedValuesBatchesInsteadOfPerKeyUnionBranches()
             throws Exception {
         String source = normalized(

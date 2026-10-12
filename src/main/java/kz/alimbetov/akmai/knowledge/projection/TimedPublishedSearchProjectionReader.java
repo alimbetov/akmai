@@ -1,11 +1,13 @@
 package kz.alimbetov.akmai.knowledge.projection;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 import kz.alimbetov.akmai.knowledge.model.ChunkRole;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -26,17 +28,21 @@ public class TimedPublishedSearchProjectionReader
     private static final int SEARCH_OVERSAMPLE_FACTOR = 3;
     private static final int SEARCH_OVERSAMPLE_MAX = 1000;
 
-    private final PostgresSearchProjectionRepository delegate;
+    private final CanonicalPostgresSearchProjectionRepository delegate;
     private final TransactionTemplate transactionTemplate;
     private final PublishedProjectionLifecycleEligibility lifecycleEligibility;
 
     public TimedPublishedSearchProjectionReader(
-            PostgresSearchProjectionRepository delegate,
+            JdbcTemplate jdbcTemplate,
+            ObjectMapper objectMapper,
             @Qualifier("retrievalTransactionTemplate")
             TransactionTemplate transactionTemplate,
             PublishedProjectionLifecycleEligibility lifecycleEligibility
     ) {
-        this.delegate = delegate;
+        this.delegate = new CanonicalPostgresSearchProjectionRepository(
+                jdbcTemplate,
+                objectMapper
+        );
         this.transactionTemplate = transactionTemplate;
         this.lifecycleEligibility = lifecycleEligibility;
     }

@@ -15,17 +15,15 @@ import kz.alimbetov.akmai.knowledge.identifier.DetectedIdentifier;
 import kz.alimbetov.akmai.knowledge.lifecycle.PublishedLifecycleSql;
 import kz.alimbetov.akmai.knowledge.model.KnowledgeDomain;
 import kz.alimbetov.akmai.knowledge.model.RetrievalLanguageCatalog;
-import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Repository;
 
 /**
- * Read-side specialization that keeps bounded candidate selection behind the
- * canonical READY + ACTIVE + TTL fence. Write/direct-read behavior remains in
- * {@link PostgresSearchProjectionRepository}.
+ * Internal read-side specialization that keeps bounded candidate selection behind the
+ * canonical READY + ACTIVE + TTL fence. It is owned by
+ * {@link TimedPublishedSearchProjectionReader} and is deliberately not a Spring bean,
+ * so published retrieval cannot bypass the timed read boundary. Write/direct-read
+ * behavior remains in {@link PostgresSearchProjectionRepository}.
  */
-@Repository
-@Primary
 public class CanonicalPostgresSearchProjectionRepository
         extends PostgresSearchProjectionRepository {
 
